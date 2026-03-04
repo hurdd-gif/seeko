@@ -5,7 +5,6 @@ import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
   CheckSquare,
-  Map,
   Users,
   FileText,
   LogOut,
@@ -20,7 +19,6 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 const NAV = [
   { href: '/', label: 'Overview', icon: LayoutDashboard },
   { href: '/tasks', label: 'My Tasks', icon: CheckSquare },
-  { href: '/areas', label: 'Game Areas', icon: Map },
   { href: '/team', label: 'Team', icon: Users },
   { href: '/docs', label: 'Docs', icon: FileText },
   { href: '/activity', label: 'Activity', icon: Activity },

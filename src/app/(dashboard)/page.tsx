@@ -10,6 +10,7 @@ import {
   FileText,
   Circle,
   ArrowUpRight,
+  Map,
 } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
@@ -89,6 +90,49 @@ export default async function OverviewPage() {
           </Card>
         ))}
       </div>
+
+      {areas.length > 0 && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Map className="size-4 text-muted-foreground" />
+              <CardTitle>Game Areas</CardTitle>
+            </div>
+            <CardDescription>Dojo · Battleground · Fighting Club</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {areas.map(area => (
+                <div key={area.id} className="rounded-lg border border-border p-4 space-y-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="text-sm font-medium text-foreground">{area.name}</p>
+                    {area.phase && (
+                      <Badge variant="outline" className="shrink-0 text-xs">{area.phase}</Badge>
+                    )}
+                  </div>
+                  {area.description && (
+                    <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">
+                      {area.description}
+                    </p>
+                  )}
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-xs text-muted-foreground">Progress</span>
+                      <span className="text-xs font-mono text-muted-foreground">{area.progress}%</span>
+                    </div>
+                    <div className="w-full h-1.5 rounded-full bg-secondary overflow-hidden">
+                      <div
+                        className="h-full rounded-full"
+                        style={{ width: `${area.progress}%`, backgroundColor: 'var(--color-seeko-accent)' }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
         <Card className="lg:col-span-3">
