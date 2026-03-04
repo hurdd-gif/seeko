@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
+import { createBrowserClient } from '@supabase/ssr';
 import {
   Search,
   MoreHorizontal,
@@ -9,13 +10,14 @@ import {
   AlertCircle,
   CheckCircle2,
   Clock,
+  UserPlus,
 } from 'lucide-react';
-import { Task } from '@/lib/types';
+import { Task, Profile, TaskWithAssignee } from '@/lib/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   DropdownMenu,
@@ -48,25 +50,68 @@ export function filterTasks(tasks: Task[], query: string, status: string): Task[
   });
 }
 
-export function TaskList({ tasks }: { tasks: Task[] }) {
+function getInitials(name: string): string {
+  return name
+    .split(' ')
+    .map(p => p[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2) || '?';
+}
+
+interface TaskListProps {
+  tasks: Task[] | TaskWithAssignee[];
+  isAdmin?: boolean;
+  team?: Profile[];
+}
+
+export function TaskList({ tasks: initialTasks, isAdmin = false, team = [] }: TaskListProps) {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('All');
+  const [assignments, setAssignments] = useState<Record<string, string | null>>({});
+
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+
+  const handleAssign = useCallback(async (taskId: string, memberId: string | null) => {
+    setAssignments(prev => ({ ...prev, [taskId]: memberId }));
+
+    await supabase
+      .from('tasks')
+      .update({ assignee_id: memberId })
+      .eq('id', taskId);
+  }, [supabase]);
 
   const filtered = useMemo(() => {
-    return tasks.filter(t => {
+    return initialTasks.filter(t => {
       const matchesSearch = !search || t.name.toLowerCase().includes(search.toLowerCase());
       const matchesStatus = filter === 'All' || t.status === filter;
       return matchesSearch && matchesStatus;
     });
-  }, [tasks, search, filter]);
+  }, [initialTasks, search, filter]);
 
   const counts = useMemo(() => ({
-    All: tasks.length,
-    'Complete': tasks.filter(t => t.status === 'Complete').length,
-    'In Progress': tasks.filter(t => t.status === 'In Progress').length,
-    'In Review': tasks.filter(t => t.status === 'In Review').length,
-    'Blocked': tasks.filter(t => t.status === 'Blocked').length,
-  }), [tasks]);
+    All: initialTasks.length,
+    'Complete': initialTasks.filter(t => t.status === 'Complete').length,
+    'In Progress': initialTasks.filter(t => t.status === 'In Progress').length,
+    'In Review': initialTasks.filter(t => t.status === 'In Review').length,
+    'Blocked': initialTasks.filter(t => t.status === 'Blocked').length,
+  }), [initialTasks]);
+
+  function getAssignee(task: Task | TaskWithAssignee): Pick<Profile, 'id' | 'display_name' | 'avatar_url'> | null {
+    const overrideId = assignments[task.id];
+    if (overrideId !== undefined) {
+      if (overrideId === null) return null;
+      const member = team.find(m => m.id === overrideId);
+      return member ? { id: member.id, display_name: member.display_name, avatar_url: member.avatar_url } : null;
+    }
+    if ('assignee' in task && task.assignee) {
+      return task.assignee;
+    }
+    return null;
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -95,6 +140,8 @@ export function TaskList({ tasks }: { tasks: Task[] }) {
             {filtered.map(task => {
               const config = STATUS_CONFIG[task.status] ?? STATUS_CONFIG['In Progress'];
               const StatusIcon = config.icon;
+              const assignee = isAdmin ? getAssignee(task) : null;
+
               return (
                 <div
                   key={task.id}
@@ -120,6 +167,57 @@ export function TaskList({ tasks }: { tasks: Task[] }) {
                       </Badge>
                     </div>
                   </div>
+
+                  {isAdmin && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button className="flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-xs text-muted-foreground hover:text-foreground hover:border-foreground/20 transition-colors shrink-0">
+                          {assignee ? (
+                            <>
+                              <Avatar className="size-4">
+                                <AvatarImage src={assignee.avatar_url ?? undefined} alt={assignee.display_name ?? ''} />
+                                <AvatarFallback className="text-[6px] bg-secondary">
+                                  {getInitials(assignee.display_name ?? '?')}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className="max-w-[80px] truncate">{assignee.display_name}</span>
+                            </>
+                          ) : (
+                            <>
+                              <UserPlus className="size-3" />
+                              <span>Assign</span>
+                            </>
+                          )}
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-48">
+                        {team.map(member => (
+                          <DropdownMenuItem
+                            key={member.id}
+                            onClick={() => handleAssign(task.id, member.id)}
+                            className="flex items-center gap-2"
+                          >
+                            <Avatar className="size-5">
+                              <AvatarImage src={member.avatar_url ?? undefined} alt={member.display_name ?? ''} />
+                              <AvatarFallback className="text-[7px] bg-secondary">
+                                {getInitials(member.display_name ?? '?')}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="text-sm truncate">{member.display_name ?? 'Unnamed'}</span>
+                          </DropdownMenuItem>
+                        ))}
+                        {assignee && (
+                          <DropdownMenuItem
+                            onClick={() => handleAssign(task.id, null)}
+                            className="text-muted-foreground"
+                          >
+                            Unassign
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+
                   <div className="hidden items-center gap-3 md:flex">
                     {task.deadline && (
                       <div className="flex items-center gap-1 text-xs text-muted-foreground">

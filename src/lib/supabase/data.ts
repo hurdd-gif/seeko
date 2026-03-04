@@ -95,3 +95,15 @@ export async function fetchProfile(userId: string): Promise<Profile | null> {
   if (error) return null;
   return data as Profile;
 }
+
+export async function fetchAllTasksWithAssignees(): Promise<import('../types').TaskWithAssignee[]> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from('tasks')
+    .select('*, assignee:profiles!tasks_assignee_id_fkey(id, display_name, avatar_url)')
+    .order('deadline', { ascending: true, nullsFirst: false });
+
+  if (error) throw error;
+  return (data ?? []) as import('../types').TaskWithAssignee[];
+}

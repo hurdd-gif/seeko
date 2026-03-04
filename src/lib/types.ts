@@ -36,6 +36,7 @@ export type Profile = {
   avatar_url?: string;
   onboarded: number;
   tour_completed: number;
+  is_admin: boolean;
 };
 
 export type Doc = {
@@ -44,4 +45,8 @@ export type Doc = {
   content?: string;
   parent_id?: string;
   sort_order: number;
+};
+
+export type TaskWithAssignee = Task & {
+  assignee?: Pick<Profile, 'id' | 'display_name' | 'avatar_url'> | null;
 };
