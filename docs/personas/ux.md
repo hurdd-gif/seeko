@@ -1,16 +1,16 @@
 # Persona: UX / UI Designer
 
-Load this file when working on: HeroUI v3 components, Tailwind styling, animations, visual language, design tools.
+Load this file when working on: shadcn/ui components, Tailwind styling, animations, visual language, design tools.
 
 ---
 
-## Visual Language (from seeko-dashboard.jsx)
+## Visual Language
 
-- **Background:** `#0a0a0b` (near-black)
-- **Success / Coding dept:** `#6ee7b7` (emerald green)
+- **Background:** `oklch(0.10 0 0)` (near-black)
+- **Success / Coding dept:** `#6ee7b7` (emerald green — `--color-seeko-accent`)
 - **Font for IDs/labels:** JetBrains Mono (monospace)
 - **Font for UI text:** Outfit (sans-serif)
-- **Dark mode:** always on — `className="dark"` on `<html>`
+- **Dark mode:** always on — OKLCH token system in `globals.css`
 
 ---
 
@@ -28,58 +28,51 @@ Load this file when working on: HeroUI v3 components, Tailwind styling, animatio
 
 ## Status Color Map
 
-| Status      | Color     |
-|-------------|-----------|
-| Complete    | `#6ee7b7` |
-| In Progress | `#fbbf24` |
-| In Review   | `#93c5fd` |
-| Blocked     | `#f87171` |
+| Status      | Color     | CSS Variable               |
+|-------------|-----------|----------------------------|
+| Complete    | `#6ee7b7` | `--color-status-complete`  |
+| In Progress | `#fbbf24` | `--color-status-progress`  |
+| In Review   | `#93c5fd` | `--color-status-review`    |
+| Blocked     | `#f87171` | `--color-status-blocked`   |
 
 ---
 
-## HeroUI v3 Components
+## shadcn/ui Components
 
-Package: `@heroui/react@beta` (v3.0.0-beta.8)
-HeroUI v3 does NOT require a provider wrapper — components work standalone.
-Set `className="dark"` on the `<html>` element and import `@heroui/styles` in `globals.css`.
+All components live in `src/components/ui/` and use the `cn()` utility from `src/lib/utils.ts`.
 
-### Primary components in use:
-- `Table`, `TableHeader`, `TableColumn`, `TableBody`, `TableRow`, `TableCell` — TasksTable
-- `Badge` — notification counts
-- `Card`, `CardHeader`, `CardBody` — DepartmentsCard, GameAreasCard
-- `Progress` — area progress bars
-- `Tabs`, `Tab` — dashboard tab navigation
-- `Button` — actions
-- `Chip` — status labels (use `color` prop with custom className for status colors above)
-- `Avatar` — team member photos
+### Components in use:
 
-### HeroUI v3 patterns:
+| Component    | File                        | Usage                                |
+|--------------|-----------------------------|--------------------------------------|
+| Card         | `src/components/ui/card.tsx` | Page sections, stat cards, list wrappers |
+| Badge        | `src/components/ui/badge.tsx` | Status labels, department tags, priority |
+| Button       | `src/components/ui/button.tsx` | Actions, sign out                   |
+| Avatar       | `src/components/ui/avatar.tsx` | Team member initials                |
+| Input        | `src/components/ui/input.tsx` | Search fields                       |
+| Select       | `src/components/ui/select.tsx` | Status filter dropdown              |
+| Separator    | `src/components/ui/separator.tsx` | Visual dividers                  |
+
+### Pattern examples:
 ```tsx
-// Chip for status
-<Chip
-  size="sm"
-  className="text-xs"
-  style={{ backgroundColor: STATUS_COLORS[task.status] + '20', color: STATUS_COLORS[task.status] }}
->
-  {task.status}
-</Chip>
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 
-// Table with HeroUI
-<Table aria-label="Tasks" className="mt-4">
-  <TableHeader>
-    <TableColumn>NAME</TableColumn>
-    <TableColumn>STATUS</TableColumn>
-  </TableHeader>
-  <TableBody items={tasks}>
-    {(task) => (
-      <TableRow key={task.id}>
-        <TableCell>{task.name}</TableCell>
-        <TableCell><StatusChip status={task.status} /></TableCell>
-      </TableRow>
-    )}
-  </TableBody>
-</Table>
+<Card>
+  <CardHeader>
+    <CardTitle>Section Title</CardTitle>
+  </CardHeader>
+  <CardContent>
+    <Badge variant="secondary">Label</Badge>
+  </CardContent>
+</Card>
 ```
+
+### Badge variants:
+- `default` — primary bg
+- `secondary` — muted bg (department tags)
+- `outline` — bordered (status, phase labels)
+- `destructive` — red (high priority)
 
 ---
 
@@ -88,12 +81,6 @@ Set `className="dark"` on the `<html>` element and import `@heroui/styles` in `g
 Timings from seeko-dashboard.jsx:
 - Tab change: `fadeUp` 0.5s
 - Header entrance: `fadeIn` 0.6s
-
-```tsx
-// Tailwind animation classes (add to tailwind.config.ts keyframes)
-// fadeUp: opacity 0→1 + translateY 10px→0
-// fadeIn: opacity 0→1
-```
 
 For complex motion: invoke `interface-craft` skill before implementing.
 For motion patterns: invoke `motion-design-patterns` skill.
@@ -111,53 +98,67 @@ For motion patterns: invoke `motion-design-patterns` skill.
 
 ## ui-design-brain Data Dashboard Conventions
 
-- **Data-dense layouts:** cards over tables where possible for overview; tables for detail lists
+- **Data-dense layouts:** cards over tables where possible for overview; divide-y lists for detail
 - **State handling:** always show loading, empty, and error states — never blank
-- **KPI metrics at top**, detail below (StatsRow → Cards → Table pattern)
+- **KPI metrics at top**, detail below (StatCard grid → Cards → divide-y list pattern)
 - **Avoid overloading a single view** — use tabs to layer depth
-- **Categorical status:** use `Chip` or `Badge`, never raw text
-- **Progress:** use `Progress` bar component with labeled percentage
+- **Categorical status:** use `Badge` or status dots, never raw text
+- **Progress:** use custom progress bar with `--color-seeko-accent`
 
 ---
 
 ## Component File Locations
 
 ```
+src/components/ui/
+  card.tsx          — Card, CardHeader, CardTitle, CardContent
+  badge.tsx         — Badge with variant system
+  button.tsx        — Button with variant/size system
+  avatar.tsx        — Avatar, AvatarFallback
+  input.tsx         — Input field
+  select.tsx        — Native select wrapper
+  separator.tsx     — Horizontal/vertical divider
+
+src/components/layout/
+  Sidebar.tsx       — client component, usePathname, Lucide icons
+
 src/components/dashboard/
-  StatsRow.tsx       — top KPI metrics row
-  DepartmentsCard.tsx — department breakdown cards
-  GameAreasCard.tsx  — Dojo/Battleground/Fighting Club progress
-  TasksTable.tsx     — filterable task list
+  TaskList.tsx      — client component, search/filter task list
 
 src/components/notion/
-  NotionRenderer.tsx  — renders Notion blocks as React JSX
+  NotionRenderer.tsx — renders Notion blocks as React JSX
 ```
 
 ---
 
-## Tailwind v4 + HeroUI v3 Setup
+## Tailwind v4 + shadcn/ui Setup
 
 No `tailwind.config.ts` needed. Tailwind v4 uses CSS-based configuration in `globals.css`:
 
 ```css
-/* globals.css */
 @import "tailwindcss";
-@import "@heroui/styles";   /* HeroUI v3 CSS */
 
 @theme inline {
+  --color-background:        oklch(0.10 0 0);
+  --color-foreground:        oklch(0.95 0 0);
+  --color-card:              oklch(0.14 0 0);
+  --color-card-foreground:   oklch(0.95 0 0);
+  --color-border:            oklch(0.22 0 0);
+  --color-muted:             oklch(0.18 0 0);
+  --color-muted-foreground:  oklch(0.49 0 0);
+  --color-secondary:         oklch(0.18 0 0);
+  --color-primary:           oklch(0.95 0 0);
+  --color-sidebar:           oklch(0.12 0 0);
+  --color-seeko-accent:      #6ee7b7;
+  /* ... see globals.css for full token list */
+
   --font-sans: var(--font-outfit);
   --font-mono: var(--font-jetbrains-mono);
-
-  /* Custom tokens */
-  --animate-fade-up: fadeUp 0.5s ease-out;
-  --animate-fade-in: fadeIn 0.6s ease-out;
+  --radius: 0.5rem;
 }
-
-@keyframes fadeUp { ... }
-@keyframes fadeIn { ... }
 ```
 
-Dark mode: set `class="dark"` on `<html>`. HeroUI v3 respects this class.
+Tailwind v4 maps `--color-*` variables to `bg-*`, `text-*`, `border-*` utilities automatically.
 
 ---
 

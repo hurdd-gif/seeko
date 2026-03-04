@@ -7,7 +7,7 @@
 | Task type                                        | Load                       |
 |--------------------------------------------------|----------------------------|
 | Next.js, API routes, Supabase, Notion API, tests | @docs/personas/swe.md      |
-| HeroUI v3, Tailwind, components, animations      | @docs/personas/ux.md       |
+| shadcn/ui, Tailwind, components, animations       | @docs/personas/ux.md       |
 | Notion DB schema, content structure, task model  | @docs/personas/ia.md       |
 | Render deployment, env vars, CI/CD               | @docs/personas/devops.md   |
 
@@ -74,7 +74,7 @@ User task
 ## Repo Info
 
 - Root: /Volumes/CODEUSER/seeko-studio
-- Stack: Next.js 14 (App Router) · HeroUI v3 beta · Tailwind CSS · Supabase Auth · Notion API
+- Stack: Next.js 16 (App Router) · shadcn/ui · Tailwind v4 · Supabase Auth · Notion API
 - Hosting: Render (render.yaml at root)
 - Auth: Supabase email/password — karti invites team members
 - Data source: Notion API (Notion is single source of truth, karti manages)
