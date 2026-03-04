@@ -31,7 +31,7 @@ function Dialog({ open, onOpenChange, children }: DialogProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div
-        className="fixed inset-0 bg-black/60 animate-in fade-in-0"
+        className="fixed inset-0 bg-black/40 backdrop-blur-sm animate-in fade-in-0"
         onClick={() => onOpenChange(false)}
       />
       <div className="relative z-50 w-full max-w-2xl max-h-[85vh] overflow-y-auto rounded-xl border border-border bg-card p-6 shadow-lg animate-in fade-in-0 zoom-in-95 mx-4">
