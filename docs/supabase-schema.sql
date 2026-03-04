@@ -1,37 +1,98 @@
 -- Run in Supabase SQL Editor after creating your project
 -- Extends auth.users (created automatically by Supabase Auth)
 
+-- ─── Profiles ─────────────────────────────────────────────────────────────────
+
+create type public.department as enum ('Coding', 'Visual Art', 'UI/UX', 'Animation', 'Asset Creation');
+
 create table public.profiles (
-  id                   uuid references auth.users primary key,
-  notion_assignee_name text not null,   -- matches "Assignee" name in Notion Tasks DB
-  display_name         text,
-  department           text,
-  role                 text,
-  created_at           timestamptz default now()
+  id           uuid references auth.users primary key,
+  display_name text,
+  department   public.department,
+  role         text,
+  created_at   timestamptz default now()
 );
 
--- Enable Row Level Security
 alter table public.profiles enable row level security;
 
--- Users can only read their own profile
-create policy "Users read own profile"
+create policy "Authenticated users can read all profiles"
   on public.profiles for select
-  using (auth.uid() = id);
+  using (auth.role() = 'authenticated');
 
--- Auto-create a profile row when a new user signs up
 create or replace function public.handle_new_user()
 returns trigger as $$
 begin
-  insert into public.profiles (id, notion_assignee_name, display_name)
+  insert into public.profiles (id, display_name)
   values (
     new.id,
-    coalesce(new.raw_user_meta_data->>'notion_assignee_name', new.email),
     coalesce(new.raw_user_meta_data->>'display_name', new.email)
   );
   return new;
 end;
-$$ language plpgsql security definer;
+$$ language plpgsql security definer set search_path = '';
 
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
+
+-- ─── Areas ────────────────────────────────────────────────────────────────────
+
+create type public.area_status as enum ('Active', 'Planned', 'Complete');
+create type public.area_phase as enum ('Alpha', 'Beta', 'Launch');
+
+create table public.areas (
+  id          uuid primary key default gen_random_uuid(),
+  name        text not null,
+  status      public.area_status default 'Active',
+  progress    int  default 0,
+  description text,
+  phase       public.area_phase,
+  created_at  timestamptz default now()
+);
+
+alter table public.areas enable row level security;
+
+create policy "Authenticated users can read areas"
+  on public.areas for select
+  using (auth.role() = 'authenticated');
+
+-- ─── Tasks ────────────────────────────────────────────────────────────────────
+
+create type public.task_status as enum ('Complete', 'In Progress', 'In Review', 'Blocked');
+create type public.priority as enum ('High', 'Medium', 'Low');
+
+create table public.tasks (
+  id          uuid primary key default gen_random_uuid(),
+  name        text not null,
+  department  public.department,
+  status      public.task_status default 'In Progress',
+  priority    public.priority default 'Medium',
+  area_id     uuid references public.areas(id),
+  assignee_id uuid references public.profiles(id),
+  deadline    date,
+  description text,
+  created_at  timestamptz default now()
+);
+
+alter table public.tasks enable row level security;
+
+create policy "Authenticated users can read tasks"
+  on public.tasks for select
+  using (auth.role() = 'authenticated');
+
+-- ─── Docs ─────────────────────────────────────────────────────────────────────
+
+create table public.docs (
+  id         uuid primary key default gen_random_uuid(),
+  title      text not null,
+  content    text,
+  parent_id  uuid references public.docs(id),
+  sort_order int default 0,
+  created_at timestamptz default now()
+);
+
+alter table public.docs enable row level security;
+
+create policy "Authenticated users can read docs"
+  on public.docs for select
+  using (auth.role() = 'authenticated');

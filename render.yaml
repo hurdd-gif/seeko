@@ -13,13 +13,3 @@ services:
         sync: false
       - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
-      - key: NOTION_TOKEN
-        sync: false
-      - key: NOTION_TASKS_DB_ID
-        sync: false
-      - key: NOTION_AREAS_DB_ID
-        sync: false
-      - key: NOTION_TEAM_DB_ID
-        sync: false
-      - key: NOTION_DOCS_PAGE_ID
-        sync: false

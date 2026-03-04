@@ -1,4 +1,4 @@
-import { fetchAreas } from '@/lib/notion';
+import { fetchAreas } from '@/lib/supabase/data';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
@@ -14,7 +14,7 @@ export default async function AreasPage() {
 
       {areas.length === 0 ? (
         <p className="text-sm text-muted-foreground">
-          No game areas found. Add them to the Notion Areas database.
+          No game areas found. Add them in the Supabase Table Editor.
         </p>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

@@ -1,9 +1,8 @@
-import { fetchDocBlocks } from '@/lib/notion';
-import { NotionRenderer } from '@/components/notion/NotionRenderer';
+import { fetchDocs } from '@/lib/supabase/data';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 
 export default async function DocsPage() {
-  const blocks = await fetchDocBlocks().catch(() => []);
+  const docs = await fetchDocs().catch(() => []);
 
   return (
     <div className="space-y-6">
@@ -12,20 +11,31 @@ export default async function DocsPage() {
         <p className="text-sm text-muted-foreground mt-1">SEEKO Studio documentation</p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Studio Docs</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {blocks.length === 0 ? (
+      {docs.length === 0 ? (
+        <Card>
+          <CardContent className="py-6">
             <p className="text-sm text-muted-foreground">
-              No docs found. Add pages under &quot;SEEKO Docs&quot; in Notion.
+              No docs found. Add them in the Supabase Table Editor.
             </p>
-          ) : (
-            <NotionRenderer blocks={blocks} />
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      ) : (
+        docs.map(doc => (
+          <Card key={doc.id}>
+            <CardHeader>
+              <CardTitle>{doc.title}</CardTitle>
+            </CardHeader>
+            {doc.content && (
+              <CardContent>
+                <article
+                  className="prose prose-invert max-w-none text-zinc-300 prose-headings:text-white prose-strong:text-white prose-code:bg-zinc-800 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-sm"
+                  dangerouslySetInnerHTML={{ __html: doc.content }}
+                />
+              </CardContent>
+            )}
+          </Card>
+        ))
+      )}
     </div>
   );
 }

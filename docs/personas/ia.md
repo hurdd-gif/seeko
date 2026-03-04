@@ -1,81 +1,100 @@
 # Persona: Information Architect
 
-Load this file when working on: Notion database schema, content hierarchy, task taxonomy, data modeling.
+Load this file when working on: Supabase schema, content hierarchy, task taxonomy, data modeling.
 
 ---
 
 ## Overview
 
-Notion is the **single source of truth** for SEEKO Studio. Karti manages all content in Notion.
-The TypeScript types in `src/lib/types.ts` must align with Notion property names exactly.
+Supabase Postgres is the **single source of truth** for SEEKO Studio data.
+Karti manages content via the Supabase Table Editor.
+The TypeScript types in `src/lib/types.ts` must align with the table columns exactly.
 
 ---
 
-## Notion Databases
+## Supabase Tables
 
-### 1. Tasks DB (`NOTION_TASKS_DB_ID`)
+### 1. profiles (= team roster)
 
-| Property    | Notion Type | Notes                                     |
-|-------------|-------------|-------------------------------------------|
-| Name        | title       | Task name                                 |
-| Department  | select      | Coding, Visual Art, UI/UX, Animation, Asset Creation |
-| Status      | select      | Complete, In Progress, In Review, Blocked |
-| Priority    | select      | High, Medium, Low                         |
-| Area        | relation    | → Areas DB                                |
-| Assignee    | people      | Used to filter tasks per team member      |
-| Deadline    | date        |                                           |
-| Description | rich_text   |                                           |
+Every authenticated user gets a profile row automatically on signup. This doubles as the team roster — the `/team` page lists all profiles.
 
-**Key:** Filter by `Assignee` property using `notion.databases.query` with `{ property: 'Assignee', people: { contains: assigneeName } }`.
-The `assigneeName` comes from `profiles.notion_assignee_name` in Supabase.
+| Column       | Type           | Notes                                  |
+|--------------|----------------|----------------------------------------|
+| id           | uuid (PK)      | References auth.users                  |
+| display_name | text           | User display name                      |
+| department   | department enum| Coding, Visual Art, UI/UX, Animation, Asset Creation |
+| role         | text           | Job title / role description           |
+| created_at   | timestamptz    |                                        |
 
 ---
 
-### 2. Areas DB (`NOTION_AREAS_DB_ID`)
+### 2. tasks
 
-| Property    | Notion Type | Notes                                    |
-|-------------|-------------|------------------------------------------|
-| Name        | title       | Area name                                |
-| Status      | select      | Active, Planned, Complete                |
-| Progress    | number      | Percentage 0–100                         |
-| Description | rich_text   |                                          |
-| Phase       | select      | Alpha, Beta, Launch                      |
+| Column      | Type             | Notes                                     |
+|-------------|------------------|-------------------------------------------|
+| id          | uuid (PK)        | Auto-generated                            |
+| name        | text             | Task name                                 |
+| department  | department enum  | Coding, Visual Art, UI/UX, Animation, Asset Creation |
+| status      | task_status enum | Complete, In Progress, In Review, Blocked |
+| priority    | priority enum    | High, Medium, Low                         |
+| area_id     | uuid (FK)        | → areas.id                                |
+| assignee_id | uuid (FK)        | → profiles.id                             |
+| deadline    | date             |                                           |
+| description | text             |                                           |
+| created_at  | timestamptz      |                                           |
+
+---
+
+### 3. areas
+
+| Column      | Type              | Notes                                    |
+|-------------|-------------------|------------------------------------------|
+| id          | uuid (PK)         | Auto-generated                           |
+| name        | text              | Area name                                |
+| status      | area_status enum  | Active, Planned, Complete                |
+| progress    | int               | Percentage 0–100                         |
+| description | text              |                                          |
+| phase       | area_phase enum   | Alpha, Beta, Launch                      |
+| created_at  | timestamptz       |                                          |
 
 **Rows:** Dojo, Battleground, Fighting Club
 
 ---
 
-### 3. Team DB (`NOTION_TEAM_DB_ID`)
+### 4. docs
 
-| Property     | Notion Type | Notes                                    |
-|--------------|-------------|------------------------------------------|
-| Name         | title       | Full name                                |
-| Role         | rich_text   | Job title / role description             |
-| Department   | select      | Coding, Visual Art, UI/UX, Animation, Asset Creation |
-| Email        | email       | For reference only (auth via Supabase)   |
-| NotionHandle | rich_text   | @mention handle, matches Assignee names  |
+| Column     | Type        | Notes                                    |
+|------------|-------------|------------------------------------------|
+| id         | uuid (PK)   | Auto-generated                           |
+| title      | text        | Doc title                                |
+| content    | text        | HTML content                             |
+| parent_id  | uuid (FK)   | → docs.id (self-referencing tree)        |
+| sort_order | int         | Ordering within a parent                 |
+| created_at | timestamptz |                                          |
 
 ---
 
-### 4. Docs — Notion Pages
+## Enum Types (dropdowns in Table Editor)
 
-- Nested under a **"SEEKO Docs"** parent page (`NOTION_DOCS_PAGE_ID`)
-- Fetched as blocks via `notion.blocks.children.list({ block_id: NOTION_DOCS_PAGE_ID })`
-- Rendered by `NotionRenderer.tsx` in the app
+| Enum           | Values                                                    |
+|----------------|-----------------------------------------------------------|
+| department     | Coding, Visual Art, UI/UX, Animation, Asset Creation      |
+| task_status    | Complete, In Progress, In Review, Blocked                 |
+| priority       | High, Medium, Low                                         |
+| area_status    | Active, Planned, Complete                                 |
+| area_phase     | Alpha, Beta, Launch                                       |
 
 ---
 
 ## Content Hierarchy
 
 ```
-SEEKO Studio (Notion workspace)
-├── Tasks DB          ← linked to Areas, Assignee = team member
-├── Areas DB          ← Dojo, Battleground, Fighting Club
-├── Team DB           ← roster, NotionHandle matches Assignee
-└── SEEKO Docs (page)
-    ├── Design System
+Supabase (seeko-studio project)
+├── tasks          ← area_id → areas, assignee_id → profiles
+├── areas          ← Dojo, Battleground, Fighting Club
+├── profiles       ← auto-created from auth.users (= team roster)
+└── docs           ← self-referencing tree (parent_id)
     ├── Game Design Doc
-    ├── Engineering Notes
     └── Onboarding
 ```
 
@@ -90,56 +109,32 @@ SEEKO Studio (Notion workspace)
 
 ---
 
-## Notion → TypeScript Property Mapping
+## Data Access
 
-When mapping Notion API responses, handle these common patterns:
+All queries go through `src/lib/supabase/data.ts`:
 
 ```ts
-// Title property
-const name = page.properties.Name.title[0]?.plain_text ?? '';
+import { fetchTasks, fetchAreas, fetchTeam, fetchDocs } from '@/lib/supabase/data';
 
-// Select property
-const status = page.properties.Status.select?.name ?? '';
-
-// Number property
-const progress = page.properties.Progress.number ?? 0;
-
-// People property (for Assignee)
-const assignee = page.properties.Assignee.people[0]?.name ?? '';
-
-// Relation property
-const areaId = page.properties.Area.relation[0]?.id ?? '';
-
-// Date property
-const deadline = page.properties.Deadline.date?.start ?? '';
-
-// Rich text property
-const description = page.properties.Description.rich_text[0]?.plain_text ?? '';
+const tasks = await fetchTasks(userId);   // optional assignee filter
+const areas = await fetchAreas();
+const team  = await fetchTeam();          // queries profiles table
+const docs  = await fetchDocs(parentId);  // optional parent filter, null = top-level
 ```
 
 ---
 
-## Fresh Database Recommendation
+## RLS Policies
 
-Use fresh Notion databases with the schema above (clean property names matching TypeScript types).
-Karti migrates existing tasks into the new structure before Phase 3 API integration begins.
+- `profiles`: any authenticated user can read all profiles (needed for team page)
+- `tasks`, `areas`, `docs`: any authenticated user can read
 
----
-
-## MCP Usage
-
-Use `mcp__claude_ai_Notion__*` tools to:
-- Create databases: `notion-create-database`
-- Query pages: `notion-fetch`
-- Search: `notion-search`
-- Create/update pages: `notion-create-pages`, `notion-update-page`
-
-Check if a database already exists (via `notion-search`) before creating a new one.
+Full schema: `docs/supabase-schema.sql`
 
 ---
 
 ## Skill Routing Reminders
 
-- Before any schema change: review existing DB structure in Notion first
+- Before any schema change: review `docs/supabase-schema.sql` first
 - After schema changes: update this file AND `src/lib/types.ts` to stay in sync
 - Trigger maintenance agent when schema changes significantly

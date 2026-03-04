@@ -1,15 +1,15 @@
 # Persona: Software Engineer
 
-Load this file when working on: Next.js, API routes, Supabase, Notion API, TypeScript types, Vitest tests.
+Load this file when working on: Next.js, API routes, Supabase queries, TypeScript types, Vitest tests.
 
 ---
 
 ## Stack
 
-- **Framework:** Next.js 14 App Router (TypeScript, `src/` layout)
+- **Framework:** Next.js 16 App Router (TypeScript, `src/` layout)
 - **Auth:** Supabase (`@supabase/supabase-js` v2 + `@supabase/ssr`)
-- **Data:** Notion API (`@notionhq/client`)
-- **UI:** HeroUI v3 (`@heroui/react@beta`)
+- **Data:** Supabase Postgres (queried via `@supabase/supabase-js`)
+- **UI:** shadcn/ui + Tailwind v4
 - **Tests:** Vitest (`npm test`)
 - **Hosting:** Render
 
@@ -17,15 +17,16 @@ Load this file when working on: Next.js, API routes, Supabase, Notion API, TypeS
 
 ## App Router Patterns
 
-- **Server Components** (default) — fetch Notion data directly, no `useState`
+- **Server Components** (default) — fetch Supabase data directly, no `useState`
 - **Client Components** — `"use client"` directive, handle auth state, interactivity
 - Route groups: `(auth)` for login/signup, `(dashboard)` for protected pages
-- API routes live in `src/app/api/` as `route.ts` files using `NextRequest`/`NextResponse`
 
 ```ts
-// Server component fetching Notion data
+// Server component fetching Supabase data
+import { fetchTasks } from '@/lib/supabase/data';
+
 export default async function TasksPage() {
-  const tasks = await fetchTasks(); // lib/notion.ts
+  const tasks = await fetchTasks();
   return <TasksTable tasks={tasks} />;
 }
 ```
@@ -86,35 +87,24 @@ export const config = { matcher: ['/((?!_next/static|_next/image|favicon.ico|log
 
 ---
 
-## Notion API
+## Supabase Data Layer
 
-**IMPORTANT: `@notionhq/client` v5 API changes:**
-- `notion.databases.query` → `notion.dataSources.query` (renamed)
-- `database_id` parameter → `data_source_id`
-- People filters require Notion User ID (UUID), not a display name
+All data queries live in `src/lib/supabase/data.ts`:
 
 ```ts
-// src/lib/notion.ts
-import { Client } from '@notionhq/client';
+import { createClient } from './server';
+import type { Task, Area, TeamMember, Doc } from '../types';
 
-const notion = new Client({ auth: process.env.NOTION_TOKEN });
-
-export async function fetchTasks(assigneeName?: string) {
-  const res = await notion.dataSources.query({
-    data_source_id: process.env.NOTION_TASKS_DB_ID!,
-    sorts: [{ property: 'Deadline', direction: 'ascending' }],
-  });
-  const tasks = res.results.map(pageToTask);
-  // Filter by assignee name in-memory (profile.notion_assignee_name)
-  return assigneeName
-    ? tasks.filter(t => t.assignee?.toLowerCase() === assigneeName.toLowerCase())
-    : tasks;
-}
+export async function fetchTasks(assigneeId?: string): Promise<Task[]>
+export async function fetchAreas(): Promise<Area[]>
+export async function fetchTeam(): Promise<TeamMember[]>
+export async function fetchDocs(parentId?: string): Promise<Doc[]>
 ```
 
-- Filter tasks in-memory by comparing `task.assignee` (from Notion people property `.name`) against `profile.notion_assignee_name`
-- All fetcher functions should be typed — define `Task`, `Area`, `TeamMember` in `src/lib/types.ts`
-- Use `notion.blocks.children.list` for Docs page rendering
+- Uses the server Supabase client (cookie-based auth)
+- Each function creates its own client instance
+- Tasks ordered by deadline, areas/team by name, docs by sort_order
+- Tasks optionally filtered by `assignee_id` (user's auth UUID)
 
 ---
 
@@ -124,11 +114,11 @@ export async function fetchTasks(assigneeName?: string) {
 export type Task = {
   id: string;
   name: string;
-  department: string;
-  status: 'Complete' | 'In Progress' | 'In Review' | 'Blocked';
-  priority: 'High' | 'Medium' | 'Low';
-  area?: string;
-  assignee?: string;
+  department: Department | string;
+  status: TaskStatus;
+  priority: Priority;
+  area_id?: string;
+  assignee_id?: string;
   deadline?: string;
   description?: string;
 };
@@ -146,53 +136,32 @@ export type TeamMember = {
   id: string;
   name: string;
   role: string;
-  department: string;
+  department: Department | string;
   email?: string;
-  notionHandle?: string;
 };
 
 export type Profile = {
   id: string;
-  notion_assignee_name: string;
   display_name?: string;
   department?: string;
   role?: string;
 };
+
+export type Doc = {
+  id: string;
+  title: string;
+  content?: string;
+  parent_id?: string;
+  sort_order: number;
+};
 ```
-
----
-
-## API Route Convention
-
-```ts
-// src/app/api/notion/tasks/route.ts
-import { NextResponse } from 'next/server';
-import { fetchTasks } from '@/lib/notion';
-
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const assignee = searchParams.get('assignee') ?? undefined;
-  const tasks = await fetchTasks(assignee);
-  return NextResponse.json(tasks);
-}
-```
-
----
-
-## api2cli Skills (post-integration)
-
-After Notion integration is live:
-1. Run `api2cli` against the Notion API → outputs `.claude/skills/notion/SKILL.md`
-2. Run `api2cli` against the Supabase REST API → outputs `.claude/skills/supabase/SKILL.md`
-3. Use these generated skills for all future Notion DB queries and Supabase mutations
 
 ---
 
 ## Testing
 
 - Test runner: Vitest (`npm test`)
-- Unit test Notion fetchers with mocked `@notionhq/client`
-- Integration test API routes using `vitest` + `msw`
+- Unit test Supabase data fetchers with mocked `@supabase/supabase-js`
 - Test auth middleware behavior with mocked Supabase responses
 - Co-locate tests: `__tests__/` next to the file being tested, or `.test.ts` suffix
 

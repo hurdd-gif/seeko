@@ -31,7 +31,7 @@ export function filterTasks(tasks: Task[], query: string, status: string): Task[
   });
 }
 
-export function TaskList({ tasks, assigneeName }: { tasks: Task[]; assigneeName?: string }) {
+export function TaskList({ tasks }: { tasks: Task[] }) {
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState<string>('All');
 
@@ -96,7 +96,7 @@ export function TaskList({ tasks, assigneeName }: { tasks: Task[]; assigneeName?
 
       <p className="text-xs text-muted-foreground">
         {filtered.length} {filtered.length === 1 ? 'task' : 'tasks'}
-        {assigneeName ? ` for ${assigneeName}` : ''}
+        
       </p>
     </div>
   );

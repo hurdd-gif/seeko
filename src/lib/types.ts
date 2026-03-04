@@ -13,8 +13,8 @@ export type Task = {
   department: Department | string;
   status: TaskStatus;
   priority: Priority;
-  area?: string;
-  assignee?: string;
+  area_id?: string;
+  assignee_id?: string;
   deadline?: string;
   description?: string;
 };
@@ -28,26 +28,17 @@ export type Area = {
   phase?: string;
 };
 
-export type TeamMember = {
-  id: string;
-  name: string;
-  role: string;
-  department: Department | string;
-  email?: string;
-  notionHandle?: string;
-};
-
 export type Profile = {
   id: string;
-  notion_assignee_name: string;
   display_name?: string;
   department?: string;
   role?: string;
 };
 
-export type NotionBlock = {
+export type Doc = {
   id: string;
-  type: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  [key: string]: any;
+  title: string;
+  content?: string;
+  parent_id?: string;
+  sort_order: number;
 };

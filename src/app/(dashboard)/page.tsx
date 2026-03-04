@@ -1,4 +1,4 @@
-import { fetchTasks, fetchAreas } from '@/lib/notion';
+import { fetchTasks, fetchAreas } from '@/lib/supabase/data';
 import { Task, Area } from '@/lib/types';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
