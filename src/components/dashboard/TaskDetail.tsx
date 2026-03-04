@@ -11,8 +11,14 @@ import {
   Timer,
   AlertCircle,
   Circle,
+  Pencil,
+  Trash2,
+  Check,
+  X,
+  FileText,
 } from 'lucide-react';
-import { Task, TaskWithAssignee, TaskComment, Profile } from '@/lib/types';
+import Link from 'next/link';
+import { Task, TaskWithAssignee, TaskComment, Profile, Doc } from '@/lib/types';
 import { Dialog, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -30,6 +36,18 @@ function getInitials(name: string): string {
   return name.split(' ').map(p => p[0]).join('').toUpperCase().slice(0, 2) || '?';
 }
 
+function formatLocalTime(dateStr: string): string {
+  return new Date(dateStr).toLocaleString(undefined, {
+    weekday: 'short',
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZoneName: 'short',
+  });
+}
+
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(diff / 60000);
@@ -42,34 +60,226 @@ function timeAgo(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString();
 }
 
-function renderContent(text: string): React.ReactNode[] {
-  const parts = text.split(/(@\w[\w\s]*?\b)/g);
-  return parts.map((part, i) =>
-    part.startsWith('@') ? (
-      <span key={i} className="rounded bg-seeko-accent/15 px-1 py-0.5 text-seeko-accent font-medium">
-        {part}
-      </span>
-    ) : (
-      <span key={i}>{part}</span>
-    )
+function escapeRegex(s: string) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function renderContent(text: string, teamNames: string[], docTitles: string[]): React.ReactNode[] {
+  const mentionAlts = teamNames.filter(Boolean).sort((a, b) => b.length - a.length).map(escapeRegex);
+  const docAlts = docTitles.filter(Boolean).sort((a, b) => b.length - a.length).map(escapeRegex);
+
+  const parts: string[] = [];
+  if (mentionAlts.length) parts.push(`@(?:${mentionAlts.join('|')})`);
+  if (docAlts.length) parts.push(`#(?:${docAlts.join('|')})`);
+
+  if (parts.length === 0) return [<span key={0}>{text}</span>];
+
+  const regex = new RegExp(`(${parts.join('|')})`, 'gi');
+  const segments = text.split(regex);
+
+  return segments.map((seg, i) => {
+    if (seg.match(/^@/i) && mentionAlts.some(a => seg.slice(1).match(new RegExp(`^${a}$`, 'i')))) {
+      return (
+        <span key={i} className="rounded bg-seeko-accent/15 px-1 py-0.5 text-seeko-accent font-medium">
+          {seg}
+        </span>
+      );
+    }
+    if (seg.match(/^#/i) && docAlts.some(a => seg.slice(1).match(new RegExp(`^${a}$`, 'i')))) {
+      return (
+        <Link key={i} href="/docs" className="rounded bg-blue-500/15 px-1 py-0.5 text-blue-400 font-medium hover:bg-blue-500/25 transition-colors cursor-pointer">
+          {seg}
+        </Link>
+      );
+    }
+    return <span key={i}>{seg}</span>;
+  });
+}
+
+function CommentItem({
+  comment,
+  isOwn,
+  isHighlighted,
+  teamNames,
+  docTitles,
+  onEdit,
+  onDelete,
+}: {
+  comment: TaskComment;
+  isOwn: boolean;
+  isHighlighted?: boolean;
+  teamNames: string[];
+  docTitles: string[];
+  onEdit: (id: string, content: string) => void;
+  onDelete: (id: string) => void;
+}) {
+  const highlightRef = useRef<HTMLDivElement>(null);
+  const [editing, setEditing] = useState(false);
+  const [editText, setEditText] = useState(comment.content);
+  const editRef = useRef<HTMLTextAreaElement>(null);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+
+  const prof = comment.profiles;
+  const name = prof?.display_name ?? 'Unknown';
+  const avatar = prof?.avatar_url;
+  const wasEdited = comment.updated_at && comment.updated_at !== comment.created_at;
+
+  useEffect(() => {
+    if (editing) {
+      editRef.current?.focus();
+      editRef.current?.select();
+    }
+  }, [editing]);
+
+  function handleSaveEdit() {
+    if (!editText.trim() || editText.trim() === comment.content) {
+      setEditing(false);
+      setEditText(comment.content);
+      return;
+    }
+    onEdit(comment.id, editText.trim());
+    setEditing(false);
+  }
+
+  useEffect(() => {
+    if (isHighlighted && highlightRef.current) {
+      highlightRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [isHighlighted]);
+
+  return (
+    <motion.div
+      ref={highlightRef}
+      key={comment.id}
+      initial={{ opacity: 0, y: 8 }}
+      animate={{
+        opacity: 1,
+        y: 0,
+        backgroundColor: isHighlighted ? ['rgba(59,130,246,0.25)', 'rgba(59,130,246,0)'] : 'rgba(59,130,246,0)',
+      }}
+      exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+      transition={{ duration: isHighlighted ? 2 : 0.15, backgroundColor: { duration: 2, delay: 0.5 } }}
+      className="group flex gap-3 rounded-md px-2 py-1 -mx-2"
+    >
+      <Avatar className="size-7 shrink-0 mt-0.5">
+        <AvatarImage src={avatar ?? undefined} alt={name} />
+        <AvatarFallback className="text-[8px] bg-secondary">{getInitials(name)}</AvatarFallback>
+      </Avatar>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-baseline gap-2">
+          <span className="text-sm font-medium text-foreground">{name}</span>
+          <span className="text-[11px] text-muted-foreground cursor-default" title={formatLocalTime(comment.created_at)}>{timeAgo(comment.created_at)}</span>
+          {wasEdited && (
+            <span className="text-[11px] text-muted-foreground/60 italic">( edited )</span>
+          )}
+          {isOwn && !editing && !confirmingDelete && (
+            <div className="ml-auto flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button
+                onClick={() => { setEditText(comment.content); setEditing(true); }}
+                className="rounded p-1 text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+                title="Edit"
+              >
+                <Pencil className="size-3" />
+              </button>
+              <button
+                onClick={() => setConfirmingDelete(true)}
+                className="rounded p-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                title="Delete"
+              >
+                <Trash2 className="size-3" />
+              </button>
+            </div>
+          )}
+        </div>
+
+        <AnimatePresence>
+          {confirmingDelete && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.12, ease: [0.25, 1, 0.5, 1] }}
+              className="overflow-hidden"
+            >
+              <div className="flex items-center gap-2 mt-1.5 rounded-md bg-destructive/10 border border-destructive/20 px-2.5 py-1.5">
+                <span className="text-xs text-destructive flex-1">Delete this comment?</span>
+                <button
+                  onClick={() => { onDelete(comment.id); setConfirmingDelete(false); }}
+                  className="rounded px-2 py-0.5 text-xs font-medium bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-colors"
+                >
+                  Delete
+                </button>
+                <button
+                  onClick={() => setConfirmingDelete(false)}
+                  className="rounded px-2 py-0.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {editing ? (
+          <div className="mt-1">
+            <textarea
+              ref={editRef}
+              value={editText}
+              onChange={e => setEditText(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSaveEdit(); }
+                if (e.key === 'Escape') { setEditing(false); setEditText(comment.content); }
+              }}
+              className="w-full resize-none rounded-md border border-border bg-muted/30 px-2.5 py-1.5 text-sm text-foreground focus:outline-none focus:border-foreground/30 min-h-[36px]"
+              rows={1}
+              onInput={e => {
+                const el = e.currentTarget;
+                el.style.height = 'auto';
+                el.style.height = Math.min(el.scrollHeight, 100) + 'px';
+              }}
+            />
+            <div className="flex items-center gap-1.5 mt-1.5">
+              <button onClick={handleSaveEdit} className="flex items-center gap-1 rounded px-2 py-0.5 text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors">
+                <Check className="size-3" />
+                Save
+              </button>
+              <button onClick={() => { setEditing(false); setEditText(comment.content); }} className="flex items-center gap-1 rounded px-2 py-0.5 text-xs text-muted-foreground hover:text-foreground transition-colors">
+                <X className="size-3" />
+                Cancel
+              </button>
+              <span className="text-[10px] text-muted-foreground/50 ml-1">Esc to cancel · Enter to save</span>
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm text-foreground/80 mt-0.5 whitespace-pre-wrap break-words">
+            {renderContent(comment.content, teamNames, docTitles)}
+          </p>
+        )}
+      </div>
+    </motion.div>
   );
 }
+
+type AutocompleteMode = 'mention' | 'doc' | null;
 
 interface TaskDetailProps {
   task: Task | TaskWithAssignee;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   team: Profile[];
+  docs: Doc[];
   currentUserId: string;
+  highlightCommentId?: string | null;
 }
 
-export function TaskDetail({ task, open, onOpenChange, team, currentUserId }: TaskDetailProps) {
+export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId, highlightCommentId }: TaskDetailProps) {
   const [comments, setComments] = useState<TaskComment[]>([]);
   const [loading, setLoading] = useState(false);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
-  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
-  const [mentionIndex, setMentionIndex] = useState(0);
+  const [autocompleteMode, setAutocompleteMode] = useState<AutocompleteMode>(null);
+  const [autocompleteQuery, setAutocompleteQuery] = useState('');
+  const [autocompleteIndex, setAutocompleteIndex] = useState(0);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const commentsEndRef = useRef<HTMLDivElement>(null);
 
@@ -77,6 +287,9 @@ export function TaskDetail({ task, open, onOpenChange, team, currentUserId }: Ta
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
+
+  const teamNames = useMemo(() => team.map(m => m.display_name).filter(Boolean) as string[], [team]);
+  const docTitles = useMemo(() => docs.map(d => d.title).filter(Boolean), [docs]);
 
   const loadComments = useCallback(async () => {
     setLoading(true);
@@ -94,69 +307,136 @@ export function TaskDetail({ task, open, onOpenChange, team, currentUserId }: Ta
   }, [open, loadComments]);
 
   useEffect(() => {
+    if (!open) return;
+
+    const channel = supabase
+      .channel(`comments:${task.id}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'task_comments', filter: `task_id=eq.${task.id}` },
+        (payload) => {
+          const incoming = payload.new as TaskComment;
+          // Skip if this is our own comment (already optimistically added)
+          if (incoming.user_id === currentUserId) return;
+          // Fetch full comment with profile join, then add to state
+          supabase
+            .from('task_comments')
+            .select('*, profiles(id, display_name, avatar_url)')
+            .eq('id', incoming.id)
+            .single()
+            .then(({ data }) => {
+              if (data) setComments(prev => [...prev, data as TaskComment]);
+            });
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'task_comments', filter: `task_id=eq.${task.id}` },
+        (payload) => {
+          const updated = payload.new as TaskComment;
+          setComments(prev =>
+            prev.map(c => c.id === updated.id ? { ...c, content: updated.content, updated_at: updated.updated_at } : c)
+          );
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'task_comments', filter: `task_id=eq.${task.id}` },
+        (payload) => {
+          const deleted = payload.old as { id: string };
+          setComments(prev => prev.filter(c => c.id !== deleted.id));
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [open, task.id, currentUserId, supabase]);
+
+  useEffect(() => {
     if (comments.length > 0) {
       commentsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   }, [comments.length]);
 
-  const mentionCandidates = useMemo(() => {
-    if (mentionQuery === null) return [];
-    const q = mentionQuery.toLowerCase();
-    return team.filter(m => (m.display_name ?? '').toLowerCase().includes(q)).slice(0, 5);
-  }, [mentionQuery, team]);
+  const handleEditComment = useCallback(async (commentId: string, newContent: string) => {
+    const now = new Date().toISOString();
+    setComments(prev => prev.map(c =>
+      c.id === commentId ? { ...c, content: newContent, updated_at: now } : c
+    ));
+    await supabase
+      .from('task_comments')
+      .update({ content: newContent, updated_at: now })
+      .eq('id', commentId);
+  }, [supabase]);
+
+  const handleDeleteComment = useCallback(async (commentId: string) => {
+    setComments(prev => prev.filter(c => c.id !== commentId));
+    await supabase.from('task_comments').delete().eq('id', commentId);
+  }, [supabase]);
+
+  const autocompleteCandidates = useMemo(() => {
+    if (autocompleteMode === null) return [];
+    const q = autocompleteQuery.toLowerCase();
+    if (autocompleteMode === 'mention') {
+      return team
+        .filter(m => (m.display_name ?? '').toLowerCase().includes(q))
+        .slice(0, 5)
+        .map(m => ({ id: m.id, label: m.display_name ?? '', icon: 'user' as const, avatar: m.avatar_url, role: m.role }));
+    }
+    return docs
+      .filter(d => d.title.toLowerCase().includes(q))
+      .slice(0, 5)
+      .map(d => ({ id: d.id, label: d.title, icon: 'doc' as const }));
+  }, [autocompleteMode, autocompleteQuery, team, docs]);
+
+  function detectAutocomplete(value: string) {
+    const cursorPos = inputRef.current?.selectionStart ?? value.length;
+    const textBeforeCursor = value.slice(0, cursorPos);
+
+    const mentionMatch = textBeforeCursor.match(/@(\w*)$/);
+    if (mentionMatch) {
+      setAutocompleteMode('mention');
+      setAutocompleteQuery(mentionMatch[1]);
+      setAutocompleteIndex(0);
+      return;
+    }
+
+    const docMatch = textBeforeCursor.match(/#(\w*)$/);
+    if (docMatch) {
+      setAutocompleteMode('doc');
+      setAutocompleteQuery(docMatch[1]);
+      setAutocompleteIndex(0);
+      return;
+    }
+
+    setAutocompleteMode(null);
+  }
 
   function handleInputChange(value: string) {
     setInput(value);
-
-    const cursorPos = inputRef.current?.selectionStart ?? value.length;
-    const textBeforeCursor = value.slice(0, cursorPos);
-    const match = textBeforeCursor.match(/@(\w*)$/);
-
-    if (match) {
-      setMentionQuery(match[1]);
-      setMentionIndex(0);
-    } else {
-      setMentionQuery(null);
-    }
+    detectAutocomplete(value);
   }
 
-  function insertMention(name: string) {
+  function insertAutocomplete(label: string) {
     const cursorPos = inputRef.current?.selectionStart ?? input.length;
     const textBefore = input.slice(0, cursorPos);
     const textAfter = input.slice(cursorPos);
-    const replaced = textBefore.replace(/@\w*$/, `@${name} `);
+    const trigger = autocompleteMode === 'mention' ? '@' : '#';
+    const regex = autocompleteMode === 'mention' ? /@\w*$/ : /#\w*$/;
+    const replaced = textBefore.replace(regex, `${trigger}${label} `);
     setInput(replaced + textAfter);
-    setMentionQuery(null);
+    setAutocompleteMode(null);
     inputRef.current?.focus();
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
-    if (mentionQuery !== null && mentionCandidates.length > 0) {
-      if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        setMentionIndex(i => (i + 1) % mentionCandidates.length);
-        return;
-      }
-      if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        setMentionIndex(i => (i - 1 + mentionCandidates.length) % mentionCandidates.length);
-        return;
-      }
-      if (e.key === 'Enter' || e.key === 'Tab') {
-        e.preventDefault();
-        insertMention(mentionCandidates[mentionIndex].display_name ?? '');
-        return;
-      }
-      if (e.key === 'Escape') {
-        setMentionQuery(null);
-        return;
-      }
+    if (autocompleteMode !== null && autocompleteCandidates.length > 0) {
+      if (e.key === 'ArrowDown') { e.preventDefault(); setAutocompleteIndex(i => (i + 1) % autocompleteCandidates.length); return; }
+      if (e.key === 'ArrowUp') { e.preventDefault(); setAutocompleteIndex(i => (i - 1 + autocompleteCandidates.length) % autocompleteCandidates.length); return; }
+      if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); insertAutocomplete(autocompleteCandidates[autocompleteIndex].label); return; }
+      if (e.key === 'Escape') { setAutocompleteMode(null); return; }
     }
-
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
   }
 
   const handleSend = useCallback(async () => {
@@ -164,7 +444,6 @@ export function TaskDetail({ task, open, onOpenChange, team, currentUserId }: Ta
     setSending(true);
 
     const currentProfile = team.find(m => m.id === currentUserId);
-
     const optimistic: TaskComment = {
       id: crypto.randomUUID(),
       task_id: task.id,
@@ -180,14 +459,61 @@ export function TaskDetail({ task, open, onOpenChange, team, currentUserId }: Ta
     setComments(prev => [...prev, optimistic]);
     setInput('');
 
-    await supabase.from('task_comments').insert({
+    const { data: inserted } = await supabase.from('task_comments').insert({
       task_id: task.id,
       user_id: currentUserId,
       content: optimistic.content,
+    }).select('id').single();
+
+    const realCommentId = inserted?.id ?? optimistic.id;
+    if (inserted?.id) {
+      setComments(prev => prev.map(c =>
+        c.id === optimistic.id ? { ...c, id: inserted.id } : c
+      ));
+    }
+    const senderName = currentProfile?.display_name ?? 'Someone';
+    const notifs: { user_id: string; kind: string; title: string; body: string; link: string }[] = [];
+
+    const mentionedTargets = team.filter(m => {
+      const dn = m.display_name;
+      return dn && optimistic.content.toLowerCase().includes(`@${dn.toLowerCase()}`);
     });
+    for (const target of mentionedTargets) {
+      if (target.id !== currentUserId) {
+        notifs.push({
+          user_id: target.id,
+          kind: 'mentioned',
+          title: 'You were mentioned',
+          body: `${senderName} mentioned you in "${task.name}"`,
+          link: `/tasks?task=${task.id}&comment=${realCommentId}`,
+        });
+      }
+    }
+
+    const mentionedIds = new Set(notifs.map(n => n.user_id));
+    const otherCommenters = new Set(
+      comments
+        .filter(c => c.user_id !== currentUserId)
+        .map(c => c.user_id)
+    );
+    for (const uid of otherCommenters) {
+      if (!mentionedIds.has(uid)) {
+        notifs.push({
+          user_id: uid,
+          kind: 'comment_reply',
+          title: 'New reply',
+          body: `${senderName} replied in "${task.name}"`,
+          link: `/tasks?task=${task.id}&comment=${realCommentId}`,
+        });
+      }
+    }
+
+    if (notifs.length > 0) {
+      await supabase.from('notifications').insert(notifs);
+    }
 
     setSending(false);
-  }, [input, sending, task.id, currentUserId, team, supabase]);
+  }, [input, sending, task.id, currentUserId, team, comments, supabase]);
 
   const statusCfg = STATUS_DISPLAY[task.status] ?? STATUS_DISPLAY['In Progress'];
   const StatusIcon = statusCfg.icon;
@@ -208,7 +534,7 @@ export function TaskDetail({ task, open, onOpenChange, team, currentUserId }: Ta
         <Badge variant="secondary" className="text-xs">{task.department}</Badge>
         <Badge variant="outline" className="text-xs">{task.priority}</Badge>
         {task.deadline && (
-          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+          <div className="flex items-center gap-1 text-xs text-muted-foreground cursor-default" title={task.deadline ? formatLocalTime(task.deadline) : undefined}>
             <Clock className="size-3" />
             <span>{task.deadline}</span>
           </div>
@@ -241,48 +567,30 @@ export function TaskDetail({ task, open, onOpenChange, team, currentUserId }: Ta
           {loading && comments.length === 0 && (
             <p className="text-xs text-muted-foreground text-center py-4">Loading comments...</p>
           )}
-
           {!loading && comments.length === 0 && (
             <p className="text-xs text-muted-foreground text-center py-4">No comments yet. Start the conversation.</p>
           )}
 
           <AnimatePresence>
-            {comments.map(comment => {
-              const prof = comment.profiles;
-              const name = prof?.display_name ?? 'Unknown';
-              const avatar = prof?.avatar_url;
-
-              return (
-                <motion.div
-                  key={comment.id}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.15 }}
-                  className="flex gap-3"
-                >
-                  <Avatar className="size-7 shrink-0 mt-0.5">
-                    <AvatarImage src={avatar ?? undefined} alt={name} />
-                    <AvatarFallback className="text-[8px] bg-secondary">{getInitials(name)}</AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-sm font-medium text-foreground">{name}</span>
-                      <span className="text-[11px] text-muted-foreground">{timeAgo(comment.created_at)}</span>
-                    </div>
-                    <p className="text-sm text-foreground/80 mt-0.5 whitespace-pre-wrap break-words">
-                      {renderContent(comment.content)}
-                    </p>
-                  </div>
-                </motion.div>
-              );
-            })}
+            {comments.map(comment => (
+              <CommentItem
+                key={comment.id}
+                isHighlighted={highlightCommentId === comment.id}
+                teamNames={teamNames}
+                docTitles={docTitles}
+                comment={comment}
+                isOwn={comment.user_id === currentUserId}
+                onEdit={handleEditComment}
+                onDelete={handleDeleteComment}
+              />
+            ))}
           </AnimatePresence>
           <div ref={commentsEndRef} />
         </div>
 
         <div className="relative">
           <AnimatePresence>
-            {mentionQuery !== null && mentionCandidates.length > 0 && (
+            {autocompleteMode !== null && autocompleteCandidates.length > 0 && (
               <motion.div
                 initial={{ opacity: 0, y: 4 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -290,19 +598,25 @@ export function TaskDetail({ task, open, onOpenChange, team, currentUserId }: Ta
                 transition={{ duration: 0.1 }}
                 className="absolute bottom-full mb-1 left-0 w-full rounded-lg border border-border bg-card shadow-lg z-10 overflow-hidden"
               >
-                {mentionCandidates.map((member, i) => (
+                {autocompleteCandidates.map((candidate, i) => (
                   <button
-                    key={member.id}
-                    className={`flex w-full items-center gap-2 px-3 py-2 text-sm transition-colors ${i === mentionIndex ? 'bg-secondary text-foreground' : 'text-muted-foreground hover:bg-secondary/50'}`}
-                    onMouseDown={e => { e.preventDefault(); insertMention(member.display_name ?? ''); }}
-                    onMouseEnter={() => setMentionIndex(i)}
+                    key={candidate.id}
+                    className={`flex w-full items-center gap-2 px-3 py-2 text-sm transition-colors ${i === autocompleteIndex ? 'bg-secondary text-foreground' : 'text-muted-foreground hover:bg-secondary/50'}`}
+                    onMouseDown={e => { e.preventDefault(); insertAutocomplete(candidate.label); }}
+                    onMouseEnter={() => setAutocompleteIndex(i)}
                   >
-                    <Avatar className="size-5">
-                      <AvatarImage src={member.avatar_url ?? undefined} />
-                      <AvatarFallback className="text-[7px] bg-secondary">{getInitials(member.display_name ?? '?')}</AvatarFallback>
-                    </Avatar>
-                    <span>{member.display_name}</span>
-                    {member.role && <span className="text-xs text-muted-foreground ml-auto">{member.role}</span>}
+                    {candidate.icon === 'user' ? (
+                      <Avatar className="size-5">
+                        <AvatarImage src={candidate.avatar ?? undefined} />
+                        <AvatarFallback className="text-[7px] bg-secondary">{getInitials(candidate.label)}</AvatarFallback>
+                      </Avatar>
+                    ) : (
+                      <FileText className="size-4 text-blue-400" />
+                    )}
+                    <span className="truncate">{candidate.label}</span>
+                    {candidate.icon === 'user' && candidate.role && (
+                      <span className="text-xs text-muted-foreground ml-auto">{candidate.role}</span>
+                    )}
                   </button>
                 ))}
               </motion.div>
@@ -315,7 +629,7 @@ export function TaskDetail({ task, open, onOpenChange, team, currentUserId }: Ta
               value={input}
               onChange={e => handleInputChange(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Write a comment... Type @ to mention"
+              placeholder="Write a comment... @ to mention, # to link doc"
               rows={1}
               className="flex-1 resize-none bg-transparent text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none min-h-[36px] max-h-[120px] py-1.5"
               style={{ height: 'auto', overflow: 'hidden' }}
