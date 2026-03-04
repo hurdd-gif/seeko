@@ -48,11 +48,11 @@ export function Sidebar({ email, displayName, avatarUrl }: SidebarProps) {
   return (
     <aside className="hidden md:flex w-60 shrink-0 flex-col border-r border-sidebar-border bg-sidebar">
       <div className="flex items-center gap-2.5 px-4 py-5">
-        <div className="flex h-7 w-7 items-center justify-center shrink-0">
-          <img src="/seeko-logo.png" alt="SEEKO" className="h-5 w-5 invert" />
+        <div className="flex h-8 w-8 items-center justify-center shrink-0">
+          <img src="/seeko-logo.png" alt="SEEKO" className="h-6 w-6 invert" />
         </div>
-        <span className="font-semibold text-sm tracking-tight text-sidebar-foreground">
-          SEEKO Studio
+        <span className="font-semibold text-base tracking-tight text-sidebar-foreground">
+          SEEKO
         </span>
       </div>
 
@@ -66,7 +66,7 @@ export function Sidebar({ email, displayName, avatarUrl }: SidebarProps) {
               key={href}
               href={href}
               className={[
-                'flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors',
+                'flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors',
                 isActive
                   ? 'bg-sidebar-accent text-sidebar-foreground font-medium'
                   : 'text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent/50',
