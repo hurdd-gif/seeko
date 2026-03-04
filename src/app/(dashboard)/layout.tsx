@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { fetchProfile } from '@/lib/supabase/data';
 import { Sidebar } from '@/components/layout/Sidebar';
+import { GettingStarted } from '@/components/dashboard/GettingStarted';
 
 export default async function DashboardLayout({
   children,
@@ -13,6 +14,7 @@ export default async function DashboardLayout({
   if (!user) redirect('/login');
 
   const profile = await fetchProfile(user.id);
+  const showTour = profile?.onboarded === 1 && profile?.tour_completed === 0;
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -26,6 +28,7 @@ export default async function DashboardLayout({
           {children}
         </div>
       </main>
+      {showTour && <GettingStarted userId={user.id} />}
     </div>
   );
 }

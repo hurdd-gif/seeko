@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Outfit, JetBrains_Mono } from "next/font/google";
+import { DevAgentation } from "@/components/dev/agentation";
 import "./globals.css";
 
 const outfit = Outfit({
@@ -28,6 +29,7 @@ export default function RootLayout({
         className={`${outfit.variable} ${jetbrainsMono.variable} antialiased bg-[#0a0a0b] text-white`}
       >
         {children}
+        <DevAgentation />
       </body>
     </html>
   );

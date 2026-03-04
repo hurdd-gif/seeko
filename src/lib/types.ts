@@ -35,6 +35,7 @@ export type Profile = {
   role?: string;
   avatar_url?: string;
   onboarded: number;
+  tour_completed: number;
 };
 
 export type Doc = {
