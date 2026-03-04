@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { motion, AnimatePresence } from 'motion/react';
 import { createBrowserClient } from '@supabase/ssr';
 import {
   Search,
@@ -159,13 +160,28 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [] }: Ta
 
               return (
                 <div key={task.id} className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/50">
-                  <Checkbox
-                    checked={isComplete}
-                    onCheckedChange={() => handleToggleComplete(task.id, status)}
-                    className="shrink-0"
-                    aria-label={`Mark ${task.name} as ${isComplete ? 'incomplete' : 'complete'}`}
-                  />
-                  <StatusIcon className={`size-4 shrink-0 ${iconCfg.className}`} />
+                  <motion.div whileTap={{ scale: 0.85, filter: 'blur(1px)' }} transition={{ duration: 0.1 }}>
+                    <Checkbox
+                      checked={isComplete}
+                      onCheckedChange={() => handleToggleComplete(task.id, status)}
+                      className="shrink-0"
+                      aria-label={`Mark ${task.name} as ${isComplete ? 'incomplete' : 'complete'}`}
+                    />
+                  </motion.div>
+                  <div className="relative size-4 shrink-0">
+                    <AnimatePresence mode="wait">
+                      <motion.div
+                        key={status}
+                        initial={{ opacity: 0, scale: 0.6, filter: 'blur(4px)' }}
+                        animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+                        exit={{ opacity: 0, scale: 0.6, filter: 'blur(4px)' }}
+                        transition={{ duration: 0.2 }}
+                        className="absolute inset-0"
+                      >
+                        <StatusIcon className={`size-4 ${iconCfg.className}`} />
+                      </motion.div>
+                    </AnimatePresence>
+                  </div>
 
                   <span className={`min-w-0 flex-1 truncate text-sm ${isComplete ? 'text-muted-foreground line-through' : 'text-foreground'}`}>
                     {task.name}
