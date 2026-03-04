@@ -14,8 +14,9 @@ import {
   Clock,
   UserPlus,
   Trash2,
+  Plus,
 } from 'lucide-react';
-import { Task, Profile, TaskWithAssignee, TaskStatus } from '@/lib/types';
+import { Task, Profile, TaskWithAssignee, TaskStatus, Department, Priority } from '@/lib/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -38,6 +39,8 @@ const STATUS_ICONS: Record<string, { icon: typeof Circle; className: string }> =
 };
 
 const ALL_STATUSES: TaskStatus[] = ['Complete', 'In Progress', 'In Review', 'Blocked'];
+const DEPARTMENTS: Department[] = ['Coding', 'Visual Art', 'UI/UX', 'Animation', 'Asset Creation'];
+const PRIORITIES: Priority[] = ['High', 'Medium', 'Low'];
 
 const PRIORITY_VARIANT: Record<string, 'default' | 'secondary' | 'outline' | 'destructive'> = {
   High:   'default',
@@ -72,11 +75,47 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [] }: Ta
   const [taskStatuses, setTaskStatuses] = useState<Record<string, TaskStatus>>({});
   const [assignments, setAssignments] = useState<Record<string, string | null>>({});
   const [deleted, setDeleted] = useState<Set<string>>(new Set());
+  const [localTasks, setLocalTasks] = useState<Task[]>([]);
+
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newDept, setNewDept] = useState<Department>('Coding');
+  const [newPriority, setNewPriority] = useState<Priority>('Medium');
+  const [newDeadline, setNewDeadline] = useState('');
+  const [adding, setAdding] = useState(false);
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
+
+  const allTasks = useMemo(() => [...initialTasks, ...localTasks], [initialTasks, localTasks]);
+
+  const handleAddTask = useCallback(async () => {
+    if (!newName.trim()) return;
+    setAdding(true);
+
+    const { data, error } = await supabase
+      .from('tasks')
+      .insert({
+        name: newName.trim(),
+        department: newDept,
+        priority: newPriority,
+        status: 'In Progress' as TaskStatus,
+        deadline: newDeadline || null,
+      })
+      .select()
+      .single();
+
+    if (!error && data) {
+      setLocalTasks(prev => [...prev, data as Task]);
+    }
+
+    setNewName('');
+    setNewDeadline('');
+    setAdding(false);
+    setShowAddForm(false);
+  }, [newName, newDept, newPriority, newDeadline, supabase]);
 
   const handleStatusChange = useCallback(async (taskId: string, newStatus: TaskStatus) => {
     setTaskStatuses(prev => ({ ...prev, [taskId]: newStatus }));
@@ -103,17 +142,17 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [] }: Ta
   }, [taskStatuses]);
 
   const filtered = useMemo(() => {
-    return initialTasks.filter(t => {
+    return allTasks.filter(t => {
       if (deleted.has(t.id)) return false;
       const status = getEffectiveStatus(t);
       const matchesSearch = !search || t.name.toLowerCase().includes(search.toLowerCase());
       const matchesStatus = filter === 'All' || status === filter;
       return matchesSearch && matchesStatus;
     });
-  }, [initialTasks, search, filter, deleted, getEffectiveStatus]);
+  }, [allTasks, search, filter, deleted, getEffectiveStatus]);
 
   const counts = useMemo(() => {
-    const live = initialTasks.filter(t => !deleted.has(t.id));
+    const live = allTasks.filter(t => !deleted.has(t.id));
     return {
       All: live.length,
       'Complete': live.filter(t => getEffectiveStatus(t) === 'Complete').length,
@@ -121,7 +160,7 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [] }: Ta
       'In Review': live.filter(t => getEffectiveStatus(t) === 'In Review').length,
       'Blocked': live.filter(t => getEffectiveStatus(t) === 'Blocked').length,
     };
-  }, [initialTasks, deleted, getEffectiveStatus]);
+  }, [allTasks, deleted, getEffectiveStatus]);
 
   function getAssignee(task: Task | TaskWithAssignee): Pick<Profile, 'id' | 'display_name' | 'avatar_url'> | null {
     const overrideId = assignments[task.id];
@@ -141,12 +180,67 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [] }: Ta
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input placeholder="Search tasks..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
         </div>
-        <Select value={filter} onChange={e => setFilter(e.target.value)}>
-          {FILTER_STATUSES.map(s => (
-            <option key={s} value={s}>{s} ({counts[s]})</option>
-          ))}
-        </Select>
+        <div className="flex items-center gap-2">
+          <Select value={filter} onChange={e => setFilter(e.target.value)}>
+            {FILTER_STATUSES.map(s => (
+              <option key={s} value={s}>{s} ({counts[s]})</option>
+            ))}
+          </Select>
+          {isAdmin && (
+            <Button size="sm" onClick={() => setShowAddForm(v => !v)} className="shrink-0 gap-1.5">
+              <Plus className="size-3.5" />
+              Add Task
+            </Button>
+          )}
+        </div>
       </div>
+
+      <AnimatePresence>
+        {showAddForm && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.15 }}
+            className="overflow-hidden"
+          >
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex flex-col gap-3">
+                  <Input
+                    placeholder="Task name..."
+                    value={newName}
+                    onChange={e => setNewName(e.target.value)}
+                    autoFocus
+                    onKeyDown={e => { if (e.key === 'Enter' && newName.trim()) handleAddTask(); }}
+                  />
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Select value={newDept} onChange={e => setNewDept(e.target.value as Department)}>
+                      {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
+                    </Select>
+                    <Select value={newPriority} onChange={e => setNewPriority(e.target.value as Priority)}>
+                      {PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
+                    </Select>
+                    <Input
+                      type="date"
+                      value={newDeadline}
+                      onChange={e => setNewDeadline(e.target.value)}
+                      className="w-auto"
+                    />
+                    <div className="flex-1" />
+                    <Button variant="ghost" size="sm" onClick={() => setShowAddForm(false)}>
+                      Cancel
+                    </Button>
+                    <Button size="sm" onClick={handleAddTask} disabled={adding || !newName.trim()}>
+                      {adding ? 'Adding...' : 'Add'}
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <Card>
         <CardContent className="p-0">
@@ -160,7 +254,7 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [] }: Ta
 
               return (
                 <div key={task.id} className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/50">
-                  <motion.div whileTap={{ scale: 0.85, filter: 'blur(1px)' }} transition={{ duration: 0.1 }}>
+                  <motion.div whileTap={{ scale: 0.8 }} transition={{ duration: 0.06 }}>
                     <Checkbox
                       checked={isComplete}
                       onCheckedChange={() => handleToggleComplete(task.id, status)}
@@ -172,10 +266,10 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [] }: Ta
                     <AnimatePresence mode="wait">
                       <motion.div
                         key={status}
-                        initial={{ opacity: 0, scale: 0.6, filter: 'blur(4px)' }}
+                        initial={{ opacity: 0, scale: 0.6, filter: 'blur(3px)' }}
                         animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
-                        exit={{ opacity: 0, scale: 0.6, filter: 'blur(4px)' }}
-                        transition={{ duration: 0.2 }}
+                        exit={{ opacity: 0, scale: 0.6, filter: 'blur(3px)' }}
+                        transition={{ duration: 0.12 }}
                         className="absolute inset-0"
                       >
                         <StatusIcon className={`size-4 ${iconCfg.className}`} />
