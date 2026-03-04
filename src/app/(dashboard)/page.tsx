@@ -1,7 +1,7 @@
 import { fetchTasks, fetchAreas, fetchTeam, fetchDocs, fetchActivity } from '@/lib/supabase/data';
 import { Task, Area } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import {
   CheckSquare,
@@ -146,10 +146,13 @@ export default async function OverviewPage() {
             ) : (
               <div className="flex flex-col gap-4">
                 {activity.map(item => {
-                  const name = (item.profiles as unknown as { display_name?: string })?.display_name ?? 'Unknown';
+                  const prof = item.profiles as unknown as { display_name?: string; avatar_url?: string } | undefined;
+                  const name = prof?.display_name ?? 'Unknown';
+                  const avatar = prof?.avatar_url;
                   return (
                     <div key={item.id} className="flex items-start gap-3">
                       <Avatar className="size-8">
+                        <AvatarImage src={avatar} alt={name} />
                         <AvatarFallback className="bg-secondary text-foreground text-xs">
                           {getInitials(name)}
                         </AvatarFallback>

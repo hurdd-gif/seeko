@@ -1,13 +1,13 @@
 import { fetchTeam } from '@/lib/supabase/data';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { Plus, Mail } from 'lucide-react';
+import { Plus } from 'lucide-react';
 
 function getInitials(name: string): string {
   return name
@@ -75,6 +75,7 @@ export default async function TeamPage() {
                   <div className="flex items-center justify-between py-3">
                     <div className="flex items-center gap-3">
                       <Avatar className="size-9">
+                        <AvatarImage src={member.avatar_url} alt={member.display_name ?? ''} />
                         <AvatarFallback className="bg-secondary text-foreground text-xs">
                           {getInitials(member.display_name ?? '?')}
                         </AvatarFallback>

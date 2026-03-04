@@ -7,7 +7,7 @@ export type ActivityItem = {
   action: string;
   target: string;
   created_at: string;
-  profiles?: Pick<Profile, 'display_name'>;
+  profiles?: Pick<Profile, 'display_name' | 'avatar_url'>;
 };
 
 export async function fetchTasks(assigneeId?: string): Promise<Task[]> {
@@ -75,10 +75,23 @@ export async function fetchActivity(limit = 20): Promise<ActivityItem[]> {
 
   const { data, error } = await supabase
     .from('activity_log')
-    .select('*, profiles(display_name)')
+    .select('*, profiles(display_name, avatar_url)')
     .order('created_at', { ascending: false })
     .limit(limit);
 
   if (error) throw error;
   return (data ?? []) as ActivityItem[];
+}
+
+export async function fetchProfile(userId: string): Promise<Profile | null> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', userId)
+    .single();
+
+  if (error) return null;
+  return data as Profile;
 }

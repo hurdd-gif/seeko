@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
 const NAV = [
   { href: '/', label: 'Overview', icon: LayoutDashboard },
@@ -27,8 +28,24 @@ const NAV = [
   { href: '/settings', label: 'Settings', icon: Settings },
 ];
 
-export function Sidebar({ email }: { email: string }) {
+function getInitials(name: string): string {
+  return name
+    .split(' ')
+    .map(p => p[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2) || '?';
+}
+
+interface SidebarProps {
+  email: string;
+  displayName?: string;
+  avatarUrl?: string;
+}
+
+export function Sidebar({ email, displayName, avatarUrl }: SidebarProps) {
   const pathname = usePathname();
+  const label = displayName || email;
 
   return (
     <aside className="hidden md:flex w-60 shrink-0 flex-col border-r border-sidebar-border bg-sidebar">
@@ -44,7 +61,7 @@ export function Sidebar({ email }: { email: string }) {
       <Separator className="bg-sidebar-border" />
 
       <nav className="flex flex-col gap-0.5 p-2 flex-1 mt-1">
-        {NAV.map(({ href, label, icon: Icon }) => {
+        {NAV.map(({ href, label: navLabel, icon: Icon }) => {
           const isActive = href === '/' ? pathname === '/' : pathname.startsWith(href);
           return (
             <Link
@@ -58,14 +75,27 @@ export function Sidebar({ email }: { email: string }) {
               ].join(' ')}
             >
               <Icon className="h-4 w-4 shrink-0" />
-              {label}
+              {navLabel}
             </Link>
           );
         })}
       </nav>
 
       <div className="p-4 border-t border-sidebar-border">
-        <p className="text-xs text-muted-foreground truncate mb-2">{email}</p>
+        <div className="flex items-center gap-2.5 mb-3">
+          <Avatar className="size-8">
+            <AvatarImage src={avatarUrl} alt={label} />
+            <AvatarFallback className="bg-secondary text-foreground text-[10px]">
+              {getInitials(label)}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex-1 min-w-0">
+            {displayName && (
+              <p className="text-sm font-medium text-sidebar-foreground truncate">{displayName}</p>
+            )}
+            <p className="text-xs text-muted-foreground truncate">{email}</p>
+          </div>
+        </div>
         <form action="/auth/signout" method="post">
           <Button
             variant="ghost"

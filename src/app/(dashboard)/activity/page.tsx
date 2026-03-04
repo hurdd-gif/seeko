@@ -1,6 +1,6 @@
 import { fetchActivity } from '@/lib/supabase/data';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
 function getInitials(name: string): string {
   return name
@@ -12,16 +12,13 @@ function getInitials(name: string): string {
 }
 
 function timeAgo(dateStr: string): string {
-  const now = Date.now();
-  const then = new Date(dateStr).getTime();
-  const diff = now - then;
+  const diff = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(diff / 60000);
   if (mins < 1) return 'just now';
   if (mins < 60) return `${mins}m ago`;
   const hours = Math.floor(mins / 60);
   if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
+  return `${Math.floor(hours / 24)}d ago`;
 }
 
 export default async function ActivityPage() {
@@ -45,13 +42,16 @@ export default async function ActivityPage() {
           ) : (
             <div className="relative flex flex-col gap-0">
               {activity.map((item, i) => {
-                const name = (item.profiles as unknown as { display_name?: string })?.display_name ?? 'Unknown';
+                const prof = item.profiles as unknown as { display_name?: string; avatar_url?: string } | undefined;
+                const name = prof?.display_name ?? 'Unknown';
+                const avatar = prof?.avatar_url;
                 return (
                   <div key={item.id} className="relative flex gap-4 pb-6 last:pb-0">
                     {i < activity.length - 1 && (
                       <div className="absolute left-4 top-10 h-[calc(100%-24px)] w-px bg-border" />
                     )}
                     <Avatar className="relative z-10 size-8 shrink-0">
+                      <AvatarImage src={avatar} alt={name} />
                       <AvatarFallback className="bg-secondary text-foreground text-[10px]">
                         {getInitials(name)}
                       </AvatarFallback>

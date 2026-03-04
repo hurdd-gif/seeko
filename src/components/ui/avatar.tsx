@@ -12,6 +12,26 @@ const Avatar = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElem
 );
 Avatar.displayName = 'Avatar';
 
+interface AvatarImageProps extends Omit<React.ImgHTMLAttributes<HTMLImageElement>, 'src'> {
+  src?: string | null;
+}
+
+const AvatarImage = React.forwardRef<HTMLImageElement, AvatarImageProps>(
+  ({ className, src, alt = '', ...props }, ref) => {
+    if (!src) return null;
+    return (
+      <img
+        ref={ref}
+        src={src}
+        alt={alt}
+        className={cn('aspect-square h-full w-full object-cover', className)}
+        {...props}
+      />
+    );
+  }
+);
+AvatarImage.displayName = 'AvatarImage';
+
 const AvatarFallback = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => (
     <div
@@ -23,4 +43,4 @@ const AvatarFallback = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTM
 );
 AvatarFallback.displayName = 'AvatarFallback';
 
-export { Avatar, AvatarFallback };
+export { Avatar, AvatarImage, AvatarFallback };
