@@ -283,10 +283,10 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const commentsEndRef = useRef<HTMLDivElement>(null);
 
-  const supabase = createBrowserClient(
+  const supabase = useMemo(() => createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  ), []);
 
   const teamNames = useMemo(() => team.map(m => m.display_name).filter(Boolean) as string[], [team]);
   const docTitles = useMemo(() => docs.map(d => d.title).filter(Boolean), [docs]);
@@ -309,6 +309,8 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
   useEffect(() => {
     if (!open) return;
 
+    let isMounted = true;
+
     const channel = supabase
       .channel(`comments:${task.id}`)
       .on(
@@ -325,7 +327,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
             .eq('id', incoming.id)
             .single()
             .then(({ data }) => {
-              if (data) setComments(prev => [...prev, data as TaskComment]);
+              if (data && isMounted) setComments(prev => [...prev, data as TaskComment]);
             });
         }
       )
@@ -349,7 +351,10 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
       )
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      isMounted = false;
+      supabase.removeChannel(channel);
+    };
   }, [open, task.id, currentUserId, supabase]);
 
   useEffect(() => {
