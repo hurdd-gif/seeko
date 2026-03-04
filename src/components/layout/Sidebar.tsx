@@ -10,6 +10,8 @@ import {
   FileText,
   LogOut,
   Activity,
+  Bell,
+  Settings,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -21,6 +23,8 @@ const NAV = [
   { href: '/team', label: 'Team', icon: Users },
   { href: '/docs', label: 'Docs', icon: FileText },
   { href: '/activity', label: 'Activity', icon: Activity },
+  { href: '/notifications', label: 'Notifications', icon: Bell },
+  { href: '/settings', label: 'Settings', icon: Settings },
 ];
 
 export function Sidebar({ email }: { email: string }) {
@@ -28,7 +32,6 @@ export function Sidebar({ email }: { email: string }) {
 
   return (
     <aside className="hidden md:flex w-60 shrink-0 flex-col border-r border-sidebar-border bg-sidebar">
-      {/* Brand */}
       <div className="flex items-center gap-2.5 px-4 py-5">
         <div className="flex h-7 w-7 items-center justify-center rounded-md bg-seeko-accent text-black text-xs font-bold shrink-0">
           S
@@ -40,7 +43,6 @@ export function Sidebar({ email }: { email: string }) {
 
       <Separator className="bg-sidebar-border" />
 
-      {/* Nav */}
       <nav className="flex flex-col gap-0.5 p-2 flex-1 mt-1">
         {NAV.map(({ href, label, icon: Icon }) => {
           const isActive = href === '/' ? pathname === '/' : pathname.startsWith(href);
@@ -62,7 +64,6 @@ export function Sidebar({ email }: { email: string }) {
         })}
       </nav>
 
-      {/* Footer */}
       <div className="p-4 border-t border-sidebar-border">
         <p className="text-xs text-muted-foreground truncate mb-2">{email}</p>
         <form action="/auth/signout" method="post">

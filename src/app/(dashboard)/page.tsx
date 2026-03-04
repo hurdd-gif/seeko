@@ -1,150 +1,175 @@
-import { fetchTasks, fetchAreas } from '@/lib/supabase/data';
+import { fetchTasks, fetchAreas, fetchTeam, fetchDocs, fetchActivity } from '@/lib/supabase/data';
 import { Task, Area } from '@/lib/types';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import {
+  CheckSquare,
+  Activity,
+  Users,
+  FileText,
+  Circle,
+  ArrowUpRight,
+} from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
-const STATUS_DOT: Record<string, string> = {
-  'Complete':    'var(--color-status-complete)',
-  'In Progress': 'var(--color-status-progress)',
-  'In Review':   'var(--color-status-review)',
-  'Blocked':     'var(--color-status-blocked)',
+const PRIORITY_VARIANT: Record<string, 'destructive' | 'default' | 'outline'> = {
+  High: 'destructive',
+  Urgent: 'destructive',
+  Medium: 'default',
+  Low: 'outline',
 };
 
-const PRIORITY_VARIANT: Record<string, 'secondary' | 'outline' | 'destructive'> = {
-  High:   'destructive',
-  Medium: 'secondary',
-  Low:    'outline',
-};
+function getInitials(name: string): string {
+  return name
+    .split(' ')
+    .map(p => p[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2) || '?';
+}
 
-function StatCard({ label, value }: { label: string; value: string | number }) {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{label}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <p className="text-3xl font-bold tracking-tight text-foreground">{value}</p>
-      </CardContent>
-    </Card>
-  );
+function timeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
 }
 
 export default async function OverviewPage() {
-  const [tasks, areas] = await Promise.all([
+  const [tasks, areas, team, docs, activity] = await Promise.all([
     fetchTasks().catch((): Task[] => []),
     fetchAreas().catch((): Area[] => []),
+    fetchTeam().catch(() => []),
+    fetchDocs().catch(() => []),
+    fetchActivity(5).catch(() => []),
   ]);
 
-  const total = tasks.length;
+  const openTasks = tasks.filter(t => t.status !== 'Complete').length;
   const completed = tasks.filter(t => t.status === 'Complete').length;
-  const inProgress = tasks.filter(t => t.status === 'In Progress').length;
-  const blocked = tasks.filter(t => t.status === 'Blocked').length;
 
-  const depts = ['Coding', 'Visual Art', 'UI/UX', 'Animation', 'Asset Creation'];
-  const deptCounts = depts.map(dept => ({
-    name: dept,
-    count: tasks.filter(t => t.department === dept).length,
-  })).sort((a, b) => b.count - a.count);
+  const stats = [
+    { label: 'Open Tasks', value: openTasks, icon: CheckSquare },
+    { label: 'Completed', value: completed, icon: Activity },
+    { label: 'Team Members', value: team.length, icon: Users },
+    { label: 'Documents', value: docs.length, icon: FileText },
+  ];
 
-  const recent = tasks.slice(0, 10);
+  const upcoming = tasks
+    .filter(t => t.status !== 'Complete')
+    .slice(0, 4);
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">Overview</h1>
-        <p className="text-sm text-muted-foreground mt-1">Studio-wide tasks and game area progress</p>
+        <p className="text-sm text-muted-foreground">Welcome back. Here is what is happening with your team.</p>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Total Tasks" value={total} />
-        <StatCard label="Completed" value={completed} />
-        <StatCard label="In Progress" value={inProgress} />
-        <StatCard label="Blocked" value={blocked} />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {stats.map(stat => (
+          <Card key={stat.label}>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardDescription className="text-sm font-medium">{stat.label}</CardDescription>
+              <stat.icon className="size-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-baseline gap-2">
+                <span className="text-2xl font-semibold tracking-tight">{stat.value}</span>
+                <span className="flex items-center text-xs font-medium text-foreground">
+                  <ArrowUpRight className="mr-0.5 size-3" />
+                  {stat.value}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
         <Card className="lg:col-span-3">
           <CardHeader>
-            <CardTitle>Departments</CardTitle>
+            <CardTitle>Upcoming Tasks</CardTitle>
+            <CardDescription>Tasks that need attention soon.</CardDescription>
           </CardHeader>
-          <CardContent className="pt-0">
-            <div className="space-y-2">
-              {deptCounts.map(({ name, count }) => (
-                <div key={name} className="flex items-center justify-between py-1.5">
-                  <span className="text-sm text-foreground">{name}</span>
-                  <Badge variant="secondary">{count}</Badge>
-                </div>
-              ))}
-              {deptCounts.every(d => d.count === 0) && (
-                <p className="text-sm text-muted-foreground py-2">No tasks yet.</p>
-              )}
-            </div>
+          <CardContent>
+            {upcoming.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No upcoming tasks.</p>
+            ) : (
+              <div className="flex flex-col gap-4">
+                {upcoming.map(task => (
+                  <div
+                    key={task.id}
+                    className="flex items-center justify-between rounded-md border border-border p-3"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="flex size-9 items-center justify-center rounded-md bg-secondary">
+                        <Circle className="size-4 text-foreground" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-foreground">{task.name}</p>
+                        <p className="text-xs text-muted-foreground font-mono">
+                          {task.department ?? 'Unassigned'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <Badge
+                        variant={PRIORITY_VARIANT[task.priority] ?? 'outline'}
+                        className="text-xs"
+                      >
+                        {task.priority}
+                      </Badge>
+                      {task.deadline && (
+                        <p className="text-xs text-muted-foreground">Due {task.deadline}</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
 
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle>Game Areas</CardTitle>
+            <CardTitle>Recent Activity</CardTitle>
+            <CardDescription>Latest actions from your team.</CardDescription>
           </CardHeader>
-          <CardContent className="pt-0">
-            <div className="space-y-4">
-              {areas.map(area => (
-                <div key={area.id}>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-sm text-foreground">{area.name}</span>
-                    <span className="text-xs font-mono text-muted-foreground">{area.progress}%</span>
-                  </div>
-                  <div className="w-full h-1.5 rounded-full bg-secondary overflow-hidden">
-                    <div
-                      className="h-full rounded-full"
-                      style={{ width: `${area.progress}%`, backgroundColor: 'var(--color-seeko-accent)' }}
-                    />
-                  </div>
-                </div>
-              ))}
-              {areas.length === 0 && (
-                <p className="text-sm text-muted-foreground">No areas found.</p>
-              )}
-            </div>
+          <CardContent>
+            {activity.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No recent activity.</p>
+            ) : (
+              <div className="flex flex-col gap-4">
+                {activity.map(item => {
+                  const name = (item.profiles as unknown as { display_name?: string })?.display_name ?? 'Unknown';
+                  return (
+                    <div key={item.id} className="flex items-start gap-3">
+                      <Avatar className="size-8">
+                        <AvatarFallback className="bg-secondary text-foreground text-xs">
+                          {getInitials(name)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 space-y-0.5">
+                        <p className="text-sm text-foreground">
+                          <span className="font-medium">{name}</span>{' '}
+                          <span className="text-muted-foreground">{item.action.toLowerCase()}</span>
+                        </p>
+                        <p className="text-xs text-muted-foreground font-mono">{item.target}</p>
+                      </div>
+                      <span className="shrink-0 text-xs text-muted-foreground">{timeAgo(item.created_at)}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Tasks</CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          {recent.length === 0 ? (
-            <p className="text-sm text-muted-foreground px-6 pb-6">No tasks found.</p>
-          ) : (
-            <div className="divide-y divide-border">
-              {recent.map(task => (
-                <div key={task.id} className="flex items-center gap-3 px-6 py-3 hover:bg-muted/50 transition-colors">
-                  <div
-                    className="h-2 w-2 rounded-full shrink-0"
-                    style={{ backgroundColor: STATUS_DOT[task.status] ?? '#6b7280' }}
-                  />
-                  <span className="text-sm text-foreground flex-1 min-w-0 truncate">{task.name}</span>
-                  <Badge variant="secondary" className="hidden sm:inline-flex shrink-0">
-                    {task.department}
-                  </Badge>
-                  <Badge variant={PRIORITY_VARIANT[task.priority] ?? 'outline'} className="shrink-0">
-                    {task.priority}
-                  </Badge>
-                  {task.deadline && (
-                    <span className="text-xs text-muted-foreground font-mono shrink-0 hidden md:block">
-                      {task.deadline}
-                    </span>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
     </div>
   );
 }

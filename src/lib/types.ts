@@ -33,6 +33,8 @@ export type Profile = {
   display_name?: string;
   department?: string;
   role?: string;
+  avatar_url?: string;
+  onboarded: number;
 };
 
 export type Doc = {

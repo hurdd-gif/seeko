@@ -10,6 +10,8 @@ create table public.profiles (
   display_name text,
   department   public.department,
   role         text,
+  avatar_url   text,
+  onboarded    smallint not null default 0,
   created_at   timestamptz default now()
 );
 
@@ -19,13 +21,19 @@ create policy "Authenticated users can read all profiles"
   on public.profiles for select
   using (auth.role() = 'authenticated');
 
+create policy "Users can update own profile"
+  on public.profiles for update
+  using (auth.uid() = id)
+  with check (auth.uid() = id);
+
 create or replace function public.handle_new_user()
 returns trigger as $$
 begin
-  insert into public.profiles (id, display_name)
+  insert into public.profiles (id, display_name, onboarded)
   values (
     new.id,
-    coalesce(new.raw_user_meta_data->>'display_name', new.email)
+    coalesce(new.raw_user_meta_data->>'display_name', new.email),
+    0
   );
   return new;
 end;
@@ -96,3 +104,28 @@ alter table public.docs enable row level security;
 create policy "Authenticated users can read docs"
   on public.docs for select
   using (auth.role() = 'authenticated');
+
+-- ─── Activity Log ─────────────────────────────────────────────────────────────
+
+create table public.activity_log (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    uuid references public.profiles(id),
+  action     text not null,
+  target     text not null,
+  created_at timestamptz default now()
+);
+
+alter table public.activity_log enable row level security;
+
+create policy "Authenticated users can read activity"
+  on public.activity_log for select
+  using (auth.role() = 'authenticated');
+
+create policy "Authenticated users can insert activity"
+  on public.activity_log for insert
+  with check (auth.role() = 'authenticated');
+
+-- ─── Storage: Avatars Bucket ──────────────────────────────────────────────────
+
+-- insert into storage.buckets (id, name, public) values ('avatars', 'avatars', true);
+-- Policies: anyone can read, authenticated can upload, users can update own avatar
