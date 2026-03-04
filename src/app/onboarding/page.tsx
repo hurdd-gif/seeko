@@ -23,7 +23,7 @@ export default async function OnboardingPage() {
             S
           </div>
           <h1 className="mt-4 text-2xl font-semibold tracking-tight text-foreground">
-            Welcome on-board to SEEKO.
+            Welcome aboard to SEEKO!
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
             Set up your profile to get started, what should the team call you?
