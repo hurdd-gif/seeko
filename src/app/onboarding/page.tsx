@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { OnboardingForm } from '@/components/onboarding/OnboardingForm';
+import { FadeScale, FadeRise } from '@/components/motion';
 
 export default async function OnboardingPage() {
   const supabase = await createClient();
@@ -19,21 +20,27 @@ export default async function OnboardingPage() {
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="w-full max-w-md space-y-8">
         <div className="text-center">
-          <div className="mx-auto flex size-16 items-center justify-center">
+          <FadeScale className="mx-auto flex size-16 items-center justify-center">
             <img src="/seeko-logo.png" alt="SEEKO" className="size-14 invert" />
-          </div>
-          <h1 className="mt-4 text-2xl font-semibold tracking-tight text-foreground">
-            Welcome aboard to SEEKO!
-          </h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Set up your profile to get started, what should the team call you?
-          </p>
+          </FadeScale>
+          <FadeRise delay={0.15}>
+            <h1 className="mt-4 text-2xl font-semibold tracking-tight text-foreground">
+              Welcome aboard to SEEKO!
+            </h1>
+          </FadeRise>
+          <FadeRise delay={0.25}>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Set up your profile to get started, what should the team call you?
+            </p>
+          </FadeRise>
         </div>
-        <OnboardingForm
-          userId={user.id}
-          defaultName={profile?.display_name ?? user.email ?? ''}
-          defaultAvatar={profile?.avatar_url ?? ''}
-        />
+        <FadeRise delay={0.4} y={24}>
+          <OnboardingForm
+            userId={user.id}
+            defaultName={profile?.display_name ?? user.email ?? ''}
+            defaultAvatar={profile?.avatar_url ?? ''}
+          />
+        </FadeRise>
       </div>
     </div>
   );

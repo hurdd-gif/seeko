@@ -3,12 +3,13 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createBrowserClient } from '@supabase/ssr';
+import { motion } from 'motion/react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Camera } from 'lucide-react';
+import { springs } from '@/components/motion';
 
 function getInitials(name: string): string {
   return name
@@ -99,7 +100,11 @@ export function OnboardingForm({
       <CardContent className="pt-6">
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="flex flex-col items-center gap-3">
-            <div className="relative group">
+            <motion.div
+              className="relative group"
+              whileHover={{ scale: 1.05 }}
+              transition={springs.snappy}
+            >
               <Avatar className="size-20 border-2 border-border">
                 {avatarUrl ? (
                   <img src={avatarUrl} alt="Avatar" className="size-full object-cover rounded-full" />
@@ -119,7 +124,7 @@ export function OnboardingForm({
                   disabled={uploading}
                 />
               </label>
-            </div>
+            </motion.div>
             <p className="text-xs text-muted-foreground">
               {uploading ? 'Uploading...' : 'Click to upload a photo (optional)'}
             </p>
@@ -140,9 +145,16 @@ export function OnboardingForm({
             <p className="text-sm text-destructive">{error}</p>
           )}
 
-          <Button type="submit" className="w-full" disabled={saving || uploading}>
+          <motion.button
+            type="submit"
+            disabled={saving || uploading}
+            className="inline-flex w-full items-center justify-center gap-2 whitespace-nowrap rounded-md bg-primary text-primary-foreground text-sm font-medium h-9 px-4 py-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            transition={springs.snappy}
+          >
             {saving ? 'Saving...' : 'Continue to Dashboard'}
-          </Button>
+          </motion.button>
 
           <button
             type="button"
