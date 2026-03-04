@@ -156,22 +156,6 @@ export function OnboardingForm({
             {saving ? 'Saving...' : 'Continue to Dashboard'}
           </motion.button>
 
-          <button
-            type="button"
-            onClick={async () => {
-              setSaving(true);
-              await supabase
-                .from('profiles')
-                .update({ onboarded: 1 })
-                .eq('id', userId);
-              router.push('/');
-              router.refresh();
-            }}
-            className="w-full text-center text-xs text-muted-foreground hover:text-foreground transition-colors"
-            disabled={saving}
-          >
-            Skip for now
-          </button>
         </form>
       </CardContent>
     </Card>
