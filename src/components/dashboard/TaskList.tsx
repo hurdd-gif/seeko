@@ -30,6 +30,7 @@ import {
   DropdownMenuItem,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
+import { TaskDetail } from '@/components/dashboard/TaskDetail';
 
 const STATUS_ICONS: Record<string, { icon: typeof Circle; className: string }> = {
   'Complete':     { icon: CheckCircle2, className: 'text-[var(--color-status-complete)]' },
@@ -66,9 +67,10 @@ interface TaskListProps {
   tasks: Task[] | TaskWithAssignee[];
   isAdmin?: boolean;
   team?: Profile[];
+  currentUserId?: string;
 }
 
-export function TaskList({ tasks: initialTasks, isAdmin = false, team = [] }: TaskListProps) {
+export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], currentUserId = '' }: TaskListProps) {
   const router = useRouter();
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('All');
@@ -76,6 +78,7 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [] }: Ta
   const [assignments, setAssignments] = useState<Record<string, string | null>>({});
   const [deleted, setDeleted] = useState<Set<string>>(new Set());
   const [localTasks, setLocalTasks] = useState<Task[]>([]);
+  const [selectedTask, setSelectedTask] = useState<Task | TaskWithAssignee | null>(null);
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [newName, setNewName] = useState('');
@@ -277,9 +280,12 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [] }: Ta
                     </AnimatePresence>
                   </div>
 
-                  <span className={`min-w-0 flex-1 truncate text-sm ${isComplete ? 'text-muted-foreground line-through' : 'text-foreground'}`}>
+                  <button
+                    onClick={() => setSelectedTask(task)}
+                    className={`min-w-0 flex-1 truncate text-sm text-left hover:underline ${isComplete ? 'text-muted-foreground line-through' : 'text-foreground'}`}
+                  >
                     {task.name}
-                  </span>
+                  </button>
 
                   <div className="hidden items-center gap-2 lg:flex">
                     <Badge variant="secondary" className="text-xs font-normal whitespace-nowrap">
@@ -374,6 +380,16 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [] }: Ta
           </div>
         </CardContent>
       </Card>
+
+      {selectedTask && (
+        <TaskDetail
+          task={selectedTask}
+          open={!!selectedTask}
+          onOpenChange={open => { if (!open) setSelectedTask(null); }}
+          team={team}
+          currentUserId={currentUserId}
+        />
+      )}
     </div>
   );
 }

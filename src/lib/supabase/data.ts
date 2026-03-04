@@ -107,3 +107,16 @@ export async function fetchAllTasksWithAssignees(): Promise<import('../types').T
   if (error) throw error;
   return (data ?? []) as import('../types').TaskWithAssignee[];
 }
+
+export async function fetchTaskComments(taskId: string): Promise<import('../types').TaskComment[]> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from('task_comments')
+    .select('*, profiles(id, display_name, avatar_url)')
+    .eq('task_id', taskId)
+    .order('created_at', { ascending: true });
+
+  if (error) throw error;
+  return (data ?? []) as import('../types').TaskComment[];
+}

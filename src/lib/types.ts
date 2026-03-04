@@ -50,3 +50,12 @@ export type Doc = {
 export type TaskWithAssignee = Task & {
   assignee?: Pick<Profile, 'id' | 'display_name' | 'avatar_url'> | null;
 };
+
+export type TaskComment = {
+  id: string;
+  task_id: string;
+  user_id: string;
+  content: string;
+  created_at: string;
+  profiles?: Pick<Profile, 'id' | 'display_name' | 'avatar_url'>;
+};

@@ -13,9 +13,7 @@ export default async function TasksPage() {
     ? await fetchAllTasksWithAssignees().catch(() => [])
     : await fetchTasks(user?.id).catch(() => []);
 
-  const team = isAdmin
-    ? await fetchTeam().catch(() => [])
-    : [];
+  const team = await fetchTeam().catch(() => []);
 
   return (
     <div className="space-y-6">
@@ -27,7 +25,12 @@ export default async function TasksPage() {
           {isAdmin ? 'Manage and assign tasks to team members.' : 'Showing your assigned tasks.'}
         </p>
       </div>
-      <TaskList tasks={tasks} isAdmin={isAdmin} team={team} />
+      <TaskList
+        tasks={tasks}
+        isAdmin={isAdmin}
+        team={team}
+        currentUserId={user?.id ?? ''}
+      />
     </div>
   );
 }
