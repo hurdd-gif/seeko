@@ -19,8 +19,8 @@ export default async function OnboardingPage() {
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="w-full max-w-md space-y-8">
         <div className="text-center">
-          <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-seeko-accent text-primary-foreground text-lg font-bold">
-            S
+          <div className="mx-auto flex size-12 items-center justify-center">
+            <img src="/seeko-logo.png" alt="SEEKO" className="size-10 invert" />
           </div>
           <h1 className="mt-4 text-2xl font-semibold tracking-tight text-foreground">
             Welcome aboard to SEEKO!

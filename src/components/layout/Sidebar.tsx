@@ -50,8 +50,8 @@ export function Sidebar({ email, displayName, avatarUrl }: SidebarProps) {
   return (
     <aside className="hidden md:flex w-60 shrink-0 flex-col border-r border-sidebar-border bg-sidebar">
       <div className="flex items-center gap-2.5 px-4 py-5">
-        <div className="flex h-7 w-7 items-center justify-center rounded-md bg-seeko-accent text-primary-foreground text-xs font-bold shrink-0">
-          S
+        <div className="flex h-7 w-7 items-center justify-center shrink-0">
+          <img src="/seeko-logo.png" alt="SEEKO" className="h-5 w-5 invert" />
         </div>
         <span className="font-semibold text-sm tracking-tight text-sidebar-foreground">
           SEEKO Studio
