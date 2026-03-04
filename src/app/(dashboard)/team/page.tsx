@@ -1,57 +1,54 @@
 import { fetchTeam } from '@/lib/notion';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 
-const DEPT_COLORS: Record<string, string> = {
-  Coding: '#6ee7b7',
-  'Visual Art': '#93c5fd',
-  'UI/UX': '#c4b5fd',
-  Animation: '#fbbf24',
-  'Asset Creation': '#f9a8d4',
-};
+function getInitials(name: string): string {
+  return name
+    .split(' ')
+    .map(part => part[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
+}
 
 export default async function TeamPage() {
   const team = await fetchTeam().catch(() => []);
 
   return (
-    <>
-      <div className="mb-6">
-        <h1 className="text-xl font-bold text-white">Team</h1>
-        <p className="text-sm text-zinc-500 mt-1">{team.length} members</p>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Team</h1>
+        <p className="text-sm text-muted-foreground mt-1">{team.length} members</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {team.map((member) => (
-          <div
-            key={member.id}
-            className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex items-start gap-3"
-          >
-            <div
-              className="w-9 h-9 rounded-lg shrink-0 flex items-center justify-center text-sm font-bold text-black"
-              style={{ backgroundColor: DEPT_COLORS[member.department] ?? '#6b7280' }}
-            >
-              {member.name.charAt(0).toUpperCase()}
+      <Card>
+        <CardHeader>
+          <CardTitle>Members</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {team.length === 0 ? (
+            <p className="text-sm text-muted-foreground px-6 pb-6">
+              No team members found. Add them to the Notion Team database.
+            </p>
+          ) : (
+            <div className="divide-y divide-border">
+              {team.map(member => (
+                <div key={member.id} className="flex items-center gap-3 px-6 py-3 hover:bg-muted/50 transition-colors">
+                  <Avatar>
+                    <AvatarFallback>{getInitials(member.name)}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">{member.name}</p>
+                    <p className="text-xs text-muted-foreground truncate">{member.role}</p>
+                  </div>
+                  <Badge variant="secondary" className="shrink-0">{member.department}</Badge>
+                </div>
+              ))}
             </div>
-            <div className="min-w-0">
-              <p className="font-medium text-white text-sm truncate">{member.name}</p>
-              <p className="text-xs text-zinc-400 truncate">{member.role}</p>
-              <span
-                className="inline-block mt-1 text-xs px-2 py-0.5 rounded-full"
-                style={{
-                  backgroundColor: (DEPT_COLORS[member.department] ?? '#6b7280') + '20',
-                  color: DEPT_COLORS[member.department] ?? '#6b7280',
-                }}
-              >
-                {member.department}
-              </span>
-            </div>
-          </div>
-        ))}
-
-        {team.length === 0 && (
-          <div className="col-span-3 text-center py-12 text-zinc-600 text-sm">
-            No team members found. Add them to the Notion Team database.
-          </div>
-        )}
-      </div>
-    </>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 }
