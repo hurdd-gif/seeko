@@ -26,7 +26,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body
-        className={`${outfit.variable} ${jetbrainsMono.variable} antialiased bg-[#0a0a0b] text-white`}
+        className={`${outfit.variable} ${jetbrainsMono.variable} antialiased bg-background text-foreground`}
       >
         {children}
         <DevAgentation />

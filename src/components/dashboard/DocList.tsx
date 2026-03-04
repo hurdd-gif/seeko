@@ -53,7 +53,7 @@ export function DocList({ docs }: { docs: Doc[] }) {
             </DialogHeader>
             {selected.content ? (
               <article
-                className="prose prose-invert max-w-none text-zinc-300 prose-headings:text-white prose-strong:text-white prose-code:bg-zinc-800 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-sm"
+                className="prose prose-invert max-w-none text-foreground/80 prose-headings:text-foreground prose-strong:text-foreground prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-sm"
                 dangerouslySetInnerHTML={{ __html: selected.content }}
               />
             ) : (
