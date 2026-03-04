@@ -9,6 +9,7 @@ import {
   Users,
   FileText,
   LogOut,
+  Activity,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -19,6 +20,7 @@ const NAV = [
   { href: '/areas', label: 'Game Areas', icon: Map },
   { href: '/team', label: 'Team', icon: Users },
   { href: '/docs', label: 'Docs', icon: FileText },
+  { href: '/activity', label: 'Activity', icon: Activity },
 ];
 
 export function Sidebar({ email }: { email: string }) {

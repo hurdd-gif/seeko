@@ -1,6 +1,15 @@
 import { createClient } from './server';
 import type { Task, Area, Profile, Doc } from '../types';
 
+export type ActivityItem = {
+  id: string;
+  user_id?: string;
+  action: string;
+  target: string;
+  created_at: string;
+  profiles?: Pick<Profile, 'display_name'>;
+};
+
 export async function fetchTasks(assigneeId?: string): Promise<Task[]> {
   const supabase = await createClient();
 
@@ -59,4 +68,17 @@ export async function fetchDocs(parentId?: string): Promise<Doc[]> {
   const { data, error } = await query;
   if (error) throw error;
   return (data ?? []) as Doc[];
+}
+
+export async function fetchActivity(limit = 20): Promise<ActivityItem[]> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from('activity_log')
+    .select('*, profiles(display_name)')
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error) throw error;
+  return (data ?? []) as ActivityItem[];
 }
