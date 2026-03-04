@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { Check, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -26,27 +26,21 @@ const STEPS = [
 ];
 
 function Confetti({ active }: { active: boolean }) {
-  const [particles, setParticles] = useState<
-    { id: number; x: number; startY: number; color: string; rotation: number; scale: number; delay: number; drift: number }[]
-  >([]);
-
-  useEffect(() => {
-    if (!active) return;
+  const [particles] = useState(() => {
     const colors = ['#ef4444', '#3b82f6', '#22c55e', '#eab308', '#a855f7', '#06b6d4', '#f97316', '#ec4899'];
-    const batch = Array.from({ length: 60 }, (_, i) => ({
+    return Array.from({ length: 60 }, (_, i) => ({
       id: i,
       x: 20 + Math.random() * 60,
-      startY: 0,
       color: colors[Math.floor(Math.random() * colors.length)],
       rotation: Math.random() * 360,
       scale: 0.4 + Math.random() * 1,
       delay: Math.random() * 0.4,
       drift: -40 + Math.random() * 80,
+      isCircle: i % 3 === 0,
     }));
-    setParticles(batch);
-  }, [active]);
+  });
 
-  if (!active || particles.length === 0) return null;
+  if (!active) return null;
 
   return (
     <div className="pointer-events-none absolute inset-x-0 -top-48 h-56 overflow-visible z-10">
@@ -66,7 +60,7 @@ function Confetti({ active }: { active: boolean }) {
               width: `${5 * p.scale}px`,
               height: `${8 * p.scale}px`,
               backgroundColor: p.color,
-              borderRadius: p.id % 3 === 0 ? '50%' : '1px',
+              borderRadius: p.isCircle ? '50%' : '1px',
               transform: `rotate(${p.rotation}deg)`,
             }}
           />
@@ -77,10 +71,9 @@ function Confetti({ active }: { active: boolean }) {
 }
 
 export function GettingStarted({ userId }: { userId: string }) {
-  const [currentStep, setCurrentStep] = useState(-1);
+  const [currentStep, setCurrentStep] = useState(0);
   const [completed, setCompleted] = useState<boolean[]>(STEPS.map(() => false));
   const [dismissed, setDismissed] = useState(false);
-  const [animating, setAnimating] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
 
   const supabase = createBrowserClient(
@@ -92,38 +85,6 @@ export function GettingStarted({ userId }: { userId: string }) {
   const progress = Math.round((completedCount / STEPS.length) * 100);
   const allDone = completedCount === STEPS.length;
 
-  useEffect(() => {
-    if (currentStep === -1) {
-      const timer = setTimeout(() => {
-        setCurrentStep(0);
-        setAnimating(true);
-      }, 600);
-      return () => clearTimeout(timer);
-    }
-  }, [currentStep]);
-
-  useEffect(() => {
-    if (!animating || currentStep < 0 || currentStep >= STEPS.length) return;
-
-    const timer = setTimeout(() => {
-      setCompleted(prev => {
-        const next = [...prev];
-        next[currentStep] = true;
-        return next;
-      });
-
-      setTimeout(() => {
-        if (currentStep < STEPS.length - 1) {
-          setCurrentStep(s => s + 1);
-        } else {
-          setAnimating(false);
-        }
-      }, 500);
-    }, 1400);
-
-    return () => clearTimeout(timer);
-  }, [currentStep, animating]);
-
   const markComplete = useCallback(async () => {
     await supabase
       .from('profiles')
@@ -131,16 +92,23 @@ export function GettingStarted({ userId }: { userId: string }) {
       .eq('id', userId);
   }, [userId, supabase]);
 
-  const handleDone = useCallback(async () => {
-    if (allDone) {
-      setShowConfetti(true);
-      await markComplete();
-      setTimeout(() => setDismissed(true), 2200);
-    } else {
-      await markComplete();
-      setDismissed(true);
+  const handleNext = useCallback(() => {
+    setCompleted(prev => {
+      const next = [...prev];
+      next[currentStep] = true;
+      return next;
+    });
+
+    if (currentStep < STEPS.length - 1) {
+      setCurrentStep(s => s + 1);
     }
-  }, [allDone, markComplete]);
+  }, [currentStep]);
+
+  const handleDone = useCallback(async () => {
+    setShowConfetti(true);
+    await markComplete();
+    setTimeout(() => setDismissed(true), 2200);
+  }, [markComplete]);
 
   const handleSkip = useCallback(async () => {
     await markComplete();
@@ -171,46 +139,70 @@ export function GettingStarted({ userId }: { userId: string }) {
             </div>
             <p className="mt-1.5 text-sm text-muted-foreground">
               {allDone
-                ? "All steps complete \u2014 you're ready to go"
+                ? "All steps complete \u2014 you're ready to go!"
                 : 'Set up your workspace and explore the dashboard.'}
             </p>
           </div>
 
           <div className="flex flex-col gap-0 px-6 py-5">
-            {STEPS.map((step, i) => (
-              <div key={i} className="flex items-start gap-3 py-2.5">
+            {STEPS.map((step, i) => {
+              const isActive = i === currentStep && !allDone;
+              const isCompleted = completed[i];
+
+              return (
                 <div
+                  key={i}
                   className={cn(
-                    'mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border transition-all duration-300',
-                    completed[i]
-                      ? 'border-blue-500 bg-blue-500 text-white'
-                      : 'border-border bg-transparent'
+                    'flex items-start gap-3 rounded-lg px-3 py-2.5 transition-colors duration-200',
+                    isActive && 'bg-secondary/60'
                   )}
                 >
-                  {completed[i] && <Check className="size-3" strokeWidth={3} />}
-                </div>
-                <div>
-                  <p
+                  <div
                     className={cn(
-                      'text-sm font-medium transition-colors duration-300',
-                      completed[i] ? 'text-foreground' : 'text-muted-foreground'
+                      'mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border transition-all duration-300',
+                      isCompleted
+                        ? 'border-blue-500 bg-blue-500 text-white'
+                        : isActive
+                          ? 'border-foreground/40'
+                          : 'border-border bg-transparent'
                     )}
                   >
-                    {step.title}
-                  </p>
-                  <p className="text-xs text-muted-foreground">{step.description}</p>
+                    {isCompleted && <Check className="size-3" strokeWidth={3} />}
+                  </div>
+                  <div>
+                    <p
+                      className={cn(
+                        'text-sm font-medium transition-colors duration-200',
+                        isCompleted || isActive ? 'text-foreground' : 'text-muted-foreground'
+                      )}
+                    >
+                      {step.title}
+                    </p>
+                    <p className={cn(
+                      'text-xs transition-colors duration-200',
+                      isActive ? 'text-muted-foreground' : 'text-muted-foreground/60'
+                    )}>
+                      {step.description}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           <div className="flex items-center justify-end gap-2 border-t border-border px-6 py-4">
             <Button variant="ghost" size="sm" onClick={handleSkip}>
-              {allDone ? 'Back' : 'Skip'}
+              Skip
             </Button>
-            <Button size="sm" onClick={handleDone} disabled={showConfetti}>
-              {allDone ? 'Done' : 'Next'}
-            </Button>
+            {allDone ? (
+              <Button size="sm" onClick={handleDone} disabled={showConfetti}>
+                Done
+              </Button>
+            ) : (
+              <Button size="sm" onClick={handleNext}>
+                Next
+              </Button>
+            )}
           </div>
         </div>
       </div>
