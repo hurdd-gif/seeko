@@ -17,6 +17,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { motion, AnimatePresence } from 'motion/react';
 import { createClient } from '@/lib/supabase/client';
 import { InviteCodeForm } from '@/components/auth/InviteCodeForm';
@@ -93,11 +94,6 @@ export default function LoginPage() {
 
   return (
     <div className="relative w-full max-w-sm">
-      {/* Ambient glow behind card */}
-      <div
-        className="pointer-events-none absolute -inset-12 rounded-full opacity-20 blur-3xl"
-        style={{ background: 'radial-gradient(circle, #6ee7b7 0%, transparent 70%)' }}
-      />
 
       {/* Card */}
       <motion.div
@@ -113,10 +109,15 @@ export default function LoginPage() {
           animate={{ opacity: stage >= 2 ? 1 : 0, y: stage >= 2 ? 0 : LOGO.offsetY }}
           transition={LOGO.spring}
         >
-          {/* Monogram mark */}
-          <div className="flex size-10 items-center justify-center rounded-xl bg-seeko-accent/15 border border-seeko-accent/30">
-            <span className="font-mono text-sm font-bold text-seeko-accent tracking-tight">SK</span>
-          </div>
+          {/* Logo mark */}
+          <Image
+            src="/seeko-s.png"
+            alt="SEEKO"
+            width={40}
+            height={40}
+            className="size-10 object-contain"
+            style={{ filter: 'invert(1)' }}
+          />
           <h1 className="text-xl font-bold tracking-tight text-foreground">SEEKO Studio</h1>
         </motion.div>
 
