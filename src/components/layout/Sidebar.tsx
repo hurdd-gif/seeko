@@ -104,8 +104,32 @@ export function Sidebar({
         transition={{ type: 'spring', stiffness: 300, damping: 30 }}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
-        className="relative hidden md:flex shrink-0 flex-col border-r border-sidebar-border bg-sidebar h-screen sticky top-0 overflow-hidden"
+        className="relative hidden md:flex shrink-0 border-r border-sidebar-border bg-sidebar h-screen sticky top-0"
       >
+        {/* Chevron toggle — outside overflow-hidden so it renders fully */}
+        <AnimatePresence>
+          {hovered && (
+            <motion.button
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              onClick={toggleCollapsed}
+              className="absolute -right-3 top-1/2 -translate-y-1/2 z-20 flex size-6 items-center justify-center rounded-full border border-sidebar-border bg-sidebar shadow-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <motion.span
+                animate={{ rotate: collapsed ? 180 : 0 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                className="flex"
+              >
+                <ChevronLeft className="size-3.5" />
+              </motion.span>
+            </motion.button>
+          )}
+        </AnimatePresence>
+
+        {/* Inner wrapper clips text overflow during width animation */}
+        <div className="flex flex-col w-full overflow-hidden">
         <div className={`flex items-center py-5 transition-all ${collapsed ? 'justify-center px-0' : 'gap-2.5 px-4'}`}>
           <div className="flex h-8 w-8 items-center justify-center shrink-0">
             <Image src="/seeko-s.png" alt="SEEKO" width={24} height={24} />
@@ -124,28 +148,6 @@ export function Sidebar({
             )}
           </AnimatePresence>
         </div>
-
-        {/* Chevron toggle — visible on sidebar hover */}
-        <AnimatePresence>
-          {hovered && (
-            <motion.button
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.15 }}
-              onClick={toggleCollapsed}
-              className="absolute -right-3 top-1/2 -translate-y-1/2 z-10 flex size-6 items-center justify-center rounded-full border border-sidebar-border bg-sidebar shadow-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <motion.span
-                animate={{ rotate: collapsed ? 180 : 0 }}
-                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-                className="flex"
-              >
-                <ChevronLeft className="size-3.5" />
-              </motion.span>
-            </motion.button>
-          )}
-        </AnimatePresence>
 
         <Separator className="bg-sidebar-border" />
 
@@ -197,12 +199,23 @@ export function Sidebar({
 
         <div className="p-4 border-t border-sidebar-border">
           <div className={`flex items-center mb-3 ${collapsed ? 'justify-center' : 'gap-2.5'}`}>
-            <Avatar className="size-8">
-              <AvatarImage src={avatarUrl} alt={label} />
-              <AvatarFallback className="bg-secondary text-foreground text-[10px]">
-                {getInitials(label)}
-              </AvatarFallback>
-            </Avatar>
+            {collapsed ? (
+              <Link href="/settings">
+                <Avatar className="size-8">
+                  <AvatarImage src={avatarUrl} alt={label} />
+                  <AvatarFallback className="bg-secondary text-foreground text-[10px]">
+                    {getInitials(label)}
+                  </AvatarFallback>
+                </Avatar>
+              </Link>
+            ) : (
+              <Avatar className="size-8">
+                <AvatarImage src={avatarUrl} alt={label} />
+                <AvatarFallback className="bg-secondary text-foreground text-[10px]">
+                  {getInitials(label)}
+                </AvatarFallback>
+              </Avatar>
+            )}
             <AnimatePresence>
               {!collapsed && (
                 <motion.div
@@ -261,6 +274,8 @@ export function Sidebar({
             </>
           )}
         </div>
+        </div>{/* end inner overflow wrapper */}
+
         {typeof document !== 'undefined' && tooltip && createPortal(
           <div
             className="fixed z-[9999] pointer-events-none"
