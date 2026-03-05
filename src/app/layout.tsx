@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Toaster } from "sonner";
 import { Outfit, JetBrains_Mono } from "next/font/google";
 import { DevAgentation } from "@/components/dev/agentation";
@@ -17,6 +17,13 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "SEEKO Studio",
   description: "SEEKO Game Studio Platform",
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({
