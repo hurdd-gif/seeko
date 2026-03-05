@@ -78,7 +78,7 @@ export function Sidebar({
     const rect = e.currentTarget.getBoundingClientRect();
     tooltipTimerRef.current = setTimeout(() => {
       setTooltip({ label: navLabel, y: rect.top + rect.height / 2 });
-    }, 4000);
+    }, 2000);
   };
 
   const handleNavMouseLeave = () => {
@@ -281,7 +281,7 @@ export function Sidebar({
             className="fixed z-[9999] pointer-events-none"
             style={{ left: 64, top: tooltip.y, transform: 'translateY(-50%)' }}
           >
-            <div className="rounded-md bg-foreground px-2 py-1 text-xs font-medium text-background shadow-md whitespace-nowrap">
+            <div className="rounded-md bg-card border border-border px-2 py-1 text-xs font-medium text-sidebar-foreground shadow-md whitespace-nowrap">
               {tooltip.label}
             </div>
           </div>,
