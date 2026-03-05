@@ -287,7 +287,7 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false }: 
       </Dialog>
 
       {/* Edit / New dialog */}
-      <Dialog open={editingDoc !== null} onOpenChange={() => setEditingDoc(null)}>
+      <Dialog open={editingDoc !== null} onOpenChange={() => setEditingDoc(null)} resizable>
         {editingDoc !== null && (
           <>
             <DialogClose onClose={() => setEditingDoc(null)} />

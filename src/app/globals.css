@@ -222,3 +222,13 @@ body {
   outline: 2px solid var(--color-seeko-accent);
   outline-offset: -1px;
 }
+/* Kill paragraph margin inside table cells so rows aren't bloated */
+.doc-content td p,
+.doc-content th p,
+.doc-read-body .doc-content td p,
+.doc-read-body .doc-content th p,
+.ProseMirror td p,
+.ProseMirror th p {
+  margin: 0;
+  padding: 0;
+}
