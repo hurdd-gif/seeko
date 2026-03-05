@@ -294,7 +294,7 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
                       <>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <button className={`inline-flex items-center rounded-md border border-border/50 bg-muted/40 px-2 py-0.5 text-xs font-normal whitespace-nowrap transition-colors hover:bg-muted hover:border-border ${DEPT_COLOR[dept] ?? 'text-muted-foreground'}`}>
+                            <button className="inline-flex items-center rounded-md border border-border/50 bg-muted/40 px-2 py-0.5 text-xs font-normal whitespace-nowrap text-muted-foreground transition-colors hover:bg-muted hover:border-border hover:text-foreground">
                               {dept}
                             </button>
                           </DropdownMenuTrigger>
