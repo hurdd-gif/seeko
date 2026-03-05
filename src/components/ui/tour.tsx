@@ -351,7 +351,7 @@ export function TourAlertDialog({
     <AlertDialog open={isOpen} onOpenChange={setIsOpen}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Welcome to SEEKO</AlertDialogTitle>
+          <AlertDialogTitle>Welcome to the SEEKO team</AlertDialogTitle>
           <AlertDialogDescription>
             Take a quick tour to learn about the key features and how to get started.
           </AlertDialogDescription>
