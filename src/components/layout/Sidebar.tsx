@@ -50,7 +50,7 @@ const AVATAR = {
 
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence, LayoutGroup } from 'motion/react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -175,7 +175,7 @@ export function Sidebar({
         </AnimatePresence>
 
         {/* Inner wrapper clips text overflow during width animation */}
-        <div className="flex flex-col w-full overflow-hidden">
+        <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
         <div className={`flex items-center py-5 transition-all ${collapsed ? 'justify-center px-0' : 'gap-2.5 px-4'}`}>
           <div className="flex h-8 w-8 items-center justify-center shrink-0">
             <Image src="/seeko-s.png" alt="SEEKO" width={24} height={24} />
@@ -198,6 +198,7 @@ export function Sidebar({
         <Separator className="bg-sidebar-border" />
 
         <nav className="flex flex-col gap-0.5 p-2 flex-1 mt-1">
+          <LayoutGroup id="sidebar-nav">
           {NAV.map(({ href, label: navLabel, icon: Icon, tourKey }) => {
             const isActive = href === '/' ? pathname === '/' : pathname.startsWith(href);
             const tourId = TOUR_STEP_IDS[tourKey as keyof typeof TOUR_STEP_IDS];
@@ -240,6 +241,7 @@ export function Sidebar({
               </Link>
             );
           })}
+          </LayoutGroup>
           {userId && (
             <NotificationBell
               userId={userId}
