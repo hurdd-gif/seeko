@@ -190,6 +190,7 @@ export function Sidebar({
               userId={userId}
               initialCount={unreadCount}
               initialNotifications={notifications}
+              collapsed={collapsed}
             />
           )}
         </nav>

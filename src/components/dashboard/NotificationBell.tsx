@@ -30,9 +30,10 @@ interface NotificationBellProps {
   userId: string;
   initialCount: number;
   initialNotifications: Notification[];
+  collapsed?: boolean;
 }
 
-export function NotificationBell({ userId, initialCount, initialNotifications }: NotificationBellProps) {
+export function NotificationBell({ userId, initialCount, initialNotifications, collapsed = false }: NotificationBellProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(initialCount);
@@ -207,18 +208,30 @@ export function NotificationBell({ userId, initialCount, initialNotifications }:
       <button
         ref={bellRef}
         onClick={handleToggle}
-        className="relative flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent/50 w-full"
+        className={[
+          'relative flex items-center rounded-md py-2.5 text-sm transition-colors text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent/50 w-full',
+          collapsed ? 'justify-center px-0' : 'gap-3 px-3',
+        ].join(' ')}
       >
-        <Bell className="h-4 w-4 shrink-0" />
-        <span>Notifications</span>
-        {unreadCount > 0 && (
-          <motion.span
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-seeko-accent px-1.5 text-[10px] font-semibold text-black"
-          >
-            {unreadCount > 99 ? '99+' : unreadCount}
-          </motion.span>
+        <span className="relative shrink-0">
+          <Bell className="h-4 w-4" />
+          {collapsed && unreadCount > 0 && (
+            <span className="absolute -top-1 -right-1 size-2 rounded-full bg-seeko-accent" />
+          )}
+        </span>
+        {!collapsed && (
+          <>
+            <span>Notifications</span>
+            {unreadCount > 0 && (
+              <motion.span
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-seeko-accent px-1.5 text-[10px] font-semibold text-black"
+              >
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </motion.span>
+            )}
+          </>
         )}
       </button>
       {typeof document !== 'undefined' && createPortal(panel, document.body)}
