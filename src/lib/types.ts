@@ -56,6 +56,15 @@ export type TaskWithAssignee = Task & {
   assignee?: Pick<Profile, 'id' | 'display_name' | 'avatar_url'> | null;
 };
 
+export type TaskDeliverable = {
+  id: string;
+  task_id: string;
+  file_name: string;
+  storage_path: string;
+  uploaded_by: string;
+  created_at: string;
+};
+
 export type TaskComment = {
   id: string;
   task_id: string;
