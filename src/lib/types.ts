@@ -50,6 +50,8 @@ export type Doc = {
   content?: string;
   parent_id?: string;
   sort_order: number;
+  updated_at?: string;
+  restricted_department?: string;
 };
 
 export type TaskWithAssignee = Task & {
