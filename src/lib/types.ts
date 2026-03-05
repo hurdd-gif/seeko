@@ -34,9 +34,14 @@ export type Profile = {
   department?: string;
   role?: string;
   avatar_url?: string;
+  email?: string;
   onboarded: number;
   tour_completed: number;
   is_admin: boolean;
+  is_contractor?: boolean;
+  must_set_password?: boolean;
+  last_seen_at?: string;
+  timezone?: string;
 };
 
 export type Doc = {
@@ -58,4 +63,22 @@ export type TaskComment = {
   content: string;
   created_at: string;
   profiles?: Pick<Profile, 'id' | 'display_name' | 'avatar_url'>;
+};
+
+export type NotificationKind =
+  | 'task_assigned'
+  | 'mentioned'
+  | 'comment_reply'
+  | 'task_completed'
+  | 'deliverable_uploaded';
+
+export type Notification = {
+  id: string;
+  user_id: string;
+  kind: NotificationKind;
+  title: string;
+  body?: string;
+  link?: string;
+  read: boolean;
+  created_at: string;
 };
