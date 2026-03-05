@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { createClient } from '@/lib/supabase/server';
 import { fetchTasks, fetchAllTasksWithAssignees, fetchTeam, fetchProfile, fetchDocs } from '@/lib/supabase/data';
 import { TaskList } from '@/components/dashboard/TaskList';
@@ -28,13 +29,15 @@ export default async function TasksPage() {
           {isAdmin ? 'Manage and assign tasks to team members.' : 'Showing your assigned tasks.'}
         </p>
       </div>
-      <TaskList
-        tasks={tasks}
-        isAdmin={isAdmin}
-        team={team}
-        docs={docs}
-        currentUserId={user?.id ?? ''}
-      />
+      <Suspense>
+        <TaskList
+          tasks={tasks}
+          isAdmin={isAdmin}
+          team={team}
+          docs={docs}
+          currentUserId={user?.id ?? ''}
+        />
+      </Suspense>
     </div>
   );
 }

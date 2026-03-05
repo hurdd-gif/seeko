@@ -228,7 +228,7 @@ export default async function TeamPage() {
           <CardContent>
             {members.length === 0 ? (
               <EmptyState
-                icon={Users}
+                icon="Users"
                 title="No team members yet"
                 description="Invite people to get started."
               />
@@ -264,7 +264,7 @@ export default async function TeamPage() {
           <CardContent>
             {contractors.length === 0 ? (
               <EmptyState
-                icon={Globe}
+                icon="Globe"
                 title="No contractors yet"
                 description="Mark team members as contractors in the database to show them here."
               />

@@ -42,7 +42,7 @@ describe('POST /api/profile/init', () => {
     const mockSelect = vi.fn().mockReturnValue({
       eq: vi.fn().mockReturnValue({
         single: vi.fn().mockResolvedValue({
-          data: { department: 'Coding', is_contractor: false },
+          data: { department: 'Coding', is_contractor: false, is_investor: false },
           error: null,
         }),
       }),
@@ -61,6 +61,7 @@ describe('POST /api/profile/init', () => {
     expect(mockUpdate).toHaveBeenCalledWith({
       department: 'Coding',
       is_contractor: false,
+      is_investor: false,
       must_set_password: true,
     });
     expect(res.status).toBe(200);

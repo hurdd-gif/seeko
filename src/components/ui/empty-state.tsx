@@ -2,10 +2,32 @@
 
 import * as React from 'react';
 import { cn } from '@/lib/utils';
-import type { LucideIcon } from 'lucide-react';
+import {
+  Activity,
+  CheckCircle2,
+  CheckSquare,
+  FileText,
+  Globe,
+  Map,
+  TrendingUp,
+  Users,
+} from 'lucide-react';
+
+export const EMPTY_STATE_ICONS = {
+  Activity,
+  CheckCircle2,
+  CheckSquare,
+  FileText,
+  Globe,
+  Map,
+  TrendingUp,
+  Users,
+} as const;
+
+export type EmptyStateIconName = keyof typeof EMPTY_STATE_ICONS;
 
 export interface EmptyStateProps {
-  icon: LucideIcon;
+  icon: EmptyStateIconName;
   title: string;
   description?: string;
   action?: React.ReactNode;
@@ -15,8 +37,10 @@ export interface EmptyStateProps {
 /**
  * Unified empty state: icon + title + optional description + optional CTA.
  * Use across Overview, Team, Activity, Tasks, Docs for consistent empty UX.
+ * Accepts an icon name (string) so it can be used from Server Components.
  */
-export function EmptyState({ icon: Icon, title, description, action, className }: EmptyStateProps) {
+export function EmptyState({ icon: iconName, title, description, action, className }: EmptyStateProps) {
+  const Icon = EMPTY_STATE_ICONS[iconName];
   return (
     <div
       className={cn(

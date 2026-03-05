@@ -18,7 +18,7 @@ export async function POST() {
   // Read pending invite metadata
   const { data: invite } = await admin
     .from('pending_invites')
-    .select('department, is_contractor')
+    .select('department, is_contractor, is_investor')
     .eq('email', user.email)
     .single();
 
@@ -29,6 +29,7 @@ export async function POST() {
       .update({
         department: invite.department,
         is_contractor: invite.is_contractor,
+        is_investor: invite.is_investor ?? false,
         must_set_password: true,
       })
       .eq('id', user.id);

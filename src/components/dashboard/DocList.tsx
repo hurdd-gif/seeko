@@ -123,7 +123,7 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, cu
 
       {docs.length === 0 ? (
         <EmptyState
-          icon={FileText}
+          icon="FileText"
           title="No documents yet"
           description={isAdmin
             ? 'Create your first document to share specs and resources with the team.'

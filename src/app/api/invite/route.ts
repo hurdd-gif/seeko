@@ -1,6 +1,9 @@
+import type { Department } from '@/lib/types';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
+
+const VALID_DEPARTMENTS: Department[] = ['Coding', 'Visual Art', 'UI/UX', 'Animation', 'Asset Creation'];
 
 /* ─── In-memory rate limiter ────────────────────────────────
  * 5 invite requests per IP per hour.
@@ -53,15 +56,18 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json();
-  const { email, department, isContractor } = body as {
+  const { email, department, isContractor, isInvestor } = body as {
     email: string;
     department: string;
     isContractor: boolean;
+    isInvestor?: boolean;
   };
 
   if (!email) {
     return NextResponse.json({ error: 'Email is required' }, { status: 400 });
   }
+
+  const departmentVal = department && VALID_DEPARTMENTS.includes(department as Department) ? department : null;
 
   const admin = createServiceClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -88,7 +94,12 @@ export async function POST(request: NextRequest) {
   const { error: insertError } = await admin
     .from('pending_invites')
     .upsert(
-      { email, department: department || null, is_contractor: isContractor ?? false },
+      {
+        email,
+        department: departmentVal,
+        is_contractor: isContractor ?? false,
+        is_investor: isInvestor ?? false,
+      },
       { onConflict: 'email' }
     );
 

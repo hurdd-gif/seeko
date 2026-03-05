@@ -128,7 +128,7 @@ export default async function ActivityPage() {
           <CardContent className="px-4 pt-1">
             {activity.length === 0 ? (
               <EmptyState
-                icon={Activity}
+                icon="Activity"
                 title="No activity yet"
                 description="Task assignments, status changes, and comments will show here."
               />

@@ -63,6 +63,7 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
+  TrendingUp,
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { Button } from '@/components/ui/button';
@@ -78,12 +79,14 @@ const NotificationBell = dynamic(
 );
 
 const NAV_BASE = [
-  { href: '/',         label: 'Overview',   mobileLabel: 'Home',   icon: LayoutDashboard, tourKey: 'OVERVIEW' },
-  { href: '/tasks',    label: '__TASKS__',  mobileLabel: '__TASKS__', icon: CheckSquare,  tourKey: 'TASKS' },
-  { href: '/team',     label: 'Team',       mobileLabel: 'Team',   icon: Users,           tourKey: 'TEAM' },
-  { href: '/docs',     label: 'Docs',       mobileLabel: 'Docs',   icon: FileText,        tourKey: 'DOCS' },
-  { href: '/activity', label: 'Activity',   mobileLabel: 'Activity', icon: Activity,      tourKey: 'ACTIVITY' },
+  { href: '/',         label: 'Overview',   mobileLabel: 'Home',   icon: LayoutDashboard, tourKey: 'OVERVIEW' as const },
+  { href: '/tasks',    label: '__TASKS__',  mobileLabel: '__TASKS__', icon: CheckSquare,  tourKey: 'TASKS' as const },
+  { href: '/team',     label: 'Team',       mobileLabel: 'Team',   icon: Users,           tourKey: 'TEAM' as const },
+  { href: '/docs',     label: 'Docs',       mobileLabel: 'Docs',   icon: FileText,        tourKey: 'DOCS' as const },
+  { href: '/activity', label: 'Activity',   mobileLabel: 'Activity', icon: Activity,      tourKey: 'ACTIVITY' as const },
 ];
+
+const NAV_INVESTOR = { href: '/investor', label: 'Investor Panel', mobileLabel: 'Investors', icon: TrendingUp, tourKey: undefined as undefined };
 
 function getInitials(name: string): string {
   return name.split(' ').map(p => p[0]).join('').toUpperCase().slice(0, 2) || '?';
@@ -132,13 +135,16 @@ export function Sidebar({
     setTooltip(null);
   };
 
-  const NAV = NAV_BASE
-    .filter(item => !(isContractor && item.href === '/activity'))
-    .map(item =>
-      item.label === '__TASKS__'
-        ? { ...item, label: isAdmin ? 'All Tasks' : 'My Tasks', mobileLabel: 'Tasks' }
-        : item
-    );
+  const NAV = [
+    ...NAV_BASE
+      .filter(item => !(isContractor && item.href === '/activity'))
+      .map(item =>
+        item.label === '__TASKS__'
+          ? { ...item, label: isAdmin ? 'All Tasks' : 'My Tasks', mobileLabel: 'Tasks' as const }
+          : item
+      ),
+    ...(isAdmin ? [NAV_INVESTOR] : []),
+  ];
 
   const label = displayName || email;
 
@@ -203,7 +209,7 @@ export function Sidebar({
           <LayoutGroup id="sidebar-nav">
           {NAV.map(({ href, label: navLabel, icon: Icon, tourKey }) => {
             const isActive = href === '/' ? pathname === '/' : pathname.startsWith(href);
-            const tourId = TOUR_STEP_IDS[tourKey as keyof typeof TOUR_STEP_IDS];
+            const tourId = tourKey != null ? TOUR_STEP_IDS[tourKey] : undefined;
             return (
               <Link
                 key={href}
@@ -393,7 +399,7 @@ export function Sidebar({
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 flex items-stretch bg-sidebar border-t border-sidebar-border">
         {NAV.map(({ href, mobileLabel, icon: Icon, tourKey }) => {
           const isActive = href === '/' ? pathname === '/' : pathname.startsWith(href);
-          const tourId = TOUR_STEP_IDS[tourKey as keyof typeof TOUR_STEP_IDS];
+          const tourId = tourKey != null ? TOUR_STEP_IDS[tourKey] : undefined;
           return (
             <Link
               key={href}

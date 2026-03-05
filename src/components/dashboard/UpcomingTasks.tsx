@@ -44,7 +44,7 @@ export function UpcomingTasks({ tasks, team, docs, currentUserId }: UpcomingTask
   if (tasks.length === 0) {
     return (
       <EmptyState
-        icon={CheckCircle2}
+        icon="CheckCircle2"
         title="No upcoming tasks"
         description="You're all caught up."
       />

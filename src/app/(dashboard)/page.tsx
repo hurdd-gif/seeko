@@ -19,6 +19,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { FadeRise, Stagger, StaggerItem, HoverCard } from '@/components/motion';
 import { EmptyState } from '@/components/ui/empty-state';
 import { UpcomingTasks } from '@/components/dashboard/UpcomingTasks';
+import { DashboardAreaCard } from '@/components/dashboard/DashboardAreaCard';
 import {
   CheckSquare,
   Activity,
@@ -84,8 +85,8 @@ export default async function OverviewPage() {
 
   const [tasks, areas, team, docs, activity] = await Promise.all([
     isAdmin
-      ? fetchAllTasksWithAssignees().catch((e) => { throw new Error('Failed to load overview.'); })
-      : fetchTasks(user?.id ?? '').catch((e) => { throw new Error('Failed to load overview.'); }),
+      ? fetchAllTasksWithAssignees().catch(() => [])
+      : fetchTasks(user?.id ?? '').catch(() => []),
     fetchAreas().catch((): Area[] => []),
     fetchTeam().catch(() => []),
     fetchDocs().catch(() => []),
@@ -185,41 +186,7 @@ export default async function OverviewPage() {
             <CardContent>
               <Stagger className="grid grid-cols-1 md:grid-cols-3 gap-4" delayMs={delay(TIMING.areasInner)}>
                 {areas.map(area => (
-                  <StaggerItem key={area.id}>
-                    <HoverCard>
-                      <Card>
-                        <CardContent className="p-4 space-y-3">
-                          <div className="flex items-start justify-between gap-2">
-                            <p className="text-sm font-medium text-foreground">{area.name}</p>
-                            {area.phase && (
-                              <span className="shrink-0 rounded border border-border px-1.5 py-0.5 text-xs text-muted-foreground font-mono">
-                                {area.phase}
-                              </span>
-                            )}
-                          </div>
-                          {area.description && (
-                            <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">
-                              {area.description}
-                            </p>
-                          )}
-                          <div>
-                            <div className="flex items-center justify-between mb-1.5">
-                              <span className="text-xs text-muted-foreground">Progress</span>
-                              <span className="text-xs font-mono text-muted-foreground">
-                                {area.progress}%
-                              </span>
-                            </div>
-                            <div className="w-full h-1.5 rounded-full bg-secondary overflow-hidden">
-                              <div
-                                className="h-full rounded-full"
-                                style={{ width: `${area.progress}%`, backgroundColor: 'var(--color-seeko-accent)' }}
-                              />
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </HoverCard>
-                  </StaggerItem>
+                  <DashboardAreaCard key={area.id} area={area} isAdmin={isAdmin} />
                 ))}
               </Stagger>
             </CardContent>
@@ -260,7 +227,7 @@ export default async function OverviewPage() {
             <CardContent>
               {activity.length === 0 ? (
                 <EmptyState
-                  icon={Activity}
+                  icon="Activity"
                   title="No recent activity"
                   description="Latest actions will show here."
                 />

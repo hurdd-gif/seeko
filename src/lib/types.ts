@@ -17,6 +17,8 @@ export type Task = {
   assignee_id?: string;
   deadline?: string;
   description?: string;
+  created_at?: string;
+  updated_at?: string;
 };
 
 export type Area = {
@@ -39,6 +41,7 @@ export type Profile = {
   tour_completed: number;
   is_admin: boolean;
   is_contractor?: boolean;
+  is_investor?: boolean;
   must_set_password?: boolean;
   last_seen_at?: string;
   timezone?: string;

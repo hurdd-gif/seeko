@@ -14,7 +14,7 @@ const DEPARTMENTS = ['Coding', 'Visual Art', 'UI/UX', 'Animation', 'Asset Creati
 export function InviteForm() {
   const [email, setEmail] = useState('');
   const [department, setDepartment] = useState('');
-  const [isContractor, setIsContractor] = useState(false);
+  const [role, setRole] = useState<'member' | 'contractor' | 'investor'>('member');
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
 
@@ -29,7 +29,12 @@ export function InviteForm() {
       const res = await fetch('/api/invite', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, department, isContractor }),
+        body: JSON.stringify({
+          email,
+          department,
+          isContractor: role === 'contractor',
+          isInvestor: role === 'investor',
+        }),
       });
       const data = await res.json();
 
@@ -37,7 +42,7 @@ export function InviteForm() {
         setResult({ ok: true, message: `Invite sent to ${email}` });
         setEmail('');
         setDepartment('');
-        setIsContractor(false);
+        setRole('member');
       } else {
         setResult({ ok: false, message: data.error || 'Failed to send invite' });
       }
@@ -89,11 +94,12 @@ export function InviteForm() {
             <div className="w-full space-y-2 sm:w-36">
               <Label>Role</Label>
               <Select
-                value={isContractor ? 'contractor' : 'member'}
-                onChange={e => setIsContractor(e.target.value === 'contractor')}
+                value={role}
+                onChange={e => setRole(e.target.value as 'member' | 'contractor' | 'investor')}
               >
                 <option value="member">Team Member</option>
                 <option value="contractor">Contractor</option>
+                <option value="investor">Investor</option>
               </Select>
             </div>
             <Button type="submit" disabled={sending || !email} className="gap-2 shrink-0">

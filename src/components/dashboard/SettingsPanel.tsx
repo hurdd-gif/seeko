@@ -82,9 +82,11 @@ interface SettingsPanelProps {
   profile: Profile;
   isAdmin: boolean;
   team: Profile[];
+  /** When provided (e.g. investor settings), called instead of revalidateDashboard after save. */
+  revalidate?: () => Promise<void>;
 }
 
-export function SettingsPanel({ profile, isAdmin, team }: SettingsPanelProps) {
+export function SettingsPanel({ profile, isAdmin, team, revalidate }: SettingsPanelProps) {
   const router = useRouter();
   const [displayName, setDisplayName] = useState(profile.display_name ?? '');
   const [avatarUrl, setAvatarUrl] = useState(profile.avatar_url ?? '');
@@ -165,7 +167,8 @@ export function SettingsPanel({ profile, isAdmin, team }: SettingsPanelProps) {
       return;
     }
 
-    await revalidateDashboard();
+    if (revalidate) await revalidate();
+    else await revalidateDashboard();
     setSaving(false);
     setSaved(true);
     toast.success('Changes saved');

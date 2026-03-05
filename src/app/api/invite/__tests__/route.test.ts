@@ -79,7 +79,7 @@ describe('POST /api/invite', () => {
       options: { shouldCreateUser: true },
     });
     expect(mockUpsert).toHaveBeenCalledWith(
-      { email: 'new@seeko.studio', department: 'Coding', is_contractor: false },
+      { email: 'new@seeko.studio', department: 'Coding', is_contractor: false, is_investor: false },
       { onConflict: 'email' }
     );
     expect(res.status).toBe(200);

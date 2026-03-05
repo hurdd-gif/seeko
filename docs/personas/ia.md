@@ -18,13 +18,16 @@ The TypeScript types in `src/lib/types.ts` must align with the table columns exa
 
 Every authenticated user gets a profile row automatically on signup. This doubles as the team roster — the `/team` page lists all profiles.
 
-| Column       | Type           | Notes                                  |
-|--------------|----------------|----------------------------------------|
-| id           | uuid (PK)      | References auth.users                  |
-| display_name | text           | User display name                      |
-| department   | department enum| Coding, Visual Art, UI/UX, Animation, Asset Creation |
-| role         | text           | Job title / role description           |
-| created_at   | timestamptz    |                                        |
+| Column        | Type           | Notes                                                        |
+|---------------|----------------|--------------------------------------------------------------|
+| id            | uuid (PK)      | References auth.users                                        |
+| display_name  | text           | User display name                                            |
+| department    | department enum| Coding, Visual Art, UI/UX, Animation, Asset Creation         |
+| role          | text           | Job title / role description                                 |
+| is_admin      | boolean        | Full admin access                                            |
+| is_contractor | boolean        | Contractor; Activity page hidden from sidebar                |
+| is_investor   | boolean        | Grants access to /investor panel; investors see limited view |
+| created_at    | timestamptz    |                                                              |
 
 ---
 

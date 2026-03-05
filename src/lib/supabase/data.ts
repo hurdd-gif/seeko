@@ -50,7 +50,9 @@ export async function fetchTeam(): Promise<Profile[]> {
     .order('display_name', { ascending: true });
 
   if (error) throw error;
-  return (data ?? []) as Profile[];
+  const all = (data ?? []) as Profile[];
+  // Investors are not shown on the team roster (discreet).
+  return all.filter(p => !p.is_investor);
 }
 
 export async function fetchDocs(parentId?: string): Promise<Doc[]> {

@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'motion/react';
 import { createBrowserClient } from '@supabase/ssr';
 import {
@@ -81,6 +81,27 @@ function getInitials(name: string): string {
   return name.split(' ').map(p => p[0]).join('').toUpperCase().slice(0, 2) || '?';
 }
 
+/** Format deadline: relative ("in 2 hours", "1 hour ago") when within 24h, otherwise "Mon DD, YYYY". */
+function formatDeadline(deadline: string): string {
+  const dateOnly = deadline.includes('T') ? deadline : deadline + 'T12:00:00';
+  const deadlineTime = new Date(dateOnly).getTime();
+  const now = Date.now();
+  const diffMs = deadlineTime - now;
+  const diffMins = Math.round(diffMs / (1000 * 60));
+  const diffHours = Math.round(diffMs / (1000 * 60 * 60));
+
+  if (Math.abs(diffMs) <= 24 * 60 * 60 * 1000) {
+    if (Math.abs(diffMins) < 60) {
+      if (diffMins === 0) return 'now';
+      return diffMins > 0 ? `in ${diffMins}m` : `${Math.abs(diffMins)}m ago`;
+    }
+    if (diffHours > 0) return `in ${diffHours}h`;
+    return `${Math.abs(diffHours)}h ago`;
+  }
+
+  return new Date(deadline + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
 interface TaskListProps {
   tasks: Task[] | TaskWithAssignee[];
   isAdmin?: boolean;
@@ -91,6 +112,7 @@ interface TaskListProps {
 
 export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs = [], currentUserId = '' }: TaskListProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('All');
   const [taskStatuses, setTaskStatuses] = useState<Record<string, TaskStatus>>({});
@@ -115,6 +137,14 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
   );
 
   const allTasks = useMemo(() => [...initialTasks, ...localTasks], [initialTasks, localTasks]);
+
+  // Auto-open task from ?task= URL param (e.g. from notification deep-link)
+  useEffect(() => {
+    const taskId = searchParams.get('task');
+    if (!taskId) return;
+    const match = allTasks.find(t => t.id === taskId);
+    if (match) setSelectedTask(match);
+  }, [searchParams, allTasks]);
 
   const handleAddTask = useCallback(async () => {
     if (!newName.trim()) return;
@@ -200,7 +230,7 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
           kind: 'task_assigned',
           title: 'Task assigned to you',
           body: task?.name ?? 'A task has been assigned to you',
-          link: '/tasks',
+          link: `/tasks?task=${taskId}`,
         }),
       });
     }
@@ -384,7 +414,7 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
                   {task.deadline && (
                     <div className="hidden items-center gap-1 text-xs text-muted-foreground whitespace-nowrap md:flex">
                       <Clock className="size-3" />
-                      <span>{new Date(task.deadline + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                      <span>{formatDeadline(task.deadline)}</span>
                     </div>
                   )}
 

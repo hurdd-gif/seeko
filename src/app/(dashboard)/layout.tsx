@@ -16,6 +16,8 @@ export default async function DashboardLayout({
   if (!user) redirect('/login');
 
   const profile = await fetchProfile(user.id);
+  if (profile?.is_investor && !profile?.is_admin) redirect('/investor');
+
   const [notifications, unreadCount] = await Promise.all([
     fetchNotifications(user.id, 20).catch(() => []),
     fetchUnreadNotificationCount(user.id).catch(() => 0),
