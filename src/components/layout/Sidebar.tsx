@@ -67,7 +67,7 @@ export function Sidebar({
       <aside className="hidden md:flex w-60 shrink-0 flex-col border-r border-sidebar-border bg-sidebar h-screen sticky top-0">
         <div className="flex items-center gap-2.5 px-4 py-5">
           <div className="flex h-8 w-8 items-center justify-center shrink-0">
-            <Image src="/seeko-s.png" alt="SEEKO" width={24} height={24} />
+            <Image src="/seeko-s.png" alt="SEEKO" width={24} height={24} className="invert mix-blend-screen" />
           </div>
           <span className="font-semibold text-base tracking-tight text-sidebar-foreground">SEEKO</span>
         </div>
@@ -161,7 +161,7 @@ export function Sidebar({
       {/* ── Mobile top header ─────────────────────────────── */}
       <header className="md:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-4 h-14 bg-sidebar border-b border-sidebar-border">
         <div className="flex items-center gap-2.5">
-          <Image src="/seeko-s.png" alt="SEEKO" width={20} height={20} />
+          <Image src="/seeko-s.png" alt="SEEKO" width={20} height={20} className="invert mix-blend-screen" />
           <span className="font-semibold text-sm tracking-tight text-sidebar-foreground">SEEKO</span>
         </div>
         <div className="flex items-center gap-2">
