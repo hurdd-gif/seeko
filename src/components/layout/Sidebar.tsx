@@ -8,7 +8,7 @@
  *    +0ms   labels fade out (80ms) / fade in (150ms)
  *    +0ms   icons re-center via layout animation
  *
- * Tooltip (on 800ms hover, collapsed only):
+ * Tooltip (instant on hover, collapsed only):
  *    +0ms   scale 0.88 → 1, opacity 0 → 1, x −6 → 0  (spring)
  *   exit    scale → 0.88, opacity → 0, x → −6         (spring)
  *
@@ -44,7 +44,7 @@ const AVATAR = {
   spring: { type: 'spring' as const, stiffness: 400, damping: 20 },
 };
 
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import Link from 'next/link';
@@ -107,7 +107,6 @@ export function Sidebar({
   });
   const [hovered, setHovered] = useState(false);
   const [tooltip, setTooltip] = useState<{ label: string; y: number } | null>(null);
-  const tooltipTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const toggleCollapsed = () => {
     setCollapsed(prev => {
@@ -120,13 +119,10 @@ export function Sidebar({
   const handleNavMouseEnter = (e: React.MouseEvent<HTMLAnchorElement>, navLabel: string) => {
     if (!collapsed) return;
     const rect = e.currentTarget.getBoundingClientRect();
-    tooltipTimerRef.current = setTimeout(() => {
-      setTooltip({ label: navLabel, y: rect.top + rect.height / 2 });
-    }, 800);
+    setTooltip({ label: navLabel, y: rect.top + rect.height / 2 });
   };
 
   const handleNavMouseLeave = () => {
-    if (tooltipTimerRef.current) clearTimeout(tooltipTimerRef.current);
     setTooltip(null);
   };
 
