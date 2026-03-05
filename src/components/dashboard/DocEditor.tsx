@@ -165,7 +165,7 @@ export function DocEditor({ doc, onSave, onCancel }: DocEditorProps) {
       StarterKit,
       Image.configure({ inline: false }),
       Placeholder.configure({ placeholder: 'Start writing…' }),
-      Table.configure({ resizable: false }),
+      Table.configure({ resizable: true }),
       TableRow,
       TableHeader,
       TableCell,

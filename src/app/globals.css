@@ -224,6 +224,27 @@ body {
   outline: 2px solid var(--color-seeko-accent);
   outline-offset: -1px;
 }
+/* Column resize handle */
+.ProseMirror .column-resize-handle {
+  position: absolute;
+  right: -2px;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--color-seeko-accent);
+  opacity: 0;
+  cursor: col-resize;
+  pointer-events: none;
+  transition: opacity 0.15s;
+}
+.ProseMirror th:hover .column-resize-handle,
+.ProseMirror td:hover .column-resize-handle {
+  opacity: 0.6;
+}
+.ProseMirror.resize-cursor {
+  cursor: col-resize;
+}
+
 /* Kill paragraph margin inside table cells so rows aren't bloated */
 .doc-content td p,
 .doc-content th p,

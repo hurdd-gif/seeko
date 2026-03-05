@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/select';
 
 const DEPARTMENTS = ['Coding', 'Visual Art', 'UI/UX', 'Animation', 'Asset Creation'];
 
@@ -75,27 +76,25 @@ export function InviteForm() {
             </div>
             <div className="w-full space-y-2 sm:w-40">
               <Label>Department</Label>
-              <select
+              <Select
                 value={department}
                 onChange={e => setDepartment(e.target.value)}
-                className="flex h-9 w-full rounded-md border border-border bg-background px-3 py-1 text-sm text-foreground transition-colors transition-[box-shadow_var(--focus-ring-duration)_ease-out] focus:outline-none focus:ring-1 focus:ring-ring"
               >
                 <option value="">Select...</option>
                 {DEPARTMENTS.map(d => (
                   <option key={d} value={d}>{d}</option>
                 ))}
-              </select>
+              </Select>
             </div>
             <div className="w-full space-y-2 sm:w-36">
               <Label>Role</Label>
-              <select
+              <Select
                 value={isContractor ? 'contractor' : 'member'}
                 onChange={e => setIsContractor(e.target.value === 'contractor')}
-                className="flex h-9 w-full rounded-md border border-border bg-background px-3 py-1 text-sm text-foreground transition-colors transition-[box-shadow_var(--focus-ring-duration)_ease-out] focus:outline-none focus:ring-1 focus:ring-ring"
               >
                 <option value="member">Team Member</option>
                 <option value="contractor">Contractor</option>
-              </select>
+              </Select>
             </div>
             <Button type="submit" disabled={sending || !email} className="gap-2 shrink-0">
               {sending ? (
