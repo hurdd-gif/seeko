@@ -38,6 +38,10 @@ const CHEVRON = {
   duration: 0.15,  // s — fade in/out
 };
 
+const NAV_HIGHLIGHT = {
+  spring: { type: 'spring' as const, stiffness: 380, damping: 30 },
+};
+
 const AVATAR = {
   hoverScale:  1.1,    // scale up on hover
   hoverRing:   2,      // ring width px (applied via boxShadow)
@@ -203,14 +207,21 @@ export function Sidebar({
                 onMouseEnter={e => handleNavMouseEnter(e, navLabel)}
                 onMouseLeave={handleNavMouseLeave}
                 className={[
-                  'flex items-center rounded-md py-2.5 text-sm transition-colors',
+                  'relative flex items-center rounded-md py-2.5 text-sm',
                   collapsed ? 'justify-center px-0 w-full' : 'gap-3 px-3',
                   isActive
-                    ? 'bg-white/5 text-seeko-accent font-medium'
+                    ? 'text-seeko-accent font-medium'
                     : 'text-muted-foreground hover:text-foreground hover:bg-white/5',
                 ].join(' ')}
               >
-                <Icon className={`h-4 w-4 shrink-0 ${isActive ? 'text-seeko-accent' : ''}`} />
+                {isActive && (
+                  <motion.div
+                    layoutId="nav-highlight"
+                    className="absolute inset-0 rounded-md bg-white/5"
+                    transition={NAV_HIGHLIGHT.spring}
+                  />
+                )}
+                <Icon className={`relative h-4 w-4 shrink-0 ${isActive ? 'text-seeko-accent' : ''}`} />
                 <AnimatePresence>
                   {!collapsed && (
                     <motion.span
@@ -218,7 +229,7 @@ export function Sidebar({
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
                       transition={LABEL.enter}
-                      className="whitespace-nowrap"
+                      className="relative whitespace-nowrap"
                     >
                       {navLabel}
                     </motion.span>
