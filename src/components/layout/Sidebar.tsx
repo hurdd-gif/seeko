@@ -1,5 +1,43 @@
 'use client';
 
+/* ─────────────────────────────────────────────────────────
+ * ANIMATION STORYBOARD — Sidebar
+ *
+ * Collapse / expand (on toggle click):
+ *    +0ms   sidebar width springs 240px ↔ 56px
+ *    +0ms   labels fade out (80ms) / fade in (150ms)
+ *    +0ms   icons re-center via layout animation
+ *
+ * Tooltip (on 800ms hover, collapsed only):
+ *    +0ms   scale 0.88 → 1, opacity 0 → 1, x −6 → 0  (spring)
+ *   exit    scale → 0.88, opacity → 0, x → −6         (spring)
+ *
+ * Chevron (on sidebar hover):
+ *    +0ms   opacity 0 → 1 (150ms)
+ *   exit    opacity → 0   (150ms)
+ * ───────────────────────────────────────────────────────── */
+
+const SIDEBAR = {
+  expandedWidth:  240,   // px — full sidebar
+  collapsedWidth:  56,   // px — icon rail
+  spring: { type: 'spring' as const, stiffness: 320, damping: 28 },
+};
+
+const LABEL = {
+  enter: { duration: 0.15 },   // s — fade in
+  exit:  { duration: 0.08 },   // s — fade out (faster)
+};
+
+const TOOLTIP = {
+  initialX:     -6,     // px — slides in from left
+  initialScale: 0.88,   // scale before appearing
+  spring: { type: 'spring' as const, stiffness: 420, damping: 26 },
+};
+
+const CHEVRON = {
+  duration: 0.15,  // s — fade in/out
+};
+
 import { useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
@@ -100,8 +138,8 @@ export function Sidebar({
     <>
       {/* ── Desktop sidebar ──────────────────────────────── */}
       <motion.aside
-        animate={{ width: collapsed ? 56 : 240 }}
-        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+        animate={{ width: collapsed ? SIDEBAR.collapsedWidth : SIDEBAR.expandedWidth }}
+        transition={SIDEBAR.spring}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
         className="relative hidden md:flex shrink-0 border-r border-sidebar-border bg-sidebar h-screen sticky top-0"
@@ -113,13 +151,13 @@ export function Sidebar({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.15 }}
+              transition={{ duration: CHEVRON.duration }}
               onClick={toggleCollapsed}
               className="absolute -right-3 top-1/2 -translate-y-1/2 z-20 flex size-6 items-center justify-center rounded-full border border-sidebar-border bg-sidebar shadow-sm text-muted-foreground hover:text-foreground transition-colors"
             >
               <motion.span
                 animate={{ rotate: collapsed ? 180 : 0 }}
-                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                transition={SIDEBAR.spring}
                 className="flex"
               >
                 <ChevronLeft className="size-3.5" />
@@ -140,7 +178,7 @@ export function Sidebar({
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 0.15 }}
+                transition={LABEL.enter}
                 className="font-semibold text-base tracking-tight text-sidebar-foreground whitespace-nowrap"
               >
                 SEEKO
@@ -177,7 +215,7 @@ export function Sidebar({
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
-                      transition={{ duration: 0.15 }}
+                      transition={LABEL.enter}
                       className="whitespace-nowrap"
                     >
                       {navLabel}
@@ -222,7 +260,7 @@ export function Sidebar({
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  transition={{ duration: 0.15 }}
+                  transition={LABEL.enter}
                   className="flex-1 min-w-0"
                 >
                   {displayName && (
@@ -276,15 +314,24 @@ export function Sidebar({
         </div>
         </div>{/* end inner overflow wrapper */}
 
-        {typeof document !== 'undefined' && tooltip && createPortal(
-          <div
-            className="fixed z-[9999] pointer-events-none"
-            style={{ left: 64, top: tooltip.y, transform: 'translateY(-50%)' }}
-          >
-            <div className="rounded-md bg-card border border-border px-2 py-1 text-xs font-medium text-sidebar-foreground shadow-md whitespace-nowrap">
-              {tooltip.label}
-            </div>
-          </div>,
+        {typeof document !== 'undefined' && createPortal(
+          <AnimatePresence>
+            {tooltip && (
+              <motion.div
+                key={tooltip.label}
+                initial={{ opacity: 0, x: TOOLTIP.initialX, scale: TOOLTIP.initialScale }}
+                animate={{ opacity: 1, x: 0, scale: 1 }}
+                exit={{ opacity: 0, x: TOOLTIP.initialX, scale: TOOLTIP.initialScale }}
+                transition={TOOLTIP.spring}
+                className="fixed z-[9999] pointer-events-none"
+                style={{ left: 64, top: tooltip.y, transform: 'translateY(-50%)' }}
+              >
+                <div className="rounded-md bg-card border border-border px-2 py-1 text-xs font-medium text-sidebar-foreground shadow-md whitespace-nowrap">
+                  {tooltip.label}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>,
           document.body
         )}
       </motion.aside>
