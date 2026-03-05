@@ -144,10 +144,12 @@ export function Sidebar({
     <>
       {/* ── Desktop sidebar ──────────────────────────────── */}
       <motion.aside
+        initial={false}
         animate={{ width: collapsed ? SIDEBAR.collapsedWidth : SIDEBAR.expandedWidth }}
         transition={SIDEBAR.spring}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
+        style={{ width: collapsed ? SIDEBAR.collapsedWidth : SIDEBAR.expandedWidth }}
         className="relative hidden md:flex shrink-0 border-r border-sidebar-border bg-sidebar h-screen sticky top-0"
       >
         {/* Chevron toggle — outside overflow-hidden so it renders fully */}
