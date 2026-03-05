@@ -12,8 +12,9 @@ import { TableHeader } from '@tiptap/extension-table-header';
 import { Bold, Italic, List, ListOrdered, ImageIcon, Heading1, Heading2, Heading3, Table as TableIcon, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
-import type { Doc } from '@/lib/types';
+import type { Doc, Profile } from '@/lib/types';
 
 const DEPARTMENTS = ['Coding', 'Visual Art', 'UI/UX', 'Animation', 'Asset Creation'] as const;
 
@@ -21,6 +22,7 @@ interface DocEditorProps {
   doc?: Doc;
   onSave: (doc: Doc) => void;
   onCancel: () => void;
+  team?: Pick<Profile, 'id' | 'display_name'>[];
 }
 
 function ToolbarButton({
@@ -146,11 +148,13 @@ function ImagePopover({ onInsert }: { onInsert: (url: string) => void }) {
   );
 }
 
-export function DocEditor({ doc, onSave, onCancel }: DocEditorProps) {
+export function DocEditor({ doc, onSave, onCancel, team = [] }: DocEditorProps) {
   const [title, setTitle] = useState(doc?.title ?? '');
   const [departments, setDepartments] = useState<string[]>(doc?.restricted_department ?? []);
+  const [grantedIds, setGrantedIds] = useState<string[]>(doc?.granted_user_ids ?? []);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [addUserValue, setAddUserValue] = useState('');
 
   const toggleDepartment = (dept: string) => {
     setDepartments(prev =>
@@ -314,6 +318,7 @@ export function DocEditor({ doc, onSave, onCancel }: DocEditorProps) {
         title: title.trim(),
         content: editor?.getHTML() ?? '',
         restricted_department: departments.length > 0 ? departments : null,
+        granted_user_ids: grantedIds.length > 0 ? grantedIds : null,
       };
       const res = doc
         ? await fetch(`/api/docs/${doc.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
@@ -373,6 +378,48 @@ export function DocEditor({ doc, onSave, onCancel }: DocEditorProps) {
           </button>
         )}
       </div>
+
+      {/* Also allow access — users who get access despite department restriction */}
+      {team.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs text-muted-foreground whitespace-nowrap">Also allow access:</span>
+          <Select
+            value={addUserValue}
+            onChange={e => {
+              const val = e.target.value;
+              if (val && !grantedIds.includes(val)) {
+                setGrantedIds(prev => [...prev, val]);
+                setAddUserValue('');
+              }
+            }}
+            className="w-[180px] h-8 text-xs"
+          >
+            <option value="">Add someone…</option>
+            {team.filter(p => !grantedIds.includes(p.id)).map(p => (
+              <option key={p.id} value={p.id}>{p.display_name ?? p.id}</option>
+            ))}
+          </Select>
+          {grantedIds.length > 0 && grantedIds.map(id => {
+            const p = team.find(t => t.id === id);
+            return (
+              <span
+                key={id}
+                className="inline-flex items-center gap-1 rounded-full border border-border bg-secondary/50 px-2.5 py-0.5 text-xs text-foreground"
+              >
+                @{p?.display_name ?? 'Unknown'}
+                <button
+                  type="button"
+                  onClick={() => setGrantedIds(prev => prev.filter(x => x !== id))}
+                  className="rounded p-0.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+                  aria-label={`Remove ${p?.display_name ?? id}`}
+                >
+                  <Trash2 className="size-3" />
+                </button>
+              </span>
+            );
+          })}
+        </div>
+      )}
 
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-1 rounded-md border border-border bg-secondary/40 px-2 py-1.5">
