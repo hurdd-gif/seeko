@@ -38,6 +38,12 @@ const CHEVRON = {
   duration: 0.15,  // s — fade in/out
 };
 
+const AVATAR = {
+  hoverScale:  1.1,    // scale up on hover
+  hoverRing:   2,      // ring width px (applied via boxShadow)
+  spring: { type: 'spring' as const, stiffness: 400, damping: 20 },
+};
+
 import { useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
@@ -239,12 +245,21 @@ export function Sidebar({
           <div className={`flex items-center mb-3 ${collapsed ? 'justify-center' : 'gap-2.5'}`}>
             {collapsed ? (
               <Link href="/settings">
-                <Avatar className="size-8">
-                  <AvatarImage src={avatarUrl} alt={label} />
-                  <AvatarFallback className="bg-secondary text-foreground text-[10px]">
-                    {getInitials(label)}
-                  </AvatarFallback>
-                </Avatar>
+                <motion.div
+                  whileHover={{
+                    scale: AVATAR.hoverScale,
+                    boxShadow: `0 0 0 ${AVATAR.hoverRing}px var(--color-seeko-accent)`,
+                  }}
+                  transition={AVATAR.spring}
+                  className="rounded-full"
+                >
+                  <Avatar className="size-8">
+                    <AvatarImage src={avatarUrl} alt={label} />
+                    <AvatarFallback className="bg-secondary text-foreground text-[10px]">
+                      {getInitials(label)}
+                    </AvatarFallback>
+                  </Avatar>
+                </motion.div>
               </Link>
             ) : (
               <Avatar className="size-8">
