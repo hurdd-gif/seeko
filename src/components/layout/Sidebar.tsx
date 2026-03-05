@@ -113,6 +113,28 @@ export function Sidebar({
           <span className="font-semibold text-base tracking-tight text-sidebar-foreground">SEEKO</span>
         </div>
 
+        {/* Chevron toggle — visible on sidebar hover */}
+        <AnimatePresence>
+          {hovered && (
+            <motion.button
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              onClick={toggleCollapsed}
+              className="absolute -right-3 top-1/2 -translate-y-1/2 z-10 flex size-6 items-center justify-center rounded-full border border-sidebar-border bg-sidebar shadow-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <motion.span
+                animate={{ rotate: collapsed ? 180 : 0 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                className="flex"
+              >
+                <ChevronLeft className="size-3.5" />
+              </motion.span>
+            </motion.button>
+          )}
+        </AnimatePresence>
+
         <Separator className="bg-sidebar-border" />
 
         <nav className="flex flex-col gap-0.5 p-2 flex-1 mt-1">
