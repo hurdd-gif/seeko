@@ -73,7 +73,8 @@ const PAGE_NAMES: Record<string, string> = {
   '/settings': 'Settings',
 };
 
-function friendlyPage(path: string): string {
+function friendlyPage(path: string | undefined): string {
+  if (!path) return '';
   return PAGE_NAMES[path] || path;
 }
 

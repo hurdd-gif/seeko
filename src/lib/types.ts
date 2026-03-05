@@ -66,6 +66,7 @@ export type TaskDeliverable = {
   storage_path: string;
   uploaded_by: string;
   created_at: string;
+  download_url?: string;
 };
 
 export type TaskComment = {
@@ -74,6 +75,7 @@ export type TaskComment = {
   user_id: string;
   content: string;
   created_at: string;
+  updated_at?: string;
   profiles?: Pick<Profile, 'id' | 'display_name' | 'avatar_url'>;
 };
 
@@ -83,6 +85,16 @@ export type NotificationKind =
   | 'comment_reply'
   | 'task_completed'
   | 'deliverable_uploaded';
+
+export type UserEvent = {
+  id: string;
+  user_id: string;
+  event_type: string;
+  page?: string;
+  target?: string;
+  metadata?: Record<string, string>;
+  created_at: string;
+};
 
 export type Notification = {
   id: string;
