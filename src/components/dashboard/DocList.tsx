@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { FileText, Lock, Pencil, Trash2, Plus, Search, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import { Doc } from '@/lib/types';
+import type { Profile } from '@/lib/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -49,9 +50,11 @@ interface DocListProps {
   docs: Doc[];
   userDepartment?: string | null;
   isAdmin?: boolean;
+  currentUserId?: string;
+  team?: Pick<Profile, 'id' | 'display_name'>[];
 }
 
-export function DocList({ docs: initialDocs, userDepartment, isAdmin = false }: DocListProps) {
+export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, currentUserId = '', team = [] }: DocListProps) {
   const [docs, setDocs] = useState<Doc[]>(initialDocs);
   const [selected, setSelected] = useState<Doc | null>(null);
   const [editingDoc, setEditingDoc] = useState<Doc | 'new' | null>(null);
@@ -60,13 +63,16 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false }: 
   const [departmentFilter, setDepartmentFilter] = useState<string>('all');
   const searchParams = useSearchParams();
 
-  const isLocked = (d: Doc) =>
-    !isAdmin && !!d.restricted_department?.length && !d.restricted_department.includes(userDepartment ?? '');
+  const isLocked = (d: Doc) => {
+    if (isAdmin) return false;
+    const hasDeptRestriction = !!d.restricted_department?.length;
+    const inDept = hasDeptRestriction && d.restricted_department!.includes(userDepartment ?? '');
+    const granted = !!d.granted_user_ids?.length && d.granted_user_ids.includes(currentUserId);
+    return hasDeptRestriction && !inDept && !granted;
+  };
   const sortedDocs = useMemo(() => {
-    const isLockedDoc = (d: Doc) =>
-      !isAdmin && !!d.restricted_department?.length && !d.restricted_department.includes(userDepartment ?? '');
     const byLock = [...docs].sort((a, b) =>
-      isLockedDoc(a) === isLockedDoc(b) ? 0 : isLockedDoc(a) ? 1 : -1
+      isLocked(a) === isLocked(b) ? 0 : isLocked(a) ? 1 : -1
     );
     const q = searchQuery.trim().toLowerCase();
     const bySearch = q
@@ -74,7 +80,7 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false }: 
       : byLock;
     if (departmentFilter === 'all') return bySearch;
     return bySearch.filter(d => d.restricted_department?.includes(departmentFilter));
-  }, [docs, searchQuery, departmentFilter, isAdmin, userDepartment]);
+  }, [docs, searchQuery, departmentFilter, isAdmin, userDepartment, currentUserId]);
 
   useEffect(() => {
     const docId = searchParams.get('doc');
@@ -238,6 +244,11 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false }: 
                             </div>
                           )}
                         </div>
+                        {doc.granted_user_ids?.length ? (
+                          <p className="text-[11px] text-muted-foreground/70">
+                            Also: {team.filter(p => doc.granted_user_ids?.includes(p.id)).map(p => `@${p.display_name ?? 'Unknown'}`).join(', ')}
+                          </p>
+                        ) : null}
                         {(doc.updated_at || doc.created_at) && (
                           <p className="flex items-center gap-1 text-[11px] text-muted-foreground/70">
                             <Clock className="size-3" />
@@ -298,6 +309,7 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false }: 
               doc={editingDoc === 'new' ? undefined : editingDoc}
               onSave={handleSave}
               onCancel={() => setEditingDoc(null)}
+              team={team}
             />
           </>
         )}

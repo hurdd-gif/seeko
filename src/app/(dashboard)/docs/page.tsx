@@ -6,7 +6,7 @@
  *  160ms   doc list or empty state rises in
  * ───────────────────────────────────────────────────────── */
 
-import { fetchDocs, fetchProfile } from '@/lib/supabase/data';
+import { fetchDocs, fetchProfile, fetchTeam } from '@/lib/supabase/data';
 import { createClient } from '@/lib/supabase/server';
 import { DocList } from '@/components/dashboard/DocList';
 import { FileText } from 'lucide-react';
@@ -24,9 +24,10 @@ const delay = (ms: number) => ms / 1000;
 export default async function DocsPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  const [docs, profile] = await Promise.all([
+  const [docs, profile, team] = await Promise.all([
     fetchDocs().catch((e) => { throw new Error('Failed to load documents.'); }),
     user ? fetchProfile(user.id).catch(() => null) : null,
+    fetchTeam().catch(() => []),
   ]);
   const userDepartment = profile?.department ?? null;
   const isAdmin = profile?.is_admin ?? false;
@@ -43,7 +44,13 @@ export default async function DocsPage() {
       </div>
 
       <FadeRise delay={delay(TIMING.list)} y={12}>
-        <DocList docs={docs} userDepartment={userDepartment} isAdmin={isAdmin} />
+        <DocList
+          docs={docs}
+          userDepartment={userDepartment}
+          isAdmin={isAdmin}
+          currentUserId={user?.id ?? ''}
+          team={team}
+        />
       </FadeRise>
     </div>
   );
