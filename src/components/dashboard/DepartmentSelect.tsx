@@ -1,0 +1,65 @@
+'use client';
+
+import { useState, useTransition } from 'react';
+import { toast } from 'sonner';
+import { Department } from '@/lib/types';
+
+const DEPARTMENTS: Department[] = ['Coding', 'Visual Art', 'UI/UX', 'Animation', 'Asset Creation'];
+
+const DEPT_COLOR: Record<string, string> = {
+  'Coding':         'text-emerald-400',
+  'Visual Art':     'text-blue-300',
+  'UI/UX':          'text-violet-300',
+  'Animation':      'text-amber-400',
+  'Asset Creation': 'text-pink-300',
+};
+
+interface Props {
+  userId: string;
+  department?: string;
+}
+
+export function DepartmentSelect({ userId, department }: Props) {
+  const [value, setValue] = useState(department ?? '');
+  const [isPending, startTransition] = useTransition();
+
+  async function handleChange(next: string) {
+    const prev = value;
+    setValue(next);
+    startTransition(async () => {
+      const res = await fetch('/api/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, department: next }),
+      });
+      if (!res.ok) {
+        setValue(prev);
+        toast.error('Failed to update department');
+      } else {
+        toast.success(`Department updated to ${next}`);
+      }
+    });
+  }
+
+  return (
+    <select
+      value={value}
+      onChange={e => handleChange(e.target.value)}
+      disabled={isPending}
+      className={[
+        'rounded bg-transparent text-xs border border-transparent px-1.5 py-0.5',
+        'hover:border-border hover:bg-muted cursor-pointer transition-colors',
+        'focus:outline-none focus:border-border',
+        isPending ? 'opacity-50' : '',
+        DEPT_COLOR[value] ?? 'text-muted-foreground',
+      ].join(' ')}
+    >
+      {!value && <option value="">No department</option>}
+      {DEPARTMENTS.map(d => (
+        <option key={d} value={d} className="bg-card text-foreground">
+          {d}
+        </option>
+      ))}
+    </select>
+  );
+}
