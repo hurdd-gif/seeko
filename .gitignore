@@ -45,3 +45,12 @@ next-env.d.ts
 
 # local MCP config (may contain API tokens)
 .mcp.json
+
+# documents
+*.pdf
+*.doc
+*.docx
+*.xls
+*.xlsx
+*.ppt
+*.pptx
