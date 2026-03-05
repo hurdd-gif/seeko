@@ -70,6 +70,7 @@ Every authenticated user gets a profile row automatically on signup. This double
 | content    | text        | HTML content                             |
 | parent_id  | uuid (FK)   | → docs.id (self-referencing tree)        |
 | sort_order | int         | Ordering within a parent                 |
+| granted_user_ids | uuid[] | User IDs granted access when doc is department-restricted |
 | created_at | timestamptz |                                          |
 
 ---

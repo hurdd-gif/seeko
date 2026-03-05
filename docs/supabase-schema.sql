@@ -100,6 +100,7 @@ create table public.docs (
   content    text,
   parent_id  uuid references public.docs(id),
   sort_order int default 0,
+  granted_user_ids uuid[] default null,  -- allow specific users when doc is department-restricted
   created_at timestamptz default now()
 );
 
