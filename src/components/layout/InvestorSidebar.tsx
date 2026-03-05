@@ -3,10 +3,16 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { motion, LayoutGroup } from 'motion/react';
 import { LogOut, LayoutDashboard, FileDown, Settings } from 'lucide-react';
 import { toast } from 'sonner';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+
+const NAV_HIGHLIGHT = {
+  spring: { type: 'spring' as const, stiffness: 380, damping: 30 },
+};
 
 function getInitials(name: string): string {
   return name.split(' ').map(p => p[0]).join('').toUpperCase().slice(0, 2) || '?';
@@ -20,6 +26,7 @@ interface InvestorSidebarProps {
 }
 
 export function InvestorSidebar({ email, displayName, avatarUrl, isAdmin = false }: InvestorSidebarProps) {
+  const pathname = usePathname();
   const label = displayName || email;
   const [pdfLoading, setPdfLoading] = useState(false);
 
@@ -72,6 +79,45 @@ export function InvestorSidebar({ email, displayName, avatarUrl, isAdmin = false
           </p>
         </div>
 
+        <nav className="flex flex-col gap-0.5 p-2 flex-1 mt-1">
+          <LayoutGroup id="investor-sidebar-nav">
+            {/* Dashboard (back to investor home) */}
+            <Link
+              href="/investor"
+              className={[
+                'relative flex items-center rounded-md py-2.5 text-sm gap-3 px-3',
+                pathname === '/investor'
+                  ? 'text-seeko-accent font-medium'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors',
+              ].join(' ')}
+            >
+              {pathname === '/investor' && (
+                <motion.div
+                  layoutId="investor-nav-highlight"
+                  className="absolute inset-0 rounded-md bg-white/5"
+                  transition={NAV_HIGHLIGHT.spring}
+                />
+              )}
+              <LayoutDashboard className={`relative h-4 w-4 shrink-0 ${pathname === '/investor' ? 'text-seeko-accent' : ''}`} />
+              <span className="whitespace-nowrap">Dashboard</span>
+            </Link>
+
+            {/* Back to main dashboard (admins only) */}
+            {isAdmin && (
+              <Link
+                href="/"
+                className={[
+                  'relative flex items-center rounded-md py-2.5 text-sm gap-3 px-3',
+                  'text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors',
+                ].join(' ')}
+              >
+                <LayoutDashboard className="relative h-4 w-4 shrink-0" />
+                <span className="whitespace-nowrap">Back to dashboard</span>
+              </Link>
+            )}
+          </LayoutGroup>
+        </nav>
+
         <div className="flex-1" />
 
         {/* Download summary PDF */}
@@ -80,27 +126,13 @@ export function InvestorSidebar({ email, displayName, avatarUrl, isAdmin = false
             type="button"
             onClick={handleDownloadPdf}
             disabled={pdfLoading}
-            className="flex items-center gap-2 rounded-md px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors disabled:opacity-50 w-full text-left"
+            className="flex items-center gap-2 rounded-md px-3 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors disabled:opacity-50 w-full text-left"
           >
-            <FileDown className="h-3.5 w-3.5 shrink-0" />
+            <FileDown className="h-4 w-4 shrink-0" />
             {pdfLoading ? 'Generating…' : 'Download summary (PDF)'}
           </button>
         </div>
 
-        {/* Back to dashboard (admins only) */}
-        {isAdmin && (
-          <div className="px-4 pb-2">
-            <Link
-              href="/"
-              className="flex items-center gap-2 rounded-md px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors"
-            >
-              <LayoutDashboard className="h-3.5 w-3.5 shrink-0" />
-              Back to dashboard
-            </Link>
-          </div>
-        )}
-
-        {/* User + settings + sign out */}
         <div className="p-4 border-t border-sidebar-border space-y-3">
           <div className="flex items-center gap-2.5">
             <Avatar className="size-8 shrink-0">
@@ -119,7 +151,12 @@ export function InvestorSidebar({ email, displayName, avatarUrl, isAdmin = false
 
           <Link
             href="/investor/settings"
-            className="flex items-center gap-2 rounded-md px-0 py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            className={[
+              'flex items-center gap-2 rounded-md px-0 py-1.5 text-xs transition-colors mb-1',
+              pathname.startsWith('/investor/settings')
+                ? 'text-seeko-accent font-medium'
+                : 'text-muted-foreground hover:text-foreground',
+            ].join(' ')}
           >
             <Settings className="h-3.5 w-3.5 shrink-0" />
             Settings
@@ -146,8 +183,21 @@ export function InvestorSidebar({ email, displayName, avatarUrl, isAdmin = false
         </div>
         <div className="flex items-center gap-2">
           <Link
+            href="/investor"
+            className={[
+              'flex items-center gap-1.5 text-xs font-medium transition-colors',
+              pathname === '/investor' ? 'text-seeko-accent' : 'text-muted-foreground hover:text-foreground',
+            ].join(' ')}
+          >
+            <LayoutDashboard className="h-3.5 w-3.5" />
+            Dashboard
+          </Link>
+          <Link
             href="/investor/settings"
-            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            className={[
+              'flex items-center gap-1.5 text-xs font-medium transition-colors',
+              pathname.startsWith('/investor/settings') ? 'text-seeko-accent' : 'text-muted-foreground hover:text-foreground',
+            ].join(' ')}
           >
             <Settings className="h-3.5 w-3.5" />
             Settings
@@ -167,7 +217,7 @@ export function InvestorSidebar({ email, displayName, avatarUrl, isAdmin = false
               className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
             >
               <LayoutDashboard className="h-3.5 w-3.5" />
-              Dashboard
+              Main
             </Link>
           )}
           <form action="/auth/signout" method="post">
