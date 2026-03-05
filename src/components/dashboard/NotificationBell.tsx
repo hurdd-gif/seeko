@@ -39,8 +39,23 @@ export function NotificationBell({ userId, initialCount, initialNotifications, c
   const [unreadCount, setUnreadCount] = useState(initialCount);
   const [notifications, setNotifications] = useState<Notification[]>(initialNotifications);
   const [panelPos, setPanelPos] = useState<{ left: number; top: number } | null>(null);
+  const [tooltipY, setTooltipY] = useState<number | null>(null);
   const bellRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+
+  const tooltipLabel = unreadCount > 0
+    ? `${unreadCount} notification${unreadCount === 1 ? '' : 's'}`
+    : 'No notifications';
+
+  function handleBellMouseEnter() {
+    if (!collapsed || !bellRef.current) return;
+    const rect = bellRef.current.getBoundingClientRect();
+    setTooltipY(rect.top + rect.height / 2);
+  }
+
+  function handleBellMouseLeave() {
+    setTooltipY(null);
+  }
 
   const supabase = useMemo(() => createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -208,6 +223,8 @@ export function NotificationBell({ userId, initialCount, initialNotifications, c
       <button
         ref={bellRef}
         onClick={handleToggle}
+        onMouseEnter={handleBellMouseEnter}
+        onMouseLeave={handleBellMouseLeave}
         className={[
           'relative flex items-center rounded-md py-2.5 text-sm transition-colors text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent/50 w-full',
           collapsed ? 'justify-center px-0' : 'gap-3 px-3',
@@ -235,6 +252,26 @@ export function NotificationBell({ userId, initialCount, initialNotifications, c
         )}
       </button>
       {typeof document !== 'undefined' && createPortal(panel, document.body)}
+      {typeof document !== 'undefined' && createPortal(
+        <AnimatePresence>
+          {collapsed && tooltipY !== null && (
+            <motion.div
+              key="bell-tooltip"
+              initial={{ opacity: 0, x: -6, scale: 0.88 }}
+              animate={{ opacity: 1, x: 0, scale: 1 }}
+              exit={{ opacity: 0, x: -6, scale: 0.88 }}
+              transition={{ type: 'spring', stiffness: 420, damping: 26 }}
+              className="fixed z-[9999] pointer-events-none"
+              style={{ left: 64, top: tooltipY, transform: 'translateY(-50%)' }}
+            >
+              <div className="rounded-md bg-card border border-border px-2 py-1 text-xs font-medium text-sidebar-foreground shadow-md whitespace-nowrap">
+                {tooltipLabel}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
     </>
   );
 }
