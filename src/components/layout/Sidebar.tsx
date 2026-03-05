@@ -395,10 +395,42 @@ export function Sidebar({
         )}
       </motion.aside>
 
-      {/* ── Mobile: no in-app header (avoids double bar with status bar); nav fixed at bottom ── */}
+      {/* ── Mobile: header in-flow (logo, notifications, profile); nav fixed at bottom ── */}
       {mounted && (() => {
+        const headerSlot = typeof document !== 'undefined' ? document.getElementById('dashboard-mobile-header-slot') : null;
+        const headerEl = headerSlot ?? document.body;
+        const useHeaderSlot = Boolean(headerSlot);
         return (
           <>
+            {createPortal(
+              <header
+                className={`md:hidden flex items-center justify-between px-4 h-14 w-full shrink-0 ${!useHeaderSlot ? 'fixed top-0 left-0 right-0 z-40 mobile-fixed-layer' : ''}`}
+                style={useHeaderSlot ? undefined : { background: 'rgba(0,0,0,0)', backdropFilter: 'none' }}
+              >
+                <div className="flex items-center gap-2.5">
+                  <Image src="/seeko-s.png" alt="SEEKO" width={20} height={20} unoptimized />
+                  <span className="font-semibold text-sm tracking-tight text-sidebar-foreground">SEEKO</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {userId && (
+                    <NotificationBell
+                      userId={userId}
+                      initialCount={unreadCount}
+                      initialNotifications={notifications}
+                    />
+                  )}
+                  <Link href="/settings" onClick={() => trigger('selection')}>
+                    <Avatar className="size-8">
+                      <AvatarImage src={avatarUrl} alt={label} />
+                      <AvatarFallback className="bg-secondary text-foreground text-[10px]">
+                        {getInitials(label)}
+                      </AvatarFallback>
+                    </Avatar>
+                  </Link>
+                </div>
+              </header>,
+              headerEl
+            )}
             {createPortal(
               <nav
                 className="mobile-fixed-layer md:hidden fixed bottom-0 left-0 right-0 z-50 mx-auto w-max max-w-[calc(100vw-24px)] flex justify-center items-center"
