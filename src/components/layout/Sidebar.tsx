@@ -48,7 +48,7 @@ const AVATAR = {
   spring: { type: 'spring' as const, stiffness: 400, damping: 20 },
 };
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence, LayoutGroup } from 'motion/react';
 import Link from 'next/link';
@@ -105,10 +105,12 @@ export function Sidebar({
 }: SidebarProps) {
   const pathname = usePathname();
   const [confirmingSignOut, setConfirmingSignOut] = useState(false);
-  const [collapsed, setCollapsed] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return false;
-    return localStorage.getItem('seeko:sidebar-collapsed') === 'true';
-  });
+  // Always start expanded for SSR/hydration; sync from localStorage after mount to avoid mismatch.
+  const [collapsed, setCollapsed] = useState(false);
+  useEffect(() => {
+    const stored = localStorage.getItem('seeko:sidebar-collapsed') === 'true';
+    setCollapsed(stored);
+  }, []);
   const [hovered, setHovered] = useState(false);
   const [tooltip, setTooltip] = useState<{ label: string; y: number } | null>(null);
 
