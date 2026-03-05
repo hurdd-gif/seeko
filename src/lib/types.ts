@@ -50,6 +50,7 @@ export type Doc = {
   content?: string;
   parent_id?: string;
   sort_order: number;
+  created_at?: string;
   updated_at?: string;
   restricted_department?: string;
 };
