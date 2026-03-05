@@ -1,6 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
+import { motion, AnimatePresence } from 'motion/react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -11,6 +13,8 @@ import {
   LogOut,
   Activity,
   Settings,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { Button } from '@/components/ui/button';
@@ -53,6 +57,34 @@ export function Sidebar({
 }: SidebarProps) {
   const pathname = usePathname();
   const [confirmingSignOut, setConfirmingSignOut] = useState(false);
+  const [collapsed, setCollapsed] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return localStorage.getItem('seeko:sidebar-collapsed') === 'true';
+  });
+  const [hovered, setHovered] = useState(false);
+  const [tooltip, setTooltip] = useState<{ label: string; y: number } | null>(null);
+  const tooltipTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const toggleCollapsed = () => {
+    setCollapsed(prev => {
+      const next = !prev;
+      localStorage.setItem('seeko:sidebar-collapsed', String(next));
+      return next;
+    });
+  };
+
+  const handleNavMouseEnter = (e: React.MouseEvent<HTMLAnchorElement>, navLabel: string) => {
+    if (!collapsed) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    tooltipTimerRef.current = setTimeout(() => {
+      setTooltip({ label: navLabel, y: rect.top + rect.height / 2 });
+    }, 4000);
+  };
+
+  const handleNavMouseLeave = () => {
+    if (tooltipTimerRef.current) clearTimeout(tooltipTimerRef.current);
+    setTooltip(null);
+  };
 
   const NAV = NAV_BASE
     .filter(item => !(isContractor && item.href === '/activity'))
