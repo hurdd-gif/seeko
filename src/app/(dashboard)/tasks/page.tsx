@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
-import { fetchTasks, fetchAllTasksWithAssignees, fetchTeam, fetchProfile } from '@/lib/supabase/data';
+import { fetchTasks, fetchAllTasksWithAssignees, fetchTeam, fetchProfile, fetchDocs } from '@/lib/supabase/data';
 import { TaskList } from '@/components/dashboard/TaskList';
 
 export default async function TasksPage() {
@@ -13,7 +13,10 @@ export default async function TasksPage() {
     ? await fetchAllTasksWithAssignees().catch(() => [])
     : await fetchTasks(user?.id).catch(() => []);
 
-  const team = await fetchTeam().catch(() => []);
+  const [team, docs] = await Promise.all([
+    fetchTeam().catch(() => []),
+    fetchDocs().catch(() => []),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -29,6 +32,7 @@ export default async function TasksPage() {
         tasks={tasks}
         isAdmin={isAdmin}
         team={team}
+        docs={docs}
         currentUserId={user?.id ?? ''}
       />
     </div>

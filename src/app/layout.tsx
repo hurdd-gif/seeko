@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Toaster } from "sonner";
 import { Outfit, JetBrains_Mono } from "next/font/google";
 import { DevAgentation } from "@/components/dev/agentation";
 import "./globals.css";
@@ -29,6 +30,7 @@ export default function RootLayout({
         className={`${outfit.variable} ${jetbrainsMono.variable} antialiased bg-background text-foreground`}
       >
         {children}
+        <Toaster richColors position="top-center" />
         <DevAgentation />
       </body>
     </html>

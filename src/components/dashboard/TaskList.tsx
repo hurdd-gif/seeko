@@ -31,6 +31,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { TaskDetail } from '@/components/dashboard/TaskDetail';
+import { DeliverablesUploadDialog } from '@/components/dashboard/DeliverablesUploadDialog';
 
 const STATUS_ICONS: Record<string, { icon: typeof Circle; className: string }> = {
   'Complete':     { icon: CheckCircle2, className: 'text-[var(--color-status-complete)]' },
@@ -67,10 +68,11 @@ interface TaskListProps {
   tasks: Task[] | TaskWithAssignee[];
   isAdmin?: boolean;
   team?: Profile[];
+  docs?: import('@/lib/types').Doc[];
   currentUserId?: string;
 }
 
-export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], currentUserId = '' }: TaskListProps) {
+export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs = [], currentUserId = '' }: TaskListProps) {
   const router = useRouter();
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('All');
@@ -79,6 +81,7 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], curr
   const [deleted, setDeleted] = useState<Set<string>>(new Set());
   const [localTasks, setLocalTasks] = useState<Task[]>([]);
   const [selectedTask, setSelectedTask] = useState<Task | TaskWithAssignee | null>(null);
+  const [deliverableTask, setDeliverableTask] = useState<Task | TaskWithAssignee | null>(null);
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [newName, setNewName] = useState('');
@@ -121,9 +124,33 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], curr
   }, [newName, newDept, newPriority, newDeadline, supabase]);
 
   const handleStatusChange = useCallback(async (taskId: string, newStatus: TaskStatus) => {
+    if (newStatus === 'Complete') {
+      const task = allTasks.find(t => t.id === taskId);
+      if (task) setDeliverableTask(task);
+      return;
+    }
     setTaskStatuses(prev => ({ ...prev, [taskId]: newStatus }));
     await supabase.from('tasks').update({ status: newStatus }).eq('id', taskId);
+  }, [supabase, allTasks]);
+
+  const doCompleteTask = useCallback(async (taskId: string) => {
+    setTaskStatuses(prev => ({ ...prev, [taskId]: 'Complete' }));
+    await supabase.from('tasks').update({ status: 'Complete' }).eq('id', taskId);
+    setDeliverableTask(null);
   }, [supabase]);
+
+  const notifyAdminsTaskCompleted = useCallback((taskId: string, taskName: string, completerName: string) => {
+    fetch('/api/notify/admins', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        kind: 'task_completed',
+        title: 'Task completed',
+        body: `${completerName} completed "${taskName}"`,
+        link: `/tasks?task=${taskId}`,
+      }),
+    }).catch(() => {});
+  }, []);
 
   const handleToggleComplete = useCallback((taskId: string, currentStatus: string) => {
     const newStatus: TaskStatus = currentStatus === 'Complete' ? 'In Progress' : 'Complete';
@@ -387,7 +414,39 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], curr
           open={!!selectedTask}
           onOpenChange={open => { if (!open) setSelectedTask(null); }}
           team={team}
+          docs={docs}
           currentUserId={currentUserId}
+          isAdmin={isAdmin}
+        />
+      )}
+
+      {deliverableTask && (
+        <DeliverablesUploadDialog
+          open
+          onOpenChange={open => { if (!open) setDeliverableTask(null); }}
+          task={deliverableTask}
+          onSubmit={async (files) => {
+            for (const file of files) {
+              const form = new FormData();
+              form.append('file', file);
+              const res = await fetch(`/api/tasks/${deliverableTask.id}/deliverables`, { method: 'POST', body: form });
+              if (!res.ok) throw new Error((await res.json()).error || 'Upload failed');
+            }
+            await doCompleteTask(deliverableTask.id);
+            notifyAdminsTaskCompleted(
+              deliverableTask.id,
+              deliverableTask.name,
+              team.find(m => m.id === currentUserId)?.display_name ?? 'Someone'
+            );
+          }}
+          onSkip={async () => {
+            await doCompleteTask(deliverableTask.id);
+            notifyAdminsTaskCompleted(
+              deliverableTask.id,
+              deliverableTask.name,
+              team.find(m => m.id === currentUserId)?.display_name ?? 'Someone'
+            );
+          }}
         />
       )}
     </div>

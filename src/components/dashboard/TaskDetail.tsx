@@ -16,9 +16,11 @@ import {
   Check,
   X,
   FileText,
+  Package,
+  Download,
 } from 'lucide-react';
 import Link from 'next/link';
-import { Task, TaskWithAssignee, TaskComment, Profile, Doc } from '@/lib/types';
+import { Task, TaskWithAssignee, TaskComment, TaskDeliverable, Profile, Doc } from '@/lib/types';
 import { Dialog, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -270,11 +272,14 @@ interface TaskDetailProps {
   docs: Doc[];
   currentUserId: string;
   highlightCommentId?: string | null;
+  isAdmin?: boolean;
 }
 
-export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId, highlightCommentId }: TaskDetailProps) {
+export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId, highlightCommentId, isAdmin = false }: TaskDetailProps) {
   const [comments, setComments] = useState<TaskComment[]>([]);
   const [loading, setLoading] = useState(false);
+  const [deliverables, setDeliverables] = useState<TaskDeliverable[]>([]);
+  const [deliverablesLoading, setDeliverablesLoading] = useState(false);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [autocompleteMode, setAutocompleteMode] = useState<AutocompleteMode>(null);
@@ -305,6 +310,26 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
   useEffect(() => {
     if (open) loadComments();
   }, [open, loadComments]);
+
+  const loadDeliverables = useCallback(async () => {
+    if (!isAdmin) return;
+    setDeliverablesLoading(true);
+    try {
+      const res = await fetch(`/api/tasks/${task.id}/deliverables`);
+      if (res.ok) {
+        const data = await res.json();
+        setDeliverables(Array.isArray(data) ? data : []);
+      } else {
+        setDeliverables([]);
+      }
+    } finally {
+      setDeliverablesLoading(false);
+    }
+  }, [task.id, isAdmin]);
+
+  useEffect(() => {
+    if (open && isAdmin) loadDeliverables();
+  }, [open, isAdmin, loadDeliverables]);
 
   useEffect(() => {
     if (!open) return;
@@ -656,6 +681,44 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
           </div>
         </div>
       </div>
+
+      {isAdmin && (
+        <>
+          <Separator className="my-4" />
+          <div className="mt-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Package className="size-4 text-muted-foreground" />
+              <h3 className="text-sm font-medium text-foreground">Deliverables</h3>
+              <span className="text-xs text-muted-foreground">({deliverables.length})</span>
+            </div>
+            {deliverablesLoading ? (
+              <p className="text-xs text-muted-foreground py-3">Loading...</p>
+            ) : deliverables.length === 0 ? (
+              <p className="text-xs text-muted-foreground py-3">No deliverables uploaded yet.</p>
+            ) : (
+              <ul className="space-y-2 max-h-32 overflow-y-auto">
+                {deliverables.map((d) => (
+                  <li key={d.id} className="flex items-center gap-2 text-sm">
+                    <FileText className="size-3.5 text-muted-foreground shrink-0" />
+                    <span className="truncate flex-1">{d.file_name}</span>
+                    {d.download_url ? (
+                      <a
+                        href={d.download_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="shrink-0 text-xs text-primary hover:underline flex items-center gap-1"
+                      >
+                        <Download className="size-3" />
+                        Download
+                      </a>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </>
+      )}
     </Dialog>
   );
 }

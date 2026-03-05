@@ -88,6 +88,10 @@ create policy "Authenticated users can read tasks"
   on public.tasks for select
   using (auth.role() = 'authenticated');
 
+-- ─── Task Deliverables ────────────────────────────────────────────────────────
+-- Files uploaded when completing a task. Visible only to admins (Deliverables tab).
+-- See migration 20260305000002_task_deliverables.sql for table + storage bucket.
+
 -- ─── Docs ─────────────────────────────────────────────────────────────────────
 
 create table public.docs (
