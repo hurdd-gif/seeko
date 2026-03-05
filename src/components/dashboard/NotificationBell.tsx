@@ -111,17 +111,25 @@ export function NotificationBell({ userId, initialCount, initialNotifications }:
   function handleToggle() {
     if (!open && bellRef.current) {
       const rect = bellRef.current.getBoundingClientRect();
+      const panelWidth = 320; // w-80
       const panelHeight = 420;
       const margin = 8;
+
+      // Horizontal: prefer right of bell, clamp to viewport
+      let left = rect.right + 8;
+      if (left + panelWidth > window.innerWidth - margin) {
+        left = window.innerWidth - panelWidth - margin;
+      }
+      if (left < margin) left = margin;
+
+      // Vertical: prefer aligned to bell, clamp to viewport
       let top = rect.bottom - panelHeight;
-      if (top < margin) top = margin;
+      if (top < margin) top = rect.bottom + 4; // fall below bell on mobile
       if (top + panelHeight > window.innerHeight - margin) {
         top = window.innerHeight - panelHeight - margin;
       }
-      setPanelPos({
-        left: rect.right + 8,
-        top,
-      });
+
+      setPanelPos({ left, top });
     }
     setOpen(v => !v);
   }
