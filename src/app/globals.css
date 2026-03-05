@@ -224,22 +224,28 @@ body {
   outline: 2px solid var(--color-seeko-accent);
   outline-offset: -1px;
 }
-/* Column resize handle */
+/* Column resize handle — Tiptap injects this div; we show the I► icon */
 .ProseMirror .column-resize-handle {
   position: absolute;
-  right: -2px;
-  top: 0;
-  bottom: 0;
-  width: 4px;
-  background: var(--color-seeko-accent);
+  right: -10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-seeko-accent);
   opacity: 0;
   cursor: col-resize;
-  pointer-events: none;
-  transition: opacity 0.15s;
+  pointer-events: all;
+  transition: opacity 0.12s;
+  z-index: 20;
+  border-radius: 3px;
 }
 .ProseMirror th:hover .column-resize-handle,
 .ProseMirror td:hover .column-resize-handle {
-  opacity: 0.6;
+  opacity: 1;
 }
 .ProseMirror.resize-cursor {
   cursor: col-resize;

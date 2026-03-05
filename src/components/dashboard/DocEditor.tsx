@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Image from '@tiptap/extension-image';
@@ -180,6 +180,125 @@ export function DocEditor({ doc, onSave, onCancel }: DocEditorProps) {
 
   const insertImage = useCallback((url: string) => {
     editor?.chain().focus().setImage({ src: url }).run();
+  }, [editor]);
+
+  // ── Table resize icons + row resize ──────────────────────
+  useEffect(() => {
+    if (!editor) return;
+    const editorEl = editor.view.dom as HTMLElement;
+
+    /* SVG strings — match the three icons the user provided */
+    const COL_RESIZE_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 14 14" fill="currentColor" style="display:block">
+      <rect x="1" y="1" width="2" height="12" rx="1"/>
+      <path d="M6 7L12 3.5V10.5L6 7Z"/>
+    </svg>`;
+
+    const ROW_RESIZE_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 14 14" fill="currentColor" style="display:block">
+      <rect x="1" y="6.25" width="12" height="1.5" rx="0.75"/>
+      <path d="M7 1L4 4.5H10L7 1Z"/>
+      <path d="M7 13L4 9.5H10L7 13Z"/>
+    </svg>`;
+
+    /* Inject I► icon into Tiptap's column-resize-handle divs */
+    function injectColIcons() {
+      editorEl.querySelectorAll<HTMLElement>('.column-resize-handle').forEach(h => {
+        if (!h.querySelector('svg')) h.innerHTML = COL_RESIZE_SVG;
+      });
+    }
+
+    const colObserver = new MutationObserver(injectColIcons);
+    colObserver.observe(editorEl, { childList: true, subtree: true });
+    injectColIcons();
+
+    /* ── Row resize ── */
+    let resizing = false;
+    let resizingRow: HTMLTableRowElement | null = null;
+    let startY = 0;
+    let startHeight = 0;
+
+    /* Floating ≑ indicator */
+    const indicator = document.createElement('div');
+    Object.assign(indicator.style, {
+      position: 'fixed',
+      zIndex: '9999',
+      pointerEvents: 'none',
+      opacity: '0',
+      transition: 'opacity 0.1s',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      color: '#6ee7b7',
+      width: '20px',
+      height: '20px',
+    });
+    indicator.innerHTML = ROW_RESIZE_SVG;
+    document.body.appendChild(indicator);
+
+    function rowNearBottom(e: MouseEvent): HTMLTableRowElement | null {
+      for (const el of document.elementsFromPoint(e.clientX, e.clientY)) {
+        const cell = el.closest('td, th');
+        if (!cell || !editorEl.contains(cell)) continue;
+        const row = cell.parentElement as HTMLTableRowElement;
+        if (!row || row.tagName !== 'TR') continue;
+        const rect = row.getBoundingClientRect();
+        if (e.clientY >= rect.bottom - 6 && e.clientY <= rect.bottom + 4) return row;
+      }
+      return null;
+    }
+
+    function onMove(e: MouseEvent) {
+      if (resizing && resizingRow) {
+        const newH = Math.max(28, startHeight + (e.clientY - startY));
+        Array.from(resizingRow.cells).forEach(c => { (c as HTMLElement).style.height = `${newH}px`; });
+        const r = resizingRow.getBoundingClientRect();
+        indicator.style.left = `${e.clientX - 10}px`;
+        indicator.style.top  = `${r.bottom - 10}px`;
+        indicator.style.opacity = '1';
+        return;
+      }
+      const row = rowNearBottom(e);
+      if (row) {
+        const r = row.getBoundingClientRect();
+        indicator.style.left = `${e.clientX - 10}px`;
+        indicator.style.top  = `${r.bottom - 10}px`;
+        indicator.style.opacity = '1';
+        editorEl.style.cursor = 'row-resize';
+      } else {
+        indicator.style.opacity = '0';
+        editorEl.style.cursor = '';
+      }
+    }
+
+    function onDown(e: MouseEvent) {
+      const row = rowNearBottom(e);
+      if (!row) return;
+      e.preventDefault();
+      resizing = true;
+      resizingRow = row;
+      startY = e.clientY;
+      startHeight = row.getBoundingClientRect().height;
+    }
+
+    function onUp() {
+      resizing = false;
+      resizingRow = null;
+      indicator.style.opacity = '0';
+      editorEl.style.cursor = '';
+    }
+
+    editorEl.addEventListener('mousemove', onMove);
+    window.addEventListener('mousemove', onMove);
+    editorEl.addEventListener('mousedown', onDown);
+    window.addEventListener('mouseup', onUp);
+
+    return () => {
+      colObserver.disconnect();
+      editorEl.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mousemove', onMove);
+      editorEl.removeEventListener('mousedown', onDown);
+      window.removeEventListener('mouseup', onUp);
+      indicator.remove();
+    };
   }, [editor]);
 
   const handleSave = async () => {
