@@ -12,7 +12,7 @@ import { Select } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Camera, Check, Eye, MousePointer, Monitor } from 'lucide-react';
+import { Camera, Check, Eye, MousePointer, Monitor, UserX, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { Profile, UserEvent } from '@/lib/types';
 
@@ -97,6 +97,11 @@ export function SettingsPanel({ profile, isAdmin, team }: SettingsPanelProps) {
   const [events, setEvents] = useState<(UserEvent & { profiles?: Pick<Profile, 'display_name' | 'avatar_url'> })[]>([]);
   const [loadingEvents, setLoadingEvents] = useState(false);
   const [selectedUser, setSelectedUser] = useState('all');
+
+  const [bootTarget, setBootTarget] = useState<Profile | null>(null);
+  const [bootPassword, setBootPassword] = useState('');
+  const [bootLoading, setBootLoading] = useState(false);
+  const [bootError, setBootError] = useState('');
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const supabase = createBrowserClient(
@@ -190,6 +195,31 @@ export function SettingsPanel({ profile, isAdmin, team }: SettingsPanelProps) {
   useEffect(() => {
     if (isAdmin) loadEvents();
   }, [isAdmin, loadEvents]);
+
+  async function handleBoot() {
+    if (!bootTarget || !bootPassword) return;
+    setBootLoading(true);
+    setBootError('');
+
+    const res = await fetch('/api/admin/boot-member', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: bootTarget.id, password: bootPassword }),
+    });
+
+    const data = await res.json();
+    setBootLoading(false);
+
+    if (!res.ok) {
+      setBootError(data.error ?? 'Failed to remove member.');
+      return;
+    }
+
+    toast.success(`${bootTarget.display_name ?? 'Member'} has been removed.`);
+    setBootTarget(null);
+    setBootPassword('');
+    router.refresh();
+  }
 
 
 
@@ -352,6 +382,111 @@ export function SettingsPanel({ profile, isAdmin, team }: SettingsPanelProps) {
                     );
                   })}
                 </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Boot member dialog */}
+      {bootTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+          <div className="w-full max-w-sm rounded-xl border border-border bg-card p-6 shadow-xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-destructive/10">
+                <AlertTriangle className="size-5 text-destructive" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-foreground">Remove member</p>
+                <p className="text-xs text-muted-foreground">
+                  This will permanently remove <span className="font-medium text-foreground">{bootTarget.display_name ?? bootTarget.email}</span> from the team.
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="boot-password">Confirm with your password</Label>
+                <Input
+                  id="boot-password"
+                  type="password"
+                  placeholder="Your password"
+                  value={bootPassword}
+                  onChange={e => { setBootPassword(e.target.value); setBootError(''); }}
+                  onKeyDown={e => e.key === 'Enter' && handleBoot()}
+                  autoFocus
+                />
+              </div>
+              {bootError && <p className="text-xs text-destructive">{bootError}</p>}
+            </div>
+
+            <div className="flex gap-2 mt-5">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => { setBootTarget(null); setBootPassword(''); setBootError(''); }}
+                disabled={bootLoading}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                className="flex-1"
+                onClick={handleBoot}
+                disabled={bootLoading || !bootPassword}
+              >
+                {bootLoading ? 'Removing…' : 'Remove member'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Team Management — admin only */}
+      {isAdmin && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <UserX className="size-4 text-muted-foreground" />
+              <div>
+                <CardTitle>Team Management</CardTitle>
+                <CardDescription>Remove members from the team. This action is permanent.</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {team.filter(m => m.id !== profile.id).length === 0 ? (
+              <p className="text-xs text-muted-foreground text-center py-4">No other team members.</p>
+            ) : (
+              <div className="flex flex-col divide-y divide-border">
+                {team.filter(m => m.id !== profile.id).map(member => (
+                  <div key={member.id} className="flex items-center justify-between py-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <Avatar className="size-8 shrink-0">
+                        {member.avatar_url && <AvatarImage src={member.avatar_url} alt={member.display_name ?? ''} />}
+                        <AvatarFallback className="text-xs bg-secondary text-foreground">
+                          {getInitials(member.display_name ?? '?')}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-foreground truncate">
+                          {member.display_name ?? 'Unknown'}
+                          {member.is_admin && <span className="ml-1.5 text-[10px] text-muted-foreground font-normal">(admin)</span>}
+                        </p>
+                        {member.email && <p className="text-xs text-muted-foreground truncate">{member.email}</p>}
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      onClick={() => { setBootTarget(member); setBootPassword(''); setBootError(''); }}
+                    >
+                      <UserX className="size-3.5 mr-1.5" />
+                      Remove
+                    </Button>
+                  </div>
+                ))}
               </div>
             )}
           </CardContent>
