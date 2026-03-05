@@ -100,7 +100,7 @@ function Dialog({ open, onOpenChange, children, resizable = false, contentClassN
           <motion.div
             className={cn(
               "relative z-50 overflow-y-auto rounded-xl border border-border bg-card p-6 shadow-lg mx-4",
-              !resizable && "w-full max-w-2xl max-h-[85vh]",
+              !resizable && "w-full max-w-2xl max-h-[90vh] sm:max-h-[85vh]",
               contentClassName
             )}
             style={panelStyle}
