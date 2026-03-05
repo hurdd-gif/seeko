@@ -5,7 +5,11 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Image from '@tiptap/extension-image';
 import Placeholder from '@tiptap/extension-placeholder';
-import { Bold, Italic, List, ListOrdered, ImageIcon, Heading1, Heading2, Heading3 } from 'lucide-react';
+import { Table } from '@tiptap/extension-table';
+import { TableRow } from '@tiptap/extension-table-row';
+import { TableCell } from '@tiptap/extension-table-cell';
+import { TableHeader } from '@tiptap/extension-table-header';
+import { Bold, Italic, List, ListOrdered, ImageIcon, Heading1, Heading2, Heading3, Table as TableIcon, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -144,9 +148,15 @@ function ImagePopover({ onInsert }: { onInsert: (url: string) => void }) {
 
 export function DocEditor({ doc, onSave, onCancel }: DocEditorProps) {
   const [title, setTitle] = useState(doc?.title ?? '');
-  const [department, setDepartment] = useState<string>(doc?.restricted_department ?? '');
+  const [departments, setDepartments] = useState<string[]>(doc?.restricted_department ?? []);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+
+  const toggleDepartment = (dept: string) => {
+    setDepartments(prev =>
+      prev.includes(dept) ? prev.filter(d => d !== dept) : [...prev, dept]
+    );
+  };
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -155,6 +165,10 @@ export function DocEditor({ doc, onSave, onCancel }: DocEditorProps) {
       StarterKit,
       Image.configure({ inline: false }),
       Placeholder.configure({ placeholder: 'Start writing…' }),
+      Table.configure({ resizable: false }),
+      TableRow,
+      TableHeader,
+      TableCell,
     ],
     content: doc?.content ?? '',
     editorProps: {
@@ -176,7 +190,7 @@ export function DocEditor({ doc, onSave, onCancel }: DocEditorProps) {
       const body = {
         title: title.trim(),
         content: editor?.getHTML() ?? '',
-        restricted_department: department || null,
+        restricted_department: departments.length > 0 ? departments : null,
       };
       const res = doc
         ? await fetch(`/api/docs/${doc.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
@@ -208,17 +222,33 @@ export function DocEditor({ doc, onSave, onCancel }: DocEditorProps) {
         className="text-base font-semibold h-10"
       />
 
-      {/* Department restrict */}
-      <div className="flex items-center gap-2">
-        <label className="text-xs text-muted-foreground whitespace-nowrap">Restrict to dept</label>
-        <select
-          value={department}
-          onChange={e => setDepartment(e.target.value)}
-          className="h-7 rounded border border-border bg-card px-2 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-foreground/20"
-        >
-          <option value="">All departments</option>
-          {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
-        </select>
+      {/* Department restrict — multi-select toggles */}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs text-muted-foreground whitespace-nowrap">Restrict to:</span>
+        {DEPARTMENTS.map(dept => (
+          <button
+            key={dept}
+            type="button"
+            onClick={() => toggleDepartment(dept)}
+            className={cn(
+              'rounded-full border px-2.5 py-0.5 text-xs transition-colors',
+              departments.includes(dept)
+                ? 'border-seeko-accent bg-seeko-accent/10 text-seeko-accent'
+                : 'border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground'
+            )}
+          >
+            {dept}
+          </button>
+        ))}
+        {departments.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setDepartments([])}
+            className="text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors"
+          >
+            Clear
+          </button>
+        )}
       </div>
 
       {/* Toolbar */}
@@ -254,6 +284,35 @@ export function DocEditor({ doc, onSave, onCancel }: DocEditorProps) {
         <div className="mx-1 h-4 w-px bg-border" />
 
         <ImagePopover onInsert={insertImage} />
+
+        <div className="mx-1 h-4 w-px bg-border" />
+
+        <ToolbarButton
+          title="Insert table (3×3)"
+          onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}
+        >
+          <TableIcon className="size-3.5" />
+        </ToolbarButton>
+        {editor.can().addColumnAfter() && (
+          <>
+            <ToolbarButton title="Add column" onClick={() => editor.chain().focus().addColumnAfter().run()}>
+              <Plus className="size-3.5" />
+            </ToolbarButton>
+            <ToolbarButton title="Delete column" onClick={() => editor.chain().focus().deleteColumn().run()}>
+              <Trash2 className="size-3 text-destructive/70" />
+            </ToolbarButton>
+          </>
+        )}
+        {editor.can().addRowAfter() && (
+          <>
+            <ToolbarButton title="Add row" onClick={() => editor.chain().focus().addRowAfter().run()}>
+              <Plus className="size-3.5 rotate-90" />
+            </ToolbarButton>
+            <ToolbarButton title="Delete row" onClick={() => editor.chain().focus().deleteRow().run()}>
+              <Trash2 className="size-3 rotate-90 text-destructive/70" />
+            </ToolbarButton>
+          </>
+        )}
       </div>
 
       {/* Editor */}

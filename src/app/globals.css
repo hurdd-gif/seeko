@@ -188,3 +188,37 @@ body {
   margin-bottom: 1rem;
   border-color: var(--color-border);
 }
+
+/* Tables — read view and editor */
+.doc-content table,
+.doc-read-body .doc-content table,
+.ProseMirror table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.75rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.875rem;
+}
+.doc-content th,
+.doc-read-body .doc-content th,
+.ProseMirror th {
+  background: var(--color-muted);
+  color: var(--color-foreground);
+  font-weight: 600;
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--color-border);
+}
+.doc-content td,
+.doc-read-body .doc-content td,
+.ProseMirror td {
+  padding: 0.4rem 0.75rem;
+  border: 1px solid var(--color-border);
+  color: rgba(240, 240, 240, 0.85);
+  vertical-align: top;
+}
+.ProseMirror .selectedCell {
+  background: var(--color-muted);
+  outline: 2px solid var(--color-seeko-accent);
+  outline-offset: -1px;
+}

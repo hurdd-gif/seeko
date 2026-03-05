@@ -73,7 +73,13 @@ export async function POST(request: NextRequest) {
 
   if (otpError) {
     console.error('[invite] OTP send failed', { email, error: otpError.message });
-    return NextResponse.json({ error: otpError.message }, { status: 400 });
+    const hint = otpError.message.toLowerCase().includes('confirmation email')
+      ? ' If SMTP is already configured, check Supabase Auth logs and your SMTP provider dashboard (see docs/auth-email-troubleshooting.md).'
+      : '';
+    return NextResponse.json(
+      { error: otpError.message + hint },
+      { status: 400 }
+    );
   }
 
   const { error: insertError } = await admin
