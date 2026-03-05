@@ -37,12 +37,13 @@ export async function PATCH(
 
   const { id } = await params;
   const body = await req.json();
-  const { title, content, restricted_department } = body;
+  const { title, content, restricted_department, granted_user_ids } = body;
 
   const updates: Record<string, unknown> = {};
   if (title !== undefined) updates.title = title;
   if (content !== undefined) updates.content = content;
   if ('restricted_department' in body) updates.restricted_department = restricted_department ?? null;
+  if ('granted_user_ids' in body) updates.granted_user_ids = granted_user_ids?.length ? granted_user_ids : null;
   updates.updated_at = new Date().toISOString();
 
   const service = createServiceClient(

@@ -53,6 +53,7 @@ export type Doc = {
   created_at?: string;
   updated_at?: string;
   restricted_department?: string[];
+  granted_user_ids?: string[];
 };
 
 export type TaskWithAssignee = Task & {

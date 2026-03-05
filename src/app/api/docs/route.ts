@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
   if (!admin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const body = await req.json();
-  const { title, content, sort_order, restricted_department } = body;
+  const { title, content, sort_order, restricted_department, granted_user_ids } = body;
 
   const service = createServiceClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -42,7 +42,13 @@ export async function POST(req: NextRequest) {
 
   const { data, error } = await service
     .from('docs')
-    .insert({ title, content, sort_order: sort_order ?? 0, restricted_department: restricted_department ?? null })
+    .insert({
+      title,
+      content,
+      sort_order: sort_order ?? 0,
+      restricted_department: restricted_department ?? null,
+      granted_user_ids: granted_user_ids?.length ? granted_user_ids : null,
+    })
     .select()
     .single();
 
