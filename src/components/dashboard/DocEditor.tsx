@@ -248,6 +248,7 @@ export function DocEditor({ doc, onSave, onCancel }: DocEditorProps) {
 
     function onMove(e: MouseEvent) {
       if (resizing && resizingRow) {
+        e.preventDefault();
         const newH = Math.max(28, startHeight + (e.clientY - startY));
         Array.from(resizingRow.cells).forEach(c => { (c as HTMLElement).style.height = `${newH}px`; });
         const r = resizingRow.getBoundingClientRect();
@@ -273,10 +274,12 @@ export function DocEditor({ doc, onSave, onCancel }: DocEditorProps) {
       const row = rowNearBottom(e);
       if (!row) return;
       e.preventDefault();
+      e.stopPropagation();
       resizing = true;
       resizingRow = row;
       startY = e.clientY;
       startHeight = row.getBoundingClientRect().height;
+      document.body.style.userSelect = 'none';
     }
 
     function onUp() {
@@ -284,18 +287,19 @@ export function DocEditor({ doc, onSave, onCancel }: DocEditorProps) {
       resizingRow = null;
       indicator.style.opacity = '0';
       editorEl.style.cursor = '';
+      document.body.style.userSelect = '';
     }
 
     editorEl.addEventListener('mousemove', onMove);
     window.addEventListener('mousemove', onMove);
-    editorEl.addEventListener('mousedown', onDown);
+    window.addEventListener('mousedown', onDown);
     window.addEventListener('mouseup', onUp);
 
     return () => {
       colObserver.disconnect();
       editorEl.removeEventListener('mousemove', onMove);
       window.removeEventListener('mousemove', onMove);
-      editorEl.removeEventListener('mousedown', onDown);
+      window.removeEventListener('mousedown', onDown);
       window.removeEventListener('mouseup', onUp);
       indicator.remove();
     };
