@@ -49,7 +49,7 @@ export function DepartmentSelect({ userId, department }: Props) {
       onChange={e => handleChange(e.target.value)}
       disabled={isPending}
       className={cn(
-        'h-7 bg-transparent border border-transparent px-1.5 text-xs hover:border-border hover:bg-muted',
+        'h-auto py-0.5 px-1.5 text-xs bg-transparent border border-transparent hover:border-border hover:bg-muted',
         isPending && 'opacity-50',
         DEPT_COLOR[value] ?? 'text-muted-foreground',
       )}
