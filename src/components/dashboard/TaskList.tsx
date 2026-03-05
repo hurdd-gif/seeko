@@ -32,6 +32,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { TaskDetail } from '@/components/dashboard/TaskDetail';
 import { DeliverablesUploadDialog } from '@/components/dashboard/DeliverablesUploadDialog';
+import { Stagger, StaggerItem } from '@/components/motion';
 
 const STATUS_ICONS: Record<string, { icon: typeof Circle; className: string }> = {
   'Complete':     { icon: CheckCircle2, className: 'text-[var(--color-status-complete)]' },
@@ -266,7 +267,7 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
       const priority = getEffectivePriority(task);
 
               return (
-                <div key={task.id} className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/50">
+                <StaggerItem key={task.id} className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/50">
                   <motion.div whileTap={{ scale: 0.8 }} transition={{ duration: 0.06 }}>
                     <Checkbox
                       checked={isComplete}
@@ -413,7 +414,7 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
                       )}
                     </DropdownMenuContent>
                   </DropdownMenu>
-                </div>
+                </StaggerItem>
               );
     };
 
@@ -442,9 +443,9 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
                   <span className="text-xs text-muted-foreground">({filtered.filter(t => getEffectiveDept(t) === dept).length})</span>
                 </div>
                 <CardContent className="p-0">
-                  <div className="flex flex-col divide-y divide-border">
+                  <Stagger className="flex flex-col divide-y divide-border">
                     {filtered.filter(t => getEffectiveDept(t) === dept).map(t => renderTaskRow(t))}
-                  </div>
+                  </Stagger>
                 </CardContent>
               </Card>
             ))}
@@ -453,7 +454,7 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
         ) : (
           <Card>
             <CardContent className="p-0">
-              <div className="flex flex-col divide-y divide-border">
+              <Stagger className="flex flex-col divide-y divide-border">
                 {filtered.map(t => renderTaskRow(t))}
                 {filtered.length === 0 && (
                   <div className="flex flex-col items-center justify-center py-12 text-center">
@@ -462,7 +463,7 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
                     <p className="text-xs text-muted-foreground">Try adjusting your filters or search.</p>
                   </div>
                 )}
-              </div>
+              </Stagger>
             </CardContent>
           </Card>
         )}
