@@ -61,11 +61,11 @@ export function InviteCodeForm() {
           id="invite-token"
           type="text"
           value={token}
-          onChange={e => setToken(e.target.value.replace(/\D/g, '').slice(0, 6))}
+          onChange={e => setToken(e.target.value.replace(/\D/g, '').slice(0, 8))}
           required
-          placeholder="6-digit code from your email"
+          placeholder="8-digit code from your email"
           inputMode="numeric"
-          maxLength={6}
+          maxLength={8}
           className="w-full px-3 py-2 rounded-lg bg-card border border-border text-foreground text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:border-seeko-accent transition-colors font-mono tracking-widest"
         />
       </div>
@@ -76,7 +76,7 @@ export function InviteCodeForm() {
 
       <button
         type="submit"
-        disabled={loading || token.length < 6}
+        disabled={loading || token.length < 8}
         className="w-full py-2 px-4 rounded-lg bg-seeko-accent text-primary-foreground font-semibold text-sm hover:bg-seeko-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       >
         {loading ? 'Verifying…' : 'Continue'}
