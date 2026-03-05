@@ -357,6 +357,18 @@ export function SettingsPanel({ profile, isAdmin, team }: SettingsPanelProps) {
           </CardContent>
         </Card>
       )}
+
+      {/* Sign out — mobile only (desktop uses sidebar) */}
+      <div className="md:hidden">
+        <form action="/auth/signout" method="post">
+          <button
+            type="submit"
+            className="w-full rounded-lg border border-destructive/40 py-2.5 text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors"
+          >
+            Sign out
+          </button>
+        </form>
+      </div>
     </div>
   );
 }
