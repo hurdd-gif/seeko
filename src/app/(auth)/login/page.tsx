@@ -116,7 +116,6 @@ export default function LoginPage() {
             width={40}
             height={40}
             className="size-10 object-contain"
-            style={{ filter: 'invert(1)' }}
           />
           <h1 className="text-xl font-bold tracking-tight text-foreground">SEEKO Studio</h1>
         </motion.div>
