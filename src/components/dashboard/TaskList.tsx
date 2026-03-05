@@ -44,10 +44,26 @@ const ALL_STATUSES: TaskStatus[] = ['Complete', 'In Progress', 'In Review', 'Blo
 const DEPARTMENTS: Department[] = ['Coding', 'Visual Art', 'UI/UX', 'Animation', 'Asset Creation'];
 const PRIORITIES: Priority[] = ['High', 'Medium', 'Low'];
 
-const PRIORITY_VARIANT: Record<string, 'default' | 'secondary' | 'outline' | 'destructive'> = {
-  High:   'default',
-  Medium: 'outline',
-  Low:    'secondary',
+const PRIORITY_STYLE: Record<string, string> = {
+  High:   'bg-red-500/15 text-red-400 border-red-500/30',
+  Medium: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
+  Low:    'bg-muted text-muted-foreground border-border',
+};
+
+const DEPT_COLOR: Record<string, string> = {
+  'Coding':         'text-emerald-400',
+  'Visual Art':     'text-blue-300',
+  'UI/UX':          'text-violet-300',
+  'Animation':      'text-amber-400',
+  'Asset Creation': 'text-pink-300',
+};
+
+const DEPT_SECTION_COLOR: Record<string, string> = {
+  'Coding':         'border-emerald-500/30 text-emerald-400',
+  'Visual Art':     'border-blue-300/30 text-blue-300',
+  'UI/UX':          'border-violet-300/30 text-violet-300',
+  'Animation':      'border-amber-400/30 text-amber-400',
+  'Asset Creation': 'border-pink-300/30 text-pink-300',
 };
 
 const FILTER_STATUSES = ['All', ...ALL_STATUSES] as const;
@@ -77,6 +93,8 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('All');
   const [taskStatuses, setTaskStatuses] = useState<Record<string, TaskStatus>>({});
+  const [taskDepts, setTaskDepts] = useState<Record<string, Department>>({});
+  const [taskPriorities, setTaskPriorities] = useState<Record<string, Priority>>({});
   const [assignments, setAssignments] = useState<Record<string, string | null>>({});
   const [deleted, setDeleted] = useState<Set<string>>(new Set());
   const [localTasks, setLocalTasks] = useState<Task[]>([]);
@@ -149,7 +167,17 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
         body: `${completerName} completed "${taskName}"`,
         link: `/tasks?task=${taskId}`,
       }),
-    }).catch(() => {});
+    })
+      .then(async r => { 
+        if (!r.ok) {
+          // TODO: Replace with proper logging system
+          // console.error('[notify] task_completed failed:', await r.json());
+        }
+      })
+      .catch(e => {
+        // TODO: Replace with proper logging system  
+        // console.error('[notify] task_completed error:', e);
+      });
   }, []);
 
   const handleToggleComplete = useCallback((taskId: string, currentStatus: string) => {
@@ -177,14 +205,24 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
     }
   }, [supabase, allTasks]);
 
+  const handleDeptChange = useCallback(async (taskId: string, dept: Department) => {
+    setTaskDepts(prev => ({ ...prev, [taskId]: dept }));
+    await supabase.from('tasks').update({ department: dept }).eq('id', taskId);
+  }, [supabase]);
+
+  const handlePriorityChange = useCallback(async (taskId: string, priority: Priority) => {
+    setTaskPriorities(prev => ({ ...prev, [taskId]: priority }));
+    await supabase.from('tasks').update({ priority }).eq('id', taskId);
+  }, [supabase]);
+
   const handleDelete = useCallback(async (taskId: string) => {
     setDeleted(prev => new Set(prev).add(taskId));
     await supabase.from('tasks').delete().eq('id', taskId);
   }, [supabase]);
 
-  const getEffectiveStatus = useCallback((task: Task): TaskStatus => {
-    return taskStatuses[task.id] ?? task.status;
-  }, [taskStatuses]);
+  const getEffectiveStatus = useCallback((task: Task): TaskStatus => taskStatuses[task.id] ?? task.status, [taskStatuses]);
+  const getEffectiveDept = useCallback((task: Task): Department => (taskDepts[task.id] ?? task.department) as Department, [taskDepts]);
+  const getEffectivePriority = useCallback((task: Task): Priority => (taskPriorities[task.id] ?? task.priority) as Priority, [taskPriorities]);
 
   const filtered = useMemo(() => {
     return allTasks.filter(t => {
@@ -218,8 +256,265 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
     return null;
   }
 
+  const renderTaskRow = (task: Task | TaskWithAssignee) => {
+      const status = getEffectiveStatus(task);
+      const iconCfg = STATUS_ICONS[status] ?? STATUS_ICONS['In Progress'];
+      const StatusIcon = iconCfg.icon;
+      const assignee = isAdmin ? getAssignee(task) : null;
+      const isComplete = status === 'Complete';
+      const dept = getEffectiveDept(task);
+      const priority = getEffectivePriority(task);
+
+              return (
+                <div key={task.id} className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/50">
+                  <motion.div whileTap={{ scale: 0.8 }} transition={{ duration: 0.06 }}>
+                    <Checkbox
+                      checked={isComplete}
+                      onCheckedChange={() => handleToggleComplete(task.id, status)}
+                      className="shrink-0"
+                      aria-label={`Mark ${task.name} as ${isComplete ? 'incomplete' : 'complete'}`}
+                    />
+                  </motion.div>
+                  <div className="relative size-4 shrink-0">
+                    <AnimatePresence mode="wait">
+                      <motion.div
+                        key={status}
+                        initial={{ opacity: 0, scale: 0.6, filter: 'blur(3px)' }}
+                        animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+                        exit={{ opacity: 0, scale: 0.6, filter: 'blur(3px)' }}
+                        transition={{ duration: 0.12 }}
+                        className="absolute inset-0"
+                      >
+                        <StatusIcon className={`size-4 ${iconCfg.className}`} />
+                      </motion.div>
+                    </AnimatePresence>
+                  </div>
+
+                  <button
+                    onClick={() => setSelectedTask(task)}
+                    className={`min-w-0 flex-1 truncate text-sm text-left hover:underline ${isComplete ? 'text-muted-foreground line-through' : 'text-foreground'}`}
+                  >
+                    {task.name}
+                  </button>
+
+                  <div className="hidden items-center gap-2 lg:flex">
+                    {isAdmin ? (
+                      <>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button className="inline-flex items-center rounded-md border border-border/50 bg-muted/40 px-2 py-0.5 text-xs font-normal whitespace-nowrap text-muted-foreground transition-colors hover:bg-muted hover:border-border hover:text-foreground">
+                              {dept}
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {DEPARTMENTS.map(d => (
+                              <DropdownMenuItem key={d} onClick={() => handleDeptChange(task.id, d)} className={`text-xs ${DEPT_COLOR[d] ?? ''} ${d === dept ? 'font-medium' : ''}`}>
+                                {d}
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button className={`inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-normal whitespace-nowrap transition-opacity hover:opacity-80 ${PRIORITY_STYLE[priority] ?? PRIORITY_STYLE.Low}`}>
+                              {priority}
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {PRIORITIES.map(p => (
+                              <DropdownMenuItem key={p} onClick={() => handlePriorityChange(task.id, p)} className={`text-xs ${p === priority ? 'font-medium' : ''}`}>
+                                <span className={`inline-flex items-center rounded border px-1.5 py-0 mr-1 ${PRIORITY_STYLE[p]}`}>{p}</span>
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </>
+                    ) : (
+                      <>
+                        <Badge variant="secondary" className={`text-xs font-normal whitespace-nowrap ${DEPT_COLOR[dept] ?? ''}`}>
+                          {dept}
+                        </Badge>
+                        <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-normal whitespace-nowrap ${PRIORITY_STYLE[priority] ?? PRIORITY_STYLE.Low}`}>
+                          {priority}
+                        </span>
+                      </>
+                    )}
+                  </div>
+
+                  {isAdmin && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button className="hidden items-center gap-1.5 rounded-md border border-border px-2 py-1 text-xs text-muted-foreground hover:text-foreground hover:border-foreground/20 transition-colors shrink-0 sm:flex">
+                          {assignee ? (
+                            <>
+                              <Avatar className="size-4">
+                                <AvatarImage src={assignee.avatar_url ?? undefined} alt={assignee.display_name ?? ''} />
+                                <AvatarFallback className="text-[6px] bg-secondary">{getInitials(assignee.display_name ?? '?')}</AvatarFallback>
+                              </Avatar>
+                              <span className="max-w-[72px] truncate">{assignee.display_name}</span>
+                            </>
+                          ) : (
+                            <>
+                              <UserPlus className="size-3" />
+                              <span>Assign</span>
+                            </>
+                          )}
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-48">
+                        {team.map(member => (
+                          <DropdownMenuItem key={member.id} onClick={() => handleAssign(task.id, member.id)} className="flex items-center gap-2">
+                            <Avatar className="size-5">
+                              <AvatarImage src={member.avatar_url ?? undefined} alt={member.display_name ?? ''} />
+                              <AvatarFallback className="text-[7px] bg-secondary">{getInitials(member.display_name ?? '?')}</AvatarFallback>
+                            </Avatar>
+                            <span className="text-sm truncate">{member.display_name ?? 'Unnamed'}</span>
+                          </DropdownMenuItem>
+                        ))}
+                        {assignee && (
+                          <DropdownMenuItem onClick={() => handleAssign(task.id, null)} className="text-muted-foreground hover:text-destructive focus:text-destructive">
+                            Unassign
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+
+                  {task.deadline && (
+                    <div className="hidden items-center gap-1 text-xs text-muted-foreground whitespace-nowrap md:flex">
+                      <Clock className="size-3" />
+                      <span>{new Date(task.deadline + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                    </div>
+                  )}
+
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="size-7 shrink-0">
+                        <MoreHorizontal className="size-4" />
+                        <span className="sr-only">Task actions</span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-44">
+                      {ALL_STATUSES.filter(s => s !== status).map(s => {
+                        const cfg = STATUS_ICONS[s];
+                        const Icon = cfg.icon;
+                        return (
+                          <DropdownMenuItem key={s} onClick={() => handleStatusChange(task.id, s)} className="flex items-center gap-2">
+                            <Icon className={`size-3.5 ${cfg.className}`} />
+                            <span>{s}</span>
+                          </DropdownMenuItem>
+                        );
+                      })}
+                      {isAdmin && (
+                        <DropdownMenuItem onClick={() => handleDelete(task.id)} className="flex items-center gap-2 text-destructive">
+                          <Trash2 className="size-3.5" />
+                          <span>Delete</span>
+                        </DropdownMenuItem>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              );
+    };
+
+  const renderContent = () => {
+    const taskGroups = isAdmin
+      ? DEPARTMENTS.filter(d => filtered.some(t => getEffectiveDept(t) === d))
+      : null;
+
+    return (
+      <>
+        {taskGroups ? (
+          taskGroups.length === 0 ? (
+            <Card>
+              <CardContent className="p-4 flex flex-col items-center justify-center py-12 text-center">
+                <CheckCircle2 className="size-10 text-muted-foreground/50" />
+                <p className="mt-3 text-sm font-medium text-foreground">No tasks found</p>
+                <p className="text-xs text-muted-foreground">Try adjusting your filters or search.</p>
+              </CardContent>
+            </Card>
+          ) : (
+          <div className="flex flex-col gap-4">
+            {taskGroups.map(dept => (
+              <Card key={dept}>
+                <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border">
+                  <span className={`text-xs font-semibold tracking-wide uppercase ${DEPT_SECTION_COLOR[dept] ?? 'text-muted-foreground'}`}>{dept}</span>
+                  <span className="text-xs text-muted-foreground">({filtered.filter(t => getEffectiveDept(t) === dept).length})</span>
+                </div>
+                <CardContent className="p-0">
+                  <div className="flex flex-col divide-y divide-border">
+                    {filtered.filter(t => getEffectiveDept(t) === dept).map(t => renderTaskRow(t))}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          )
+        ) : (
+          <Card>
+            <CardContent className="p-0">
+              <div className="flex flex-col divide-y divide-border">
+                {filtered.map(t => renderTaskRow(t))}
+                {filtered.length === 0 && (
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <CheckCircle2 className="size-10 text-muted-foreground/50" />
+                    <p className="mt-3 text-sm font-medium text-foreground">No tasks found</p>
+                    <p className="text-xs text-muted-foreground">Try adjusting your filters or search.</p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+      {selectedTask && (
+        <TaskDetail
+          task={selectedTask}
+          open={!!selectedTask}
+          onOpenChange={open => { if (!open) setSelectedTask(null); }}
+          team={team}
+          docs={docs}
+          currentUserId={currentUserId}
+          isAdmin={isAdmin}
+        />
+      )}
+
+      {deliverableTask && (
+        <DeliverablesUploadDialog
+          open
+          onOpenChange={open => { if (!open) setDeliverableTask(null); }}
+          task={deliverableTask}
+          onSubmit={async (files) => {
+            for (const file of files) {
+              const form = new FormData();
+              form.append('file', file);
+              const res = await fetch(`/api/tasks/${deliverableTask.id}/deliverables`, { method: 'POST', body: form });
+              if (!res.ok) throw new Error((await res.json()).error || 'Upload failed');
+            }
+            await doCompleteTask(deliverableTask.id);
+            notifyAdminsTaskCompleted(
+              deliverableTask.id,
+              deliverableTask.name,
+              team.find(m => m.id === currentUserId)?.display_name ?? 'Someone'
+            );
+          }}
+          onSkip={async () => {
+            await doCompleteTask(deliverableTask.id);
+            notifyAdminsTaskCompleted(
+              deliverableTask.id,
+              deliverableTask.name,
+              team.find(m => m.id === currentUserId)?.display_name ?? 'Someone'
+            );
+          }}
+        />
+      )}
+      </>
+    );
+  };
+
   return (
     <div className="flex flex-col gap-4">
+
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -287,183 +582,7 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
         )}
       </AnimatePresence>
 
-      <Card>
-        <CardContent className="p-0">
-          <div className="flex flex-col divide-y divide-border">
-            {filtered.map(task => {
-              const status = getEffectiveStatus(task);
-              const iconCfg = STATUS_ICONS[status] ?? STATUS_ICONS['In Progress'];
-              const StatusIcon = iconCfg.icon;
-              const assignee = isAdmin ? getAssignee(task) : null;
-              const isComplete = status === 'Complete';
-
-              return (
-                <div key={task.id} className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/50">
-                  <motion.div whileTap={{ scale: 0.8 }} transition={{ duration: 0.06 }}>
-                    <Checkbox
-                      checked={isComplete}
-                      onCheckedChange={() => handleToggleComplete(task.id, status)}
-                      className="shrink-0"
-                      aria-label={`Mark ${task.name} as ${isComplete ? 'incomplete' : 'complete'}`}
-                    />
-                  </motion.div>
-                  <div className="relative size-4 shrink-0">
-                    <AnimatePresence mode="wait">
-                      <motion.div
-                        key={status}
-                        initial={{ opacity: 0, scale: 0.6, filter: 'blur(3px)' }}
-                        animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
-                        exit={{ opacity: 0, scale: 0.6, filter: 'blur(3px)' }}
-                        transition={{ duration: 0.12 }}
-                        className="absolute inset-0"
-                      >
-                        <StatusIcon className={`size-4 ${iconCfg.className}`} />
-                      </motion.div>
-                    </AnimatePresence>
-                  </div>
-
-                  <button
-                    onClick={() => setSelectedTask(task)}
-                    className={`min-w-0 flex-1 truncate text-sm text-left hover:underline ${isComplete ? 'text-muted-foreground line-through' : 'text-foreground'}`}
-                  >
-                    {task.name}
-                  </button>
-
-                  <div className="hidden items-center gap-2 lg:flex">
-                    <Badge variant="secondary" className="text-xs font-normal whitespace-nowrap">
-                      {task.department}
-                    </Badge>
-                    <Badge variant={PRIORITY_VARIANT[task.priority] ?? 'outline'} className="text-xs font-normal whitespace-nowrap">
-                      {task.priority}
-                    </Badge>
-                  </div>
-
-                  {isAdmin && (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <button className="hidden items-center gap-1.5 rounded-md border border-border px-2 py-1 text-xs text-muted-foreground hover:text-foreground hover:border-foreground/20 transition-colors shrink-0 sm:flex">
-                          {assignee ? (
-                            <>
-                              <Avatar className="size-4">
-                                <AvatarImage src={assignee.avatar_url ?? undefined} alt={assignee.display_name ?? ''} />
-                                <AvatarFallback className="text-[6px] bg-secondary">{getInitials(assignee.display_name ?? '?')}</AvatarFallback>
-                              </Avatar>
-                              <span className="max-w-[72px] truncate">{assignee.display_name}</span>
-                            </>
-                          ) : (
-                            <>
-                              <UserPlus className="size-3" />
-                              <span>Assign</span>
-                            </>
-                          )}
-                        </button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-48">
-                        {team.map(member => (
-                          <DropdownMenuItem key={member.id} onClick={() => handleAssign(task.id, member.id)} className="flex items-center gap-2">
-                            <Avatar className="size-5">
-                              <AvatarImage src={member.avatar_url ?? undefined} alt={member.display_name ?? ''} />
-                              <AvatarFallback className="text-[7px] bg-secondary">{getInitials(member.display_name ?? '?')}</AvatarFallback>
-                            </Avatar>
-                            <span className="text-sm truncate">{member.display_name ?? 'Unnamed'}</span>
-                          </DropdownMenuItem>
-                        ))}
-                        {assignee && (
-                          <DropdownMenuItem onClick={() => handleAssign(task.id, null)} className="text-muted-foreground">
-                            Unassign
-                          </DropdownMenuItem>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  )}
-
-                  {task.deadline && (
-                    <div className="hidden items-center gap-1 text-xs text-muted-foreground whitespace-nowrap md:flex">
-                      <Clock className="size-3" />
-                      <span>{task.deadline}</span>
-                    </div>
-                  )}
-
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="size-7 shrink-0">
-                        <MoreHorizontal className="size-4" />
-                        <span className="sr-only">Task actions</span>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-44">
-                      {ALL_STATUSES.filter(s => s !== status).map(s => {
-                        const cfg = STATUS_ICONS[s];
-                        const Icon = cfg.icon;
-                        return (
-                          <DropdownMenuItem key={s} onClick={() => handleStatusChange(task.id, s)} className="flex items-center gap-2">
-                            <Icon className={`size-3.5 ${cfg.className}`} />
-                            <span>{s}</span>
-                          </DropdownMenuItem>
-                        );
-                      })}
-                      <DropdownMenuItem onClick={() => handleDelete(task.id)} className="flex items-center gap-2 text-destructive">
-                        <Trash2 className="size-3.5" />
-                        <span>Delete</span>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              );
-            })}
-
-            {filtered.length === 0 && (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <CheckCircle2 className="size-10 text-muted-foreground/50" />
-                <p className="mt-3 text-sm font-medium text-foreground">No tasks found</p>
-                <p className="text-xs text-muted-foreground">Try adjusting your filters or search.</p>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {selectedTask && (
-        <TaskDetail
-          task={selectedTask}
-          open={!!selectedTask}
-          onOpenChange={open => { if (!open) setSelectedTask(null); }}
-          team={team}
-          docs={docs}
-          currentUserId={currentUserId}
-          isAdmin={isAdmin}
-        />
-      )}
-
-      {deliverableTask && (
-        <DeliverablesUploadDialog
-          open
-          onOpenChange={open => { if (!open) setDeliverableTask(null); }}
-          task={deliverableTask}
-          onSubmit={async (files) => {
-            for (const file of files) {
-              const form = new FormData();
-              form.append('file', file);
-              const res = await fetch(`/api/tasks/${deliverableTask.id}/deliverables`, { method: 'POST', body: form });
-              if (!res.ok) throw new Error((await res.json()).error || 'Upload failed');
-            }
-            await doCompleteTask(deliverableTask.id);
-            notifyAdminsTaskCompleted(
-              deliverableTask.id,
-              deliverableTask.name,
-              team.find(m => m.id === currentUserId)?.display_name ?? 'Someone'
-            );
-          }}
-          onSkip={async () => {
-            await doCompleteTask(deliverableTask.id);
-            notifyAdminsTaskCompleted(
-              deliverableTask.id,
-              deliverableTask.name,
-              team.find(m => m.id === currentUserId)?.display_name ?? 'Someone'
-            );
-          }}
-        />
-      )}
+      {renderContent()}
     </div>
   );
 }

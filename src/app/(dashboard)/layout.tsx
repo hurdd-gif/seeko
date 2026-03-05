@@ -31,6 +31,7 @@ export default async function DashboardLayout({
           avatarUrl={profile?.avatar_url ?? undefined}
           userId={user.id}
           isAdmin={profile?.is_admin ?? false}
+          isContractor={profile?.is_contractor ?? false}
           unreadCount={unreadCount}
           notifications={notifications}
         />

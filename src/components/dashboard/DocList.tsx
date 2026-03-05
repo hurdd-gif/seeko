@@ -61,10 +61,10 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false }: 
   const searchParams = useSearchParams();
 
   const isLocked = (d: Doc) =>
-    !isAdmin && !!d.restricted_department && d.restricted_department !== userDepartment;
+    !isAdmin && !!d.restricted_department?.length && !d.restricted_department.includes(userDepartment ?? '');
   const sortedDocs = useMemo(() => {
     const isLockedDoc = (d: Doc) =>
-      !isAdmin && !!d.restricted_department && d.restricted_department !== userDepartment;
+      !isAdmin && !!d.restricted_department?.length && !d.restricted_department.includes(userDepartment ?? '');
     const byLock = [...docs].sort((a, b) =>
       isLockedDoc(a) === isLockedDoc(b) ? 0 : isLockedDoc(a) ? 1 : -1
     );
@@ -73,7 +73,7 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false }: 
       ? byLock.filter(d => d.title.toLowerCase().includes(q))
       : byLock;
     if (departmentFilter === 'all') return bySearch;
-    return bySearch.filter(d => (d.restricted_department ?? '') === departmentFilter);
+    return bySearch.filter(d => d.restricted_department?.includes(departmentFilter));
   }, [docs, searchQuery, departmentFilter, isAdmin, userDepartment]);
 
   useEffect(() => {
@@ -184,11 +184,15 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false }: 
                         <Lock className="size-4 text-muted-foreground" />
                       </div>
                       <div className="flex flex-col gap-1 min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           <p className="text-sm font-medium text-muted-foreground">{doc.title}</p>
-                          <Badge variant="outline" className="text-xs font-normal text-muted-foreground">{doc.restricted_department} only</Badge>
+                          {doc.restricted_department?.map(dept => (
+                            <Badge key={dept} variant="outline" className="text-xs font-normal text-muted-foreground">{dept} only</Badge>
+                          ))}
                         </div>
-                        <p className="text-xs text-muted-foreground/60">This document is restricted to the {doc.restricted_department} department.</p>
+                        <p className="text-xs text-muted-foreground/60">
+                          Restricted to: {doc.restricted_department?.join(', ')}.
+                        </p>
                       </div>
                     </CardContent>
                   </Card>
@@ -206,8 +210,10 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false }: 
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex flex-wrap items-center gap-2 min-w-0">
                             <p className="text-sm font-medium text-foreground truncate">{doc.title}</p>
-                            {doc.restricted_department
-                              ? <Badge variant="outline" className="text-xs font-normal text-muted-foreground shrink-0">{doc.restricted_department} only</Badge>
+                            {doc.restricted_department?.length
+                              ? doc.restricted_department.map(dept => (
+                                  <Badge key={dept} variant="outline" className="text-xs font-normal text-muted-foreground shrink-0">{dept} only</Badge>
+                                ))
                               : <Badge variant="outline" className="text-xs font-normal shrink-0">Document</Badge>
                             }
                           </div>
@@ -281,7 +287,7 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false }: 
       </Dialog>
 
       {/* Edit / New dialog */}
-      <Dialog open={editingDoc !== null} onOpenChange={() => setEditingDoc(null)}>
+      <Dialog open={editingDoc !== null} onOpenChange={() => setEditingDoc(null)} resizable>
         {editingDoc !== null && (
           <>
             <DialogClose onClose={() => setEditingDoc(null)} />

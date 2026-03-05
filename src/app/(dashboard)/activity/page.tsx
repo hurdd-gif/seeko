@@ -75,16 +75,16 @@ function moreInfoHref(parsed: { type: string }, taskId?: string | null, docId?: 
 
 type ActionConfig = { icon: typeof Activity; className: string; circleBg: string; badge: string; badgeVariant: 'default' | 'outline' | 'destructive' };
 const ACTION_CONFIG: Record<string, ActionConfig> = {
-  Created:            { icon: Plus,         className: 'text-seeko-accent',     circleBg: 'bg-muted', badge: 'created',     badgeVariant: 'default' },
-  Assigned:           { icon: UserPlus,     className: 'text-blue-400',         circleBg: 'bg-muted', badge: 'assigned',    badgeVariant: 'default' },
-  Completed:          { icon: CheckCircle2, className: 'text-white',           circleBg: 'bg-emerald-500', badge: 'completed',   badgeVariant: 'default' },
-  Started:            { icon: Timer,        className: 'text-amber-400',        circleBg: 'bg-muted', badge: 'started',     badgeVariant: 'default' },
-  'Moved to review':  { icon: AlertCircle,  className: 'text-orange-400',       circleBg: 'bg-muted', badge: 'in review',   badgeVariant: 'outline' },
-  Blocked:            { icon: AlertCircle,  className: 'text-red-400',           circleBg: 'bg-muted', badge: 'blocked',     badgeVariant: 'destructive' },
-  Deleted:            { icon: Trash2,       className: 'text-red-400',           circleBg: 'bg-muted', badge: 'deleted',     badgeVariant: 'destructive' },
-  'Commented on':     { icon: MessageSquare,className: 'text-purple-400',       circleBg: 'bg-muted', badge: 'comment',     badgeVariant: 'outline' },
-  'Changed priority': { icon: RefreshCw,    className: 'text-amber-400',       circleBg: 'bg-muted', badge: 'priority',    badgeVariant: 'outline' },
-  'Changed department':{ icon: RefreshCw,   className: 'text-blue-400',          circleBg: 'bg-muted', badge: 'department',  badgeVariant: 'outline' },
+  Created:             { icon: Plus,          className: 'text-seeko-accent', circleBg: 'bg-muted', badge: 'created',    badgeVariant: 'default' },
+  Assigned:            { icon: UserPlus,      className: 'text-blue-400',     circleBg: 'bg-muted', badge: 'assigned',   badgeVariant: 'default' },
+  Completed:           { icon: CheckCircle2,  className: 'text-emerald-400',  circleBg: 'bg-muted', badge: 'completed',  badgeVariant: 'default' },
+  Started:             { icon: Timer,         className: 'text-amber-400',    circleBg: 'bg-muted', badge: 'started',    badgeVariant: 'default' },
+  'Moved to review':   { icon: AlertCircle,   className: 'text-orange-400',   circleBg: 'bg-muted', badge: 'in review',  badgeVariant: 'outline' },
+  Blocked:             { icon: AlertCircle,   className: 'text-red-400',      circleBg: 'bg-muted', badge: 'blocked',    badgeVariant: 'destructive' },
+  Deleted:             { icon: Trash2,        className: 'text-red-400',      circleBg: 'bg-muted', badge: 'deleted',    badgeVariant: 'destructive' },
+  'Commented on':      { icon: MessageSquare, className: 'text-purple-400',   circleBg: 'bg-muted', badge: 'comment',    badgeVariant: 'outline' },
+  'Changed priority':  { icon: RefreshCw,     className: 'text-amber-400',    circleBg: 'bg-muted', badge: 'priority',   badgeVariant: 'outline' },
+  'Changed department':{ icon: RefreshCw,     className: 'text-blue-400',     circleBg: 'bg-muted', badge: 'department', badgeVariant: 'outline' },
 };
 
 const FALLBACK_CONFIG: ActionConfig = { icon: Activity, className: 'text-muted-foreground', circleBg: 'bg-muted', badge: 'update', badgeVariant: 'outline' };

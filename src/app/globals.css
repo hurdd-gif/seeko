@@ -188,3 +188,76 @@ body {
   margin-bottom: 1rem;
   border-color: var(--color-border);
 }
+
+/* Tables — read view and editor */
+.doc-content table,
+.doc-read-body .doc-content table,
+.ProseMirror table {
+  width: auto;
+  border-collapse: collapse;
+  margin-top: 0.75rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.875rem;
+}
+.doc-content th,
+.doc-read-body .doc-content th,
+.ProseMirror th {
+  background: var(--color-muted);
+  color: var(--color-foreground);
+  font-weight: 600;
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--color-border);
+  min-width: 120px;
+}
+.doc-content td,
+.doc-read-body .doc-content td,
+.ProseMirror td {
+  padding: 0.4rem 0.75rem;
+  border: 1px solid var(--color-border);
+  color: rgba(240, 240, 240, 0.85);
+  vertical-align: top;
+  min-width: 120px;
+}
+.ProseMirror .selectedCell {
+  background: var(--color-muted);
+  outline: 2px solid var(--color-seeko-accent);
+  outline-offset: -1px;
+}
+/* Column resize handle — Tiptap injects this div; we show the I► icon */
+.ProseMirror .column-resize-handle {
+  position: absolute;
+  right: -10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-seeko-accent);
+  opacity: 0;
+  cursor: col-resize;
+  pointer-events: all;
+  transition: opacity 0.12s;
+  z-index: 20;
+  border-radius: 3px;
+}
+.ProseMirror th:hover .column-resize-handle,
+.ProseMirror td:hover .column-resize-handle {
+  opacity: 1;
+}
+.ProseMirror.resize-cursor {
+  cursor: col-resize;
+}
+
+/* Kill paragraph margin inside table cells so rows aren't bloated */
+.doc-content td p,
+.doc-content th p,
+.doc-read-body .doc-content td p,
+.doc-read-body .doc-content th p,
+.ProseMirror td p,
+.ProseMirror th p {
+  margin: 0;
+  padding: 0;
+}

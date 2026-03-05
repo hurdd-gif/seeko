@@ -1,11 +1,15 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Image from '@tiptap/extension-image';
 import Placeholder from '@tiptap/extension-placeholder';
-import { Bold, Italic, List, ListOrdered, ImageIcon, Heading1, Heading2, Heading3 } from 'lucide-react';
+import { Table } from '@tiptap/extension-table';
+import { TableRow } from '@tiptap/extension-table-row';
+import { TableCell } from '@tiptap/extension-table-cell';
+import { TableHeader } from '@tiptap/extension-table-header';
+import { Bold, Italic, List, ListOrdered, ImageIcon, Heading1, Heading2, Heading3, Table as TableIcon, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -144,9 +148,15 @@ function ImagePopover({ onInsert }: { onInsert: (url: string) => void }) {
 
 export function DocEditor({ doc, onSave, onCancel }: DocEditorProps) {
   const [title, setTitle] = useState(doc?.title ?? '');
-  const [department, setDepartment] = useState<string>(doc?.restricted_department ?? '');
+  const [departments, setDepartments] = useState<string[]>(doc?.restricted_department ?? []);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+
+  const toggleDepartment = (dept: string) => {
+    setDepartments(prev =>
+      prev.includes(dept) ? prev.filter(d => d !== dept) : [...prev, dept]
+    );
+  };
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -155,6 +165,10 @@ export function DocEditor({ doc, onSave, onCancel }: DocEditorProps) {
       StarterKit,
       Image.configure({ inline: false }),
       Placeholder.configure({ placeholder: 'Start writing…' }),
+      Table.configure({ resizable: true }),
+      TableRow,
+      TableHeader,
+      TableCell,
     ],
     content: doc?.content ?? '',
     editorProps: {
@@ -168,6 +182,129 @@ export function DocEditor({ doc, onSave, onCancel }: DocEditorProps) {
     editor?.chain().focus().setImage({ src: url }).run();
   }, [editor]);
 
+  // ── Table resize icons + row resize ──────────────────────
+  useEffect(() => {
+    if (!editor) return;
+    const editorEl = editor.view.dom as HTMLElement;
+
+    /* SVG strings — match the three icons the user provided */
+    const COL_RESIZE_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 14 14" fill="currentColor" style="display:block">
+      <rect x="1" y="1" width="2" height="12" rx="1"/>
+      <path d="M6 7L12 3.5V10.5L6 7Z"/>
+    </svg>`;
+
+    const ROW_RESIZE_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 14 14" fill="currentColor" style="display:block">
+      <rect x="1" y="6.25" width="12" height="1.5" rx="0.75"/>
+      <path d="M7 1L4 4.5H10L7 1Z"/>
+      <path d="M7 13L4 9.5H10L7 13Z"/>
+    </svg>`;
+
+    /* Inject I► icon into Tiptap's column-resize-handle divs */
+    function injectColIcons() {
+      editorEl.querySelectorAll<HTMLElement>('.column-resize-handle').forEach(h => {
+        if (!h.querySelector('svg')) h.innerHTML = COL_RESIZE_SVG;
+      });
+    }
+
+    const colObserver = new MutationObserver(injectColIcons);
+    colObserver.observe(editorEl, { childList: true, subtree: true });
+    injectColIcons();
+
+    /* ── Row resize ── */
+    let resizing = false;
+    let resizingRow: HTMLTableRowElement | null = null;
+    let startY = 0;
+    let startHeight = 0;
+
+    /* Floating ≑ indicator */
+    const indicator = document.createElement('div');
+    Object.assign(indicator.style, {
+      position: 'fixed',
+      zIndex: '9999',
+      pointerEvents: 'none',
+      opacity: '0',
+      transition: 'opacity 0.1s',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      color: '#6ee7b7',
+      width: '20px',
+      height: '20px',
+    });
+    indicator.innerHTML = ROW_RESIZE_SVG;
+    document.body.appendChild(indicator);
+
+    /* Query all TR elements directly — elementsFromPoint misses borders between rows */
+    function rowNearBottom(e: MouseEvent): HTMLTableRowElement | null {
+      const rows = editorEl.querySelectorAll<HTMLTableRowElement>('tr');
+      for (const row of rows) {
+        const rect = row.getBoundingClientRect();
+        if (e.clientX < rect.left || e.clientX > rect.right) continue;
+        if (e.clientY >= rect.bottom - 8 && e.clientY <= rect.bottom + 8) return row;
+      }
+      return null;
+    }
+
+    function onMove(e: MouseEvent) {
+      if (resizing && resizingRow) {
+        e.preventDefault();
+        const newH = Math.max(28, startHeight + (e.clientY - startY));
+        Array.from(resizingRow.cells).forEach(c => {
+          (c as HTMLElement).style.setProperty('height', `${newH}px`, 'important');
+        });
+        const r = resizingRow.getBoundingClientRect();
+        indicator.style.left = `${e.clientX - 10}px`;
+        indicator.style.top  = `${r.bottom - 10}px`;
+        indicator.style.opacity = '1';
+        return;
+      }
+      const row = rowNearBottom(e);
+      if (row) {
+        const r = row.getBoundingClientRect();
+        indicator.style.left = `${e.clientX - 10}px`;
+        indicator.style.top  = `${r.bottom - 10}px`;
+        indicator.style.opacity = '1';
+        editorEl.style.cursor = 'row-resize';
+      } else {
+        indicator.style.opacity = '0';
+        editorEl.style.cursor = '';
+      }
+    }
+
+    function onDown(e: MouseEvent) {
+      const row = rowNearBottom(e);
+      if (!row) return;
+      e.preventDefault();
+      e.stopPropagation();
+      resizing = true;
+      resizingRow = row;
+      startY = e.clientY;
+      startHeight = row.getBoundingClientRect().height;
+      document.body.style.userSelect = 'none';
+    }
+
+    function onUp() {
+      if (!resizing) return;
+      resizing = false;
+      resizingRow = null;
+      indicator.style.opacity = '0';
+      editorEl.style.cursor = '';
+      document.body.style.userSelect = '';
+    }
+
+    window.addEventListener('mousemove', onMove);
+    document.addEventListener('mousedown', onDown, true); // capture: runs before Tiptap handlers
+    window.addEventListener('mouseup', onUp);
+
+    return () => {
+      colObserver.disconnect();
+      window.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mousedown', onDown, true);
+      window.removeEventListener('mouseup', onUp);
+      indicator.remove();
+    };
+  }, [editor]);
+
   const handleSave = async () => {
     if (!title.trim()) { setError('Title is required'); return; }
     setSaving(true);
@@ -176,7 +313,7 @@ export function DocEditor({ doc, onSave, onCancel }: DocEditorProps) {
       const body = {
         title: title.trim(),
         content: editor?.getHTML() ?? '',
-        restricted_department: department || null,
+        restricted_department: departments.length > 0 ? departments : null,
       };
       const res = doc
         ? await fetch(`/api/docs/${doc.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
@@ -208,17 +345,33 @@ export function DocEditor({ doc, onSave, onCancel }: DocEditorProps) {
         className="text-base font-semibold h-10"
       />
 
-      {/* Department restrict */}
-      <div className="flex items-center gap-2">
-        <label className="text-xs text-muted-foreground whitespace-nowrap">Restrict to dept</label>
-        <select
-          value={department}
-          onChange={e => setDepartment(e.target.value)}
-          className="h-7 rounded border border-border bg-card px-2 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-foreground/20"
-        >
-          <option value="">All departments</option>
-          {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
-        </select>
+      {/* Department restrict — multi-select toggles */}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs text-muted-foreground whitespace-nowrap">Restrict to:</span>
+        {DEPARTMENTS.map(dept => (
+          <button
+            key={dept}
+            type="button"
+            onClick={() => toggleDepartment(dept)}
+            className={cn(
+              'rounded-full border px-2.5 py-0.5 text-xs transition-colors',
+              departments.includes(dept)
+                ? 'border-seeko-accent bg-seeko-accent/10 text-seeko-accent'
+                : 'border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground'
+            )}
+          >
+            {dept}
+          </button>
+        ))}
+        {departments.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setDepartments([])}
+            className="text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors"
+          >
+            Clear
+          </button>
+        )}
       </div>
 
       {/* Toolbar */}
@@ -254,6 +407,35 @@ export function DocEditor({ doc, onSave, onCancel }: DocEditorProps) {
         <div className="mx-1 h-4 w-px bg-border" />
 
         <ImagePopover onInsert={insertImage} />
+
+        <div className="mx-1 h-4 w-px bg-border" />
+
+        <ToolbarButton
+          title="Insert table (3×3)"
+          onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}
+        >
+          <TableIcon className="size-3.5" />
+        </ToolbarButton>
+        {editor.can().addColumnAfter() && (
+          <>
+            <ToolbarButton title="Add column" onClick={() => editor.chain().focus().addColumnAfter().run()}>
+              <Plus className="size-3.5" />
+            </ToolbarButton>
+            <ToolbarButton title="Delete column" onClick={() => editor.chain().focus().deleteColumn().run()}>
+              <Trash2 className="size-3 text-destructive/70" />
+            </ToolbarButton>
+          </>
+        )}
+        {editor.can().addRowAfter() && (
+          <>
+            <ToolbarButton title="Add row" onClick={() => editor.chain().focus().addRowAfter().run()}>
+              <Plus className="size-3.5 rotate-90" />
+            </ToolbarButton>
+            <ToolbarButton title="Delete row" onClick={() => editor.chain().focus().deleteRow().run()}>
+              <Trash2 className="size-3 rotate-90 text-destructive/70" />
+            </ToolbarButton>
+          </>
+        )}
       </div>
 
       {/* Editor */}

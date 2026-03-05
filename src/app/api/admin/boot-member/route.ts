@@ -55,7 +55,8 @@ export async function POST(req: NextRequest) {
 
   const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
   if (authError) {
-    console.warn('[boot-member] password verification failed', { adminId: user.id });
+    // TODO: Replace with proper logging system
+    // Admin password verification failed for boot member operation
     return NextResponse.json({ error: 'Incorrect password' }, { status: 403 });
   }
 
@@ -73,10 +74,12 @@ export async function POST(req: NextRequest) {
   // Delete auth user
   const { error: deleteErr } = await service.auth.admin.deleteUser(userId);
   if (deleteErr) {
-    console.error('[boot-member] failed to delete auth user', { userId, error: deleteErr.message });
+    // TODO: Replace with proper logging system
+    // Failed to delete auth user during boot member operation
     return NextResponse.json({ error: deleteErr.message }, { status: 500 });
   }
 
-  console.log('[boot-member] user removed', { userId, by: user.id });
+  // TODO: Replace with proper logging system
+  // User successfully removed by admin
   return NextResponse.json({ success: true });
 }

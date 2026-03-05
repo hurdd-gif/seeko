@@ -51,7 +51,8 @@ export async function POST(req: NextRequest) {
   });
 
   if (error) {
-    console.error('[notify/user] insert failed', { userId, kind, error: error.message });
+    // TODO: Replace with proper logging system
+    // Failed to insert notification for user
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 

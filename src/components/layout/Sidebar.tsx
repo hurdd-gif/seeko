@@ -43,21 +43,24 @@ interface SidebarProps {
   avatarUrl?: string;
   userId?: string;
   isAdmin?: boolean;
+  isContractor?: boolean;
   unreadCount?: number;
   notifications?: Notification[];
 }
 
 export function Sidebar({
-  email, displayName, avatarUrl, userId, isAdmin = false, unreadCount = 0, notifications = [],
+  email, displayName, avatarUrl, userId, isAdmin = false, isContractor = false, unreadCount = 0, notifications = [],
 }: SidebarProps) {
   const pathname = usePathname();
   const [confirmingSignOut, setConfirmingSignOut] = useState(false);
 
-  const NAV = NAV_BASE.map(item =>
-    item.label === '__TASKS__'
-      ? { ...item, label: isAdmin ? 'All Tasks' : 'My Tasks', mobileLabel: 'Tasks' }
-      : item
-  );
+  const NAV = NAV_BASE
+    .filter(item => !(isContractor && item.href === '/activity'))
+    .map(item =>
+      item.label === '__TASKS__'
+        ? { ...item, label: isAdmin ? 'All Tasks' : 'My Tasks', mobileLabel: 'Tasks' }
+        : item
+    );
 
   const label = displayName || email;
 

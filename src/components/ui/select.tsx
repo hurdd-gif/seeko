@@ -150,7 +150,7 @@ const Select = React.forwardRef<
           <div
             id="select-dropdown-portal"
             role="listbox"
-            className="fixed z-[100] rounded-md bg-popover shadow-lg overflow-hidden min-w-[var(--select-dropdown-width)] w-max max-w-[min(calc(100vw-16px),var(--select-dropdown-width))]"
+            className="fixed z-[100] rounded-md bg-popover shadow-lg overflow-hidden min-w-[var(--select-dropdown-width)] w-max max-w-[calc(100vw-16px)]"
             style={{
               top: position.top,
               left: position.left,

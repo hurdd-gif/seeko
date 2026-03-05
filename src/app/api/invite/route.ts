@@ -29,7 +29,8 @@ export async function POST(request: NextRequest) {
   const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
 
   if (isRateLimited(ip)) {
-    console.warn('[invite] rate limit exceeded', { ip });
+    // TODO: Replace with proper logging system
+    // Rate limit exceeded - IP blocked temporarily
     return NextResponse.json({ error: 'Too many requests. Try again later.' }, { status: 429 });
   }
 
@@ -46,7 +47,8 @@ export async function POST(request: NextRequest) {
     .single();
 
   if (!profile?.is_admin) {
-    console.warn('[invite] non-admin attempt', { userId: user.id });
+    // TODO: Replace with proper logging system
+    // Non-admin user attempted invite
     return NextResponse.json({ error: 'Admin only' }, { status: 403 });
   }
 
@@ -72,8 +74,15 @@ export async function POST(request: NextRequest) {
   });
 
   if (otpError) {
-    console.error('[invite] OTP send failed', { email, error: otpError.message });
-    return NextResponse.json({ error: otpError.message }, { status: 400 });
+    // TODO: Replace with proper logging system
+    // OTP send failed for email invitation
+    const hint = otpError.message.toLowerCase().includes('confirmation email')
+      ? ' If SMTP is already configured, check Supabase Auth logs and your SMTP provider dashboard (see docs/auth-email-troubleshooting.md).'
+      : '';
+    return NextResponse.json(
+      { error: otpError.message + hint },
+      { status: 400 }
+    );
   }
 
   const { error: insertError } = await admin
@@ -84,10 +93,12 @@ export async function POST(request: NextRequest) {
     );
 
   if (insertError) {
-    console.error('[invite] pending_invites upsert failed', { email, error: insertError.message });
+    // TODO: Replace with proper logging system
+    // Failed to insert pending invite record
     return NextResponse.json({ error: insertError.message }, { status: 400 });
   }
 
-  console.log('[invite] sent', { email, department, isContractor, invitedBy: user.id });
+  // TODO: Replace with proper logging system
+  // Invite sent successfully
   return NextResponse.json({ success: true });
 }

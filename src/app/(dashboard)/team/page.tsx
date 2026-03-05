@@ -102,7 +102,7 @@ function MemberRow({ member, isAdmin }: { member: Profile; isAdmin: boolean }) {
   const offset = tzAbbrev(member.timezone);
 
   return (
-    <div className="flex items-start gap-3 py-3">
+    <div className="flex items-center gap-3 py-3">
       {/* Avatar */}
       <div className="relative shrink-0">
         <Avatar className="size-9">
@@ -119,40 +119,33 @@ function MemberRow({ member, isAdmin }: { member: Profile; isAdmin: boolean }) {
 
       {/* Info */}
       <div className="flex-1 min-w-0">
-        {/* Name + status */}
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 min-w-0">
-            <p className="text-sm font-medium text-foreground truncate">{member.display_name ?? 'Unknown'}</p>
-            {member.is_admin && (
-              <Badge variant="outline" className="text-[10px] py-0 px-1.5 shrink-0">Lead</Badge>
-            )}
-          </div>
-          <span className={`text-[11px] shrink-0 ${online ? 'text-seeko-accent' : 'text-muted-foreground/60'}`}>
+        <div className="flex items-center gap-2">
+          <p className="text-sm font-medium text-foreground truncate">{member.display_name ?? 'Unknown'}</p>
+          {member.is_admin && (
+            <Badge variant="outline" className="text-[10px] py-0 px-1.5 shrink-0">Lead</Badge>
+          )}
+          {/* Status — mobile only */}
+          <span className={`md:hidden ml-auto text-[11px] shrink-0 ${online ? 'text-seeko-accent' : 'text-muted-foreground/60'}`}>
             {lastSeenLabel(member.last_seen_at, member.must_set_password)}
           </span>
         </div>
 
-        {/* Email — desktop only */}
         {member.email && (
           <p className="text-xs text-muted-foreground/70 hidden sm:block">{member.email}</p>
         )}
 
-        {/* Role + dept (non-admin) + timezone (desktop only) */}
         <div className="flex items-center gap-2 mt-0.5 flex-wrap">
           {member.role && (
             <p className="text-xs text-muted-foreground">{member.role}</p>
           )}
           {!isAdmin && member.department && (
-            <>
-              {member.role && <span className="text-muted-foreground/30">·</span>}
-              <span className={`text-xs font-medium ${DEPT_COLOR[member.department] ?? 'text-muted-foreground'}`}>
-                {member.department}
-              </span>
-            </>
+            <span className={`md:hidden text-xs font-medium ${DEPT_COLOR[member.department] ?? 'text-muted-foreground'}`}>
+              {member.role && '· '}{member.department}
+            </span>
           )}
           {member.timezone && (
             <div className="hidden sm:flex items-center gap-1 text-xs text-muted-foreground">
-              {(member.role || member.department) && <span className="text-muted-foreground/30">·</span>}
+              {member.role && <span className="text-muted-foreground/30">·</span>}
               <Clock className="size-2.5" />
               <span>{localTime}</span>
               <span className="text-muted-foreground/50">{offset}</span>
@@ -160,12 +153,27 @@ function MemberRow({ member, isAdmin }: { member: Profile; isAdmin: boolean }) {
           )}
         </div>
 
-        {/* Department select for admins — own row so it doesn't squish */}
+        {/* Dept select — mobile only */}
         {isAdmin && (
-          <div className="mt-2">
+          <div className="mt-2 md:hidden">
             <DepartmentSelect userId={member.id} department={member.department} />
           </div>
         )}
+      </div>
+
+      {/* Right column — desktop only */}
+      <div className="hidden md:flex items-center gap-2 shrink-0">
+        {isAdmin
+          ? <DepartmentSelect userId={member.id} department={member.department} />
+          : member.department && (
+              <Badge variant="secondary" className={`text-xs ${DEPT_COLOR[member.department] ?? 'text-muted-foreground'}`}>
+                {member.department}
+              </Badge>
+            )
+        }
+        <span className={`text-[11px] ${online ? 'text-seeko-accent' : 'text-muted-foreground/60'}`}>
+          {lastSeenLabel(member.last_seen_at, member.must_set_password)}
+        </span>
       </div>
     </div>
   );

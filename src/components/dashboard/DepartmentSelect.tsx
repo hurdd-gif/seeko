@@ -3,6 +3,8 @@
 import { useState, useTransition } from 'react';
 import { toast } from 'sonner';
 import { Department } from '@/lib/types';
+import { Select } from '@/components/ui/select';
+import { cn } from '@/lib/utils';
 
 const DEPARTMENTS: Department[] = ['Coding', 'Visual Art', 'UI/UX', 'Animation', 'Asset Creation'];
 
@@ -42,24 +44,20 @@ export function DepartmentSelect({ userId, department }: Props) {
   }
 
   return (
-    <select
+    <Select
       value={value}
       onChange={e => handleChange(e.target.value)}
       disabled={isPending}
-      className={[
-        'rounded bg-transparent text-xs border border-transparent px-1.5 py-0.5',
-        'hover:border-border hover:bg-muted cursor-pointer transition-colors',
-        'focus:outline-none focus:border-border',
-        isPending ? 'opacity-50' : '',
+      className={cn(
+        'h-auto py-0.5 px-1.5 text-xs bg-transparent border border-transparent hover:border-border hover:bg-muted',
+        isPending && 'opacity-50',
         DEPT_COLOR[value] ?? 'text-muted-foreground',
-      ].join(' ')}
+      )}
     >
       {!value && <option value="">No department</option>}
       {DEPARTMENTS.map(d => (
-        <option key={d} value={d} className="bg-card text-foreground">
-          {d}
-        </option>
+        <option key={d} value={d}>{d}</option>
       ))}
-    </select>
+    </Select>
   );
 }

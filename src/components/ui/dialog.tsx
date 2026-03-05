@@ -3,14 +3,14 @@
 import * as React from "react"
 import { motion, AnimatePresence } from "motion/react"
 import { cn } from "@/lib/utils"
-import { X } from "lucide-react"
+import { X, Maximize2, Minimize2 } from "lucide-react"
 
-const DEFAULT_MAX_W = 672 // max-w-2xl
-const DEFAULT_MAX_H_PCT = 85
+const DEFAULT_MAX_W = 900
+const DEFAULT_MAX_H_PCT = 88
 const MIN_W = 320
 const MIN_H = 200
-const MAX_W_PCT = 95
-const MAX_H_PCT = 92
+const MAX_W_PCT = 96
+const MAX_H_PCT = 94
 
 interface DialogProps {
   open: boolean
@@ -23,9 +23,11 @@ interface DialogProps {
 }
 
 function Dialog({ open, onOpenChange, children, resizable = false, contentClassName }: DialogProps) {
-  const [size, setSize] = React.useState({ w: DEFAULT_MAX_W, h: typeof window !== 'undefined' ? window.innerHeight * (DEFAULT_MAX_H_PCT / 100) : 544 })
+  const [size, setSize] = React.useState({ w: DEFAULT_MAX_W, h: typeof window !== 'undefined' ? window.innerHeight * (DEFAULT_MAX_H_PCT / 100) : 600 })
+  const [maximized, setMaximized] = React.useState(false)
   const resizingRef = React.useRef(false)
   const startRef = React.useRef({ x: 0, y: 0, w: 0, h: 0 })
+  const sizeBeforeMax = React.useRef(size)
 
   React.useEffect(() => {
     if (open) {
@@ -42,22 +44,36 @@ function Dialog({ open, onOpenChange, children, resizable = false, contentClassN
     document.body.style.overflow = ""
   }, [open, onOpenChange])
 
-  // Reset size when opening (for resizable dialogs)
+  // Reset size when opening
   React.useEffect(() => {
-    if (open && resizable && typeof window !== 'undefined') {
-      setSize({
-        w: Math.min(DEFAULT_MAX_W, window.innerWidth - 32),
-        h: window.innerHeight * (DEFAULT_MAX_H_PCT / 100),
-      })
+    if (open && typeof window !== 'undefined') {
+      const w = Math.min(DEFAULT_MAX_W, window.innerWidth - 32)
+      const h = window.innerHeight * (DEFAULT_MAX_H_PCT / 100)
+      setSize({ w, h })
+      setMaximized(false)
     }
-  }, [open, resizable])
+  }, [open])
+
+  const toggleMaximize = React.useCallback(() => {
+    if (!maximized) {
+      sizeBeforeMax.current = size
+      setSize({
+        w: (window.innerWidth * MAX_W_PCT) / 100,
+        h: (window.innerHeight * MAX_H_PCT) / 100,
+      })
+      setMaximized(true)
+    } else {
+      setSize(sizeBeforeMax.current)
+      setMaximized(false)
+    }
+  }, [maximized, size])
 
   const handleResizeStart = React.useCallback((e: React.MouseEvent) => {
-    if (!resizable) return
+    if (!resizable || maximized) return
     e.preventDefault()
     resizingRef.current = true
     startRef.current = { x: e.clientX, y: e.clientY, w: size.w, h: size.h }
-  }, [resizable, size.w, size.h])
+  }, [resizable, maximized, size.w, size.h])
 
   React.useEffect(() => {
     if (!resizable) return
@@ -100,7 +116,7 @@ function Dialog({ open, onOpenChange, children, resizable = false, contentClassN
           <motion.div
             className={cn(
               "relative z-50 overflow-y-auto rounded-xl border border-border bg-card p-6 shadow-lg mx-4",
-              !resizable && "w-full max-w-2xl max-h-[90vh] sm:max-h-[85vh]",
+              !resizable && "w-full max-w-[900px] max-h-[90vh] sm:max-h-[88vh]",
               contentClassName
             )}
             style={panelStyle}
@@ -110,20 +126,40 @@ function Dialog({ open, onOpenChange, children, resizable = false, contentClassN
             transition={{ type: "spring", stiffness: 400, damping: 30 }}
           >
             {children}
+            {/* Expand/maximize button — always shown on resizable dialogs */}
+            {resizable && (
+              <button
+                type="button"
+                onClick={toggleMaximize}
+                title={maximized ? 'Restore size' : 'Expand'}
+                className="absolute right-10 top-4 rounded-sm opacity-50 transition-opacity hover:opacity-100 focus:outline-none"
+              >
+                {maximized
+                  ? <Minimize2 className="size-3.5" />
+                  : <Maximize2 className="size-3.5" />
+                }
+                <span className="sr-only">{maximized ? 'Restore' : 'Expand'}</span>
+              </button>
+            )}
             {resizable && (
               <div
                 role="separator"
                 aria-label="Resize"
                 onMouseDown={handleResizeStart}
-                className="absolute right-0 bottom-0 w-8 h-8 cursor-se-resize rounded-br-xl flex items-end justify-end p-1.5 group"
+                className={cn(
+                  "absolute right-0 bottom-0 w-8 h-8 rounded-br-xl flex items-end justify-end p-1.5 group",
+                  maximized ? "cursor-default" : "cursor-se-resize"
+                )}
               >
-                <svg
-                  className="w-3.5 h-3.5 text-muted-foreground/50 group-hover:text-muted-foreground"
-                  viewBox="0 0 16 16"
-                  fill="currentColor"
-                >
-                  <path d="M15 15H9v-2h4V9h2v6z" />
-                </svg>
+                {!maximized && (
+                  <svg
+                    className="w-3.5 h-3.5 text-muted-foreground/50 group-hover:text-muted-foreground"
+                    viewBox="0 0 16 16"
+                    fill="currentColor"
+                  >
+                    <path d="M15 15H9v-2h4V9h2v6z" />
+                  </svg>
+                )}
               </div>
             )}
           </motion.div>

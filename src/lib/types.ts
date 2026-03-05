@@ -52,7 +52,7 @@ export type Doc = {
   sort_order: number;
   created_at?: string;
   updated_at?: string;
-  restricted_department?: string;
+  restricted_department?: string[];
 };
 
 export type TaskWithAssignee = Task & {
