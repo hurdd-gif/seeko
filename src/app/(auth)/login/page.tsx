@@ -115,7 +115,7 @@ export default function LoginPage() {
             alt="SEEKO"
             width={40}
             height={40}
-            className="size-10 object-contain invert mix-blend-screen"
+            className="size-10 object-contain"
           />
           <h1 className="text-xl font-bold tracking-tight text-foreground">SEEKO Studio</h1>
         </motion.div>
