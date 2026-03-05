@@ -50,6 +50,22 @@ const PRIORITY_STYLE: Record<string, string> = {
   Low:    'bg-muted text-muted-foreground border-border',
 };
 
+const DEPT_COLOR: Record<string, string> = {
+  'Coding':         'text-emerald-400',
+  'Visual Art':     'text-blue-300',
+  'UI/UX':          'text-violet-300',
+  'Animation':      'text-amber-400',
+  'Asset Creation': 'text-pink-300',
+};
+
+const DEPT_SECTION_COLOR: Record<string, string> = {
+  'Coding':         'border-emerald-500/30 text-emerald-400',
+  'Visual Art':     'border-blue-300/30 text-blue-300',
+  'UI/UX':          'border-violet-300/30 text-violet-300',
+  'Animation':      'border-amber-400/30 text-amber-400',
+  'Asset Creation': 'border-pink-300/30 text-pink-300',
+};
+
 const FILTER_STATUSES = ['All', ...ALL_STATUSES] as const;
 
 export function filterTasks(tasks: Task[], query: string, status: string): Task[] {
@@ -77,6 +93,8 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('All');
   const [taskStatuses, setTaskStatuses] = useState<Record<string, TaskStatus>>({});
+  const [taskDepts, setTaskDepts] = useState<Record<string, Department>>({});
+  const [taskPriorities, setTaskPriorities] = useState<Record<string, Priority>>({});
   const [assignments, setAssignments] = useState<Record<string, string | null>>({});
   const [deleted, setDeleted] = useState<Set<string>>(new Set());
   const [localTasks, setLocalTasks] = useState<Task[]>([]);
@@ -179,14 +197,24 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
     }
   }, [supabase, allTasks]);
 
+  const handleDeptChange = useCallback(async (taskId: string, dept: Department) => {
+    setTaskDepts(prev => ({ ...prev, [taskId]: dept }));
+    await supabase.from('tasks').update({ department: dept }).eq('id', taskId);
+  }, [supabase]);
+
+  const handlePriorityChange = useCallback(async (taskId: string, priority: Priority) => {
+    setTaskPriorities(prev => ({ ...prev, [taskId]: priority }));
+    await supabase.from('tasks').update({ priority }).eq('id', taskId);
+  }, [supabase]);
+
   const handleDelete = useCallback(async (taskId: string) => {
     setDeleted(prev => new Set(prev).add(taskId));
     await supabase.from('tasks').delete().eq('id', taskId);
   }, [supabase]);
 
-  const getEffectiveStatus = useCallback((task: Task): TaskStatus => {
-    return taskStatuses[task.id] ?? task.status;
-  }, [taskStatuses]);
+  const getEffectiveStatus = useCallback((task: Task): TaskStatus => taskStatuses[task.id] ?? task.status, [taskStatuses]);
+  const getEffectiveDept = useCallback((task: Task): Department => (taskDepts[task.id] ?? task.department) as Department, [taskDepts]);
+  const getEffectivePriority = useCallback((task: Task): Priority => (taskPriorities[task.id] ?? task.priority) as Priority, [taskPriorities]);
 
   const filtered = useMemo(() => {
     return allTasks.filter(t => {
@@ -220,84 +248,14 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
     return null;
   }
 
-  return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input placeholder="Search tasks..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
-        </div>
-        <div className="flex items-center gap-2">
-          <Select value={filter} onChange={e => setFilter(e.target.value)}>
-            {FILTER_STATUSES.map(s => (
-              <option key={s} value={s}>{s} ({counts[s]})</option>
-            ))}
-          </Select>
-          {isAdmin && (
-            <Button size="sm" onClick={() => setShowAddForm(v => !v)} className="shrink-0 gap-1.5">
-              <Plus className="size-3.5" />
-              Add Task
-            </Button>
-          )}
-        </div>
-      </div>
-
-      <AnimatePresence>
-        {showAddForm && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.15 }}
-            className="overflow-hidden"
-          >
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex flex-col gap-3">
-                  <Input
-                    placeholder="Task name..."
-                    value={newName}
-                    onChange={e => setNewName(e.target.value)}
-                    autoFocus
-                    onKeyDown={e => { if (e.key === 'Enter' && newName.trim()) handleAddTask(); }}
-                  />
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Select value={newDept} onChange={e => setNewDept(e.target.value as Department)}>
-                      {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
-                    </Select>
-                    <Select value={newPriority} onChange={e => setNewPriority(e.target.value as Priority)}>
-                      {PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
-                    </Select>
-                    <Input
-                      type="date"
-                      value={newDeadline}
-                      onChange={e => setNewDeadline(e.target.value)}
-                      className="w-auto"
-                    />
-                    <div className="flex-1" />
-                    <Button variant="ghost" size="sm" onClick={() => setShowAddForm(false)}>
-                      Cancel
-                    </Button>
-                    <Button size="sm" onClick={handleAddTask} disabled={adding || !newName.trim()}>
-                      {adding ? 'Adding...' : 'Add'}
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <Card>
-        <CardContent className="p-0">
-          <div className="flex flex-col divide-y divide-border">
-            {filtered.map(task => {
-              const status = getEffectiveStatus(task);
-              const iconCfg = STATUS_ICONS[status] ?? STATUS_ICONS['In Progress'];
-              const StatusIcon = iconCfg.icon;
-              const assignee = isAdmin ? getAssignee(task) : null;
-              const isComplete = status === 'Complete';
+  const renderTaskRow = (task: Task | TaskWithAssignee) => {
+      const status = getEffectiveStatus(task);
+      const iconCfg = STATUS_ICONS[status] ?? STATUS_ICONS['In Progress'];
+      const StatusIcon = iconCfg.icon;
+      const assignee = isAdmin ? getAssignee(task) : null;
+      const isComplete = status === 'Complete';
+      const dept = getEffectiveDept(task);
+      const priority = getEffectivePriority(task);
 
               return (
                 <div key={task.id} className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/50">
@@ -332,12 +290,47 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
                   </button>
 
                   <div className="hidden items-center gap-2 lg:flex">
-                    <Badge variant="secondary" className="text-xs font-normal whitespace-nowrap">
-                      {task.department}
-                    </Badge>
-                    <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-normal whitespace-nowrap ${PRIORITY_STYLE[task.priority] ?? PRIORITY_STYLE.Low}`}>
-                      {task.priority}
-                    </span>
+                    {isAdmin ? (
+                      <>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button className={`inline-flex items-center rounded-md border border-border/50 bg-muted/40 px-2 py-0.5 text-xs font-normal whitespace-nowrap transition-colors hover:bg-muted hover:border-border ${DEPT_COLOR[dept] ?? 'text-muted-foreground'}`}>
+                              {dept}
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {DEPARTMENTS.map(d => (
+                              <DropdownMenuItem key={d} onClick={() => handleDeptChange(task.id, d)} className={`text-xs ${DEPT_COLOR[d] ?? ''} ${d === dept ? 'font-medium' : ''}`}>
+                                {d}
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button className={`inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-normal whitespace-nowrap transition-opacity hover:opacity-80 ${PRIORITY_STYLE[priority] ?? PRIORITY_STYLE.Low}`}>
+                              {priority}
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {PRIORITIES.map(p => (
+                              <DropdownMenuItem key={p} onClick={() => handlePriorityChange(task.id, p)} className={`text-xs ${p === priority ? 'font-medium' : ''}`}>
+                                <span className={`inline-flex items-center rounded border px-1.5 py-0 mr-1 ${PRIORITY_STYLE[p]}`}>{p}</span>
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </>
+                    ) : (
+                      <>
+                        <Badge variant="secondary" className={`text-xs font-normal whitespace-nowrap ${DEPT_COLOR[dept] ?? ''}`}>
+                          {dept}
+                        </Badge>
+                        <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-normal whitespace-nowrap ${PRIORITY_STYLE[priority] ?? PRIORITY_STYLE.Low}`}>
+                          {priority}
+                        </span>
+                      </>
+                    )}
                   </div>
 
                   {isAdmin && (
@@ -414,18 +407,57 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
                   </DropdownMenu>
                 </div>
               );
-            })}
+    };
 
-            {filtered.length === 0 && (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
+  const renderContent = () => {
+    const taskGroups = isAdmin
+      ? DEPARTMENTS.filter(d => filtered.some(t => getEffectiveDept(t) === d))
+      : null;
+
+    return (
+      <>
+        {taskGroups ? (
+          taskGroups.length === 0 ? (
+            <Card>
+              <CardContent className="p-4 flex flex-col items-center justify-center py-12 text-center">
                 <CheckCircle2 className="size-10 text-muted-foreground/50" />
                 <p className="mt-3 text-sm font-medium text-foreground">No tasks found</p>
                 <p className="text-xs text-muted-foreground">Try adjusting your filters or search.</p>
-              </div>
-            )}
+              </CardContent>
+            </Card>
+          ) : (
+          <div className="flex flex-col gap-4">
+            {taskGroups.map(dept => (
+              <Card key={dept}>
+                <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border">
+                  <span className={`text-xs font-semibold tracking-wide uppercase ${DEPT_SECTION_COLOR[dept] ?? 'text-muted-foreground'}`}>{dept}</span>
+                  <span className="text-xs text-muted-foreground">({filtered.filter(t => getEffectiveDept(t) === dept).length})</span>
+                </div>
+                <CardContent className="p-0">
+                  <div className="flex flex-col divide-y divide-border">
+                    {filtered.filter(t => getEffectiveDept(t) === dept).map(t => renderTaskRow(t))}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
-        </CardContent>
-      </Card>
+          )
+        ) : (
+          <Card>
+            <CardContent className="p-0">
+              <div className="flex flex-col divide-y divide-border">
+                {filtered.map(t => renderTaskRow(t))}
+                {filtered.length === 0 && (
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <CheckCircle2 className="size-10 text-muted-foreground/50" />
+                    <p className="mt-3 text-sm font-medium text-foreground">No tasks found</p>
+                    <p className="text-xs text-muted-foreground">Try adjusting your filters or search.</p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
       {selectedTask && (
         <TaskDetail
@@ -468,6 +500,81 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
           }}
         />
       )}
+      </>
+    );
+  };
+
+  return (
+    <div className="flex flex-col gap-4">
+
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input placeholder="Search tasks..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+        </div>
+        <div className="flex items-center gap-2">
+          <Select value={filter} onChange={e => setFilter(e.target.value)}>
+            {FILTER_STATUSES.map(s => (
+              <option key={s} value={s}>{s} ({counts[s]})</option>
+            ))}
+          </Select>
+          {isAdmin && (
+            <Button size="sm" onClick={() => setShowAddForm(v => !v)} className="shrink-0 gap-1.5">
+              <Plus className="size-3.5" />
+              Add Task
+            </Button>
+          )}
+        </div>
+      </div>
+
+      <AnimatePresence>
+        {showAddForm && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.15 }}
+            className="overflow-hidden"
+          >
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex flex-col gap-3">
+                  <Input
+                    placeholder="Task name..."
+                    value={newName}
+                    onChange={e => setNewName(e.target.value)}
+                    autoFocus
+                    onKeyDown={e => { if (e.key === 'Enter' && newName.trim()) handleAddTask(); }}
+                  />
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Select value={newDept} onChange={e => setNewDept(e.target.value as Department)}>
+                      {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
+                    </Select>
+                    <Select value={newPriority} onChange={e => setNewPriority(e.target.value as Priority)}>
+                      {PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
+                    </Select>
+                    <Input
+                      type="date"
+                      value={newDeadline}
+                      onChange={e => setNewDeadline(e.target.value)}
+                      className="w-auto"
+                    />
+                    <div className="flex-1" />
+                    <Button variant="ghost" size="sm" onClick={() => setShowAddForm(false)}>
+                      Cancel
+                    </Button>
+                    <Button size="sm" onClick={handleAddTask} disabled={adding || !newName.trim()}>
+                      {adding ? 'Adding...' : 'Add'}
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {renderContent()}
     </div>
   );
 }
