@@ -44,7 +44,10 @@ export async function POST(req: NextRequest) {
     .select('id')
     .eq('is_admin', true);
 
-  if (adminError) return NextResponse.json({ error: adminError.message }, { status: 500 });
+  if (adminError) {
+    console.error('[notify/admins] profiles query failed:', adminError);
+    return NextResponse.json({ error: adminError.message }, { status: 500 });
+  }
   if (!admins?.length) return NextResponse.json({ success: true, count: 0 });
 
   const rows = admins.map(({ id }) => ({
@@ -57,6 +60,9 @@ export async function POST(req: NextRequest) {
   }));
 
   const { error: insertError } = await service.from('notifications').insert(rows);
-  if (insertError) return NextResponse.json({ error: insertError.message }, { status: 500 });
+  if (insertError) {
+    console.error('[notify/admins] notifications insert failed:', insertError);
+    return NextResponse.json({ error: insertError.message }, { status: 500 });
+  }
   return NextResponse.json({ success: true, count: rows.length });
 }

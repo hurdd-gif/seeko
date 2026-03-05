@@ -28,20 +28,39 @@ function Dialog({ open, onOpenChange, children, resizable = false, contentClassN
   const resizingRef = React.useRef(false)
   const startRef = React.useRef({ x: 0, y: 0, w: 0, h: 0 })
   const sizeBeforeMax = React.useRef(size)
+  const panelRef = React.useRef<HTMLDivElement>(null)
 
   React.useEffect(() => {
-    if (open) {
-      document.body.style.overflow = "hidden"
-      const handler = (e: KeyboardEvent) => {
-        if (e.key === "Escape") onOpenChange(false)
-      }
-      document.addEventListener("keydown", handler)
-      return () => {
-        document.body.style.overflow = ""
-        document.removeEventListener("keydown", handler)
-      }
+    if (!open) return
+
+    // Lock all scroll containers
+    const scrollables: HTMLElement[] = [
+      document.documentElement,
+      document.body,
+      document.getElementById('tour-main'),
+    ].filter(Boolean) as HTMLElement[]
+    const prev = scrollables.map(el => el.style.overflow)
+    scrollables.forEach(el => { el.style.overflow = 'hidden' })
+
+    // Block wheel + touch scroll outside the dialog panel (non-passive so preventDefault works)
+    const blockScroll = (e: WheelEvent | TouchEvent) => {
+      if (panelRef.current?.contains(e.target as Node)) return
+      e.preventDefault()
     }
-    document.body.style.overflow = ""
+    document.addEventListener('wheel', blockScroll, { passive: false })
+    document.addEventListener('touchmove', blockScroll, { passive: false })
+
+    const keyHandler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onOpenChange(false)
+    }
+    document.addEventListener('keydown', keyHandler)
+
+    return () => {
+      scrollables.forEach((el, i) => { el.style.overflow = prev[i] })
+      document.removeEventListener('wheel', blockScroll)
+      document.removeEventListener('touchmove', blockScroll)
+      document.removeEventListener('keydown', keyHandler)
+    }
   }, [open, onOpenChange])
 
   // Reset size when opening
@@ -114,8 +133,9 @@ function Dialog({ open, onOpenChange, children, resizable = false, contentClassN
             onClick={() => onOpenChange(false)}
           />
           <motion.div
+            ref={panelRef}
             className={cn(
-              "relative z-50 overflow-y-auto rounded-xl border border-border bg-card p-6 shadow-lg mx-4",
+              "relative z-50 flex flex-col rounded-xl border border-border bg-card shadow-lg mx-4",
               !resizable && "w-full max-w-[900px] max-h-[90vh] sm:max-h-[88vh]",
               contentClassName
             )}
@@ -125,7 +145,9 @@ function Dialog({ open, onOpenChange, children, resizable = false, contentClassN
             exit={{ opacity: 0, scale: 0.95, y: 8 }}
             transition={{ type: "spring", stiffness: 400, damping: 30 }}
           >
-            {children}
+            <div className="flex-1 overflow-y-auto p-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {children}
+            </div>
             {/* Expand/maximize button — always shown on resizable dialogs */}
             {resizable && (
               <button
