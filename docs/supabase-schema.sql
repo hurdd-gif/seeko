@@ -129,3 +129,15 @@ create policy "Authenticated users can insert activity"
 
 -- insert into storage.buckets (id, name, public) values ('avatars', 'avatars', true);
 -- Policies: anyone can read, authenticated can upload, users can update own avatar
+
+-- ─── Pending Invites ──────────────────────────────────────────────────────────
+
+create table public.pending_invites (
+  email        text primary key,
+  department   text,
+  is_contractor boolean not null default false,
+  created_at   timestamptz default now()
+);
+
+alter table public.pending_invites enable row level security;
+-- Service role only — no authenticated user policies needed
