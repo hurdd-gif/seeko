@@ -99,7 +99,13 @@ export function Sidebar({
   return (
     <>
       {/* ── Desktop sidebar ──────────────────────────────── */}
-      <aside className="hidden md:flex w-60 shrink-0 flex-col border-r border-sidebar-border bg-sidebar h-screen sticky top-0">
+      <motion.aside
+        animate={{ width: collapsed ? 56 : 240 }}
+        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        className="relative hidden md:flex shrink-0 flex-col border-r border-sidebar-border bg-sidebar h-screen sticky top-0 overflow-hidden"
+      >
         <div className="flex items-center gap-2.5 px-4 py-5">
           <div className="flex h-8 w-8 items-center justify-center shrink-0">
             <Image src="/seeko-s.png" alt="SEEKO" width={24} height={24} />
@@ -191,7 +197,7 @@ export function Sidebar({
             </button>
           )}
         </div>
-      </aside>
+      </motion.aside>
 
       {/* ── Mobile top header ─────────────────────────────── */}
       <header className="md:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-4 h-14 bg-sidebar border-b border-sidebar-border">
