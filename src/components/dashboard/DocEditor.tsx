@@ -234,14 +234,13 @@ export function DocEditor({ doc, onSave, onCancel }: DocEditorProps) {
     indicator.innerHTML = ROW_RESIZE_SVG;
     document.body.appendChild(indicator);
 
+    /* Query all TR elements directly — elementsFromPoint misses borders between rows */
     function rowNearBottom(e: MouseEvent): HTMLTableRowElement | null {
-      for (const el of document.elementsFromPoint(e.clientX, e.clientY)) {
-        const cell = el.closest('td, th');
-        if (!cell || !editorEl.contains(cell)) continue;
-        const row = cell.parentElement as HTMLTableRowElement;
-        if (!row || row.tagName !== 'TR') continue;
+      const rows = editorEl.querySelectorAll<HTMLTableRowElement>('tr');
+      for (const row of rows) {
         const rect = row.getBoundingClientRect();
-        if (e.clientY >= rect.bottom - 6 && e.clientY <= rect.bottom + 4) return row;
+        if (e.clientX < rect.left || e.clientX > rect.right) continue;
+        if (e.clientY >= rect.bottom - 8 && e.clientY <= rect.bottom + 8) return row;
       }
       return null;
     }
@@ -250,7 +249,9 @@ export function DocEditor({ doc, onSave, onCancel }: DocEditorProps) {
       if (resizing && resizingRow) {
         e.preventDefault();
         const newH = Math.max(28, startHeight + (e.clientY - startY));
-        Array.from(resizingRow.cells).forEach(c => { (c as HTMLElement).style.height = `${newH}px`; });
+        Array.from(resizingRow.cells).forEach(c => {
+          (c as HTMLElement).style.setProperty('height', `${newH}px`, 'important');
+        });
         const r = resizingRow.getBoundingClientRect();
         indicator.style.left = `${e.clientX - 10}px`;
         indicator.style.top  = `${r.bottom - 10}px`;
@@ -283,6 +284,7 @@ export function DocEditor({ doc, onSave, onCancel }: DocEditorProps) {
     }
 
     function onUp() {
+      if (!resizing) return;
       resizing = false;
       resizingRow = null;
       indicator.style.opacity = '0';
@@ -290,16 +292,14 @@ export function DocEditor({ doc, onSave, onCancel }: DocEditorProps) {
       document.body.style.userSelect = '';
     }
 
-    editorEl.addEventListener('mousemove', onMove);
     window.addEventListener('mousemove', onMove);
-    window.addEventListener('mousedown', onDown);
+    document.addEventListener('mousedown', onDown, true); // capture: runs before Tiptap handlers
     window.addEventListener('mouseup', onUp);
 
     return () => {
       colObserver.disconnect();
-      editorEl.removeEventListener('mousemove', onMove);
       window.removeEventListener('mousemove', onMove);
-      window.removeEventListener('mousedown', onDown);
+      document.removeEventListener('mousedown', onDown, true);
       window.removeEventListener('mouseup', onUp);
       indicator.remove();
     };

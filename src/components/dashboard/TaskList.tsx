@@ -44,10 +44,10 @@ const ALL_STATUSES: TaskStatus[] = ['Complete', 'In Progress', 'In Review', 'Blo
 const DEPARTMENTS: Department[] = ['Coding', 'Visual Art', 'UI/UX', 'Animation', 'Asset Creation'];
 const PRIORITIES: Priority[] = ['High', 'Medium', 'Low'];
 
-const PRIORITY_VARIANT: Record<string, 'default' | 'secondary' | 'outline' | 'destructive'> = {
-  High:   'default',
-  Medium: 'outline',
-  Low:    'secondary',
+const PRIORITY_STYLE: Record<string, string> = {
+  High:   'bg-red-500/15 text-red-400 border-red-500/30',
+  Medium: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
+  Low:    'bg-muted text-muted-foreground border-border',
 };
 
 const FILTER_STATUSES = ['All', ...ALL_STATUSES] as const;
@@ -149,7 +149,9 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
         body: `${completerName} completed "${taskName}"`,
         link: `/tasks?task=${taskId}`,
       }),
-    }).catch(() => {});
+    })
+      .then(async r => { if (!r.ok) console.error('[notify] task_completed failed:', await r.json()); })
+      .catch(e => console.error('[notify] task_completed error:', e));
   }, []);
 
   const handleToggleComplete = useCallback((taskId: string, currentStatus: string) => {
@@ -333,9 +335,9 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
                     <Badge variant="secondary" className="text-xs font-normal whitespace-nowrap">
                       {task.department}
                     </Badge>
-                    <Badge variant={PRIORITY_VARIANT[task.priority] ?? 'outline'} className="text-xs font-normal whitespace-nowrap">
+                    <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-normal whitespace-nowrap ${PRIORITY_STYLE[task.priority] ?? PRIORITY_STYLE.Low}`}>
                       {task.priority}
-                    </Badge>
+                    </span>
                   </div>
 
                   {isAdmin && (
@@ -369,7 +371,7 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
                           </DropdownMenuItem>
                         ))}
                         {assignee && (
-                          <DropdownMenuItem onClick={() => handleAssign(task.id, null)} className="text-muted-foreground">
+                          <DropdownMenuItem onClick={() => handleAssign(task.id, null)} className="text-muted-foreground hover:text-destructive focus:text-destructive">
                             Unassign
                           </DropdownMenuItem>
                         )}
@@ -380,7 +382,7 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
                   {task.deadline && (
                     <div className="hidden items-center gap-1 text-xs text-muted-foreground whitespace-nowrap md:flex">
                       <Clock className="size-3" />
-                      <span>{task.deadline}</span>
+                      <span>{new Date(task.deadline + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
                     </div>
                   )}
 
@@ -402,10 +404,12 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
                           </DropdownMenuItem>
                         );
                       })}
-                      <DropdownMenuItem onClick={() => handleDelete(task.id)} className="flex items-center gap-2 text-destructive">
-                        <Trash2 className="size-3.5" />
-                        <span>Delete</span>
-                      </DropdownMenuItem>
+                      {isAdmin && (
+                        <DropdownMenuItem onClick={() => handleDelete(task.id)} className="flex items-center gap-2 text-destructive">
+                          <Trash2 className="size-3.5" />
+                          <span>Delete</span>
+                        </DropdownMenuItem>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
