@@ -5,13 +5,15 @@ import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { createBrowserClient } from '@supabase/ssr';
 import { motion, AnimatePresence } from 'motion/react';
-import { Bell, CheckSquare, AtSign, MessageSquare, CheckCheck } from 'lucide-react';
+import { Bell, CheckSquare, AtSign, MessageSquare, CheckCheck, CheckCircle2, Package } from 'lucide-react';
 import { Notification, NotificationKind } from '@/lib/types';
 
 const KIND_CONFIG: Record<NotificationKind, { icon: typeof Bell; className: string }> = {
   task_assigned: { icon: CheckSquare, className: 'text-seeko-accent' },
   mentioned: { icon: AtSign, className: 'text-blue-400' },
   comment_reply: { icon: MessageSquare, className: 'text-amber-400' },
+  task_completed: { icon: CheckCircle2, className: 'text-emerald-500' },
+  deliverable_uploaded: { icon: Package, className: 'text-violet-400' },
 };
 
 function timeAgo(dateStr: string): string {
