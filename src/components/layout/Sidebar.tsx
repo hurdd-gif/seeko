@@ -106,11 +106,23 @@ export function Sidebar({
         onMouseLeave={() => setHovered(false)}
         className="relative hidden md:flex shrink-0 flex-col border-r border-sidebar-border bg-sidebar h-screen sticky top-0 overflow-hidden"
       >
-        <div className="flex items-center gap-2.5 px-4 py-5">
+        <div className={`flex items-center py-5 transition-all ${collapsed ? 'justify-center px-0' : 'gap-2.5 px-4'}`}>
           <div className="flex h-8 w-8 items-center justify-center shrink-0">
             <Image src="/seeko-s.png" alt="SEEKO" width={24} height={24} />
           </div>
-          <span className="font-semibold text-base tracking-tight text-sidebar-foreground">SEEKO</span>
+          <AnimatePresence>
+            {!collapsed && (
+              <motion.span
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
+                className="font-semibold text-base tracking-tight text-sidebar-foreground whitespace-nowrap"
+              >
+                SEEKO
+              </motion.span>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Chevron toggle — visible on sidebar hover */}
@@ -146,15 +158,30 @@ export function Sidebar({
                 key={href}
                 id={tourId}
                 href={href}
+                onMouseEnter={e => handleNavMouseEnter(e, navLabel)}
+                onMouseLeave={handleNavMouseLeave}
                 className={[
-                  'flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors',
+                  'flex items-center rounded-md py-2.5 text-sm transition-colors',
+                  collapsed ? 'justify-center px-0 w-full' : 'gap-3 px-3',
                   isActive
                     ? 'bg-white/5 text-seeko-accent font-medium'
                     : 'text-muted-foreground hover:text-foreground hover:bg-white/5',
                 ].join(' ')}
               >
                 <Icon className={`h-4 w-4 shrink-0 ${isActive ? 'text-seeko-accent' : ''}`} />
-                {navLabel}
+                <AnimatePresence>
+                  {!collapsed && (
+                    <motion.span
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.15 }}
+                      className="whitespace-nowrap"
+                    >
+                      {navLabel}
+                    </motion.span>
+                  )}
+                </AnimatePresence>
               </Link>
             );
           })}
@@ -168,57 +195,82 @@ export function Sidebar({
         </nav>
 
         <div className="p-4 border-t border-sidebar-border">
-          <div className="flex items-center gap-2.5 mb-3">
+          <div className={`flex items-center mb-3 ${collapsed ? 'justify-center' : 'gap-2.5'}`}>
             <Avatar className="size-8">
               <AvatarImage src={avatarUrl} alt={label} />
               <AvatarFallback className="bg-secondary text-foreground text-[10px]">
                 {getInitials(label)}
               </AvatarFallback>
             </Avatar>
-            <div className="flex-1 min-w-0">
-              {displayName && (
-                <p className="text-sm font-medium text-sidebar-foreground truncate">{displayName}</p>
+            <AnimatePresence>
+              {!collapsed && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.15 }}
+                  className="flex-1 min-w-0"
+                >
+                  {displayName && (
+                    <p className="text-sm font-medium text-sidebar-foreground truncate">{displayName}</p>
+                  )}
+                  <p className="text-xs text-muted-foreground truncate">{email}</p>
+                </motion.div>
               )}
-              <p className="text-xs text-muted-foreground truncate">{email}</p>
-            </div>
+            </AnimatePresence>
           </div>
-          <Link
-            href="/settings"
-            className={[
-              'flex items-center gap-2 rounded-md px-0 py-1.5 text-xs transition-colors mb-1',
-              pathname.startsWith('/settings')
-                ? 'text-seeko-accent font-medium'
-                : 'text-muted-foreground hover:text-foreground',
-            ].join(' ')}
-          >
-            <Settings className="h-3.5 w-3.5" />
-            Settings
-          </Link>
-          {confirmingSignOut ? (
-            <div className="flex items-center gap-2 py-1.5">
-              <span className="text-xs text-muted-foreground">Sign out?</span>
-              <form action="/auth/signout" method="post">
-                <button type="submit" className="text-xs font-medium text-red-400 hover:text-red-300 transition-colors">
-                  Yes
-                </button>
-              </form>
-              <button
-                onClick={() => setConfirmingSignOut(false)}
-                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+          {!collapsed && (
+            <>
+              <Link
+                href="/settings"
+                className={[
+                  'flex items-center gap-2 rounded-md px-0 py-1.5 text-xs transition-colors mb-1',
+                  pathname.startsWith('/settings')
+                    ? 'text-seeko-accent font-medium'
+                    : 'text-muted-foreground hover:text-foreground',
+                ].join(' ')}
               >
-                Cancel
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={() => setConfirmingSignOut(true)}
-              className="flex items-center gap-2 rounded-md px-0 py-1.5 text-xs text-muted-foreground hover:text-[#f87171] transition-colors w-full"
-            >
-              <LogOut className="h-3.5 w-3.5" />
-              Sign out
-            </button>
+                <Settings className="h-3.5 w-3.5" />
+                Settings
+              </Link>
+              {confirmingSignOut ? (
+                <div className="flex items-center gap-2 py-1.5">
+                  <span className="text-xs text-muted-foreground">Sign out?</span>
+                  <form action="/auth/signout" method="post">
+                    <button type="submit" className="text-xs font-medium text-red-400 hover:text-red-300 transition-colors">
+                      Yes
+                    </button>
+                  </form>
+                  <button
+                    onClick={() => setConfirmingSignOut(false)}
+                    className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setConfirmingSignOut(true)}
+                  className="flex items-center gap-2 rounded-md px-0 py-1.5 text-xs text-muted-foreground hover:text-[#f87171] transition-colors w-full"
+                >
+                  <LogOut className="h-3.5 w-3.5" />
+                  Sign out
+                </button>
+              )}
+            </>
           )}
         </div>
+        {typeof document !== 'undefined' && tooltip && createPortal(
+          <div
+            className="fixed z-[9999] pointer-events-none"
+            style={{ left: 64, top: tooltip.y, transform: 'translateY(-50%)' }}
+          >
+            <div className="rounded-md bg-foreground px-2 py-1 text-xs font-medium text-background shadow-md whitespace-nowrap">
+              {tooltip.label}
+            </div>
+          </div>,
+          document.body
+        )}
       </motion.aside>
 
       {/* ── Mobile top header ─────────────────────────────── */}
