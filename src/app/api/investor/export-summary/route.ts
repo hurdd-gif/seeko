@@ -147,8 +147,8 @@ export async function GET() {
     const result = await pdf(doc as any).toBuffer();
     if (result instanceof Buffer) {
       body = result;
-    } else if (result && typeof (result as ReadableStream).getReader === 'function') {
-      const stream = result as ReadableStream<Uint8Array>;
+    } else if (result && typeof (result as unknown as ReadableStream).getReader === 'function') {
+      const stream = result as unknown as ReadableStream<Uint8Array>;
       const reader = stream.getReader();
       const chunks: Uint8Array[] = [];
       // eslint-disable-next-line no-constant-condition

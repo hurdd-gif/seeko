@@ -1,31 +1,39 @@
-name: Claude
+name: Claude Code
 
-# Runs from the default branch (main). Comment on a PR with @claude to trigger.
+# Runs from the default branch (main). Comment on a PR or issue with @claude to trigger.
+# If Claude doesn't respond: install https://github.com/apps/claude and enable "Allow GitHub Actions to create and approve pull requests" in repo Settings → Actions.
 on:
   issue_comment:
     types: [created]
-  issues:
-    types: [opened]
   pull_request_review_comment:
     types: [created]
+  issues:
+    types: [opened, assigned]
+  pull_request_review:
+    types: [submitted]
 
 jobs:
   claude:
     if: |
       (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
-      (github.event_name == 'issues' && contains(github.event.issue.body, '@claude')) ||
-      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude'))
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
+      (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')))
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      issues: write
       pull-requests: write
+      issues: write
       id-token: write
+      actions: read  # Required for Claude to read CI results on PRs
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
         with:
           fetch-depth: 1
 
-      - uses: anthropics/claude-code-action@beta
+      - name: Run Claude Code
+        id: claude
+        uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
