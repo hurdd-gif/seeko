@@ -21,6 +21,7 @@ import Image from 'next/image';
 import { motion, AnimatePresence } from 'motion/react';
 import { createClient } from '@/lib/supabase/client';
 import { InviteCodeForm } from '@/components/auth/InviteCodeForm';
+import { useHaptics } from '@/components/HapticsProvider';
 
 /* ─── Timing (ms after mount) ───────────────────────────── */
 const TIMING = {
@@ -55,6 +56,7 @@ const FADE = {
 
 export default function LoginPage() {
   const router = useRouter();
+  const { trigger } = useHaptics();
   const [tab, setTab] = useState<'signin' | 'invite'>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -85,9 +87,11 @@ export default function LoginPage() {
     if (error) {
       setError(error.message);
       setLoading(false);
+      trigger('error');
       return;
     }
 
+    trigger('success');
     router.push('/');
     router.refresh();
   }

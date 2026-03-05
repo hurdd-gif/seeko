@@ -15,6 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { Camera, Check, Eye, MousePointer, Monitor, UserX, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { Profile, UserEvent } from '@/lib/types';
+import { useHaptics } from '@/components/HapticsProvider';
 
 const COMMON_TIMEZONES = [
   'America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles',
@@ -88,6 +89,7 @@ interface SettingsPanelProps {
 
 export function SettingsPanel({ profile, isAdmin, team, revalidate }: SettingsPanelProps) {
   const router = useRouter();
+  const { trigger } = useHaptics();
   const [displayName, setDisplayName] = useState(profile.display_name ?? '');
   const [avatarUrl, setAvatarUrl] = useState(profile.avatar_url ?? '');
   const [timezone, setTimezone] = useState(profile.timezone ?? 'America/New_York');
@@ -164,6 +166,7 @@ export function SettingsPanel({ profile, isAdmin, team, revalidate }: SettingsPa
       setError('Failed to save. Please try again.');
       setSaving(false);
       toast.error('Failed to save changes');
+      trigger('error');
       return;
     }
 
@@ -172,6 +175,7 @@ export function SettingsPanel({ profile, isAdmin, team, revalidate }: SettingsPa
     setSaving(false);
     setSaved(true);
     toast.success('Changes saved');
+    trigger('success');
     router.refresh();
     setTimeout(() => setSaved(false), 2000);
   }
@@ -219,6 +223,7 @@ export function SettingsPanel({ profile, isAdmin, team, revalidate }: SettingsPa
     }
 
     toast.success(`${bootTarget.display_name ?? 'Member'} has been removed.`);
+    trigger('success');
     setBootTarget(null);
     setBootPassword('');
     router.refresh();
@@ -303,8 +308,13 @@ export function SettingsPanel({ profile, isAdmin, team, revalidate }: SettingsPa
 
           {error && <p className="text-sm text-destructive">{error}</p>}
 
-          <div className="flex justify-end">
-            <Button onClick={handleSave} disabled={saving} className="gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <Button
+              type="button"
+              onClick={handleSave}
+              disabled={saving}
+              className="gap-2 min-w-[7.5rem] min-h-[2.5rem] touch-manipulation"
+            >
               {saved ? <><Check className="size-3.5" /> Saved</> : saving ? 'Saving...' : 'Save Changes'}
             </Button>
           </div>
@@ -497,7 +507,7 @@ export function SettingsPanel({ profile, isAdmin, team, revalidate }: SettingsPa
       )}
 
       {/* Sign out — mobile only (desktop uses sidebar) */}
-      <div className="md:hidden">
+      <div className="md:hidden mb-12">
         <form action="/auth/signout" method="post">
           <button
             type="submit"

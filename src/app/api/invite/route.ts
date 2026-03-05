@@ -1,19 +1,37 @@
 import type { Department } from '@/lib/types';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { createClient as createServiceClient } from '@supabase/supabase-js';
+import { getServiceClient } from '@/lib/supabase/service';
 
 const VALID_DEPARTMENTS: Department[] = ['Coding', 'Visual Art', 'UI/UX', 'Animation', 'Asset Creation'];
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 /* ─── In-memory rate limiter ────────────────────────────────
  * 5 invite requests per IP per hour.
- * Fine for a single Render instance; swap for Upstash if
- * the service ever scales horizontally.
+ * Use rightmost IP in x-forwarded-for (trusted proxy appends last).
+ * Prune expired entries to avoid unbounded memory growth.
+ * Fine for a single Render instance; swap for Upstash if horizontal scale.
  * ─────────────────────────────────────────────────────────── */
 const RATE_LIMIT = { max: 5, windowMs: 60 * 60 * 1000 };
 const ipHits = new Map<string, { count: number; resetAt: number }>();
 
+function getClientIp(request: NextRequest): string {
+  const forwarded = request.headers.get('x-forwarded-for');
+  if (!forwarded) return 'unknown';
+  const parts = forwarded.split(',').map((s) => s.trim()).filter(Boolean);
+  return parts.length > 0 ? parts[parts.length - 1]! : 'unknown';
+}
+
+function pruneExpiredRateLimitEntries(): void {
+  const now = Date.now();
+  for (const [key, entry] of ipHits.entries()) {
+    if (now > entry.resetAt) ipHits.delete(key);
+  }
+}
+
 function isRateLimited(ip: string): boolean {
+  pruneExpiredRateLimitEntries();
   const now = Date.now();
   const entry = ipHits.get(ip);
 
@@ -29,11 +47,9 @@ function isRateLimited(ip: string): boolean {
 }
 
 export async function POST(request: NextRequest) {
-  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
+  const ip = getClientIp(request);
 
   if (isRateLimited(ip)) {
-    // TODO: Replace with proper logging system
-    // Rate limit exceeded - IP blocked temporarily
     return NextResponse.json({ error: 'Too many requests. Try again later.' }, { status: 429 });
   }
 
@@ -50,52 +66,33 @@ export async function POST(request: NextRequest) {
     .single();
 
   if (!profile?.is_admin) {
-    // TODO: Replace with proper logging system
-    // Non-admin user attempted invite
     return NextResponse.json({ error: 'Admin only' }, { status: 403 });
   }
 
   const body = await request.json();
-  const { email, department, isContractor, isInvestor } = body as {
+  const { email: rawEmail, department, isContractor, isInvestor } = body as {
     email: string;
     department: string;
     isContractor: boolean;
     isInvestor?: boolean;
   };
 
-  if (!email) {
-    return NextResponse.json({ error: 'Email is required' }, { status: 400 });
+  const email = typeof rawEmail === 'string' ? rawEmail.trim() : '';
+  if (!email || !EMAIL_REGEX.test(email)) {
+    return NextResponse.json({ error: 'Valid email is required' }, { status: 400 });
   }
 
+  const emailLower = email.toLowerCase();
   const departmentVal = department && VALID_DEPARTMENTS.includes(department as Department) ? department : null;
 
-  const admin = createServiceClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
+  const admin = getServiceClient();
 
-  const { error: otpError } = await admin.auth.signInWithOtp({
-    email,
-    options: { shouldCreateUser: true },
-  });
-
-  if (otpError) {
-    // TODO: Replace with proper logging system
-    // OTP send failed for email invitation
-    const hint = otpError.message.toLowerCase().includes('confirmation email')
-      ? ' If SMTP is already configured, check Supabase Auth logs and your SMTP provider dashboard (see docs/auth-email-troubleshooting.md).'
-      : '';
-    return NextResponse.json(
-      { error: otpError.message + hint },
-      { status: 400 }
-    );
-  }
-
+  // Insert pending_invites first so role is applied on signup or on next login (profile/init).
   const { error: insertError } = await admin
     .from('pending_invites')
     .upsert(
       {
-        email,
+        email: emailLower,
         department: departmentVal,
         is_contractor: isContractor ?? false,
         is_investor: isInvestor ?? false,
@@ -104,12 +101,35 @@ export async function POST(request: NextRequest) {
     );
 
   if (insertError) {
-    // TODO: Replace with proper logging system
-    // Failed to insert pending invite record
     return NextResponse.json({ error: insertError.message }, { status: 400 });
   }
 
-  // TODO: Replace with proper logging system
-  // Invite sent successfully
+  const { data: existingUser } = await admin.auth.admin.getUserByEmail(emailLower);
+
+  if (existingUser?.user) {
+    // Existing user: send magic link so they can log in; profile/init will apply invite metadata.
+    const { error: otpError } = await admin.auth.signInWithOtp({
+      email: emailLower,
+      options: { shouldCreateUser: false },
+    });
+    if (otpError) {
+      const hint = otpError.message.toLowerCase().includes('confirmation email')
+        ? ' If SMTP is configured, check Supabase Auth logs and SMTP dashboard (see docs/auth-email-troubleshooting.md).'
+        : '';
+      return NextResponse.json({ error: otpError.message + hint }, { status: 400 });
+    }
+  } else {
+    // New user: use invite email (dedicated invite flow).
+    const { error: inviteError } = await admin.auth.admin.inviteUserByEmail(emailLower, {
+      redirectTo: request.nextUrl.origin + '/login',
+    });
+    if (inviteError) {
+      const hint = inviteError.message.toLowerCase().includes('confirmation email')
+        ? ' If SMTP is configured, check Supabase Auth logs and SMTP dashboard (see docs/auth-email-troubleshooting.md).'
+        : '';
+      return NextResponse.json({ error: inviteError.message + hint }, { status: 400 });
+    }
+  }
+
   return NextResponse.json({ success: true });
 }

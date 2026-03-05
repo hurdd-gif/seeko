@@ -11,6 +11,7 @@ import { Select } from '@/components/ui/select';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Camera } from 'lucide-react';
 import { springs } from '@/components/motion';
+import { useHaptics } from '@/components/HapticsProvider';
 
 const COMMON_TIMEZONES = [
   'America/New_York',
@@ -90,6 +91,7 @@ export function OnboardingForm({
   userEmail: string;
 }) {
   const router = useRouter();
+  const { trigger } = useHaptics();
   const [name, setName] = useState(looksLikeEmail(defaultName) ? '' : defaultName);
   const [avatarUrl, setAvatarUrl] = useState(defaultAvatar);
   const [timezone, setTimezone] = useState(detectTimezone);
@@ -131,10 +133,12 @@ export function OnboardingForm({
     e.preventDefault();
     if (!name.trim()) {
       setError('Please enter a display name.');
+      trigger('error');
       return;
     }
     if (looksLikeEmail(name)) {
       setError('Your display name cannot be an email address. Choose a real name or username.');
+      trigger('error');
       return;
     }
 
@@ -155,9 +159,11 @@ export function OnboardingForm({
     if (updateErr) {
       setError('Failed to save profile. Please try again.');
       setSaving(false);
+      trigger('error');
       return;
     }
 
+    trigger('success');
     router.push('/');
     router.refresh();
   }

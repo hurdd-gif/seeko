@@ -12,6 +12,17 @@ const MIN_H = 200
 const MAX_W_PCT = 96
 const MAX_H_PCT = 94
 
+type DialogFooterContextValue = {
+  setFooter: (node: React.ReactNode) => void
+}
+
+const DialogFooterContext = React.createContext<DialogFooterContextValue | null>(null)
+
+export function useDialogFooter() {
+  const ctx = React.useContext(DialogFooterContext)
+  return ctx?.setFooter ?? (() => {})
+}
+
 interface DialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -23,7 +34,8 @@ interface DialogProps {
 }
 
 function Dialog({ open, onOpenChange, children, resizable = false, contentClassName }: DialogProps) {
-  const [size, setSize] = React.useState({ w: DEFAULT_MAX_W, h: typeof window !== 'undefined' ? window.innerHeight * (DEFAULT_MAX_H_PCT / 100) : 600 })
+  const [footer, setFooter] = React.useState<React.ReactNode>(null)
+  const [size, setSize] = React.useState({ w: DEFAULT_MAX_W, h: 600 });
   const [maximized, setMaximized] = React.useState(false)
   const resizingRef = React.useRef(false)
   const startRef = React.useRef({ x: 0, y: 0, w: 0, h: 0 })
@@ -70,6 +82,8 @@ function Dialog({ open, onOpenChange, children, resizable = false, contentClassN
       const h = window.innerHeight * (DEFAULT_MAX_H_PCT / 100)
       setSize({ w, h })
       setMaximized(false)
+    } else if (!open) {
+      setFooter(null)
     }
   }, [open])
 
@@ -137,6 +151,7 @@ function Dialog({ open, onOpenChange, children, resizable = false, contentClassN
             className={cn(
               "relative z-50 flex flex-col rounded-xl border border-border bg-card shadow-lg mx-4",
               !resizable && "w-full max-w-[900px] max-h-[90vh] sm:max-h-[88vh]",
+              !resizable && footer != null && "h-[90vh] sm:h-[88vh]",
               contentClassName
             )}
             style={panelStyle}
@@ -145,9 +160,18 @@ function Dialog({ open, onOpenChange, children, resizable = false, contentClassN
             exit={{ opacity: 0, scale: 0.95, y: 8 }}
             transition={{ type: "spring", stiffness: 400, damping: 30 }}
           >
-            <div className="flex-1 overflow-y-auto p-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              {children}
-            </div>
+            <DialogFooterContext.Provider value={{ setFooter }}>
+              <div className="flex min-h-0 flex-1 flex-col">
+                <div className="flex-1 min-h-0 overflow-y-auto p-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                  {children}
+                </div>
+                {footer != null ? (
+                  <div className="shrink-0 border-t border-border bg-card px-6 py-4 flex flex-wrap items-center justify-end gap-3">
+                    {footer}
+                  </div>
+                ) : null}
+              </div>
+            </DialogFooterContext.Provider>
             {/* Expand/maximize button — always shown on resizable dialogs */}
             {resizable && (
               <button

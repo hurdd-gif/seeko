@@ -17,6 +17,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { DocEditor } from './DocEditor';
 import { DocDeleteConfirm } from './DocDeleteConfirm';
 import { DocContent } from './DocContent';
+import { useHaptics } from '@/components/HapticsProvider';
 
 const DEPARTMENTS = ['Coding', 'Visual Art', 'UI/UX', 'Animation', 'Asset Creation'] as const;
 
@@ -56,6 +57,7 @@ interface DocListProps {
 
 export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, currentUserId = '', team = [] }: DocListProps) {
   const [docs, setDocs] = useState<Doc[]>(initialDocs);
+  const { trigger } = useHaptics();
   const [selected, setSelected] = useState<Doc | null>(null);
   const [editingDoc, setEditingDoc] = useState<Doc | 'new' | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -101,12 +103,14 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, cu
     });
     setEditingDoc(null);
     toast.success(editingDoc === 'new' ? 'Document created' : 'Document saved');
+    trigger('success');
   };
 
   const handleDelete = (id: string) => {
     setDocs(prev => prev.filter(d => d.id !== id));
     setDeletingId(null);
     toast.success('Document deleted');
+    trigger('success');
   };
 
   return (

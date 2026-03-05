@@ -1,17 +1,40 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion, LayoutGroup } from 'motion/react';
-import { LogOut, LayoutDashboard, FileDown, Settings } from 'lucide-react';
+import { LogOut, LayoutDashboard, FileDown, Settings, Home } from 'lucide-react';
 import { toast } from 'sonner';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { useHaptics } from '@/components/HapticsProvider';
 
 const NAV_HIGHLIGHT = {
   spring: { type: 'spring' as const, stiffness: 380, damping: 30 },
+};
+
+/* ─────────────────────────────────────────────────────────
+ * MOBILE PILL NAV STORYBOARD (matches main dashboard pill)
+ *
+ *   tap    tab scale 1 → 0.94 (spring), release → 1
+ *   switch active pill background slides to new tab (layoutId spring)
+ *   spacing from MOBILE_PILL for consistency with main nav
+ * ───────────────────────────────────────────────────────── */
+
+const MOBILE_PILL = {
+  pillPaddingX: 4,
+  pillPaddingY: 5,
+  itemGap: 4,
+  itemPaddingX: 8,
+  itemPaddingY: 8,
+  itemMinWidth: 44,
+  iconLabelGap: 2,
+  tapScale: 0.94,
+  tapSpring: { type: 'spring' as const, stiffness: 450, damping: 28 },
+  activeSlideSpring: { type: 'spring' as const, stiffness: 380, damping: 30 },
 };
 
 function getInitials(name: string): string {
@@ -27,8 +50,11 @@ interface InvestorSidebarProps {
 
 export function InvestorSidebar({ email, displayName, avatarUrl, isAdmin = false }: InvestorSidebarProps) {
   const pathname = usePathname();
+  const { trigger } = useHaptics();
   const label = displayName || email;
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   async function handleDownloadPdf(e: React.MouseEvent) {
     e.preventDefault();
@@ -39,6 +65,7 @@ export function InvestorSidebar({ email, displayName, avatarUrl, isAdmin = false
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         toast.error(err?.error ?? 'Failed to generate PDF');
+        trigger('error');
         return;
       }
       const blob = await res.blob();
@@ -49,8 +76,10 @@ export function InvestorSidebar({ email, displayName, avatarUrl, isAdmin = false
       a.click();
       URL.revokeObjectURL(url);
       toast.success('PDF downloaded');
+      trigger('success');
     } catch {
       toast.error('Download failed. Try again.');
+      trigger('error');
     } finally {
       setPdfLoading(false);
     }
@@ -111,7 +140,7 @@ export function InvestorSidebar({ email, displayName, avatarUrl, isAdmin = false
                   'text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors',
                 ].join(' ')}
               >
-                <LayoutDashboard className="relative h-4 w-4 shrink-0" />
+                <Home className="relative h-4 w-4 shrink-0" />
                 <span className="whitespace-nowrap">Back to dashboard</span>
               </Link>
             )}
@@ -174,68 +203,137 @@ export function InvestorSidebar({ email, displayName, avatarUrl, isAdmin = false
         </div>
       </aside>
 
-      {/* ── Mobile top header ─────────────────────────────── */}
-      <header className="md:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-4 h-14 bg-sidebar border-b border-sidebar-border">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <Image src="/seeko-s.png" alt="SEEKO" width={20} height={20} unoptimized />
-          <span className="font-semibold text-sm tracking-tight text-sidebar-foreground truncate">SEEKO</span>
-        </div>
-        <Link href="/investor/settings" className="shrink-0">
-          <Avatar className="size-8">
-            <AvatarImage src={avatarUrl} alt={label} />
-            <AvatarFallback className="bg-secondary text-foreground text-[10px]">
-              {getInitials(label)}
-            </AvatarFallback>
-          </Avatar>
-        </Link>
-      </header>
-
-      {/* ── Mobile bottom nav (match main dashboard pattern) ── */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 flex items-stretch bg-sidebar border-t border-sidebar-border">
-        <Link
-          href="/investor"
-          className={[
-            'flex flex-1 flex-col items-center justify-center gap-1 py-2 text-[10px] font-medium transition-colors',
-            pathname === '/investor' ? 'text-seeko-accent' : 'text-muted-foreground',
-          ].join(' ')}
-        >
-          <LayoutDashboard className={`h-5 w-5 ${pathname === '/investor' ? 'text-seeko-accent' : ''}`} />
-          Dashboard
-        </Link>
-        <Link
-          href="/investor/settings"
-          className={[
-            'flex flex-1 flex-col items-center justify-center gap-1 py-2 text-[10px] font-medium transition-colors',
-            pathname.startsWith('/investor/settings') ? 'text-seeko-accent' : 'text-muted-foreground',
-          ].join(' ')}
-        >
-          <Settings className={`h-5 w-5 ${pathname.startsWith('/investor/settings') ? 'text-seeko-accent' : ''}`} />
-          Settings
-        </Link>
-        <button
-          type="button"
-          onClick={handleDownloadPdf}
-          disabled={pdfLoading}
-          className={[
-            'flex flex-1 flex-col items-center justify-center gap-1 py-2 text-[10px] font-medium transition-colors disabled:opacity-50',
-            'text-muted-foreground',
-          ].join(' ')}
-        >
-          <FileDown className="h-5 w-5" />
-          {pdfLoading ? '…' : 'PDF'}
-        </button>
-        {isAdmin && (
-          <Link
-            href="/"
-            className={[
-              'flex flex-1 flex-col items-center justify-center gap-1 py-2 text-[10px] font-medium transition-colors text-muted-foreground',
-            ].join(' ')}
-          >
-            <LayoutDashboard className="h-5 w-5" />
-            Main
-          </Link>
-        )}
-      </nav>
+      {/* ── Mobile: header in-flow (first thing you see, scrolls away); nav fixed at bottom ── */}
+      {mounted && (() => {
+        const headerSlot = typeof document !== 'undefined' ? document.getElementById('investor-mobile-header-slot') : null;
+        const headerEl = headerSlot ?? document.body;
+        const useHeaderSlot = Boolean(headerSlot);
+        return (
+          <>
+            {createPortal(
+              <header
+                className={`md:hidden flex items-center justify-between px-4 h-14 w-full shrink-0 ${!useHeaderSlot ? 'fixed top-0 left-0 right-0 z-40 mobile-fixed-layer' : ''}`}
+                style={useHeaderSlot ? undefined : { background: 'rgba(0,0,0,0)', backdropFilter: 'none' }}
+              >
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <Image src="/seeko-s.png" alt="SEEKO" width={20} height={20} unoptimized />
+                  <span className="font-semibold text-sm tracking-tight text-sidebar-foreground truncate">SEEKO</span>
+                </div>
+                <Link href="/investor/settings" className="shrink-0" onClick={() => trigger('selection')}>
+                  <Avatar className="size-8">
+                    <AvatarImage src={avatarUrl} alt={label} />
+                    <AvatarFallback className="bg-secondary text-foreground text-[10px]">
+                      {getInitials(label)}
+                    </AvatarFallback>
+                  </Avatar>
+                </Link>
+              </header>,
+              headerEl
+            )}
+            {createPortal(
+              <nav
+                className="mobile-fixed-layer md:hidden fixed bottom-0 left-0 right-0 z-50 mx-auto w-max max-w-[calc(100vw-24px)] flex justify-center items-center"
+                style={{ marginBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}
+              >
+                <div
+                  className="w-max flex items-center justify-center rounded-full border border-border/50 shadow-lg"
+                  style={{
+                    background: 'rgba(0,0,0,0)',
+                    backdropFilter: 'none',
+                    paddingLeft: MOBILE_PILL.pillPaddingX,
+                    paddingRight: MOBILE_PILL.pillPaddingX,
+                    paddingTop: MOBILE_PILL.pillPaddingY,
+                    paddingBottom: MOBILE_PILL.pillPaddingY,
+                    gap: MOBILE_PILL.itemGap,
+                  }}
+                >
+                  <LayoutGroup id="investor-mobile-nav">
+                  <Link
+                    href="/investor"
+                    onClick={() => trigger('selection')}
+                    className={[
+                      'relative flex flex-col items-center justify-center rounded-full text-[10px] font-medium transition-colors',
+                      pathname === '/investor' ? 'text-seeko-accent' : 'text-muted-foreground',
+                    ].join(' ')}
+                    style={{
+                      paddingLeft: MOBILE_PILL.itemPaddingX,
+                      paddingRight: MOBILE_PILL.itemPaddingX,
+                      paddingTop: MOBILE_PILL.itemPaddingY,
+                      paddingBottom: MOBILE_PILL.itemPaddingY,
+                      minWidth: MOBILE_PILL.itemMinWidth,
+                    }}
+                  >
+                    <motion.span
+                      className="relative flex flex-col items-center justify-center"
+                      style={{ gap: MOBILE_PILL.iconLabelGap }}
+                      whileTap={{ scale: MOBILE_PILL.tapScale }}
+                      transition={MOBILE_PILL.tapSpring}
+                    >
+                      <LayoutDashboard className={`h-5 w-5 ${pathname === '/investor' ? 'text-seeko-accent' : ''}`} />
+                      Dashboard
+                    </motion.span>
+                  </Link>
+                  <motion.span
+                    className="flex flex-col items-center justify-center"
+                    style={{
+                      paddingLeft: MOBILE_PILL.itemPaddingX,
+                      paddingRight: MOBILE_PILL.itemPaddingX,
+                      paddingTop: MOBILE_PILL.itemPaddingY,
+                      paddingBottom: MOBILE_PILL.itemPaddingY,
+                      minWidth: MOBILE_PILL.itemMinWidth,
+                      gap: MOBILE_PILL.iconLabelGap,
+                    }}
+                    whileTap={{ scale: MOBILE_PILL.tapScale }}
+                    transition={MOBILE_PILL.tapSpring}
+                  >
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        trigger('selection');
+                        handleDownloadPdf(e);
+                      }}
+                      disabled={pdfLoading}
+                      className="flex flex-col items-center justify-center rounded-full text-[10px] font-medium transition-colors text-muted-foreground disabled:opacity-50"
+                    >
+                      <FileDown className="h-5 w-5" />
+                      {pdfLoading ? '…' : 'PDF'}
+                    </button>
+                  </motion.span>
+                  {isAdmin && (
+                    <Link
+                      href="/"
+                      onClick={() => trigger('selection')}
+                      className={[
+                        'relative flex flex-col items-center justify-center rounded-full text-[10px] font-medium transition-colors',
+                        pathname === '/' ? 'text-seeko-accent' : 'text-muted-foreground',
+                      ].join(' ')}
+                      style={{
+                        paddingLeft: MOBILE_PILL.itemPaddingX,
+                        paddingRight: MOBILE_PILL.itemPaddingX,
+                        paddingTop: MOBILE_PILL.itemPaddingY,
+                        paddingBottom: MOBILE_PILL.itemPaddingY,
+                        minWidth: MOBILE_PILL.itemMinWidth,
+                      }}
+                    >
+                      <motion.span
+                        className="relative flex flex-col items-center justify-center"
+                        style={{ gap: MOBILE_PILL.iconLabelGap }}
+                        whileTap={{ scale: MOBILE_PILL.tapScale }}
+                        transition={MOBILE_PILL.tapSpring}
+                      >
+                        <Home className={`h-5 w-5 ${pathname === '/' ? 'text-seeko-accent' : ''}`} />
+                        Main
+                      </motion.span>
+                    </Link>
+                  )}
+                  </LayoutGroup>
+                </div>
+              </nav>,
+              document.body
+            )}
+          </>
+        );
+      })()}
     </>
   );
 }

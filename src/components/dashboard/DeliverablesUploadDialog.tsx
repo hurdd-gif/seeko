@@ -6,6 +6,7 @@ import { Upload, FileUp, X, Package } from 'lucide-react';
 import { Dialog, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import type { Task, TaskWithAssignee } from '@/lib/types';
+import { useHaptics } from '@/components/HapticsProvider';
 
 interface DeliverablesUploadDialogProps {
   open: boolean;
@@ -24,6 +25,7 @@ export function DeliverablesUploadDialog({
 }: DeliverablesUploadDialogProps) {
   const [files, setFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
+  const { trigger } = useHaptics();
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -44,6 +46,7 @@ export function DeliverablesUploadDialog({
       setFiles([]);
       onOpenChange(false);
       toast.success('Deliverables uploaded and task completed');
+      trigger('success');
     } finally {
       setUploading(false);
     }

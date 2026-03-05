@@ -58,6 +58,12 @@ body {
   color: var(--color-foreground);
   color-scheme: dark;
   font-family: var(--font-sans), Arial, sans-serif;
+  min-height: 100dvh;
+  min-height: 100vh;
+}
+
+html {
+  background-color: var(--color-background);
 }
 
 /* Focus ring — subtle, fades in for all users (admins and non-admins).
@@ -249,6 +255,13 @@ body {
 }
 .ProseMirror.resize-cursor {
   cursor: col-resize;
+}
+
+/* Mobile fixed chrome: promote to own layer so it stays fixed during scroll (iOS) */
+.mobile-fixed-layer {
+  transform: translateZ(0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
 }
 
 /* Kill paragraph margin inside table cells so rows aren't bloated */

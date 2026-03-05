@@ -48,6 +48,27 @@ const AVATAR = {
   spring: { type: 'spring' as const, stiffness: 400, damping: 20 },
 };
 
+/* ─────────────────────────────────────────────────────────
+ * MOBILE PILL NAV STORYBOARD
+ *
+ *   tap    tab scale 1 → 0.94 (spring), release → 1
+ *   switch active pill background slides to new tab (layoutId spring)
+ *   spacing pill padding, item padding, gap all from MOBILE_PILL
+ * ───────────────────────────────────────────────────────── */
+
+const MOBILE_PILL = {
+  pillPaddingX: 4,     // px — inner horizontal padding of pill (reduced so pill fits iPhone)
+  pillPaddingY: 5,     // px — inner vertical padding of pill
+  itemGap: 4,         // px — gap between tab items
+  itemPaddingX: 8,     // px — each tab horizontal padding
+  itemPaddingY: 8,    // px — each tab vertical padding
+  itemMinWidth: 44,   // px — minimum width per tab (fits 6 items in ~320px)
+  iconLabelGap: 2,    // px — gap between icon and label
+  tapScale: 0.94,
+  tapSpring: { type: 'spring' as const, stiffness: 450, damping: 28 },
+  activeSlideSpring: { type: 'spring' as const, stiffness: 380, damping: 30 },
+};
+
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence, LayoutGroup } from 'motion/react';
@@ -72,6 +93,7 @@ import { TOUR_STEP_IDS } from '@/lib/tour-constants';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import Image from 'next/image';
+import { useHaptics } from '@/components/HapticsProvider';
 
 const NotificationBell = dynamic(
   () => import('@/components/dashboard/NotificationBell').then(m => m.NotificationBell),
@@ -107,6 +129,7 @@ export function Sidebar({
   email, displayName, avatarUrl, userId, isAdmin = false, isContractor = false, unreadCount = 0, notifications = [],
 }: SidebarProps) {
   const pathname = usePathname();
+  const { trigger } = useHaptics();
   const [confirmingSignOut, setConfirmingSignOut] = useState(false);
   // Always start expanded for SSR/hydration; sync from localStorage after mount to avoid mismatch.
   const [collapsed, setCollapsed] = useState(false);
@@ -116,6 +139,8 @@ export function Sidebar({
   }, []);
   const [hovered, setHovered] = useState(false);
   const [tooltip, setTooltip] = useState<{ label: string; y: number } | null>(null);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   const toggleCollapsed = () => {
     setCollapsed(prev => {
@@ -348,7 +373,7 @@ export function Sidebar({
         </div>
         </div>{/* end inner overflow wrapper */}
 
-        {typeof document !== 'undefined' && createPortal(
+        {mounted && typeof document !== 'undefined' && createPortal(
           <AnimatePresence>
             {tooltip && (
               <motion.div
@@ -370,52 +395,70 @@ export function Sidebar({
         )}
       </motion.aside>
 
-      {/* ── Mobile top header ─────────────────────────────── */}
-      <header className="md:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-4 h-14 bg-sidebar border-b border-sidebar-border">
-        <div className="flex items-center gap-2.5">
-          <Image src="/seeko-s.png" alt="SEEKO" width={20} height={20} unoptimized />
-          <span className="font-semibold text-sm tracking-tight text-sidebar-foreground">SEEKO</span>
-        </div>
-        <div className="flex items-center gap-2">
-          {userId && (
-            <NotificationBell
-              userId={userId}
-              initialCount={unreadCount}
-              initialNotifications={notifications}
-            />
-          )}
-          <Link href="/settings">
-            <Avatar className="size-8">
-              <AvatarImage src={avatarUrl} alt={label} />
-              <AvatarFallback className="bg-secondary text-foreground text-[10px]">
-                {getInitials(label)}
-              </AvatarFallback>
-            </Avatar>
-          </Link>
-        </div>
-      </header>
-
-      {/* ── Mobile bottom nav ─────────────────────────────── */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 flex items-stretch bg-sidebar border-t border-sidebar-border">
-        {NAV.map(({ href, mobileLabel, icon: Icon, tourKey }) => {
-          const isActive = href === '/' ? pathname === '/' : pathname.startsWith(href);
-          const tourId = tourKey != null ? TOUR_STEP_IDS[tourKey] : undefined;
-          return (
-            <Link
-              key={href}
-              id={tourId}
-              href={href}
-              className={[
-                'flex flex-1 flex-col items-center justify-center gap-1 py-2 text-[10px] font-medium transition-colors',
-                isActive ? 'text-seeko-accent' : 'text-muted-foreground',
-              ].join(' ')}
-            >
-              <Icon className={`h-5 w-5 ${isActive ? 'text-seeko-accent' : ''}`} />
-              {mobileLabel}
-            </Link>
-          );
-        })}
-      </nav>
+      {/* ── Mobile: no in-app header (avoids double bar with status bar); nav fixed at bottom ── */}
+      {mounted && (() => {
+        return (
+          <>
+            {createPortal(
+              <nav
+                className="mobile-fixed-layer md:hidden fixed bottom-0 left-0 right-0 z-50 mx-auto w-max max-w-[calc(100vw-24px)] flex justify-center items-center"
+                style={{ marginBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}
+              >
+                <div
+                  className="w-max flex items-center justify-center rounded-full border border-border/50 shadow-lg"
+                  style={{
+                    background: 'rgba(26, 26, 26, 0.94)',
+                    backdropFilter: 'saturate(180%) blur(12px)',
+                    WebkitBackdropFilter: 'saturate(180%) blur(12px)',
+                    paddingLeft: MOBILE_PILL.pillPaddingX,
+                    paddingRight: MOBILE_PILL.pillPaddingX,
+                    paddingTop: MOBILE_PILL.pillPaddingY,
+                    paddingBottom: MOBILE_PILL.pillPaddingY,
+                    gap: MOBILE_PILL.itemGap,
+                  }}
+                >
+                  <LayoutGroup id="mobile-nav">
+                  {NAV.map(({ href, mobileLabel, icon: Icon, tourKey }) => {
+                    const isActive = href === '/' ? pathname === '/' : pathname.startsWith(href);
+                    const tourId = tourKey != null ? TOUR_STEP_IDS[tourKey] : undefined;
+                    return (
+                      <Link
+                        key={href}
+                        id={tourId}
+                        href={href}
+                        onClick={() => trigger('selection')}
+                        className={[
+                          'relative flex flex-col items-center justify-center rounded-full text-[10px] font-medium transition-colors',
+                          isActive ? 'text-seeko-accent' : 'text-muted-foreground',
+                        ].join(' ')}
+                        style={{
+                          paddingLeft: MOBILE_PILL.itemPaddingX,
+                          paddingRight: MOBILE_PILL.itemPaddingX,
+                          paddingTop: MOBILE_PILL.itemPaddingY,
+                          paddingBottom: MOBILE_PILL.itemPaddingY,
+                          minWidth: MOBILE_PILL.itemMinWidth,
+                        }}
+                      >
+                        <motion.span
+                          className="relative flex flex-col items-center justify-center"
+                          style={{ gap: MOBILE_PILL.iconLabelGap }}
+                          whileTap={{ scale: MOBILE_PILL.tapScale }}
+                          transition={MOBILE_PILL.tapSpring}
+                        >
+                          <Icon className={`h-4 w-4 ${isActive ? 'text-seeko-accent' : ''}`} />
+                          {mobileLabel}
+                        </motion.span>
+                      </Link>
+                    );
+                  })}
+                  </LayoutGroup>
+                </div>
+              </nav>,
+              document.body
+            )}
+          </>
+        );
+      })()}
     </>
   );
 }

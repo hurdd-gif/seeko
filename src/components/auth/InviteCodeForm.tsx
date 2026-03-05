@@ -3,9 +3,11 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { useHaptics } from '@/components/HapticsProvider';
 
 export function InviteCodeForm() {
   const router = useRouter();
+  const { trigger } = useHaptics();
   const [email, setEmail] = useState('');
   const [token, setToken] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -26,12 +28,14 @@ export function InviteCodeForm() {
     if (otpError) {
       setError('Invalid or expired invite code. Please check your email and try again.');
       setLoading(false);
+      trigger('error');
       return;
     }
 
     // Initialise profile with pending invite metadata
     await fetch('/api/profile/init', { method: 'POST' });
 
+    trigger('success');
     router.push('/set-password');
     router.refresh();
   }

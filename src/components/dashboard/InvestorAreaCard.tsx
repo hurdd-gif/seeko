@@ -36,9 +36,20 @@ export function InvestorAreaCard({ area, tasksInArea }: InvestorAreaCardProps) {
             </div>
             <Card className="border-0 shadow-none">
               <CardContent className="p-4 space-y-3">
-                <div className="flex items-start justify-between gap-2">
-                  <p className="text-sm font-medium text-foreground">{area.name}</p>
-                  <div className="flex flex-col items-end gap-1 shrink-0">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-foreground truncate">{area.name}</p>
+                    <div className="mt-2">
+                      <span className="text-xs text-muted-foreground">Progress</span>
+                      <div className="mt-1 w-full h-1.5 rounded-full bg-secondary overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all"
+                          style={{ width: `${area.progress}%`, backgroundColor: 'var(--color-seeko-accent)' }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-end justify-start gap-1 shrink-0">
                     {area.phase && (
                       <span className="rounded border border-border px-1.5 py-0.5 text-xs text-muted-foreground font-mono">
                         {area.phase}
@@ -49,25 +60,14 @@ export function InvestorAreaCard({ area, tasksInArea }: InvestorAreaCardProps) {
                         {area.status}
                       </Badge>
                     )}
+                    <span className="text-xs font-mono text-muted-foreground">{area.progress}%</span>
                   </div>
                 </div>
                 {area.description && (
-                  <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">
+                  <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2 pt-0.5">
                     {area.description}
                   </p>
                 )}
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-xs text-muted-foreground">Progress</span>
-                    <span className="text-xs font-mono text-muted-foreground">{area.progress}%</span>
-                  </div>
-                  <div className="w-full h-1.5 rounded-full bg-secondary overflow-hidden">
-                    <div
-                      className="h-full rounded-full transition-all"
-                      style={{ width: `${area.progress}%`, backgroundColor: 'var(--color-seeko-accent)' }}
-                    />
-                  </div>
-                </div>
               </CardContent>
             </Card>
           </button>

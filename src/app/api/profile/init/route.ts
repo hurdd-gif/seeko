@@ -1,29 +1,28 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { createClient as createServiceClient } from '@supabase/supabase-js';
+import { getServiceClient } from '@/lib/supabase/service';
 
+/**
+ * Applies invite metadata only for must_set_password (trigger already set role on signup).
+ * Call after first login so the client can force password setup; trigger is canonical for role.
+ */
 export async function POST() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  if (!user) {
+  if (!user || !user.email) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const admin = createServiceClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
+  const admin = getServiceClient();
 
-  // Read pending invite metadata
   const { data: invite } = await admin
     .from('pending_invites')
     .select('department, is_contractor, is_investor')
-    .eq('email', user.email)
+    .eq('email', user.email.toLowerCase())
     .single();
 
   if (invite) {
-    // Update profile with invite metadata
     await admin
       .from('profiles')
       .update({
@@ -34,11 +33,10 @@ export async function POST() {
       })
       .eq('id', user.id);
 
-    // Clean up pending invite
     await admin
       .from('pending_invites')
       .delete()
-      .eq('email', user.email);
+      .eq('email', user.email.toLowerCase());
   }
 
   return NextResponse.json({ success: true });

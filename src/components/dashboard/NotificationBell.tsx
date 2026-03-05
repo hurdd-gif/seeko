@@ -40,8 +40,11 @@ export function NotificationBell({ userId, initialCount, initialNotifications, c
   const [notifications, setNotifications] = useState<Notification[]>(initialNotifications);
   const [panelPos, setPanelPos] = useState<{ left: number; top: number } | null>(null);
   const [tooltipY, setTooltipY] = useState<number | null>(null);
+  const [mounted, setMounted] = useState(false);
   const bellRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => { setMounted(true); }, []);
 
   const tooltipLabel = unreadCount > 0
     ? `${unreadCount} notification${unreadCount === 1 ? '' : 's'}`
@@ -251,8 +254,8 @@ export function NotificationBell({ userId, initialCount, initialNotifications, c
           </>
         )}
       </button>
-      {typeof document !== 'undefined' && createPortal(panel, document.body)}
-      {typeof document !== 'undefined' && createPortal(
+      {mounted && typeof document !== 'undefined' && createPortal(panel, document.body)}
+      {mounted && typeof document !== 'undefined' && createPortal(
         <AnimatePresence>
           {collapsed && tooltipY !== null && (
             <motion.div

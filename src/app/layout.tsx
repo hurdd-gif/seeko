@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Toaster } from "sonner";
 import { Outfit, JetBrains_Mono } from "next/font/google";
-import { DevAgentation } from "@/components/dev/agentation";
+import { HapticsProvider } from "@/components/HapticsProvider";
 import "./globals.css";
 
 const outfit = Outfit({
@@ -24,6 +24,8 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
+  themeColor: '#1a1a1a',
+  viewportFit: 'cover',
 };
 
 export default function RootLayout({
@@ -33,12 +35,20 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
+      <head>
+        <meta name="theme-color" content="#1a1a1a" />
+        <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#1a1a1a" />
+        <meta name="theme-color" media="(prefers-color-scheme: light)" content="#1a1a1a" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+      </head>
       <body
         className={`${outfit.variable} ${jetbrainsMono.variable} antialiased bg-background text-foreground`}
       >
-        {children}
-        <Toaster richColors position="top-center" />
-        <DevAgentation />
+        <HapticsProvider>
+          {children}
+          <Toaster richColors position="top-center" />
+        </HapticsProvider>
       </body>
     </html>
   );

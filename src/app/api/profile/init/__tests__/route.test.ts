@@ -16,8 +16,8 @@ vi.mock('@/lib/supabase/server', () => ({
 }));
 
 const mockServiceFrom = vi.fn();
-vi.mock('@supabase/supabase-js', () => ({
-  createClient: vi.fn(() => ({
+vi.mock('@/lib/supabase/service', () => ({
+  getServiceClient: vi.fn(() => ({
     from: mockServiceFrom,
   })),
 }));

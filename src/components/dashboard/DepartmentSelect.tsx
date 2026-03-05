@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { Department } from '@/lib/types';
 import { Select } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
+import { useHaptics } from '@/components/HapticsProvider';
 
 const DEPARTMENTS: Department[] = ['Coding', 'Visual Art', 'UI/UX', 'Animation', 'Asset Creation'];
 
@@ -23,6 +24,7 @@ interface Props {
 
 export function DepartmentSelect({ userId, department }: Props) {
   const [value, setValue] = useState(department ?? '');
+  const { trigger } = useHaptics();
   const [isPending, startTransition] = useTransition();
 
   async function handleChange(next: string) {
@@ -37,8 +39,10 @@ export function DepartmentSelect({ userId, department }: Props) {
       if (!res.ok) {
         setValue(prev);
         toast.error('Failed to update department');
+        trigger('error');
       } else {
         toast.success(`Department updated to ${next}`);
+        trigger('success');
       }
     });
   }

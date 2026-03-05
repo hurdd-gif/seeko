@@ -30,7 +30,7 @@ export async function proxy(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const pathname = request.nextUrl.pathname;
-  const isAuthRoute = pathname.startsWith('/login');
+  const isAuthRoute = pathname.startsWith('/login') || pathname.startsWith('/api/auth/callback');
   const isOnboardingRoute = pathname.startsWith('/onboarding');
   const isSetPasswordRoute = pathname.startsWith('/set-password');
   const isPublicAsset =

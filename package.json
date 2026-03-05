@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:mobile": "next dev --turbopack -H 0.0.0.0",
     "build": "next build",
     "start": "next start",
     "test": "vitest"
@@ -32,7 +33,8 @@
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "sonner": "^2.0.7",
-    "tailwind-merge": "^3.5.0"
+    "tailwind-merge": "^3.5.0",
+    "web-haptics": "^0.0.6"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

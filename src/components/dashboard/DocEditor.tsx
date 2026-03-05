@@ -15,6 +15,8 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import type { Doc, Profile } from '@/lib/types';
+import { useHaptics } from '@/components/HapticsProvider';
+import { useDialogFooter } from '@/components/ui/dialog';
 
 const DEPARTMENTS = ['Coding', 'Visual Art', 'UI/UX', 'Animation', 'Asset Creation'] as const;
 
@@ -149,6 +151,7 @@ function ImagePopover({ onInsert }: { onInsert: (url: string) => void }) {
 }
 
 export function DocEditor({ doc, onSave, onCancel, team = [] }: DocEditorProps) {
+  const { trigger } = useHaptics();
   const [title, setTitle] = useState(doc?.title ?? '');
   const [departments, setDepartments] = useState<string[]>(doc?.restricted_department ?? []);
   const [grantedIds, setGrantedIds] = useState<string[]>(doc?.granted_user_ids ?? []);
@@ -327,18 +330,54 @@ export function DocEditor({ doc, onSave, onCancel, team = [] }: DocEditorProps) 
       if (!res.ok) {
         const j = await res.json();
         setError(j.error ?? 'Save failed');
+        trigger('error');
         return;
       }
       const saved = await res.json();
+      trigger('success');
       onSave(saved as Doc);
     } catch {
       setError('Save failed');
+      trigger('error');
     } finally {
       setSaving(false);
     }
   };
 
   if (!editor) return null;
+
+  const setDialogFooter = useDialogFooter();
+  const actionBar = (
+    <>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        onClick={() => { trigger('selection'); onCancel(); }}
+        disabled={saving}
+        className="min-w-[4.5rem] min-h-[2.5rem] touch-manipulation"
+      >
+        Cancel
+      </Button>
+      <Button
+        type="button"
+        size="sm"
+        onClick={handleSave}
+        disabled={saving}
+        className="min-w-[7rem] min-h-[2.5rem] touch-manipulation"
+      >
+        {saving ? 'Saving…' : doc ? 'Save changes' : 'Create document'}
+      </Button>
+    </>
+  );
+
+  useEffect(() => {
+    if (setDialogFooter) {
+      setDialogFooter(actionBar);
+      return () => { setDialogFooter(null); };
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- actionBar is recreated each render; we only need to sync when footer/saving/doc change
+  }, [setDialogFooter, saving, doc]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -492,15 +531,12 @@ export function DocEditor({ doc, onSave, onCancel, team = [] }: DocEditorProps) 
 
       {error && <p className="text-xs text-destructive">{error}</p>}
 
-      {/* Actions */}
-      <div className="flex justify-end gap-2">
-        <Button variant="ghost" size="sm" onClick={onCancel} disabled={saving}>
-          Cancel
-        </Button>
-        <Button size="sm" onClick={handleSave} disabled={saving}>
-          {saving ? 'Saving…' : doc ? 'Save changes' : 'Create document'}
-        </Button>
-      </div>
+      {/* Actions: when not inside a Dialog, render inline; otherwise they're in the dialog footer */}
+      {!setDialogFooter && (
+        <div className="sticky bottom-0 left-0 right-0 z-10 flex flex-shrink-0 items-center justify-end gap-3 border-t border-border bg-card pt-4 pb-2 -mx-6 px-6 mt-4">
+          {actionBar}
+        </div>
+      )}
     </div>
   );
 }

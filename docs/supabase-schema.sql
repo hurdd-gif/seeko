@@ -29,20 +29,35 @@ create policy "Users can update own profile"
   using (auth.uid() = id)
   with check (auth.uid() = id);
 
--- When an invited user signs up, set their profile from pending_invites so it's automatic
--- (no manual toggle or dependency on profile/init). Applies to all invite types:
---   - Investor:  is_investor=true
---   - Contractor: is_contractor=true
---   - Team member: department + is_contractor=false, is_investor=false
+-- Block privilege escalation: only service role may change is_admin, is_contractor, is_investor.
+create or replace function public.profiles_block_privilege_escalation()
+returns trigger as $$
+begin
+  if (old.is_admin is distinct from new.is_admin
+      or old.is_contractor is distinct from new.is_contractor
+      or old.is_investor is distinct from new.is_investor)
+     and coalesce(current_setting('request.jwt.claim.role', true), '') <> 'service_role' then
+    raise exception 'Only service role may update is_admin, is_contractor, is_investor'
+      using errcode = 'P0001';
+  end if;
+  return new;
+end;
+$$ language plpgsql security definer set search_path = '';
+
+create trigger profiles_block_privilege_escalation_trigger
+  before update on public.profiles
+  for each row execute procedure public.profiles_block_privilege_escalation();
+
+-- When an invited user signs up, set their profile from pending_invites (match email case-insensitively; delete row after apply).
 create or replace function public.handle_new_user()
 returns trigger as $$
 declare
   inv record;
 begin
-  select pi.is_investor, pi.is_contractor, pi.department
+  select pi.is_investor, pi.is_contractor, pi.department, pi.email
     into inv
     from public.pending_invites pi
-    where pi.email = new.email
+    where lower(trim(pi.email)) = lower(trim(new.email))
     limit 1;
 
   insert into public.profiles (id, display_name, onboarded, is_investor, is_contractor, department)
@@ -54,6 +69,11 @@ begin
     coalesce(inv.is_contractor, false),
     (inv.department::public.department)
   );
+
+  if found then
+    delete from public.pending_invites where email = inv.email;
+  end if;
+
   return new;
 end;
 $$ language plpgsql security definer set search_path = '';

@@ -3,9 +3,11 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { useHaptics } from '@/components/HapticsProvider';
 
 export function SetPasswordForm() {
   const router = useRouter();
+  const { trigger } = useHaptics();
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -17,10 +19,12 @@ export function SetPasswordForm() {
 
     if (password.length < 8) {
       setError('Password must be at least 8 characters.');
+      trigger('error');
       return;
     }
     if (password !== confirm) {
       setError('Passwords do not match.');
+      trigger('error');
       return;
     }
 
@@ -31,6 +35,7 @@ export function SetPasswordForm() {
     if (error) {
       setError(error.message);
       setLoading(false);
+      trigger('error');
       return;
     }
 
@@ -39,6 +44,7 @@ export function SetPasswordForm() {
       await supabase.from('profiles').update({ must_set_password: false }).eq('id', user.id);
     }
 
+    trigger('success');
     router.push('/onboarding');
   }
 
