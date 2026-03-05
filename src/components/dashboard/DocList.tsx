@@ -203,12 +203,34 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false }: 
                         <FileText className="size-4 text-foreground" />
                       </div>
                       <div className="flex flex-col gap-1 min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm font-medium text-foreground">{doc.title}</p>
-                          {doc.restricted_department
-                            ? <Badge variant="outline" className="text-xs font-normal text-muted-foreground">{doc.restricted_department} only</Badge>
-                            : <Badge variant="outline" className="text-xs font-normal">Document</Badge>
-                          }
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex flex-wrap items-center gap-2 min-w-0">
+                            <p className="text-sm font-medium text-foreground truncate">{doc.title}</p>
+                            {doc.restricted_department
+                              ? <Badge variant="outline" className="text-xs font-normal text-muted-foreground shrink-0">{doc.restricted_department} only</Badge>
+                              : <Badge variant="outline" className="text-xs font-normal shrink-0">Document</Badge>
+                            }
+                          </div>
+                          {isAdmin && (
+                            <div className="flex items-center gap-1 shrink-0">
+                              <button
+                                type="button"
+                                title="Edit"
+                                onClick={(e) => { e.stopPropagation(); setEditingDoc(doc); }}
+                                className="flex size-7 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                              >
+                                <Pencil className="size-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                title="Delete"
+                                onClick={(e) => { e.stopPropagation(); setDeletingId(doc.id); }}
+                                className="flex size-7 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                              >
+                                <Trash2 className="size-3.5" />
+                              </button>
+                            </div>
+                          )}
                         </div>
                         {(doc.updated_at || doc.created_at) && (
                           <p className="flex items-center gap-1 text-[11px] text-muted-foreground/70">
@@ -222,26 +244,6 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false }: 
                           </p>
                         ) : null}
                       </div>
-                      {isAdmin && (
-                        <div className="flex items-center gap-1 ml-auto shrink-0">
-                          <button
-                            type="button"
-                            title="Edit"
-                            onClick={(e) => { e.stopPropagation(); setEditingDoc(doc); }}
-                            className="flex size-7 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-                          >
-                            <Pencil className="size-3.5" />
-                          </button>
-                          <button
-                            type="button"
-                            title="Delete"
-                            onClick={(e) => { e.stopPropagation(); setDeletingId(doc.id); }}
-                            className="flex size-7 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-                          >
-                            <Trash2 className="size-3.5" />
-                          </button>
-                        </div>
-                      )}
                     </CardContent>
                   </Card>
                 </HoverCard>
