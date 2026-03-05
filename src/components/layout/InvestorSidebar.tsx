@@ -63,7 +63,7 @@ export function InvestorSidebar({ email, displayName, avatarUrl, isAdmin = false
         {/* Logo */}
         <div className="flex items-center gap-2.5 px-4 py-5">
           <div className="flex h-8 w-8 items-center justify-center shrink-0">
-            <Image src="/seeko-s.png" alt="SEEKO" width={24} height={24} />
+            <Image src="/seeko-s.png" alt="SEEKO" width={24} height={24} unoptimized />
           </div>
           <span className="font-semibold text-base tracking-tight text-sidebar-foreground whitespace-nowrap">
             SEEKO
@@ -176,61 +176,66 @@ export function InvestorSidebar({ email, displayName, avatarUrl, isAdmin = false
 
       {/* ── Mobile top header ─────────────────────────────── */}
       <header className="md:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-4 h-14 bg-sidebar border-b border-sidebar-border">
-        <div className="flex items-center gap-2.5">
-          <Image src="/seeko-s.png" alt="SEEKO" width={20} height={20} />
-          <span className="font-semibold text-sm tracking-tight text-sidebar-foreground">SEEKO</span>
-          <span className="text-xs text-muted-foreground/60">· Investor Panel</span>
+        <div className="flex items-center gap-2.5 min-w-0">
+          <Image src="/seeko-s.png" alt="SEEKO" width={20} height={20} unoptimized />
+          <span className="font-semibold text-sm tracking-tight text-sidebar-foreground truncate">SEEKO</span>
         </div>
-        <div className="flex items-center gap-2">
-          <Link
-            href="/investor"
-            className={[
-              'flex items-center gap-1.5 text-xs font-medium transition-colors',
-              pathname === '/investor' ? 'text-seeko-accent' : 'text-muted-foreground hover:text-foreground',
-            ].join(' ')}
-          >
-            <LayoutDashboard className="h-3.5 w-3.5" />
-            Dashboard
-          </Link>
-          <Link
-            href="/investor/settings"
-            className={[
-              'flex items-center gap-1.5 text-xs font-medium transition-colors',
-              pathname.startsWith('/investor/settings') ? 'text-seeko-accent' : 'text-muted-foreground hover:text-foreground',
-            ].join(' ')}
-          >
-            <Settings className="h-3.5 w-3.5" />
-            Settings
-          </Link>
-          <button
-            type="button"
-            onClick={handleDownloadPdf}
-            disabled={pdfLoading}
-            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
-          >
-            <FileDown className="h-3.5 w-3.5" />
-            {pdfLoading ? '…' : 'PDF'}
-          </button>
-          {isAdmin && (
-            <Link
-              href="/"
-              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <LayoutDashboard className="h-3.5 w-3.5" />
-              Main
-            </Link>
-          )}
-          <form action="/auth/signout" method="post">
-          <button
-            type="submit"
-            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-[#f87171] transition-colors"
-          >
-            <LogOut className="h-3.5 w-3.5" />
-            Sign out
-          </button>
-        </form>
-        </div>
+        <Link href="/investor/settings" className="shrink-0">
+          <Avatar className="size-8">
+            <AvatarImage src={avatarUrl} alt={label} />
+            <AvatarFallback className="bg-secondary text-foreground text-[10px]">
+              {getInitials(label)}
+            </AvatarFallback>
+          </Avatar>
+        </Link>
       </header>
+
+      {/* ── Mobile bottom nav (match main dashboard pattern) ── */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 flex items-stretch bg-sidebar border-t border-sidebar-border">
+        <Link
+          href="/investor"
+          className={[
+            'flex flex-1 flex-col items-center justify-center gap-1 py-2 text-[10px] font-medium transition-colors',
+            pathname === '/investor' ? 'text-seeko-accent' : 'text-muted-foreground',
+          ].join(' ')}
+        >
+          <LayoutDashboard className={`h-5 w-5 ${pathname === '/investor' ? 'text-seeko-accent' : ''}`} />
+          Dashboard
+        </Link>
+        <Link
+          href="/investor/settings"
+          className={[
+            'flex flex-1 flex-col items-center justify-center gap-1 py-2 text-[10px] font-medium transition-colors',
+            pathname.startsWith('/investor/settings') ? 'text-seeko-accent' : 'text-muted-foreground',
+          ].join(' ')}
+        >
+          <Settings className={`h-5 w-5 ${pathname.startsWith('/investor/settings') ? 'text-seeko-accent' : ''}`} />
+          Settings
+        </Link>
+        <button
+          type="button"
+          onClick={handleDownloadPdf}
+          disabled={pdfLoading}
+          className={[
+            'flex flex-1 flex-col items-center justify-center gap-1 py-2 text-[10px] font-medium transition-colors disabled:opacity-50',
+            'text-muted-foreground',
+          ].join(' ')}
+        >
+          <FileDown className="h-5 w-5" />
+          {pdfLoading ? '…' : 'PDF'}
+        </button>
+        {isAdmin && (
+          <Link
+            href="/"
+            className={[
+              'flex flex-1 flex-col items-center justify-center gap-1 py-2 text-[10px] font-medium transition-colors text-muted-foreground',
+            ].join(' ')}
+          >
+            <LayoutDashboard className="h-5 w-5" />
+            Main
+          </Link>
+        )}
+      </nav>
     </>
   );
 }

@@ -186,7 +186,7 @@ export function Sidebar({
         <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
         <div className={`flex items-center py-5 transition-all ${collapsed ? 'justify-center px-0' : 'gap-2.5 px-4'}`}>
           <div className="flex h-8 w-8 items-center justify-center shrink-0">
-            <Image src="/seeko-s.png" alt="SEEKO" width={24} height={24} />
+            <Image src="/seeko-s.png" alt="SEEKO" width={24} height={24} unoptimized />
           </div>
           <AnimatePresence>
             {!collapsed && (
@@ -373,7 +373,7 @@ export function Sidebar({
       {/* ── Mobile top header ─────────────────────────────── */}
       <header className="md:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-4 h-14 bg-sidebar border-b border-sidebar-border">
         <div className="flex items-center gap-2.5">
-          <Image src="/seeko-s.png" alt="SEEKO" width={20} height={20} />
+          <Image src="/seeko-s.png" alt="SEEKO" width={20} height={20} unoptimized />
           <span className="font-semibold text-sm tracking-tight text-sidebar-foreground">SEEKO</span>
         </div>
         <div className="flex items-center gap-2">
