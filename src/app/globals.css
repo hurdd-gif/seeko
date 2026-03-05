@@ -193,7 +193,7 @@ body {
 .doc-content table,
 .doc-read-body .doc-content table,
 .ProseMirror table {
-  width: 100%;
+  width: auto;
   border-collapse: collapse;
   margin-top: 0.75rem;
   margin-bottom: 0.75rem;
@@ -208,6 +208,7 @@ body {
   text-align: left;
   padding: 0.5rem 0.75rem;
   border: 1px solid var(--color-border);
+  min-width: 120px;
 }
 .doc-content td,
 .doc-read-body .doc-content td,
@@ -216,6 +217,7 @@ body {
   border: 1px solid var(--color-border);
   color: rgba(240, 240, 240, 0.85);
   vertical-align: top;
+  min-width: 120px;
 }
 .ProseMirror .selectedCell {
   background: var(--color-muted);
