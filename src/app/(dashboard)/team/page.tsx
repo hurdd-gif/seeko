@@ -1,13 +1,47 @@
+/* ─────────────────────────────────────────────────────────
+ * ANIMATION STORYBOARD
+ *
+ *    0ms   heading fades up
+ *   80ms   subtitle fades up
+ *  150ms   invite form (admin) fades up
+ *  200ms   members card rises in
+ *  260ms   member rows stagger in (60ms apart)
+ *  320ms   contractors card rises in, rows stagger
+ * ───────────────────────────────────────────────────────── */
+
 import { fetchTeam } from '@/lib/supabase/data';
+import { createClient } from '@/lib/supabase/server';
+import { Profile } from '@/lib/types';
+import { FadeRise, Stagger, StaggerItem } from '@/components/motion';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { Plus } from 'lucide-react';
+import { EmptyState } from '@/components/ui/empty-state';
+import { Globe, Clock, Users } from 'lucide-react';
+import { InviteForm } from '@/components/dashboard/InviteForm';
+import { DepartmentSelect } from '@/components/dashboard/DepartmentSelect';
+
+const TIMING = {
+  heading:    0,   // page title
+  subtitle:  80,   // description line
+  invite:   150,   // invite form (admin)
+  members:  200,   // members card rises
+  membersStagger: 260, // member rows stagger
+  contractors: 320,   // contractors card, rows stagger
+};
+
+/** FadeRise/Stagger delay in seconds */
+const delay = (ms: number) => ms / 1000;
+
+/** Department text color — match DepartmentSelect / TaskList so admins and non-admins see same colors */
+const DEPT_COLOR: Record<string, string> = {
+  'Coding':         'text-emerald-400',
+  'Visual Art':     'text-blue-300',
+  'UI/UX':          'text-violet-300',
+  'Animation':      'text-amber-400',
+  'Asset Creation': 'text-pink-300',
+};
 
 function getInitials(name: string): string {
   return name
@@ -15,87 +49,217 @@ function getInitials(name: string): string {
     .map(part => part[0])
     .join('')
     .toUpperCase()
-    .slice(0, 2);
+    .slice(0, 2) || '?';
+}
+
+function isOnline(lastSeen?: string): boolean {
+  if (!lastSeen) return false;
+  const diff = Date.now() - new Date(lastSeen).getTime();
+  return diff < 2 * 60 * 1000;
+}
+
+function lastSeenLabel(lastSeen?: string, mustSetPassword?: boolean): string {
+  if (!lastSeen) return mustSetPassword === true ? 'Invited' : 'Never seen';
+  const diff = Date.now() - new Date(lastSeen).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 2) return 'Online now';
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
+}
+
+function currentTimeInTz(tz?: string): string {
+  if (!tz) return '';
+  try {
+    return new Intl.DateTimeFormat('en-US', {
+      timeZone: tz,
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    }).format(new Date());
+  } catch {
+    return '';
+  }
+}
+
+function tzAbbrev(tz?: string): string {
+  if (!tz) return '';
+  try {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: tz,
+      timeZoneName: 'shortOffset',
+    }).formatToParts(new Date());
+    return parts.find(p => p.type === 'timeZoneName')?.value ?? '';
+  } catch {
+    return '';
+  }
+}
+
+function MemberRow({ member, isAdmin }: { member: Profile; isAdmin: boolean }) {
+  const online = isOnline(member.last_seen_at);
+  const localTime = currentTimeInTz(member.timezone);
+  const offset = tzAbbrev(member.timezone);
+
+  return (
+    <div className="flex items-center justify-between py-3">
+      <div className="flex items-center gap-3">
+        <div className="relative">
+          <Avatar className="size-9">
+            <AvatarImage src={member.avatar_url} alt={member.display_name ?? ''} />
+            <AvatarFallback className="bg-secondary text-foreground text-xs">
+              {getInitials(member.display_name ?? '?')}
+            </AvatarFallback>
+          </Avatar>
+          <span
+            className={`absolute bottom-0 right-0 size-2.5 rounded-full ring-2 ring-card ${online ? 'bg-seeko-accent' : 'bg-muted-foreground/40'}`}
+            title={lastSeenLabel(member.last_seen_at, member.must_set_password)}
+          />
+        </div>
+        <div>
+          <div className="flex items-center gap-2">
+            <p className="text-sm font-medium text-foreground">{member.display_name ?? 'Unknown'}</p>
+            {member.is_admin && (
+              <Badge variant="outline" className="text-[10px] py-0 px-1.5">Lead</Badge>
+            )}
+          </div>
+          {member.email && (
+            <p className="text-xs text-muted-foreground/70">{member.email}</p>
+          )}
+          <div className="flex items-center gap-2 mt-0.5">
+            {member.role && (
+              <p className="text-xs text-muted-foreground">{member.role}</p>
+            )}
+            {member.role && member.timezone && (
+              <span className="text-muted-foreground/30">·</span>
+            )}
+            {member.timezone && (
+              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Clock className="size-2.5" />
+                <span>{localTime}</span>
+                <span className="text-muted-foreground/50">{offset}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+      <div className="flex items-center gap-2">
+        {isAdmin
+          ? <DepartmentSelect userId={member.id} department={member.department} />
+          : member.department && (
+              <Badge variant="secondary" className={`shrink-0 text-xs ${DEPT_COLOR[member.department] ?? 'text-muted-foreground'}`}>{member.department}</Badge>
+            )
+        }
+        <span className={`text-[11px] ${online ? 'text-seeko-accent' : 'text-muted-foreground/60'}`}>
+          {lastSeenLabel(member.last_seen_at, member.must_set_password)}
+        </span>
+      </div>
+    </div>
+  );
 }
 
 export default async function TeamPage() {
-  const team = await fetchTeam().catch(() => []);
+  const team = await fetchTeam().catch((e) => { throw new Error('Failed to load team.'); });
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const currentProfile = team.find(m => m.id === user?.id);
+  const isAdmin = currentProfile?.is_admin ?? false;
+
+  const members = team.filter(m => !m.is_contractor);
+  const contractors = team.filter(m => m.is_contractor);
+
+  const onlineCount = team.filter(m => isOnline(m.last_seen_at)).length;
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Team</h1>
-        <p className="text-sm text-muted-foreground mt-1">Invite your team members to collaborate.</p>
+        <FadeRise delay={delay(TIMING.heading)}>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Team</h1>
+        </FadeRise>
+        <FadeRise delay={delay(TIMING.subtitle)}>
+          <p className="text-sm text-muted-foreground mt-1">
+            {team.length} people · {onlineCount} online now
+          </p>
+        </FadeRise>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Invite Member</CardTitle>
-          <CardDescription>Add a new team member by email address.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
-            <div className="flex-1 space-y-2">
-              <Label htmlFor="invite-email">Email</Label>
-              <Input id="invite-email" placeholder="colleague@example.com" type="email" />
-            </div>
-            <div className="w-full space-y-2 sm:w-40">
-              <Label>Department</Label>
-              <Select defaultValue="">
-                <option value="">Select...</option>
-                <option value="Coding">Coding</option>
-                <option value="Visual Art">Visual Art</option>
-                <option value="UI/UX">UI/UX</option>
-                <option value="Animation">Animation</option>
-                <option value="Asset Creation">Asset Creation</option>
-              </Select>
-            </div>
-            <Button className="gap-2">
-              <Plus className="size-4" />
-              Invite
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      {isAdmin && (
+        <FadeRise delay={delay(TIMING.invite)} y={12}>
+          <InviteForm />
+        </FadeRise>
+      )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Members</CardTitle>
-          <CardDescription>{team.length} people with access to this workspace.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {team.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No team members yet. Invite them via Supabase Auth.
-            </p>
-          ) : (
-            <div className="flex flex-col">
-              {team.map((member, i) => (
-                <div key={member.id}>
-                  <div className="flex items-center justify-between py-3">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="size-9">
-                        <AvatarImage src={member.avatar_url} alt={member.display_name ?? ''} />
-                        <AvatarFallback className="bg-secondary text-foreground text-xs">
-                          {getInitials(member.display_name ?? '?')}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="text-sm font-medium text-foreground">{member.display_name ?? 'Unknown'}</p>
-                        {member.role && <p className="text-xs text-muted-foreground">{member.role}</p>}
-                      </div>
-                    </div>
-                    {member.department && (
-                      <Badge variant="secondary" className="shrink-0">{member.department}</Badge>
-                    )}
-                  </div>
-                  {i < team.length - 1 && <Separator />}
-                </div>
-              ))}
+      <FadeRise delay={delay(TIMING.members)} y={12}>
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-xl font-semibold text-foreground">Members</CardTitle>
+                <CardDescription>{members.length} team members</CardDescription>
+              </div>
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <span className="size-2 rounded-full bg-seeko-accent" />
+                <span>{onlineCount} online</span>
+              </div>
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardHeader>
+          <CardContent>
+            {members.length === 0 ? (
+              <EmptyState
+                icon={Users}
+                title="No team members yet"
+                description="Invite people to get started."
+              />
+            ) : (
+              <Stagger className="flex flex-col" staggerMs={0.06} delayMs={delay(TIMING.membersStagger)}>
+                {members.map((member, i) => (
+                  <StaggerItem key={member.id}>
+                    <MemberRow member={member} isAdmin={isAdmin} />
+                    {i < members.length - 1 && <Separator />}
+                  </StaggerItem>
+                ))}
+              </Stagger>
+            )}
+          </CardContent>
+        </Card>
+      </FadeRise>
+
+      <FadeRise delay={delay(TIMING.contractors)} y={12}>
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Globe className="size-4 text-muted-foreground" />
+              <div>
+                <CardTitle className="text-xl font-semibold text-foreground">Contractors</CardTitle>
+                <CardDescription>
+                  {contractors.length === 0
+                    ? 'No contractors added yet.'
+                    : `${contractors.length} contractor${contractors.length !== 1 ? 's' : ''}`}
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {contractors.length === 0 ? (
+              <EmptyState
+                icon={Globe}
+                title="No contractors yet"
+                description="Mark team members as contractors in the database to show them here."
+              />
+            ) : (
+              <Stagger className="flex flex-col" staggerMs={0.06} delayMs={delay(TIMING.contractors + 60)}>
+                {contractors.map((member, i) => (
+                  <StaggerItem key={member.id}>
+                    <MemberRow member={member} isAdmin={isAdmin} />
+                    {i < contractors.length - 1 && <Separator />}
+                  </StaggerItem>
+                ))}
+              </Stagger>
+            )}
+          </CardContent>
+        </Card>
+      </FadeRise>
     </div>
   );
 }

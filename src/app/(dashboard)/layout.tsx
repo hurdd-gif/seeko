@@ -1,8 +1,10 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { fetchProfile } from '@/lib/supabase/data';
+import { fetchProfile, fetchNotifications, fetchUnreadNotificationCount } from '@/lib/supabase/data';
 import { Sidebar } from '@/components/layout/Sidebar';
-import { GettingStarted } from '@/components/dashboard/GettingStarted';
+import { DashboardTourWrapper } from '@/components/dashboard/DashboardTourWrapper';
+import { PresenceHeartbeat } from '@/components/PresenceHeartbeat';
+import { ActivityTracker } from '@/components/ActivityTracker';
 
 export default async function DashboardLayout({
   children,
@@ -14,21 +16,32 @@ export default async function DashboardLayout({
   if (!user) redirect('/login');
 
   const profile = await fetchProfile(user.id);
+  const [notifications, unreadCount] = await Promise.all([
+    fetchNotifications(user.id, 20).catch(() => []),
+    fetchUnreadNotificationCount(user.id).catch(() => 0),
+  ]);
   const showTour = profile?.onboarded === 1 && profile?.tour_completed === 0;
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar
-        email={user.email ?? ''}
-        displayName={profile?.display_name ?? undefined}
-        avatarUrl={profile?.avatar_url ?? undefined}
-      />
-      <main className="flex-1 min-w-0 overflow-auto">
-        <div className="max-w-5xl mx-auto px-6 py-8">
-          {children}
-        </div>
-      </main>
-      {showTour && <GettingStarted userId={user.id} />}
-    </div>
+    <DashboardTourWrapper showTour={showTour} userId={user.id}>
+      <div className="flex min-h-screen bg-background">
+        <Sidebar
+          email={user.email ?? ''}
+          displayName={profile?.display_name ?? undefined}
+          avatarUrl={profile?.avatar_url ?? undefined}
+          userId={user.id}
+          isAdmin={profile?.is_admin ?? false}
+          unreadCount={unreadCount}
+          notifications={notifications}
+        />
+        <main className="flex-1 min-w-0 overflow-auto" id="tour-main">
+          <div className="max-w-5xl mx-auto px-6 py-8">
+            {children}
+          </div>
+        </main>
+      </div>
+      <PresenceHeartbeat userId={user.id} />
+      <ActivityTracker userId={user.id} />
+    </DashboardTourWrapper>
   );
 }

@@ -7,6 +7,8 @@ export type ActivityItem = {
   action: string;
   target: string;
   created_at: string;
+  task_id?: string | null;
+  doc_id?: string | null;
   profiles?: Pick<Profile, 'display_name' | 'avatar_url'>;
 };
 
@@ -119,4 +121,31 @@ export async function fetchTaskComments(taskId: string): Promise<import('../type
 
   if (error) throw error;
   return (data ?? []) as import('../types').TaskComment[];
+}
+
+export async function fetchNotifications(userId: string, limit = 20): Promise<import('../types').Notification[]> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from('notifications')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error) throw error;
+  return (data ?? []) as import('../types').Notification[];
+}
+
+export async function fetchUnreadNotificationCount(userId: string): Promise<number> {
+  const supabase = await createClient();
+
+  const { count, error } = await supabase
+    .from('notifications')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .eq('read', false);
+
+  if (error) return 0;
+  return count ?? 0;
 }

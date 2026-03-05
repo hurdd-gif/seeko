@@ -53,10 +53,12 @@ DropdownMenuTrigger.displayName = "DropdownMenuTrigger"
 function DropdownMenuContent({
   className,
   align = "end",
+  side = "bottom",
   children,
 }: {
   className?: string
   align?: "start" | "end"
+  side?: "top" | "bottom"
   children: React.ReactNode
 }) {
   const { open } = useDropdown()
@@ -64,7 +66,8 @@ function DropdownMenuContent({
   return (
     <div
       className={cn(
-        "absolute z-50 mt-1 min-w-[8rem] rounded-md border border-border bg-popover p-1 shadow-md animate-in fade-in-0 zoom-in-95",
+        "absolute z-50 min-w-[8rem] rounded-md border border-border bg-popover p-1 shadow-md animate-in fade-in-0 zoom-in-95",
+        side === "top" ? "bottom-full mb-1" : "mt-1",
         align === "end" ? "right-0" : "left-0",
         className
       )}
@@ -84,8 +87,8 @@ function DropdownMenuItem({
     <button
       className={cn(
         "flex w-full items-center rounded-sm px-2 py-1.5 text-sm transition-colors",
-        "hover:bg-accent hover:text-accent-foreground",
-        "focus:bg-accent focus:text-accent-foreground focus:outline-none",
+        "hover:bg-white/8 hover:text-foreground",
+        "focus:bg-white/8 focus:text-foreground focus:outline-none",
         className
       )}
       onClick={(e) => {

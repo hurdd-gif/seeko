@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
 
 @theme inline {
   /* Surfaces — calibrated to #1a1a1a background */
@@ -6,19 +7,21 @@
   --color-foreground:        #f0f0f0;
   --color-card:              #222222;
   --color-card-foreground:   #f0f0f0;
+  --color-popover:             #262626;
+  --color-popover-foreground:  #f0f0f0;
   --color-border:            #2e2e2e;
   --color-input:             #2e2e2e;
   --color-muted:             #262626;
   --color-muted-foreground:  #808080;
   --color-secondary:         #262626;
   --color-secondary-foreground: #f0f0f0;
-  --color-accent:            #262626;
+  --color-accent:            #333333;
   --color-accent-foreground: #f0f0f0;
   --color-primary:           #f0f0f0;
   --color-primary-foreground: #1a1a1a;
   --color-destructive:       #ef4444;
   --color-destructive-foreground: #f0f0f0;
-  --color-ring:              #f0f0f0;
+  --color-ring:              rgba(240, 240, 240, 0.18);
 
   /* Sidebar — darker than background for depth */
   --color-sidebar:           #151515;
@@ -35,6 +38,13 @@
   --color-status-review:     #93c5fd;
   --color-status-blocked:    #f87171;
 
+  /* Department colors (UX persona — filters, tags, labels) */
+  --color-dept-coding:         #6ee7b7;
+  --color-dept-visual-art:     #93c5fd;
+  --color-dept-ui-ux:          #c4b5fd;
+  --color-dept-animation:      #fbbf24;
+  --color-dept-asset-creation: #f9a8d4;
+
   /* Fonts */
   --font-sans: var(--font-outfit);
   --font-mono: var(--font-jetbrains-mono);
@@ -50,21 +60,131 @@ body {
   font-family: var(--font-sans), Arial, sans-serif;
 }
 
+/* Focus ring — subtle, fades in for all users (admins and non-admins).
+ * Storyboard: 0ms no ring → 200ms ring fades in (ease-out). */
+:root {
+  --focus-ring-duration: 200ms;
+}
+
+/* Confetti burst: see TourConfetti.tsx CONFETTI/BURST storyboard.
+   Duration via --confetti-duration on container. */
 @keyframes confetti-burst {
   0% {
     opacity: 1;
-    transform: translateY(0) translateX(0) rotate(0deg);
+    transform: translateY(0) translateX(0) scale(1) rotate(0deg);
   }
-  30% {
+  12% {
     opacity: 1;
-    transform: translateY(-120px) translateX(var(--drift, 0px)) rotate(360deg);
+    transform: translateY(-120px) translateX(var(--drift, 0)) scale(1.15) rotate(var(--rotation, 0deg));
+  }
+  75% {
+    opacity: 1;
+    transform: translateY(100px) translateX(calc(var(--drift, 0) * 2)) scale(1) rotate(calc(var(--rotation, 0) * 1.5));
   }
   100% {
     opacity: 0;
-    transform: translateY(60px) translateX(var(--drift, 0px)) rotate(720deg);
+    transform: translateY(180px) translateX(calc(var(--drift, 0) * 2.5)) scale(0.85) rotate(calc(var(--rotation, 0) * 2));
   }
 }
 
 .animate-confetti-burst {
-  animation: confetti-burst 2s ease-out forwards;
+  animation: confetti-burst var(--confetti-duration, 3.2s) cubic-bezier(0.25, 0.46, 0.45, 1) forwards;
+  animation-delay: var(--delay, 0s);
+}
+
+/* Document read view: single source of truth so admin and non-admin look identical.
+   Scoped under .doc-read-body so dialog content always gets these styles regardless of parent. */
+.doc-content,
+.doc-read-body .doc-content {
+  color: var(--color-foreground);
+}
+.doc-content-body,
+.doc-content article,
+.doc-read-body .doc-content-body,
+.doc-read-body .doc-content article {
+  color: var(--color-foreground);
+  line-height: 1.65;
+  max-width: none;
+  font-size: 0.9375rem;
+}
+.doc-content strong,
+.doc-read-body .doc-content strong {
+  color: var(--color-foreground);
+  font-weight: 600;
+}
+.doc-content p,
+.doc-read-body .doc-content p {
+  margin-bottom: 0.75rem;
+  color: rgba(240, 240, 240, 0.9);
+}
+.doc-content p:last-child,
+.doc-read-body .doc-content p:last-child {
+  margin-bottom: 0;
+}
+.doc-content h1,
+.doc-read-body .doc-content h1 {
+  font-size: 1.875rem;
+  font-weight: 700;
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+  line-height: 1.2;
+  color: var(--color-foreground);
+}
+.doc-content h2,
+.doc-read-body .doc-content h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+  line-height: 1.3;
+  color: var(--color-foreground);
+}
+.doc-content h3,
+.doc-read-body .doc-content h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+  color: var(--color-foreground);
+}
+.doc-content ul,
+.doc-content ol,
+.doc-read-body .doc-content ul,
+.doc-read-body .doc-content ol {
+  margin-top: 0.75rem;
+  margin-bottom: 0.75rem;
+  padding-left: 1.5rem;
+}
+.doc-content li,
+.doc-read-body .doc-content li {
+  margin-bottom: 0.25rem;
+}
+.doc-content li::marker,
+.doc-read-body .doc-content li::marker {
+  color: var(--color-muted-foreground);
+}
+.doc-content code,
+.doc-read-body .doc-content code {
+  font-size: 0.875em;
+  padding: 0.125rem 0.25rem;
+  border-radius: 0.25rem;
+  background: var(--color-muted);
+  font-family: var(--font-mono), monospace;
+}
+.doc-content a,
+.doc-read-body .doc-content a {
+  color: var(--color-seeko-accent);
+}
+.doc-content blockquote,
+.doc-content pre,
+.doc-read-body .doc-content blockquote,
+.doc-read-body .doc-content pre {
+  margin-top: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+.doc-content hr,
+.doc-read-body .doc-content hr {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+  border-color: var(--color-border);
 }

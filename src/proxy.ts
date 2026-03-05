@@ -32,6 +32,7 @@ export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const isAuthRoute = pathname.startsWith('/login');
   const isOnboardingRoute = pathname.startsWith('/onboarding');
+  const isSetPasswordRoute = pathname.startsWith('/set-password');
   const isPublicAsset =
     pathname.startsWith('/_next') || pathname.startsWith('/favicon');
 
@@ -47,14 +48,20 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (user && !isOnboardingRoute && !isAuthRoute && !isPublicAsset) {
+  if (user && !isSetPasswordRoute && !isPublicAsset) {
     const { data: profile } = await supabase
       .from('profiles')
-      .select('onboarded')
+      .select('onboarded, must_set_password')
       .eq('id', user.id)
       .single();
 
-    if (profile && profile.onboarded === 0) {
+    if (profile?.must_set_password === true) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/set-password';
+      return NextResponse.redirect(url);
+    }
+
+    if (!isOnboardingRoute && !isAuthRoute && profile && profile.onboarded === 0) {
       const url = request.nextUrl.clone();
       url.pathname = '/onboarding';
       return NextResponse.redirect(url);

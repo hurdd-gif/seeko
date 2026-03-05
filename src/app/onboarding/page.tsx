@@ -39,6 +39,7 @@ export default async function OnboardingPage() {
             userId={user.id}
             defaultName={profile?.display_name ?? user.email ?? ''}
             defaultAvatar={profile?.avatar_url ?? ''}
+            userEmail={user.email ?? ''}
           />
         </FadeRise>
       </div>

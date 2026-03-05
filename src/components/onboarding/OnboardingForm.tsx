@@ -7,9 +7,53 @@ import { motion } from 'motion/react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/select';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Camera } from 'lucide-react';
 import { springs } from '@/components/motion';
+
+const COMMON_TIMEZONES = [
+  'America/New_York',
+  'America/Chicago',
+  'America/Denver',
+  'America/Los_Angeles',
+  'America/Anchorage',
+  'Pacific/Honolulu',
+  'America/Toronto',
+  'America/Vancouver',
+  'America/Sao_Paulo',
+  'America/Argentina/Buenos_Aires',
+  'America/Mexico_City',
+  'Europe/London',
+  'Europe/Paris',
+  'Europe/Berlin',
+  'Europe/Amsterdam',
+  'Europe/Moscow',
+  'Europe/Istanbul',
+  'Asia/Dubai',
+  'Asia/Kolkata',
+  'Asia/Bangkok',
+  'Asia/Singapore',
+  'Asia/Shanghai',
+  'Asia/Tokyo',
+  'Asia/Seoul',
+  'Australia/Sydney',
+  'Australia/Melbourne',
+  'Pacific/Auckland',
+];
+
+function formatTzLabel(tz: string): string {
+  try {
+    const now = new Date();
+    const formatter = new Intl.DateTimeFormat('en-US', { timeZone: tz, timeZoneName: 'shortOffset' });
+    const parts = formatter.formatToParts(now);
+    const offset = parts.find(p => p.type === 'timeZoneName')?.value ?? '';
+    const city = tz.split('/').pop()?.replace(/_/g, ' ') ?? tz;
+    return `${city} (${offset})`;
+  } catch {
+    return tz;
+  }
+}
 
 function getInitials(name: string): string {
   return name
@@ -20,18 +64,35 @@ function getInitials(name: string): string {
     .slice(0, 2) || '?';
 }
 
+function detectTimezone(): string {
+  try {
+    const detected = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (COMMON_TIMEZONES.includes(detected)) return detected;
+    return detected;
+  } catch {
+    return 'America/New_York';
+  }
+}
+
+function looksLikeEmail(s: string): boolean {
+  return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(s.trim());
+}
+
 export function OnboardingForm({
   userId,
   defaultName,
   defaultAvatar,
+  userEmail,
 }: {
   userId: string;
   defaultName: string;
   defaultAvatar: string;
+  userEmail: string;
 }) {
   const router = useRouter();
-  const [name, setName] = useState(defaultName);
+  const [name, setName] = useState(looksLikeEmail(defaultName) ? '' : defaultName);
   const [avatarUrl, setAvatarUrl] = useState(defaultAvatar);
+  const [timezone, setTimezone] = useState(detectTimezone);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -72,6 +133,10 @@ export function OnboardingForm({
       setError('Please enter a display name.');
       return;
     }
+    if (looksLikeEmail(name)) {
+      setError('Your display name cannot be an email address. Choose a real name or username.');
+      return;
+    }
 
     setSaving(true);
     setError('');
@@ -81,6 +146,8 @@ export function OnboardingForm({
       .update({
         display_name: name.trim(),
         avatar_url: avatarUrl || null,
+        email: userEmail,
+        timezone,
         onboarded: 1,
       })
       .eq('id', userId);
@@ -100,6 +167,9 @@ export function OnboardingForm({
       <CardContent className="pt-6">
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="flex flex-col items-center gap-3">
+            <p className="text-sm text-muted-foreground text-center">
+              Upload a photo for your profile (optional).
+            </p>
             <motion.div
               className="relative group"
               whileHover={{ scale: 1.05 }}
@@ -126,7 +196,7 @@ export function OnboardingForm({
               </label>
             </motion.div>
             <p className="text-xs text-muted-foreground">
-              {uploading ? 'Uploading...' : 'Click to upload a photo (optional)'}
+              {uploading ? 'Uploading...' : 'Click the avatar to upload (optional)'}
             </p>
           </div>
 
@@ -141,6 +211,24 @@ export function OnboardingForm({
             />
           </div>
 
+          <div className="space-y-2">
+            <Label htmlFor="timezone">Timezone</Label>
+            <Select
+              id="timezone"
+              value={timezone}
+              onChange={e => setTimezone(e.target.value)}
+              searchable
+            >
+              {COMMON_TIMEZONES.map(tz => (
+                <option key={tz} value={tz}>{formatTzLabel(tz)}</option>
+              ))}
+              {!COMMON_TIMEZONES.includes(timezone) && (
+                <option value={timezone}>{formatTzLabel(timezone)}</option>
+              )}
+            </Select>
+            <p className="text-xs text-muted-foreground">Auto-detected from your browser. Change if needed.</p>
+          </div>
+
           {error && (
             <p className="text-sm text-destructive">{error}</p>
           )}
@@ -148,14 +236,13 @@ export function OnboardingForm({
           <motion.button
             type="submit"
             disabled={saving || uploading}
-            className="inline-flex w-full items-center justify-center gap-2 whitespace-nowrap rounded-md bg-primary text-primary-foreground text-sm font-medium h-9 px-4 py-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
+            className="inline-flex w-full items-center justify-center gap-2 whitespace-nowrap rounded-md bg-primary text-primary-foreground text-sm font-medium h-9 px-4 py-2 transition-colors transition-[box-shadow_var(--focus-ring-duration)_ease-out] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             transition={springs.snappy}
           >
             {saving ? 'Saving...' : 'Continue to Dashboard'}
           </motion.button>
-
         </form>
       </CardContent>
     </Card>
