@@ -130,6 +130,8 @@ const docs  = await fetchDocs(parentId);  // optional parent filter, null = top-
 - `profiles`: any authenticated user can read all profiles (needed for team page)
 - `tasks`, `areas`, `docs`: any authenticated user can read
 
+Doc visibility is enforced in app logic: a doc is locked for a user unless they are admin, their department is in `restricted_department`, or their user id is in `granted_user_ids` (granted access despite department restriction).
+
 Full schema: `docs/supabase-schema.sql`
 
 ---
