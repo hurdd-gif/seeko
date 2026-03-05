@@ -168,8 +168,16 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
         link: `/tasks?task=${taskId}`,
       }),
     })
-      .then(async r => { if (!r.ok) console.error('[notify] task_completed failed:', await r.json()); })
-      .catch(e => console.error('[notify] task_completed error:', e));
+      .then(async r => { 
+        if (!r.ok) {
+          // TODO: Replace with proper logging system
+          // console.error('[notify] task_completed failed:', await r.json());
+        }
+      })
+      .catch(e => {
+        // TODO: Replace with proper logging system  
+        // console.error('[notify] task_completed error:', e);
+      });
   }, []);
 
   const handleToggleComplete = useCallback((taskId: string, currentStatus: string) => {
