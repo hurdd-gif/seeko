@@ -160,7 +160,22 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
   const handleAssign = useCallback(async (taskId: string, memberId: string | null) => {
     setAssignments(prev => ({ ...prev, [taskId]: memberId }));
     await supabase.from('tasks').update({ assignee_id: memberId }).eq('id', taskId);
-  }, [supabase]);
+
+    if (memberId) {
+      const task = allTasks.find(t => t.id === taskId);
+      fetch('/api/notify/user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: memberId,
+          kind: 'task_assigned',
+          title: 'Task assigned to you',
+          body: task?.name ?? 'A task has been assigned to you',
+          link: '/tasks',
+        }),
+      });
+    }
+  }, [supabase, allTasks]);
 
   const handleDelete = useCallback(async (taskId: string) => {
     setDeleted(prev => new Set(prev).add(taskId));
