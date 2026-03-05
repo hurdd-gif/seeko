@@ -78,7 +78,7 @@ export function Sidebar({
     const rect = e.currentTarget.getBoundingClientRect();
     tooltipTimerRef.current = setTimeout(() => {
       setTooltip({ label: navLabel, y: rect.top + rect.height / 2 });
-    }, 2000);
+    }, 800);
   };
 
   const handleNavMouseLeave = () => {
