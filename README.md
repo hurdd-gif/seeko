@@ -20,7 +20,7 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 ### Favicon / app icon
 
-The app icon (browser tab, bookmarks) is **`src/app/icon.png`**. Replace this file to change the favicon; Next.js serves it automatically. For legacy browsers that request `/favicon.ico`, you can add or replace `src/app/favicon.ico` (e.g. convert the PNG to ICO).
+The app icon (browser tab, bookmarks) is **`src/app/icon.png`**. Replace this file to change the favicon; Next.js serves it automatically. The project does not include `favicon.ico` to avoid build errors (Turbopack requires ICO/PNG to be valid; if you add `src/app/favicon.ico` later, ensure it is proper ICO or RGBA PNG).
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
