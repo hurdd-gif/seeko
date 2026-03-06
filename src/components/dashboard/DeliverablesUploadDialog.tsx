@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react';
 import { toast } from 'sonner';
-import { Upload, FileUp, X, Package } from 'lucide-react';
+import { Upload, FileUp, X, Package, ArrowRightLeft } from 'lucide-react';
 import { Dialog, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import type { Task, TaskWithAssignee } from '@/lib/types';
@@ -14,6 +14,7 @@ interface DeliverablesUploadDialogProps {
   task: Task | TaskWithAssignee;
   onSubmit: (files: File[]) => Promise<void>;
   onSkip: () => void;
+  onHandoff?: (files: File[]) => Promise<void>;
 }
 
 export function DeliverablesUploadDialog({
@@ -22,6 +23,7 @@ export function DeliverablesUploadDialog({
   task,
   onSubmit,
   onSkip,
+  onHandoff,
 }: DeliverablesUploadDialogProps) {
   const [files, setFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -47,6 +49,17 @@ export function DeliverablesUploadDialog({
       onOpenChange(false);
       toast.success('Deliverables uploaded and task completed');
       trigger('success');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleHandoff = async () => {
+    if (!onHandoff) return;
+    setUploading(true);
+    try {
+      await onHandoff(files);
+      setFiles([]);
     } finally {
       setUploading(false);
     }
@@ -112,6 +125,12 @@ export function DeliverablesUploadDialog({
           <Button onClick={handleSubmit} disabled={uploading}>
             {uploading ? 'Uploading…' : 'Submit & complete'}
           </Button>
+          {onHandoff && (
+            <Button variant="outline" onClick={handleHandoff} disabled={uploading} className="gap-1.5">
+              <ArrowRightLeft className="size-3.5" />
+              {uploading ? 'Uploading…' : 'Submit & hand off'}
+            </Button>
+          )}
           <Button variant="outline" onClick={handleSkip} disabled={uploading}>
             Skip & complete
           </Button>

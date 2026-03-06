@@ -538,6 +538,18 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
               team.find(m => m.id === currentUserId)?.display_name ?? 'Someone'
             );
           }}
+          onHandoff={async (files) => {
+            for (const file of files) {
+              const form = new FormData();
+              form.append('file', file);
+              const res = await fetch(`/api/tasks/${deliverableTask.id}/deliverables`, { method: 'POST', body: form });
+              if (!res.ok) throw new Error((await res.json()).error || 'Upload failed');
+            }
+            const task = deliverableTask;
+            setDeliverableTask(null);
+            // Let the deliverables dialog finish closing before the handoff dialog opens
+            setTimeout(() => setHandoffTask(task), 150);
+          }}
           onSkip={async () => {
             await doCompleteTask(deliverableTask.id);
             notifyAdminsTaskCompleted(
