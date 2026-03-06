@@ -37,6 +37,19 @@ const STATUS_DISPLAY: Record<string, { icon: typeof Circle; label: string; class
   'Blocked':      { icon: Circle,        label: 'Blocked',     className: 'text-[var(--color-status-blocked)]' },
 };
 
+/* ─────────────────────────────────────────────────────────
+ * HANDOFF PANEL ANIMATION
+ *   0ms   panel closed (trigger not shown if no handoffs)
+ *  open   backdrop fades in, card scales in (spring)
+ *  close  card scales down, backdrop fades out
+ * ───────────────────────────────────────────────────────── */
+const HANDOFF_PANEL = {
+  backdropOpacity: { closed: 0, open: 1 },
+  cardScale:        { closed: 0.96, open: 1 },
+  cardOpacity:      { closed: 0, open: 1 },
+  spring:           { type: 'spring' as const, stiffness: 400, damping: 30 },
+};
+
 function getInitials(name: string): string {
   return name.split(' ').map(p => p[0]).join('').toUpperCase().slice(0, 2) || '?';
 }
@@ -284,7 +297,9 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
   const [deliverables, setDeliverables] = useState<TaskDeliverable[]>([]);
   const [deliverablesLoading, setDeliverablesLoading] = useState(false);
   const [deletingDeliverableId, setDeletingDeliverableId] = useState<string | null>(null);
+  const [confirmingDeliverableId, setConfirmingDeliverableId] = useState<string | null>(null);
   const [handoffs, setHandoffs] = useState<TaskHandoff[]>([]);
+  const [handoffPanelOpen, setHandoffPanelOpen] = useState(false);
   const [showHandoff, setShowHandoff] = useState(false);
   const [localAssigneeId, setLocalAssigneeId] = useState<string | null | undefined>(undefined);
   const [input, setInput] = useState('');
@@ -737,50 +752,110 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
         <>
           <Separator className="my-4" />
           <div className="mt-4">
-            <div className="flex items-center gap-2 mb-3">
-              <ArrowRightLeft className="size-4 text-muted-foreground" />
-              <h3 className="text-sm font-medium text-foreground">Handoff History</h3>
+            <button
+              type="button"
+              onClick={() => setHandoffPanelOpen(true)}
+              className="flex w-full items-center gap-2 rounded-lg border border-border bg-card px-3 py-2.5 text-left transition-colors hover:bg-muted/50"
+            >
+              <ArrowRightLeft className="size-4 text-muted-foreground shrink-0" />
+              <span className="text-sm font-medium text-foreground">Handoff History</span>
               <span className="text-xs text-muted-foreground">({handoffs.length})</span>
-            </div>
-            <ul className="space-y-2">
-              {handoffs.map((h) => {
-                const fromName = h.from_profile?.display_name ?? 'Unknown';
-                const toName = h.to_profile?.display_name ?? 'Unknown';
-                return (
-                  <li key={h.id} className="rounded-lg border border-border bg-card px-3 py-2.5">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <Avatar className="size-5 shrink-0">
-                          <AvatarImage src={h.from_profile?.avatar_url ?? undefined} />
-                          <AvatarFallback className="text-[7px] bg-secondary">{getInitials(fromName)}</AvatarFallback>
-                        </Avatar>
-                        <span className="text-xs font-medium text-foreground truncate">{fromName}</span>
-                      </div>
-                      <ArrowRightLeft className="size-3 text-muted-foreground shrink-0" aria-hidden />
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <Avatar className="size-5 shrink-0">
-                          <AvatarImage src={h.to_profile?.avatar_url ?? undefined} />
-                          <AvatarFallback className="text-[7px] bg-secondary">{getInitials(toName)}</AvatarFallback>
-                        </Avatar>
-                        <span className="text-xs font-medium text-foreground truncate">{toName}</span>
-                      </div>
-                      <span
-                        className="ml-auto shrink-0 rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground tabular-nums"
-                        title={formatLocalTime(h.created_at)}
-                      >
-                        {timeAgo(h.created_at)}
-                      </span>
-                    </div>
-                    {h.note && (
-                      <div className="mt-2 rounded-r-md border-l-2 border-border bg-muted/30 pl-3 py-2 text-xs text-muted-foreground whitespace-pre-wrap">
-                        {h.note}
-                      </div>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
+            </button>
           </div>
+
+          <AnimatePresence>
+            {handoffPanelOpen && (
+              <motion.div
+                key="handoff-panel"
+                initial={{ opacity: HANDOFF_PANEL.backdropOpacity.closed }}
+                animate={{ opacity: HANDOFF_PANEL.backdropOpacity.open }}
+                exit={{ opacity: HANDOFF_PANEL.backdropOpacity.closed }}
+                transition={{ duration: 0.15 }}
+                className="fixed inset-0 z-50"
+              >
+                <div
+                  role="presentation"
+                  aria-hidden
+                  className="absolute inset-0 bg-black/60"
+                  onClick={() => setHandoffPanelOpen(false)}
+                />
+                <div className="absolute inset-0 flex items-center justify-center p-4 pointer-events-none">
+                  <motion.div
+                    role="dialog"
+                    aria-labelledby="handoff-panel-title"
+                    aria-modal="true"
+                    initial={{
+                      opacity: HANDOFF_PANEL.cardOpacity.closed,
+                      scale: HANDOFF_PANEL.cardScale.closed,
+                    }}
+                    animate={{
+                      opacity: HANDOFF_PANEL.cardOpacity.open,
+                      scale: HANDOFF_PANEL.cardScale.open,
+                    }}
+                    exit={{
+                      opacity: HANDOFF_PANEL.cardOpacity.closed,
+                      scale: HANDOFF_PANEL.cardScale.closed,
+                    }}
+                    transition={HANDOFF_PANEL.spring}
+                    className="pointer-events-auto w-full max-w-md max-h-[80vh] flex flex-col rounded-xl border border-border bg-card shadow-xl"
+                  >
+                    <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
+                      <h2 id="handoff-panel-title" className="text-sm font-medium text-foreground flex items-center gap-2">
+                        <ArrowRightLeft className="size-4 text-muted-foreground" />
+                        Handoff History
+                      </h2>
+                      <button
+                        type="button"
+                        onClick={() => setHandoffPanelOpen(false)}
+                        className="rounded p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                        aria-label="Close handoff history"
+                      >
+                        <X className="size-4" />
+                      </button>
+                    </div>
+                    <ul className="overflow-y-auto p-4 space-y-2">
+                      {handoffs.map((h) => {
+                        const fromName = h.from_profile?.display_name ?? 'Unknown';
+                        const toName = h.to_profile?.display_name ?? 'Unknown';
+                        return (
+                          <li key={h.id} className="rounded-lg border border-border bg-muted/20 px-3 py-2.5">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <Avatar className="size-5 shrink-0">
+                                  <AvatarImage src={h.from_profile?.avatar_url ?? undefined} />
+                                  <AvatarFallback className="text-[7px] bg-secondary">{getInitials(fromName)}</AvatarFallback>
+                                </Avatar>
+                                <span className="text-xs font-medium text-foreground truncate">{fromName}</span>
+                              </div>
+                              <ArrowRightLeft className="size-3 text-muted-foreground shrink-0" aria-hidden />
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <Avatar className="size-5 shrink-0">
+                                  <AvatarImage src={h.to_profile?.avatar_url ?? undefined} />
+                                  <AvatarFallback className="text-[7px] bg-secondary">{getInitials(toName)}</AvatarFallback>
+                                </Avatar>
+                                <span className="text-xs font-medium text-foreground truncate">{toName}</span>
+                              </div>
+                              <span
+                                className="ml-auto shrink-0 rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground tabular-nums"
+                                title={formatLocalTime(h.created_at)}
+                              >
+                                {timeAgo(h.created_at)}
+                              </span>
+                            </div>
+                            {h.note && (
+                              <div className="mt-2 rounded-r-md border-l-2 border-border bg-muted/30 pl-3 py-2 text-xs text-muted-foreground whitespace-pre-wrap">
+                                {h.note}
+                              </div>
+                            )}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </motion.div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </>
       )}
 
@@ -816,7 +891,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
                     ) : null}
                     <button
                       type="button"
-                      onClick={() => handleDeleteDeliverable(d.id)}
+                      onClick={() => setConfirmingDeliverableId(d.id)}
                       disabled={deletingDeliverableId === d.id}
                       className="shrink-0 rounded p-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
                       title="Remove deliverable"
@@ -828,6 +903,38 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
                 ))}
               </ul>
             )}
+            {confirmingDeliverableId && (() => {
+              const d = deliverables.find(x => x.id === confirmingDeliverableId);
+              if (!d) return null;
+              return (
+                <div className="mt-3 rounded-lg border border-border bg-card p-3">
+                  <p className="text-sm text-foreground mb-3">
+                    Remove <span className="font-medium">{d.file_name}</span>? This can&apos;t be undone.
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setConfirmingDeliverableId(null)}
+                      disabled={deletingDeliverableId === d.id}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => {
+                        handleDeleteDeliverable(d.id);
+                        setConfirmingDeliverableId(null);
+                      }}
+                      disabled={deletingDeliverableId === d.id}
+                    >
+                      {deletingDeliverableId === d.id ? 'Removing…' : 'Remove'}
+                    </Button>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         </>
       )}
