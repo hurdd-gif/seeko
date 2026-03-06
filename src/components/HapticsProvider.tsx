@@ -23,11 +23,12 @@ type HapticsContextValue = {
 const HapticsContext = createContext<HapticsContextValue | null>(null);
 
 function isMobile(): boolean {
-  if (typeof navigator === 'undefined') return false;
+  if (typeof window === 'undefined' || typeof navigator === 'undefined') return false;
+  const nav = navigator as { vibrate?: unknown; maxTouchPoints?: number; userAgent?: string };
   return (
-    'vibrate' in navigator ||
-    (typeof navigator.maxTouchPoints === 'number' && navigator.maxTouchPoints > 0) ||
-    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+    'vibrate' in nav ||
+    (typeof nav.maxTouchPoints === 'number' && nav.maxTouchPoints > 0) ||
+    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(nav.userAgent ?? '')
   );
 }
 

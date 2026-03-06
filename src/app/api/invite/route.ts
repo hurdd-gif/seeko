@@ -88,6 +88,7 @@ export async function POST(request: NextRequest) {
   const admin = getServiceClient();
 
   // Insert pending_invites first so role is applied on signup or on next login (profile/init).
+  // Table may be missing from generated Supabase types; assert payload for upsert.
   const { error: insertError } = await admin
     .from('pending_invites')
     .upsert(
@@ -96,7 +97,7 @@ export async function POST(request: NextRequest) {
         department: departmentVal,
         is_contractor: isContractor ?? false,
         is_investor: isInvestor ?? false,
-      },
+      } as never,
       { onConflict: 'email' }
     );
 
@@ -104,9 +105,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: insertError.message }, { status: 400 });
   }
 
-  const { data: existingUser } = await admin.auth.admin.getUserByEmail(emailLower);
+  // Check if user exists (getUserByEmail not in all client versions; use listUsers and filter).
+  const { data: listData } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+  const existingUser = listData?.users?.find((u) => u.email?.toLowerCase() === emailLower) ?? null;
 
-  if (existingUser?.user) {
+  if (existingUser) {
     // Existing user: send magic link so they can log in; profile/init will apply invite metadata.
     const { error: otpError } = await admin.auth.signInWithOtp({
       email: emailLower,

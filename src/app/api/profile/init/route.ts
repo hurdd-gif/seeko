@@ -23,14 +23,15 @@ export async function POST() {
     .single();
 
   if (invite) {
+    const row = invite as { department: string | null; is_contractor: boolean; is_investor: boolean };
     await admin
       .from('profiles')
       .update({
-        department: invite.department,
-        is_contractor: invite.is_contractor,
-        is_investor: invite.is_investor ?? false,
+        department: row.department,
+        is_contractor: row.is_contractor,
+        is_investor: row.is_investor ?? false,
         must_set_password: true,
-      })
+      } as never)
       .eq('id', user.id);
 
     await admin
