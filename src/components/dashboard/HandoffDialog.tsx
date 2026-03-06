@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
-import { ArrowRightLeft, ChevronRight } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { ArrowRightLeft, ChevronRight, Loader2, Check, AlertCircle } from 'lucide-react';
 import { Dialog, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -20,6 +21,17 @@ const DEPT_COLOR: Record<string, string> = {
   'Animation':      'text-amber-400',
   'Asset Creation': 'text-pink-300',
 };
+
+/* Multi-state button: idle → loading → success | error (Motion-style transitions) */
+type HandoffButtonState = 'idle' | 'loading' | 'success' | 'error';
+const BUTTON_STATE = {
+  idle:    { label: 'Hand Off Task',     Icon: ArrowRightLeft },
+  loading: { label: 'Handing off…',      Icon: Loader2 },
+  success: { label: 'Handed off',        Icon: Check },
+  error:   { label: 'Try again',         Icon: AlertCircle },
+} as const;
+const STATE_SPRING = { type: 'spring' as const, stiffness: 400, damping: 30 };
+const SUCCESS_HOLD_MS = 700;
 
 interface HandoffDialogProps {
   task: Task | TaskWithAssignee;
@@ -40,14 +52,18 @@ export function HandoffDialog({
 }: HandoffDialogProps) {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [note, setNote] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [buttonState, setButtonState] = useState<HandoffButtonState>('idle');
   const { trigger } = useHaptics();
 
   const candidates = team.filter(m => m.id !== currentUserId && !m.is_investor);
 
-  const handleHandoff = async () => {
+  useEffect(() => {
+    if (open) setButtonState('idle');
+  }, [open]);
+
+  const handleHandoff = useCallback(async () => {
     if (!selectedUserId) return;
-    setLoading(true);
+    setButtonState('loading');
     try {
       const res = await fetch(`/api/tasks/${task.id}/handoff`, {
         method: 'POST',
@@ -58,26 +74,33 @@ export function HandoffDialog({
       if (!res.ok) {
         const data = await res.json();
         toast.error(data.error ?? 'Failed to hand off task');
+        setButtonState('error');
         return;
       }
 
       trigger('success');
       toast.success('Task handed off successfully');
-      onHandoffComplete(selectedUserId);
-      onOpenChange(false);
-      setSelectedUserId(null);
-      setNote('');
-    } finally {
-      setLoading(false);
+      setButtonState('success');
+      setTimeout(() => {
+        onHandoffComplete(selectedUserId);
+        onOpenChange(false);
+        setSelectedUserId(null);
+        setNote('');
+        setButtonState('idle');
+      }, SUCCESS_HOLD_MS);
+    } catch {
+      toast.error('Something went wrong');
+      setButtonState('error');
     }
-  };
+  }, [selectedUserId, note, task.id, trigger, onHandoffComplete, onOpenChange]);
 
-  const handleClose = () => {
-    if (loading) return;
+  const handleClose = useCallback(() => {
+    if (buttonState === 'loading') return;
     onOpenChange(false);
     setSelectedUserId(null);
     setNote('');
-  };
+    setButtonState('idle');
+  }, [buttonState, onOpenChange]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -149,10 +172,55 @@ export function HandoffDialog({
         </div>
 
         <div className="flex flex-wrap gap-2 pt-1">
-          <Button onClick={handleHandoff} disabled={!selectedUserId || loading}>
-            {loading ? 'Handing off…' : 'Hand Off Task'}
-          </Button>
-          <Button variant="outline" onClick={handleClose} disabled={loading}>
+          <motion.div
+            animate={{
+              scale: buttonState === 'success' ? 1.02 : 1,
+              backgroundColor:
+                buttonState === 'success'
+                  ? 'var(--color-status-complete)'
+                  : buttonState === 'error'
+                    ? 'var(--color-status-blocked)'
+                    : undefined,
+            }}
+            transition={STATE_SPRING}
+            className="inline-block rounded-md"
+          >
+            <Button
+              onClick={handleHandoff}
+              disabled={!selectedUserId || buttonState === 'loading'}
+              className={`min-w-[140px] gap-2 ${
+                buttonState === 'success'
+                  ? 'bg-[var(--color-status-complete)] text-[var(--color-background)] hover:opacity-90'
+                  : buttonState === 'error'
+                    ? 'bg-[var(--color-status-blocked)] text-white hover:opacity-90'
+                    : ''
+              }`}
+            >
+              <AnimatePresence mode="wait">
+                {(() => {
+                  const { label, Icon } = BUTTON_STATE[buttonState];
+                  return (
+                    <motion.span
+                      key={buttonState}
+                      initial={{ opacity: 0, y: 4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -4 }}
+                      transition={STATE_SPRING}
+                      className="inline-flex items-center gap-2"
+                    >
+                      {buttonState === 'loading' ? (
+                        <Loader2 className="size-4 shrink-0 animate-spin" />
+                      ) : (
+                        <Icon className="size-4 shrink-0" />
+                      )}
+                      {label}
+                    </motion.span>
+                  );
+                })()}
+              </AnimatePresence>
+            </Button>
+          </motion.div>
+          <Button variant="outline" onClick={handleClose} disabled={buttonState === 'loading'}>
             Cancel
           </Button>
         </div>
