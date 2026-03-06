@@ -83,12 +83,24 @@ export type TaskComment = {
   profiles?: Pick<Profile, 'id' | 'display_name' | 'avatar_url'>;
 };
 
+export type TaskHandoff = {
+  id: string;
+  task_id: string;
+  from_user_id: string;
+  to_user_id: string;
+  note?: string;
+  created_at: string;
+  from_profile?: Pick<Profile, 'id' | 'display_name' | 'avatar_url'>;
+  to_profile?: Pick<Profile, 'id' | 'display_name' | 'avatar_url'>;
+};
+
 export type NotificationKind =
   | 'task_assigned'
   | 'mentioned'
   | 'comment_reply'
   | 'task_completed'
-  | 'deliverable_uploaded';
+  | 'deliverable_uploaded'
+  | 'task_handoff';
 
 export type UserEvent = {
   id: string;

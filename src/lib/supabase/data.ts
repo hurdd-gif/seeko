@@ -1,5 +1,5 @@
 import { createClient } from './server';
-import type { Task, Area, Profile, Doc } from '../types';
+import type { Task, Area, Profile, Doc, TaskHandoff } from '../types';
 
 export type ActivityItem = {
   id: string;
@@ -110,6 +110,22 @@ export async function fetchAllTasksWithAssignees(): Promise<import('../types').T
 
   if (error) throw error;
   return (data ?? []) as import('../types').TaskWithAssignee[];
+}
+
+export async function fetchTaskHandoffs(taskId: string): Promise<TaskHandoff[]> {
+  const supabase = await createClient();
+
+  const { data } = await supabase
+    .from('task_handoffs')
+    .select(`
+      *,
+      from_profile:profiles!task_handoffs_from_user_id_fkey(id, display_name, avatar_url),
+      to_profile:profiles!task_handoffs_to_user_id_fkey(id, display_name, avatar_url)
+    `)
+    .eq('task_id', taskId)
+    .order('created_at', { ascending: true });
+
+  return (data ?? []) as TaskHandoff[];
 }
 
 export async function fetchTaskComments(taskId: string): Promise<import('../types').TaskComment[]> {

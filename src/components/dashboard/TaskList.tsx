@@ -15,6 +15,7 @@ import {
   UserPlus,
   Trash2,
   Plus,
+  ArrowRightLeft,
 } from 'lucide-react';
 import { Task, Profile, TaskWithAssignee, TaskStatus, Department, Priority } from '@/lib/types';
 import { Card, CardContent } from '@/components/ui/card';
@@ -32,6 +33,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { TaskDetail } from '@/components/dashboard/TaskDetail';
 import { DeliverablesUploadDialog } from '@/components/dashboard/DeliverablesUploadDialog';
+import { HandoffDialog } from '@/components/dashboard/HandoffDialog';
 import { Stagger, StaggerItem } from '@/components/motion';
 
 const STATUS_ICONS: Record<string, { icon: typeof Circle; className: string }> = {
@@ -123,6 +125,7 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
   const [localTasks, setLocalTasks] = useState<Task[]>([]);
   const [selectedTask, setSelectedTask] = useState<Task | TaskWithAssignee | null>(null);
   const [deliverableTask, setDeliverableTask] = useState<Task | TaskWithAssignee | null>(null);
+  const [handoffTask, setHandoffTask] = useState<Task | TaskWithAssignee | null>(null);
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [newName, setNewName] = useState('');
@@ -436,6 +439,12 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
                           </DropdownMenuItem>
                         );
                       })}
+                      {(isAdmin || task.assignee_id === currentUserId) && (
+                        <DropdownMenuItem onClick={() => setHandoffTask(task)} className="flex items-center gap-2">
+                          <ArrowRightLeft className="size-3.5" />
+                          <span>Hand Off</span>
+                        </DropdownMenuItem>
+                      )}
                       {isAdmin && (
                         <DropdownMenuItem onClick={() => handleDelete(task.id)} className="flex items-center gap-2 text-destructive">
                           <Trash2 className="size-3.5" />
@@ -536,6 +545,20 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
               deliverableTask.name,
               team.find(m => m.id === currentUserId)?.display_name ?? 'Someone'
             );
+          }}
+        />
+      )}
+
+      {handoffTask && (
+        <HandoffDialog
+          task={handoffTask}
+          team={team}
+          currentUserId={currentUserId}
+          open={!!handoffTask}
+          onOpenChange={open => { if (!open) setHandoffTask(null); }}
+          onHandoffComplete={(toUserId) => {
+            setAssignments(prev => ({ ...prev, [handoffTask.id]: toUserId }));
+            setHandoffTask(null);
           }}
         />
       )}

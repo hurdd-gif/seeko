@@ -18,10 +18,12 @@ import {
   FileText,
   Package,
   Download,
+  ArrowRightLeft,
 } from 'lucide-react';
 import Link from 'next/link';
-import { Task, TaskWithAssignee, TaskComment, TaskDeliverable, Profile, Doc } from '@/lib/types';
+import { Task, TaskWithAssignee, TaskComment, TaskDeliverable, TaskHandoff, Profile, Doc } from '@/lib/types';
 import { Dialog, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
+import { HandoffDialog } from './HandoffDialog';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -280,6 +282,9 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
   const [loading, setLoading] = useState(false);
   const [deliverables, setDeliverables] = useState<TaskDeliverable[]>([]);
   const [deliverablesLoading, setDeliverablesLoading] = useState(false);
+  const [handoffs, setHandoffs] = useState<TaskHandoff[]>([]);
+  const [showHandoff, setShowHandoff] = useState(false);
+  const [localAssigneeId, setLocalAssigneeId] = useState<string | null | undefined>(undefined);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [autocompleteMode, setAutocompleteMode] = useState<AutocompleteMode>(null);
@@ -330,6 +335,19 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
   useEffect(() => {
     if (open && isAdmin) loadDeliverables();
   }, [open, isAdmin, loadDeliverables]);
+
+  const loadHandoffs = useCallback(async () => {
+    const res = await supabase
+      .from('task_handoffs')
+      .select('*, from_profile:profiles!task_handoffs_from_user_id_fkey(id, display_name, avatar_url), to_profile:profiles!task_handoffs_to_user_id_fkey(id, display_name, avatar_url)')
+      .eq('task_id', task.id)
+      .order('created_at', { ascending: true });
+    setHandoffs((res.data ?? []) as TaskHandoff[]);
+  }, [task.id, supabase]);
+
+  useEffect(() => {
+    if (open) loadHandoffs();
+  }, [open, loadHandoffs]);
 
   useEffect(() => {
     if (!open) return;
@@ -547,9 +565,15 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
 
   const statusCfg = STATUS_DISPLAY[task.status] ?? STATUS_DISPLAY['In Progress'];
   const StatusIcon = statusCfg.icon;
-  const assignee = 'assignee' in task ? (task as TaskWithAssignee).assignee : null;
+  const originalAssigneeId = 'assignee' in task ? (task as TaskWithAssignee).assignee?.id : task.assignee_id;
+  const effectiveAssigneeId = localAssigneeId !== undefined ? localAssigneeId : originalAssigneeId;
+  const assignee = localAssigneeId !== undefined
+    ? (localAssigneeId ? team.find(m => m.id === localAssigneeId) ?? null : null)
+    : ('assignee' in task ? (task as TaskWithAssignee).assignee : null);
+  const canHandOff = isAdmin || task.assignee_id === currentUserId || effectiveAssigneeId === currentUserId;
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogClose onClose={() => onOpenChange(false)} />
       <DialogHeader>
@@ -577,6 +601,15 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
             </Avatar>
             <span>{assignee.display_name}</span>
           </div>
+        )}
+        {canHandOff && (
+          <button
+            onClick={() => setShowHandoff(true)}
+            className="ml-auto flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium text-muted-foreground border border-border hover:bg-muted/50 hover:text-foreground transition-colors"
+          >
+            <ArrowRightLeft className="size-3.5" />
+            Hand Off
+          </button>
         )}
       </div>
 
@@ -682,6 +715,50 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
         </div>
       </div>
 
+      {handoffs.length > 0 && (
+        <>
+          <Separator className="my-4" />
+          <div className="mt-4">
+            <div className="flex items-center gap-2 mb-3">
+              <ArrowRightLeft className="size-4 text-muted-foreground" />
+              <h3 className="text-sm font-medium text-foreground">Handoff History</h3>
+              <span className="text-xs text-muted-foreground">({handoffs.length})</span>
+            </div>
+            <ul className="space-y-3">
+              {handoffs.map((h) => {
+                const fromName = h.from_profile?.display_name ?? 'Unknown';
+                const toName = h.to_profile?.display_name ?? 'Unknown';
+                return (
+                  <li key={h.id} className="text-sm">
+                    <div className="flex items-center gap-2">
+                      <Avatar className="size-5 shrink-0">
+                        <AvatarImage src={h.from_profile?.avatar_url ?? undefined} />
+                        <AvatarFallback className="text-[7px] bg-secondary">{getInitials(fromName)}</AvatarFallback>
+                      </Avatar>
+                      <span className="text-muted-foreground text-xs truncate">{fromName}</span>
+                      <ArrowRightLeft className="size-3 text-muted-foreground shrink-0" />
+                      <Avatar className="size-5 shrink-0">
+                        <AvatarImage src={h.to_profile?.avatar_url ?? undefined} />
+                        <AvatarFallback className="text-[7px] bg-secondary">{getInitials(toName)}</AvatarFallback>
+                      </Avatar>
+                      <span className="text-muted-foreground text-xs truncate">{toName}</span>
+                      <span className="text-[11px] text-muted-foreground/60 ml-auto shrink-0 cursor-default" title={formatLocalTime(h.created_at)}>
+                        {timeAgo(h.created_at)}
+                      </span>
+                    </div>
+                    {h.note && (
+                      <blockquote className="mt-1.5 ml-7 pl-2.5 border-l-2 border-border text-xs text-muted-foreground italic whitespace-pre-wrap">
+                        {h.note}
+                      </blockquote>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        </>
+      )}
+
       {isAdmin && (
         <>
           <Separator className="my-4" />
@@ -720,5 +797,20 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
         </>
       )}
     </Dialog>
+
+    {showHandoff && (
+      <HandoffDialog
+        task={task}
+        team={team}
+        currentUserId={currentUserId}
+        open={showHandoff}
+        onOpenChange={setShowHandoff}
+        onHandoffComplete={(toUserId) => {
+          setLocalAssigneeId(toUserId);
+          loadHandoffs();
+        }}
+      />
+    )}
+    </>
   );
 }
