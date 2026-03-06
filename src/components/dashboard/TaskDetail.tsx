@@ -29,6 +29,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { DURATION_BACKDROP_MS, PANEL_SPRING, PANEL } from '@/lib/motion';
 
 const STATUS_DISPLAY: Record<string, { icon: typeof Circle; label: string; className: string }> = {
   'Complete':     { icon: CheckCircle2, label: 'Complete',    className: 'text-[var(--color-status-complete)]' },
@@ -37,18 +38,7 @@ const STATUS_DISPLAY: Record<string, { icon: typeof Circle; label: string; class
   'Blocked':      { icon: Circle,        label: 'Blocked',     className: 'text-[var(--color-status-blocked)]' },
 };
 
-/* ─────────────────────────────────────────────────────────
- * HANDOFF PANEL ANIMATION
- *   0ms   panel closed (trigger not shown if no handoffs)
- *  open   backdrop fades in, card scales in (spring)
- *  close  card scales down, backdrop fades out
- * ───────────────────────────────────────────────────────── */
-const HANDOFF_PANEL = {
-  backdropOpacity: { closed: 0, open: 1 },
-  cardScale:        { closed: 0.96, open: 1 },
-  cardOpacity:      { closed: 0, open: 1 },
-  spring:           { type: 'spring' as const, stiffness: 400, damping: 30 },
-};
+/* Handoff panel: see @/lib/motion for storyboard and PANEL_SPRING. */
 
 function getInitials(name: string): string {
   return name.split(' ').map(p => p[0]).join('').toUpperCase().slice(0, 2) || '?';
@@ -767,10 +757,10 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
             {handoffPanelOpen && (
               <motion.div
                 key="handoff-panel"
-                initial={{ opacity: HANDOFF_PANEL.backdropOpacity.closed }}
-                animate={{ opacity: HANDOFF_PANEL.backdropOpacity.open }}
-                exit={{ opacity: HANDOFF_PANEL.backdropOpacity.closed }}
-                transition={{ duration: 0.15 }}
+                initial={{ opacity: PANEL.backdropOpacity.closed }}
+                animate={{ opacity: PANEL.backdropOpacity.open }}
+                exit={{ opacity: PANEL.backdropOpacity.closed }}
+                transition={{ duration: DURATION_BACKDROP_MS / 1000 }}
                 className="fixed inset-0 z-50"
               >
                 <div
@@ -785,18 +775,18 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
                     aria-labelledby="handoff-panel-title"
                     aria-modal="true"
                     initial={{
-                      opacity: HANDOFF_PANEL.cardOpacity.closed,
-                      scale: HANDOFF_PANEL.cardScale.closed,
+                      opacity: PANEL.cardOpacity.closed,
+                      scale: PANEL.cardScale.closed,
                     }}
                     animate={{
-                      opacity: HANDOFF_PANEL.cardOpacity.open,
-                      scale: HANDOFF_PANEL.cardScale.open,
+                      opacity: PANEL.cardOpacity.open,
+                      scale: PANEL.cardScale.open,
                     }}
                     exit={{
-                      opacity: HANDOFF_PANEL.cardOpacity.closed,
-                      scale: HANDOFF_PANEL.cardScale.closed,
+                      opacity: PANEL.cardOpacity.closed,
+                      scale: PANEL.cardScale.closed,
                     }}
-                    transition={HANDOFF_PANEL.spring}
+                    transition={PANEL_SPRING}
                     className="pointer-events-auto w-full max-w-md max-h-[80vh] flex flex-col rounded-xl border border-border bg-card shadow-xl"
                   >
                     <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">

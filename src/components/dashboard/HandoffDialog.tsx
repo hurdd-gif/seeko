@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import type { Task, TaskWithAssignee, Profile } from '@/lib/types';
 import { useHaptics } from '@/components/HapticsProvider';
+import { BUTTON_SPRING, DURATION_STATE_MS } from '@/lib/motion';
 
 function getInitials(name: string): string {
   return name.split(' ').map(p => p[0]).join('').toUpperCase().slice(0, 2) || '?';
@@ -22,7 +23,7 @@ const DEPT_COLOR: Record<string, string> = {
   'Asset Creation': 'text-pink-300',
 };
 
-/* Multi-state button: idle → loading → success | error (Motion-style transitions) */
+/* Multi-state button: storyboard in @/lib/motion. Icon/label opacity-only for readability. */
 type HandoffButtonState = 'idle' | 'loading' | 'success' | 'error';
 const BUTTON_STATE = {
   idle:    { label: 'Hand Off Task',     Icon: ArrowRightLeft },
@@ -30,7 +31,6 @@ const BUTTON_STATE = {
   success: { label: 'Handed off',        Icon: Check },
   error:   { label: 'Try again',         Icon: AlertCircle },
 } as const;
-const STATE_SPRING = { type: 'spring' as const, stiffness: 400, damping: 30 };
 const SUCCESS_HOLD_MS = 700;
 
 interface HandoffDialogProps {
@@ -182,7 +182,7 @@ export function HandoffDialog({
                     ? 'var(--color-status-blocked)'
                     : undefined,
             }}
-            transition={STATE_SPRING}
+            transition={BUTTON_SPRING}
             className="inline-block rounded-md"
           >
             <Button
@@ -202,10 +202,10 @@ export function HandoffDialog({
                   return (
                     <motion.span
                       key={buttonState}
-                      initial={{ opacity: 0, y: 4 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -4 }}
-                      transition={STATE_SPRING}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: DURATION_STATE_MS / 1000 }}
                       className="inline-flex items-center gap-2"
                     >
                       {buttonState === 'loading' ? (
