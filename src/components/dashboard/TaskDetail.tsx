@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { Task, TaskWithAssignee, TaskComment, TaskDeliverable, TaskHandoff, Profile, Doc } from '@/lib/types';
+import { toast } from 'sonner';
 import { Dialog, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
 import { HandoffDialog } from './HandoffDialog';
 import { Badge } from '@/components/ui/badge';
@@ -282,6 +283,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
   const [loading, setLoading] = useState(false);
   const [deliverables, setDeliverables] = useState<TaskDeliverable[]>([]);
   const [deliverablesLoading, setDeliverablesLoading] = useState(false);
+  const [deletingDeliverableId, setDeletingDeliverableId] = useState<string | null>(null);
   const [handoffs, setHandoffs] = useState<TaskHandoff[]>([]);
   const [showHandoff, setShowHandoff] = useState(false);
   const [localAssigneeId, setLocalAssigneeId] = useState<string | null | undefined>(undefined);
@@ -335,6 +337,22 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
   useEffect(() => {
     if (open && isAdmin) loadDeliverables();
   }, [open, isAdmin, loadDeliverables]);
+
+  const handleDeleteDeliverable = useCallback(async (deliverableId: string) => {
+    setDeletingDeliverableId(deliverableId);
+    try {
+      const res = await fetch(`/api/tasks/${task.id}/deliverables/${deliverableId}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error ?? 'Failed to remove deliverable');
+        return;
+      }
+      setDeliverables(prev => prev.filter(d => d.id !== deliverableId));
+      toast.success('Deliverable removed');
+    } finally {
+      setDeletingDeliverableId(null);
+    }
+  }, [task.id]);
 
   const loadHandoffs = useCallback(async () => {
     const res = await supabase
@@ -724,32 +742,39 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
               <h3 className="text-sm font-medium text-foreground">Handoff History</h3>
               <span className="text-xs text-muted-foreground">({handoffs.length})</span>
             </div>
-            <ul className="space-y-3">
+            <ul className="space-y-2">
               {handoffs.map((h) => {
                 const fromName = h.from_profile?.display_name ?? 'Unknown';
                 const toName = h.to_profile?.display_name ?? 'Unknown';
                 return (
-                  <li key={h.id} className="text-sm">
-                    <div className="flex items-center gap-2">
-                      <Avatar className="size-5 shrink-0">
-                        <AvatarImage src={h.from_profile?.avatar_url ?? undefined} />
-                        <AvatarFallback className="text-[7px] bg-secondary">{getInitials(fromName)}</AvatarFallback>
-                      </Avatar>
-                      <span className="text-muted-foreground text-xs truncate">{fromName}</span>
-                      <ArrowRightLeft className="size-3 text-muted-foreground shrink-0" />
-                      <Avatar className="size-5 shrink-0">
-                        <AvatarImage src={h.to_profile?.avatar_url ?? undefined} />
-                        <AvatarFallback className="text-[7px] bg-secondary">{getInitials(toName)}</AvatarFallback>
-                      </Avatar>
-                      <span className="text-muted-foreground text-xs truncate">{toName}</span>
-                      <span className="text-[11px] text-muted-foreground/60 ml-auto shrink-0 cursor-default" title={formatLocalTime(h.created_at)}>
+                  <li key={h.id} className="rounded-lg border border-border bg-card px-3 py-2.5">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <Avatar className="size-5 shrink-0">
+                          <AvatarImage src={h.from_profile?.avatar_url ?? undefined} />
+                          <AvatarFallback className="text-[7px] bg-secondary">{getInitials(fromName)}</AvatarFallback>
+                        </Avatar>
+                        <span className="text-xs font-medium text-foreground truncate">{fromName}</span>
+                      </div>
+                      <ArrowRightLeft className="size-3 text-muted-foreground shrink-0" aria-hidden />
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <Avatar className="size-5 shrink-0">
+                          <AvatarImage src={h.to_profile?.avatar_url ?? undefined} />
+                          <AvatarFallback className="text-[7px] bg-secondary">{getInitials(toName)}</AvatarFallback>
+                        </Avatar>
+                        <span className="text-xs font-medium text-foreground truncate">{toName}</span>
+                      </div>
+                      <span
+                        className="ml-auto shrink-0 rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground tabular-nums"
+                        title={formatLocalTime(h.created_at)}
+                      >
                         {timeAgo(h.created_at)}
                       </span>
                     </div>
                     {h.note && (
-                      <blockquote className="mt-1.5 ml-7 pl-2.5 border-l-2 border-border text-xs text-muted-foreground italic whitespace-pre-wrap">
+                      <div className="mt-2 rounded-r-md border-l-2 border-border bg-muted/30 pl-3 py-2 text-xs text-muted-foreground whitespace-pre-wrap">
                         {h.note}
-                      </blockquote>
+                      </div>
                     )}
                   </li>
                 );
@@ -775,7 +800,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
             ) : (
               <ul className="space-y-2 max-h-32 overflow-y-auto">
                 {deliverables.map((d) => (
-                  <li key={d.id} className="flex items-center gap-2 text-sm">
+                  <li key={d.id} className="flex items-center gap-2 text-sm group">
                     <FileText className="size-3.5 text-muted-foreground shrink-0" />
                     <span className="truncate flex-1">{d.file_name}</span>
                     {d.download_url ? (
@@ -789,6 +814,16 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
                         Download
                       </a>
                     ) : null}
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteDeliverable(d.id)}
+                      disabled={deletingDeliverableId === d.id}
+                      className="shrink-0 rounded p-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
+                      title="Remove deliverable"
+                      aria-label={`Remove ${d.file_name}`}
+                    >
+                      <Trash2 className="size-3.5" />
+                    </button>
                   </li>
                 ))}
               </ul>
