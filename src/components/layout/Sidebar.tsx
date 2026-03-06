@@ -60,9 +60,9 @@ const MOBILE_PILL = {
   pillPaddingX: 4,     // px — inner horizontal padding of pill (reduced so pill fits iPhone)
   pillPaddingY: 5,     // px — inner vertical padding of pill
   itemGap: 4,         // px — gap between tab items
-  itemPaddingX: 8,     // px — each tab horizontal padding
+  itemPaddingX: 6,     // px — each tab horizontal padding
   itemPaddingY: 8,    // px — each tab vertical padding
-  itemMinWidth: 44,   // px — minimum width per tab (fits 6 items in ~320px)
+  itemMinWidth: 40,   // px — minimum width per tab (fits 6 items in ~320px)
   iconLabelGap: 2,    // px — gap between icon and label
   tapScale: 0.94,
   tapSpring: { type: 'spring' as const, stiffness: 450, damping: 28 },
@@ -404,8 +404,12 @@ export function Sidebar({
           <>
             {createPortal(
               <header
-                className={`md:hidden flex items-center justify-between px-4 h-14 w-full shrink-0 ${!useHeaderSlot ? 'fixed top-0 left-0 right-0 z-40 mobile-fixed-layer' : ''}`}
-                style={useHeaderSlot ? undefined : { background: 'rgba(0,0,0,0)', backdropFilter: 'none' }}
+                className={`md:hidden flex items-center justify-between px-4 h-14 w-full shrink-0 border-b border-border/30 ${!useHeaderSlot ? 'fixed top-0 left-0 right-0 z-40 mobile-fixed-layer' : ''}`}
+                style={{
+                  background: 'rgba(14, 14, 14, 0.85)',
+                  backdropFilter: 'saturate(180%) blur(12px)',
+                  WebkitBackdropFilter: 'saturate(180%) blur(12px)',
+                }}
               >
                 <div className="flex items-center gap-2.5">
                   <Image src="/seeko-s.png" alt="SEEKO" width={20} height={20} unoptimized />
