@@ -406,9 +406,11 @@ export function Sidebar({
               <header
                 className={`md:hidden flex items-center justify-between px-4 h-14 w-full shrink-0 border-b border-border/30 ${!useHeaderSlot ? 'fixed top-0 left-0 right-0 z-40 mobile-fixed-layer' : ''}`}
                 style={{
-                  background: 'rgba(14, 14, 14, 0.85)',
-                  backdropFilter: 'saturate(180%) blur(12px)',
-                  WebkitBackdropFilter: 'saturate(180%) blur(12px)',
+                  background: 'rgba(21, 21, 21, 0.85)',
+                  ...(useHeaderSlot ? {} : {
+                    backdropFilter: 'saturate(180%) blur(12px)',
+                    WebkitBackdropFilter: 'saturate(180%) blur(12px)',
+                  }),
                 }}
               >
                 <div className="flex items-center gap-2.5">
