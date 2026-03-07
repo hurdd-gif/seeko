@@ -280,6 +280,10 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
       return member ? { id: member.id, display_name: member.display_name, avatar_url: member.avatar_url } : null;
     }
     if ('assignee' in task && task.assignee) return task.assignee;
+    if (task.assignee_id) {
+      const member = team.find(m => m.id === task.assignee_id);
+      if (member) return { id: member.id, display_name: member.display_name, avatar_url: member.avatar_url };
+    }
     return null;
   }
 
@@ -436,6 +440,25 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
                 </DropdownMenuItem>
               )}
               {isAdmin && <div className="my-1 h-px bg-border" />}
+              {!isAdmin && task.assignee_id === currentUserId && (
+                <>
+                  {ALL_STATUSES.filter(s => s !== status).map(s => {
+                    const cfg = STATUS_ICONS[s];
+                    const Icon = cfg.icon;
+                    return (
+                      <DropdownMenuItem
+                        key={s}
+                        onClick={() => handleStatusChange(task.id, s)}
+                        className="flex items-center gap-2 text-xs"
+                      >
+                        <Icon className={cn('size-3.5', cfg.className)} />
+                        <span>{s}</span>
+                      </DropdownMenuItem>
+                    );
+                  })}
+                  <div className="my-1 h-px bg-border" />
+                </>
+              )}
               {(isAdmin || task.assignee_id === currentUserId) && (
                 <DropdownMenuItem onClick={() => setHandoffTask(task)} className="flex items-center gap-2">
                   <ArrowRightLeft className="size-3.5" />
