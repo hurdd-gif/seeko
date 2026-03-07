@@ -1,7 +1,9 @@
 'use client';
 
-import { createContext, useContext, useEffect, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 import { useWebHaptics } from 'web-haptics/react';
+
+const STORAGE_KEY = 'seeko-haptics-enabled';
 
 export type HapticPreset =
   | 'success'
@@ -18,6 +20,8 @@ export type HapticPreset =
 
 type HapticsContextValue = {
   trigger: (preset: HapticPreset) => void;
+  enabled: boolean;
+  setEnabled: (enabled: boolean) => void;
 };
 
 const HapticsContext = createContext<HapticsContextValue | null>(null);
@@ -43,20 +47,47 @@ function isInteractiveTarget(el: EventTarget | null): el is HTMLElement {
   return false;
 }
 
+function readStoredEnabled(): boolean {
+  if (typeof window === 'undefined') return true;
+  try {
+    const val = localStorage.getItem(STORAGE_KEY);
+    return val === null ? true : val === 'true';
+  } catch {
+    return true;
+  }
+}
+
 export function HapticsProvider({ children }: { children: ReactNode }) {
-  const { trigger } = useWebHaptics();
+  const { trigger: rawTrigger } = useWebHaptics();
+  const [enabled, setEnabledState] = useState(true);
 
   useEffect(() => {
-    if (!isMobile()) return;
+    setEnabledState(readStoredEnabled());
+  }, []);
+
+  const setEnabled = useCallback((value: boolean) => {
+    setEnabledState(value);
+    try {
+      localStorage.setItem(STORAGE_KEY, String(value));
+    } catch { /* ignore */ }
+  }, []);
+
+  const trigger = useCallback((preset: HapticPreset) => {
+    if (!enabled) return;
+    rawTrigger(preset);
+  }, [enabled, rawTrigger]);
+
+  useEffect(() => {
+    if (!isMobile() || !enabled) return;
     const onTap = (e: Event) => {
-      if (isInteractiveTarget(e.target)) trigger('selection');
+      if (isInteractiveTarget(e.target)) rawTrigger('selection');
     };
     document.addEventListener('click', onTap, true);
     return () => document.removeEventListener('click', onTap, true);
-  }, [trigger]);
+  }, [rawTrigger, enabled]);
 
   return (
-    <HapticsContext.Provider value={{ trigger }}>
+    <HapticsContext.Provider value={{ trigger, enabled, setEnabled }}>
       {children}
     </HapticsContext.Provider>
   );
@@ -67,6 +98,8 @@ export function useHaptics(): HapticsContextValue {
   if (!ctx) {
     return {
       trigger: () => {},
+      enabled: true,
+      setEnabled: () => {},
     };
   }
   return ctx;
