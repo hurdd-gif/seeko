@@ -69,13 +69,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Admin only' }, { status: 403 });
   }
 
-  const body = await request.json();
-  const { email: rawEmail, department, isContractor, isInvestor } = body as {
-    email: string;
-    department: string;
-    isContractor: boolean;
-    isInvestor?: boolean;
-  };
+  let body: { email: string; department: string; isContractor: boolean; isInvestor?: boolean };
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+  }
+  const { email: rawEmail, department, isContractor, isInvestor } = body;
 
   const email = typeof rawEmail === 'string' ? rawEmail.trim() : '';
   if (!email || !EMAIL_REGEX.test(email)) {
