@@ -18,6 +18,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { FadeRise, Stagger, StaggerItem, HoverCard } from '@/components/motion';
 import { EmptyState } from '@/components/ui/empty-state';
+import { AnimatedNumber } from '@/components/ui/AnimatedNumber';
 import { UpcomingTasks } from '@/components/dashboard/UpcomingTasks';
 import { DashboardAreaCard } from '@/components/dashboard/DashboardAreaCard';
 import {
@@ -146,7 +147,7 @@ export default async function OverviewPage() {
                         className={stat.primary ? 'text-3xl font-semibold tracking-tight' : 'text-2xl font-semibold tracking-tight'}
                         style={stat.accent ? { color: 'var(--color-seeko-accent)' } : undefined}
                       >
-                        {stat.value}
+                        <AnimatedNumber value={stat.value} />
                       </span>
                     </CardContent>
                   </Card>
@@ -162,7 +163,7 @@ export default async function OverviewPage() {
                       className={stat.primary ? 'text-3xl font-semibold tracking-tight' : 'text-2xl font-semibold tracking-tight'}
                       style={stat.accent ? { color: 'var(--color-seeko-accent)' } : undefined}
                     >
-                      {stat.value}
+                      <AnimatedNumber value={stat.value} />
                     </span>
                   </CardContent>
                 </Card>

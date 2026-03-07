@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { motion } from 'motion/react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -95,9 +96,12 @@ export function DashboardAreaCard({ area, isAdmin }: DashboardAreaCardProps) {
             </span>
           </div>
           <div className="w-full h-1.5 rounded-full bg-secondary overflow-hidden">
-            <div
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${area.progress}%` }}
+              transition={{ type: 'spring', stiffness: 200, damping: 25, delay: 0.3 }}
               className="h-full rounded-full"
-              style={{ width: `${area.progress}%`, backgroundColor: 'var(--color-seeko-accent)' }}
+              style={{ backgroundColor: 'var(--color-seeko-accent)' }}
             />
           </div>
         </div>
