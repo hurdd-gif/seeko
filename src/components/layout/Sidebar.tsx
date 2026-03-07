@@ -426,7 +426,7 @@ export function Sidebar({
                     />
                   )}
                   <Link href="/settings" onClick={() => trigger('selection')}>
-                    <Avatar className="size-8">
+                    <Avatar className="size-10">
                       <AvatarImage src={avatarUrl} alt={label} />
                       <AvatarFallback className="bg-secondary text-foreground text-[10px]">
                         {getInitials(label)}
@@ -455,7 +455,6 @@ export function Sidebar({
                     gap: MOBILE_PILL.itemGap,
                   }}
                 >
-                  <LayoutGroup id="mobile-nav">
                   {NAV.map(({ href, mobileLabel, icon: Icon, tourKey }) => {
                     const isActive = href === '/' ? pathname === '/' : pathname.startsWith(href);
                     const tourId = tourKey != null ? TOUR_STEP_IDS[tourKey] : undefined;
@@ -466,7 +465,7 @@ export function Sidebar({
                         href={href}
                         onClick={() => trigger('selection')}
                         className={[
-                          'relative flex flex-col items-center justify-center rounded-full text-[10px] font-medium transition-colors',
+                          'relative flex flex-col items-center justify-center rounded-full text-[11px] font-medium transition-colors',
                           isActive ? 'text-seeko-accent' : 'text-muted-foreground',
                         ].join(' ')}
                         style={{
@@ -483,13 +482,12 @@ export function Sidebar({
                           whileTap={{ scale: MOBILE_PILL.tapScale }}
                           transition={MOBILE_PILL.tapSpring}
                         >
-                          <Icon className={`h-4 w-4 ${isActive ? 'text-seeko-accent' : ''}`} />
+                          <Icon className={`size-5 ${isActive ? 'text-seeko-accent' : ''}`} />
                           {mobileLabel}
                         </motion.span>
                       </Link>
                     );
                   })}
-                  </LayoutGroup>
                 </div>
               </nav>,
               document.body
