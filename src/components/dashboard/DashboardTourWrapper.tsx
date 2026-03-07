@@ -86,9 +86,10 @@ interface DashboardTourWrapperProps {
   children: React.ReactNode;
   showTour: boolean;
   userId: string;
+  isContractor?: boolean;
 }
 
-export function DashboardTourWrapper({ children, showTour, userId }: DashboardTourWrapperProps) {
+export function DashboardTourWrapper({ children, showTour, userId, isContractor = false }: DashboardTourWrapperProps) {
   const [tourOpen, setTourOpen] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const isMac = useIsMac();
@@ -100,9 +101,13 @@ export function DashboardTourWrapper({ children, showTour, userId }: DashboardTo
   );
 
   const tourSteps = useMemo<TourStep[]>(() => {
-    if (isMobile) return SIDEBAR_STEPS;
+    let steps = SIDEBAR_STEPS;
+    if (isContractor) {
+      steps = steps.filter((s) => s.selectorId !== TOUR_STEP_IDS.ACTIVITY);
+    }
+    if (isMobile) return steps;
     return [
-      ...SIDEBAR_STEPS,
+      ...steps,
       {
         selectorId: TOUR_STEP_IDS.CMD_K,
         content: (
@@ -113,7 +118,7 @@ export function DashboardTourWrapper({ children, showTour, userId }: DashboardTo
         position: 'bottom' as const,
       },
     ];
-  }, [isMac, isMobile]);
+  }, [isMac, isMobile, isContractor]);
 
   const markTourComplete = async () => {
     await supabase.from('profiles').update({ tour_completed: 1 }).eq('id', userId);
