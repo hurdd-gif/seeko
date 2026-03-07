@@ -47,7 +47,7 @@ const DropdownMenuTrigger = React.forwardRef<
     })
   }
   return (
-    <button ref={ref} onClick={() => setOpen(!open)} {...props}>
+    <button ref={ref} onClick={(e) => { e.stopPropagation(); setOpen(!open) }} {...props}>
       {children}
     </button>
   )
@@ -75,6 +75,7 @@ function DropdownMenuContent({
         align === "end" ? "right-0" : "left-0",
         className
       )}
+      onClick={(e) => e.stopPropagation()}
     >
       {children}
     </div>
