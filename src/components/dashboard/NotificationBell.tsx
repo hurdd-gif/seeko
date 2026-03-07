@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { createBrowserClient } from '@supabase/ssr';
 import { motion, AnimatePresence } from 'motion/react';
-import { Bell, CheckSquare, AtSign, MessageSquare, CheckCheck, CheckCircle2, Package, ArrowRightLeft } from 'lucide-react';
+import { Bell, CheckSquare, AtSign, MessageSquare, CheckCheck, CheckCircle2, Package, ArrowRightLeft, X } from 'lucide-react';
 import { Notification, NotificationKind } from '@/lib/types';
 
 const KIND_CONFIG: Record<NotificationKind, { icon: typeof Bell; className: string }> = {
@@ -128,6 +128,15 @@ export function NotificationBell({ userId, initialCount, initialNotifications, c
     await supabase.from('notifications').update({ read: true }).eq('id', notifId);
   }, [supabase]);
 
+  const dismissNotification = useCallback(async (notifId: string) => {
+    setNotifications(prev => {
+      const removed = prev.find(n => n.id === notifId);
+      if (removed && !removed.read) setUnreadCount(c => Math.max(0, c - 1));
+      return prev.filter(n => n.id !== notifId);
+    });
+    await supabase.from('notifications').delete().eq('id', notifId);
+  }, [supabase]);
+
   function handleToggle() {
     if (!open && bellRef.current) {
       const rect = bellRef.current.getBoundingClientRect();
@@ -190,29 +199,39 @@ export function NotificationBell({ userId, initialCount, initialNotifications, c
                 const cfg = KIND_CONFIG[notif.kind] ?? KIND_CONFIG.comment_reply;
                 const Icon = cfg.icon;
                 return (
-                  <button
+                  <div
                     key={notif.id}
-                    onClick={() => { if (!notif.read) markOneRead(notif.id); if (notif.link) { router.push(notif.link); setOpen(false); } }}
-                    className={`flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/40 ${!notif.read ? 'bg-muted/20' : ''}`}
+                    className={`group relative flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/40 ${!notif.read ? 'border-l-2 border-seeko-accent bg-muted/20' : 'border-l-2 border-transparent'}`}
                   >
-                    <div className={`mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-secondary ${cfg.className}`}>
-                      <Icon className="size-3.5" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className={`text-sm truncate ${!notif.read ? 'font-medium text-foreground' : 'text-muted-foreground'}`}>
-                          {notif.title}
-                        </p>
-                        {!notif.read && (
-                          <span className="size-1.5 shrink-0 rounded-full bg-seeko-accent" />
-                        )}
+                    <button
+                      onClick={() => { if (!notif.read) markOneRead(notif.id); if (notif.link) { router.push(notif.link); setOpen(false); } }}
+                      className="flex flex-1 items-start gap-3 min-w-0"
+                    >
+                      <div className={`mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-secondary ${cfg.className}`}>
+                        <Icon className="size-3.5" />
                       </div>
-                      {notif.body && (
-                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{notif.body}</p>
-                      )}
-                      <p className="text-[11px] text-muted-foreground/60 mt-1">{timeAgo(notif.created_at)}</p>
-                    </div>
-                  </button>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className={`text-sm truncate ${!notif.read ? 'font-medium text-foreground' : 'text-muted-foreground'}`}>
+                            {notif.title}
+                          </p>
+                          {!notif.read && (
+                            <span className="size-1.5 shrink-0 rounded-full bg-seeko-accent" />
+                          )}
+                        </div>
+                        {notif.body && (
+                          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{notif.body}</p>
+                        )}
+                        <p className="text-[11px] text-muted-foreground/60 mt-1">{timeAgo(notif.created_at)}</p>
+                      </div>
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); dismissNotification(notif.id); }}
+                      className="mt-1 shrink-0 rounded p-0.5 text-muted-foreground/40 opacity-0 transition-opacity group-hover:opacity-100 hover:text-foreground"
+                    >
+                      <X className="size-3.5" />
+                    </button>
+                  </div>
                 );
               })
             )}
