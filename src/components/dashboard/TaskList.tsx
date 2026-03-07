@@ -301,7 +301,7 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
 
               return (
                 <StaggerItem key={task.id} className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/50">
-                  <motion.div whileTap={{ scale: 0.8 }} transition={{ duration: 0.06 }}>
+                  <motion.div whileTap={{ scale: 0.8 }} transition={{ duration: 0.06 }} className="flex items-center justify-center min-w-[36px] min-h-[36px]">
                     <Checkbox
                       checked={isComplete}
                       onCheckedChange={() => handleToggleComplete(task.id, status)}
@@ -423,7 +423,7 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
 
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="size-7 shrink-0">
+                      <Button variant="ghost" size="icon" className="size-9 shrink-0">
                         <MoreHorizontal className="size-4" />
                         <span className="sr-only">Task actions</span>
                       </Button>
@@ -620,7 +620,7 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
                     autoFocus
                     onKeyDown={e => { if (e.key === 'Enter' && newName.trim()) handleAddTask(); }}
                   />
-                  <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
                     <Select value={newDept} onChange={e => setNewDept(e.target.value as Department)}>
                       {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
                     </Select>
@@ -633,13 +633,14 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
                       onChange={e => setNewDeadline(e.target.value)}
                       className="w-auto"
                     />
-                    <div className="flex-1" />
-                    <Button variant="ghost" size="sm" onClick={() => setShowAddForm(false)}>
-                      Cancel
-                    </Button>
-                    <Button size="sm" onClick={handleAddTask} disabled={adding || !newName.trim()}>
-                      {adding ? 'Adding...' : 'Add'}
-                    </Button>
+                    <div className="flex justify-end gap-2 sm:ml-auto">
+                      <Button variant="ghost" size="sm" onClick={() => setShowAddForm(false)}>
+                        Cancel
+                      </Button>
+                      <Button size="sm" onClick={handleAddTask} disabled={adding || !newName.trim()}>
+                        {adding ? 'Adding...' : 'Add'}
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </CardContent>
