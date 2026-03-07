@@ -19,10 +19,8 @@ import { FadeRise, Stagger, StaggerItem } from '@/components/motion';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Badge } from '@/components/ui/badge';
 import { InvestorAreaCard } from '@/components/dashboard/InvestorAreaCard';
-import { PaymentsInvestor } from '@/components/dashboard/PaymentsInvestor';
 import {
   CheckSquare,
-  DollarSign,
   Map,
   TrendingUp,
   AlertCircle,
@@ -89,25 +87,11 @@ export default async function InvestorPage() {
 
   const profile = user ? await fetchProfile(user.id) : null;
 
-  const [tasks, areas, activity, paymentsRes] = await Promise.all([
+  const [tasks, areas, activity] = await Promise.all([
     fetchAllTasksWithAssignees().catch(() => []),
     fetchAreas().catch((): Area[] => []),
     fetchActivity(30).catch(() => []),
-    supabase.from('payments')
-      .select('*, recipient:profiles!payments_recipient_id_fkey(id, display_name, avatar_url, department)')
-      .eq('status', 'paid')
-      .order('paid_at', { ascending: false }),
   ]);
-
-  const paidPayments = (paymentsRes.data ?? []) as import('@/lib/types').Payment[];
-  const now2 = new Date();
-  const monthStart2 = new Date(now2.getFullYear(), now2.getMonth(), 1).toISOString();
-  const thisMonthPayments = paidPayments.filter(p => p.paid_at && p.paid_at >= monthStart2);
-  const paymentStats = {
-    thisMonth: thisMonthPayments.reduce((sum, p) => sum + Number(p.amount), 0),
-    allTime: paidPayments.reduce((sum, p) => sum + Number(p.amount), 0),
-    peoplePaid: new Set(paidPayments.map(p => p.recipient_id)).size,
-  };
 
   const blocked        = tasks.filter(t => t.status === 'Blocked').length;
   const overdueCount   = tasks.filter(t => t.deadline && new Date(t.deadline) < new Date()).length;
@@ -278,21 +262,6 @@ export default async function InvestorPage() {
             </CardContent>
           </Card>
 
-        </div>
-      </FadeRise>
-
-      {/* ── Payments ──────────────────────────────────────── */}
-      <FadeRise delay={delay(TIMING.grid + 200)}>
-        <div className="flex flex-col gap-6">
-          <h2 className="text-xl font-semibold tracking-tight text-foreground flex items-center gap-2">
-            <DollarSign className="size-5 text-muted-foreground" />
-            Payments
-          </h2>
-          <PaymentsInvestor
-            payments={paidPayments}
-            stats={paymentStats}
-            delay={TIMING.grid + 250}
-          />
         </div>
       </FadeRise>
 
