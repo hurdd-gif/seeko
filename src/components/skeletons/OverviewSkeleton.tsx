@@ -2,37 +2,27 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 export function OverviewSkeleton() {
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
+      {/* Hero */}
       <div className="space-y-2">
-        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-8 w-40" />
         <Skeleton className="h-4 w-64" />
       </div>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+
+      {/* Stat cards — 1 col mobile, 2 col sm, 4 col lg */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {Array.from({ length: 4 }).map((_, i) => (
-          <Skeleton key={i} className="h-24 rounded-xl" />
+          <Skeleton key={i} className="h-[104px] rounded-xl" />
         ))}
       </div>
-      <div>
-        <Skeleton className="h-5 w-32 mb-4" />
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} className="h-40 rounded-xl" />
-          ))}
-        </div>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <div className="md:col-span-3 space-y-3">
-          <Skeleton className="h-5 w-36" />
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-14 rounded-lg" />
-          ))}
-        </div>
-        <div className="md:col-span-2 space-y-3">
-          <Skeleton className="h-5 w-32" />
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton key={i} className="h-12 rounded-lg" />
-          ))}
-        </div>
+
+      {/* Game Areas card */}
+      <Skeleton className="h-[280px] rounded-xl" />
+
+      {/* Tasks + Activity — 5-col split on lg */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
+        <Skeleton className="lg:col-span-3 h-[300px] rounded-xl" />
+        <Skeleton className="lg:col-span-2 h-[300px] rounded-xl" />
       </div>
     </div>
   );
