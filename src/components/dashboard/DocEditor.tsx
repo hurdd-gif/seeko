@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Image from '@tiptap/extension-image';
@@ -14,9 +14,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
+import { useIsDesktop } from '@/lib/hooks/useIsDesktop';
 import type { Doc, Profile } from '@/lib/types';
 import { useHaptics } from '@/components/HapticsProvider';
 import { useDialogFooter } from '@/components/ui/dialog';
+import { Editor as DesktopEditor } from '@/components/ui/editor';
 
 const DEPARTMENTS = ['Coding', 'Visual Art', 'UI/UX', 'Animation', 'Asset Creation'] as const;
 
@@ -152,12 +154,14 @@ function ImagePopover({ onInsert }: { onInsert: (url: string) => void }) {
 
 export function DocEditor({ doc, onSave, onCancel, team = [] }: DocEditorProps) {
   const { trigger } = useHaptics();
+  const isDesktop = useIsDesktop();
   const [title, setTitle] = useState(doc?.title ?? '');
   const [departments, setDepartments] = useState<string[]>(doc?.restricted_department ?? []);
   const [grantedIds, setGrantedIds] = useState<string[]>(doc?.granted_user_ids ?? []);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [addUserValue, setAddUserValue] = useState('');
+  const desktopContentRef = useRef<string>(doc?.content ?? '');
 
   const toggleDepartment = (dept: string) => {
     setDepartments(prev =>
@@ -317,9 +321,10 @@ export function DocEditor({ doc, onSave, onCancel, team = [] }: DocEditorProps) 
     setSaving(true);
     setError('');
     try {
+      const content = isDesktop ? desktopContentRef.current : (editor?.getHTML() ?? '');
       const body = {
         title: title.trim(),
-        content: editor?.getHTML() ?? '',
+        content,
         restricted_department: departments.length > 0 ? departments : null,
         granted_user_ids: grantedIds.length > 0 ? grantedIds : null,
       };
@@ -344,7 +349,7 @@ export function DocEditor({ doc, onSave, onCancel, team = [] }: DocEditorProps) 
     }
   };
 
-  if (!editor) return null;
+  if (!isDesktop && !editor) return null;
 
   const setDialogFooter = useDialogFooter();
   const actionBar = (
@@ -460,74 +465,102 @@ export function DocEditor({ doc, onSave, onCancel, team = [] }: DocEditorProps) 
         </div>
       )}
 
-      {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-1 rounded-md border border-border bg-secondary/40 px-2 py-1.5">
-        <ToolbarButton title="Heading 1" active={editor.isActive('heading', { level: 1 })} onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}>
-          <Heading1 className="size-3.5" />
-        </ToolbarButton>
-        <ToolbarButton title="Heading 2" active={editor.isActive('heading', { level: 2 })} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}>
-          <Heading2 className="size-3.5" />
-        </ToolbarButton>
-        <ToolbarButton title="Heading 3" active={editor.isActive('heading', { level: 3 })} onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}>
-          <Heading3 className="size-3.5" />
-        </ToolbarButton>
+      {/* Editor — desktop uses Pages CMS editor with bubble menu + slash commands;
+         mobile keeps the original toolbar editor */}
+      {isDesktop ? (
+        <DesktopEditor
+          value={doc?.content ?? ''}
+          onChange={(html) => { desktopContentRef.current = html; }}
+          format="html"
+          enableImages
+          enableImagePasteDrop
+          onUploadImage={async (file) => {
+            const fd = new FormData();
+            fd.append('file', file);
+            const res = await fetch('/api/docs/upload', { method: 'POST', body: fd });
+            if (!res.ok) return null;
+            const { url } = await res.json();
+            return { src: url };
+          }}
+          className="min-h-[300px]"
+          editorClassName="min-h-[300px] doc-content"
+        />
+      ) : (
+        <>
+          {/* Mobile toolbar */}
+          {editor && (
+            <>
+              <div className="flex flex-wrap items-center gap-1 rounded-md border border-border bg-secondary/40 px-2 py-1.5">
+                <ToolbarButton title="Heading 1" active={editor.isActive('heading', { level: 1 })} onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}>
+                  <Heading1 className="size-3.5" />
+                </ToolbarButton>
+                <ToolbarButton title="Heading 2" active={editor.isActive('heading', { level: 2 })} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}>
+                  <Heading2 className="size-3.5" />
+                </ToolbarButton>
+                <ToolbarButton title="Heading 3" active={editor.isActive('heading', { level: 3 })} onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}>
+                  <Heading3 className="size-3.5" />
+                </ToolbarButton>
 
-        <div className="mx-1 h-4 w-px bg-border" />
+                <div className="mx-1 h-4 w-px bg-border" />
 
-        <ToolbarButton title="Bold" active={editor.isActive('bold')} onClick={() => editor.chain().focus().toggleBold().run()}>
-          <Bold className="size-3.5" />
-        </ToolbarButton>
-        <ToolbarButton title="Italic" active={editor.isActive('italic')} onClick={() => editor.chain().focus().toggleItalic().run()}>
-          <Italic className="size-3.5" />
-        </ToolbarButton>
+                <ToolbarButton title="Bold" active={editor.isActive('bold')} onClick={() => editor.chain().focus().toggleBold().run()}>
+                  <Bold className="size-3.5" />
+                </ToolbarButton>
+                <ToolbarButton title="Italic" active={editor.isActive('italic')} onClick={() => editor.chain().focus().toggleItalic().run()}>
+                  <Italic className="size-3.5" />
+                </ToolbarButton>
 
-        <div className="mx-1 h-4 w-px bg-border" />
+                <div className="mx-1 h-4 w-px bg-border" />
 
-        <ToolbarButton title="Bullet list" active={editor.isActive('bulletList')} onClick={() => editor.chain().focus().toggleBulletList().run()}>
-          <List className="size-3.5" />
-        </ToolbarButton>
-        <ToolbarButton title="Ordered list" active={editor.isActive('orderedList')} onClick={() => editor.chain().focus().toggleOrderedList().run()}>
-          <ListOrdered className="size-3.5" />
-        </ToolbarButton>
+                <ToolbarButton title="Bullet list" active={editor.isActive('bulletList')} onClick={() => editor.chain().focus().toggleBulletList().run()}>
+                  <List className="size-3.5" />
+                </ToolbarButton>
+                <ToolbarButton title="Ordered list" active={editor.isActive('orderedList')} onClick={() => editor.chain().focus().toggleOrderedList().run()}>
+                  <ListOrdered className="size-3.5" />
+                </ToolbarButton>
 
-        <div className="mx-1 h-4 w-px bg-border" />
+                <div className="mx-1 h-4 w-px bg-border" />
 
-        <ImagePopover onInsert={insertImage} />
+                <ImagePopover onInsert={insertImage} />
 
-        <div className="mx-1 h-4 w-px bg-border" />
+                <div className="mx-1 h-4 w-px bg-border" />
 
-        <ToolbarButton
-          title="Insert table (3×3)"
-          onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}
-        >
-          <TableIcon className="size-3.5" />
-        </ToolbarButton>
-        {editor.can().addColumnAfter() && (
-          <>
-            <ToolbarButton title="Add column" onClick={() => editor.chain().focus().addColumnAfter().run()}>
-              <Plus className="size-3.5" />
-            </ToolbarButton>
-            <ToolbarButton title="Delete column" onClick={() => editor.chain().focus().deleteColumn().run()}>
-              <Trash2 className="size-3 text-destructive/70" />
-            </ToolbarButton>
-          </>
-        )}
-        {editor.can().addRowAfter() && (
-          <>
-            <ToolbarButton title="Add row" onClick={() => editor.chain().focus().addRowAfter().run()}>
-              <Plus className="size-3.5 rotate-90" />
-            </ToolbarButton>
-            <ToolbarButton title="Delete row" onClick={() => editor.chain().focus().deleteRow().run()}>
-              <Trash2 className="size-3 rotate-90 text-destructive/70" />
-            </ToolbarButton>
-          </>
-        )}
-      </div>
+                <ToolbarButton
+                  title="Insert table (3×3)"
+                  onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}
+                >
+                  <TableIcon className="size-3.5" />
+                </ToolbarButton>
+                {editor.can().addColumnAfter() && (
+                  <>
+                    <ToolbarButton title="Add column" onClick={() => editor.chain().focus().addColumnAfter().run()}>
+                      <Plus className="size-3.5" />
+                    </ToolbarButton>
+                    <ToolbarButton title="Delete column" onClick={() => editor.chain().focus().deleteColumn().run()}>
+                      <Trash2 className="size-3 text-destructive/70" />
+                    </ToolbarButton>
+                  </>
+                )}
+                {editor.can().addRowAfter() && (
+                  <>
+                    <ToolbarButton title="Add row" onClick={() => editor.chain().focus().addRowAfter().run()}>
+                      <Plus className="size-3.5 rotate-90" />
+                    </ToolbarButton>
+                    <ToolbarButton title="Delete row" onClick={() => editor.chain().focus().deleteRow().run()}>
+                      <Trash2 className="size-3 rotate-90 text-destructive/70" />
+                    </ToolbarButton>
+                  </>
+                )}
+              </div>
 
-      {/* Editor */}
-      <div className="min-h-[200px] rounded-md border border-border bg-card p-3">
-        <EditorContent editor={editor} />
-      </div>
+              {/* Mobile editor area */}
+              <div className="min-h-[200px] rounded-md border border-border bg-card p-3">
+                <EditorContent editor={editor} />
+              </div>
+            </>
+          )}
+        </>
+      )}
 
       {error && <p className="text-xs text-destructive">{error}</p>}
 
