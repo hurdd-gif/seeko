@@ -201,7 +201,7 @@ function CommentItem({
       <div className="flex-1 min-w-0">
         <div className="flex items-baseline gap-2">
           <span className="text-sm font-medium text-foreground">{name}</span>
-          <span className="text-[11px] text-muted-foreground cursor-default" title={formatLocalTime(comment.created_at)}>{timeAgo(comment.created_at)}</span>
+          <span className="font-mono text-[11px] text-muted-foreground cursor-default" title={formatLocalTime(comment.created_at)}>{timeAgo(comment.created_at)}</span>
           {wasEdited && (
             <span className="text-[11px] text-muted-foreground/60 italic">( edited )</span>
           )}
@@ -935,7 +935,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
                                 <span className="text-xs font-medium text-foreground truncate">{toName}</span>
                               </div>
                               <span
-                                className="ml-auto shrink-0 rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground tabular-nums"
+                                className="ml-auto shrink-0 rounded-full bg-muted px-2 py-0.5 font-mono text-[11px] text-muted-foreground tabular-nums"
                                 title={formatLocalTime(h.created_at)}
                               >
                                 {timeAgo(h.created_at)}
@@ -1264,13 +1264,64 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
                 {tabBar}
 
                 {/* Tab content */}
-                {activeTab === 'details' ? (
-                  <div className="flex-1 overflow-y-auto p-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                <AnimatePresence mode="wait">
+                  {activeTab === 'details' && (
+                    <motion.div key="details" className="flex-1 overflow-y-auto p-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.1 }}>
+                      {detailsContent}
+                    </motion.div>
+                  )}
+                  {activeTab === 'chat' && (
+                    <motion.div
+                      key="chat"
+                      className={cn('flex flex-1 flex-col overflow-hidden', isDragging && 'ring-2 ring-inset ring-seeko-accent/50')}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.1 }}
+                      onDragOver={e => { e.preventDefault(); setIsDragging(true); }}
+                      onDragLeave={e => {
+                        if (!e.currentTarget.contains(e.relatedTarget as Node)) setIsDragging(false);
+                      }}
+                      onDrop={e => {
+                        e.preventDefault();
+                        setIsDragging(false);
+                        const files = Array.from(e.dataTransfer.files);
+                        if (files.length > 0) setPendingFiles(prev => [...prev, ...files]);
+                      }}
+                    >
+                      <div className="flex-1 overflow-y-auto p-4 space-y-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                        {chatMessages}
+                      </div>
+                      <div className="shrink-0 border-t border-border p-3">
+                        {chatCompose}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
+            </div>
+          ) : (
+            /* Mobile: existing Dialog */
+            <Dialog open={open} onOpenChange={onOpenChange}>
+              <DialogClose onClose={() => onOpenChange(false)} />
+              <DialogHeader>
+                <DialogTitle className="pr-8">{task.name}</DialogTitle>
+              </DialogHeader>
+              {tabBar}
+              <AnimatePresence mode="wait">
+                {activeTab === 'details' && (
+                  <motion.div key="details" className="flex-1 overflow-y-auto p-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.1 }}>
                     {detailsContent}
-                  </div>
-                ) : (
-                  <div
+                  </motion.div>
+                )}
+                {activeTab === 'chat' && (
+                  <motion.div
+                    key="chat"
                     className={cn('flex flex-1 flex-col overflow-hidden', isDragging && 'ring-2 ring-inset ring-seeko-accent/50')}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.1 }}
                     onDragOver={e => { e.preventDefault(); setIsDragging(true); }}
                     onDragLeave={e => {
                       if (!e.currentTarget.contains(e.relatedTarget as Node)) setIsDragging(false);
@@ -1288,44 +1339,9 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
                     <div className="shrink-0 border-t border-border p-3">
                       {chatCompose}
                     </div>
-                  </div>
+                  </motion.div>
                 )}
-              </motion.div>
-            </div>
-          ) : (
-            /* Mobile: existing Dialog */
-            <Dialog open={open} onOpenChange={onOpenChange}>
-              <DialogClose onClose={() => onOpenChange(false)} />
-              <DialogHeader>
-                <DialogTitle className="pr-8">{task.name}</DialogTitle>
-              </DialogHeader>
-              {tabBar}
-              {activeTab === 'details' ? (
-                <div className="flex-1 overflow-y-auto p-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                  {detailsContent}
-                </div>
-              ) : (
-                <div
-                  className={cn('flex flex-1 flex-col overflow-hidden', isDragging && 'ring-2 ring-inset ring-seeko-accent/50')}
-                  onDragOver={e => { e.preventDefault(); setIsDragging(true); }}
-                  onDragLeave={e => {
-                    if (!e.currentTarget.contains(e.relatedTarget as Node)) setIsDragging(false);
-                  }}
-                  onDrop={e => {
-                    e.preventDefault();
-                    setIsDragging(false);
-                    const files = Array.from(e.dataTransfer.files);
-                    if (files.length > 0) setPendingFiles(prev => [...prev, ...files]);
-                  }}
-                >
-                  <div className="flex-1 overflow-y-auto p-4 space-y-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                    {chatMessages}
-                  </div>
-                  <div className="shrink-0 border-t border-border p-3">
-                    {chatCompose}
-                  </div>
-                </div>
-              )}
+              </AnimatePresence>
             </Dialog>
           )
         )}
