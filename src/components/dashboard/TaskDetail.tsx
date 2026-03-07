@@ -613,7 +613,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
         {task.deadline && (
           <div className="flex items-center gap-1 text-xs text-muted-foreground cursor-default" title={task.deadline ? formatLocalTime(task.deadline) : undefined}>
             <Clock className="size-3" />
-            <span>{task.deadline}</span>
+            <span>{new Date(task.deadline + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
           </div>
         )}
         {assignee && (
