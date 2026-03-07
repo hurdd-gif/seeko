@@ -5,7 +5,10 @@ import { cookies } from 'next/headers';
 
 const BUCKET = 'chat-attachments';
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
-const SIGNED_URL_EXPIRY_SEC = 3600; // 1 hour
+// Use 1 year expiry so stored file_url values don't go stale in the DB.
+// The frontend reads file_url directly from task_comment_attachments via Supabase query,
+// so a short expiry causes all attachment links to break after the signed URL expires.
+const SIGNED_URL_EXPIRY_SEC = 365 * 24 * 60 * 60; // 1 year
 
 async function getSupabaseAndUser() {
   const cookieStore = await cookies();
