@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'motion/react';
 import { createBrowserClient } from '@supabase/ssr';
 import {
+  MoreHorizontal,
   MoreVertical,
   Circle,
   Timer,
@@ -12,6 +13,9 @@ import {
   CheckCircle2,
   Plus,
   ChevronDown,
+  UserPlus,
+  Trash2,
+  ArrowRightLeft,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Task, Profile, TaskWithAssignee, TaskStatus, Department, Priority } from '@/lib/types';
@@ -236,6 +240,31 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
       });
   }, []);
 
+  const handleAssign = useCallback(async (taskId: string, memberId: string | null) => {
+    setAssignments(prev => ({ ...prev, [taskId]: memberId }));
+    await supabase.from('tasks').update({ assignee_id: memberId }).eq('id', taskId);
+
+    if (memberId) {
+      const task = allTasks.find(t => t.id === taskId);
+      fetch('/api/notify/user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: memberId,
+          kind: 'task_assigned',
+          title: 'Task assigned to you',
+          body: task?.name ?? 'A task has been assigned to you',
+          link: `/tasks?task=${taskId}`,
+        }),
+      });
+    }
+  }, [supabase, allTasks]);
+
+  const handleDelete = useCallback(async (taskId: string) => {
+    setDeleted(prev => new Set(prev).add(taskId));
+    await supabase.from('tasks').delete().eq('id', taskId);
+  }, [supabase]);
+
   const getEffectiveStatus = useCallback((task: Task): TaskStatus => taskStatuses[task.id] ?? task.status, [taskStatuses]);
   const getEffectivePriority = useCallback((task: Task): Priority => task.priority as Priority, []);
 
@@ -301,7 +330,7 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
     return (
       <StaggerItem
         key={task.id}
-        className="grid grid-cols-[1fr_auto_auto] items-center gap-4 px-4 py-3 transition-colors hover:bg-muted/50"
+        className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-4 px-4 py-3 transition-colors hover:bg-muted/50"
       >
         {/* Column 1: Task name */}
         <button
@@ -369,6 +398,47 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
             </span>
           )}
         </div>
+
+        {/* Column 4: Row kebab menu */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="size-8 shrink-0">
+              <MoreHorizontal className="size-4" />
+              <span className="sr-only">Task actions</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-44">
+            {isAdmin && team.map(member => (
+              <DropdownMenuItem key={member.id} onClick={() => handleAssign(task.id, member.id)} className="flex items-center gap-2">
+                <Avatar className="size-5">
+                  <AvatarImage src={member.avatar_url ?? undefined} alt={member.display_name ?? ''} />
+                  <AvatarFallback className="text-[7px] bg-secondary">{getInitials(member.display_name ?? '?')}</AvatarFallback>
+                </Avatar>
+                <span className="text-xs truncate">{member.display_name ?? 'Unnamed'}</span>
+                {assignee?.id === member.id && <CheckCircle2 className="size-3 text-seeko-accent ml-auto" />}
+              </DropdownMenuItem>
+            ))}
+            {isAdmin && assignee && (
+              <DropdownMenuItem onClick={() => handleAssign(task.id, null)} className="flex items-center gap-2 text-muted-foreground">
+                <UserPlus className="size-3.5" />
+                <span className="text-xs">Unassign</span>
+              </DropdownMenuItem>
+            )}
+            {isAdmin && <div className="my-1 h-px bg-border" />}
+            {(isAdmin || task.assignee_id === currentUserId) && (
+              <DropdownMenuItem onClick={() => setHandoffTask(task)} className="flex items-center gap-2">
+                <ArrowRightLeft className="size-3.5" />
+                <span>Hand Off</span>
+              </DropdownMenuItem>
+            )}
+            {isAdmin && (
+              <DropdownMenuItem onClick={() => handleDelete(task.id)} className="flex items-center gap-2 text-destructive">
+                <Trash2 className="size-3.5" />
+                <span>Delete</span>
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         {/* Mobile: status + avatar below task name */}
         <div className="flex items-center gap-2 sm:hidden col-span-full -mt-1">
@@ -498,10 +568,11 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
         </div>
 
         {/* Column headers */}
-        <div className="grid grid-cols-[1fr_auto_auto] items-center gap-4 border-b border-border px-4 py-2">
+        <div className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-4 border-b border-border px-4 py-2">
           <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Name</span>
           <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground w-24 text-center hidden sm:block">Assignees</span>
           <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground w-32 text-center hidden sm:block">Status</span>
+          <span className="w-8" />
         </div>
 
         {/* Task rows */}
