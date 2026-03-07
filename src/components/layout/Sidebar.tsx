@@ -53,6 +53,7 @@ const AVATAR = {
  *
  *   tap    tab scale 1 → 0.94 (spring), release → 1
  *   switch active pill background slides to new tab (layoutId spring)
+ *   mount  active pill renders in place (no initial slide)
  *   spacing pill padding, item padding, gap all from MOBILE_PILL
  * ───────────────────────────────────────────────────────── */
 
@@ -455,6 +456,7 @@ export function Sidebar({
                     gap: MOBILE_PILL.itemGap,
                   }}
                 >
+                  <LayoutGroup id="mobile-pill-nav">
                   {NAV.map(({ href, mobileLabel, icon: Icon, tourKey }) => {
                     const isActive = href === '/' ? pathname === '/' : pathname.startsWith(href);
                     const tourId = tourKey != null ? TOUR_STEP_IDS[tourKey] : undefined;
@@ -476,8 +478,15 @@ export function Sidebar({
                           minWidth: MOBILE_PILL.itemMinWidth,
                         }}
                       >
+                        {isActive && (
+                          <motion.div
+                            layoutId="mobile-pill-active"
+                            className="absolute inset-0 rounded-full bg-white/8"
+                            transition={MOBILE_PILL.activeSlideSpring}
+                          />
+                        )}
                         <motion.span
-                          className="relative flex flex-col items-center justify-center"
+                          className="relative z-10 flex flex-col items-center justify-center"
                           style={{ gap: MOBILE_PILL.iconLabelGap }}
                           whileTap={{ scale: MOBILE_PILL.tapScale }}
                           transition={MOBILE_PILL.tapSpring}
@@ -488,6 +497,7 @@ export function Sidebar({
                       </Link>
                     );
                   })}
+                  </LayoutGroup>
                 </div>
               </nav>,
               document.body
