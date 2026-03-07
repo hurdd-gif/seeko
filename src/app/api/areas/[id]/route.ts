@@ -24,7 +24,12 @@ export async function PATCH(
   if (!supabase) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const { id } = await params;
-  const body = await req.json();
+  let body: Record<string, unknown>;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
+  }
   const { progress, phase, status, description } = body;
 
   const updates: Record<string, unknown> = {};
