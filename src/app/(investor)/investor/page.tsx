@@ -207,7 +207,7 @@ export default async function InvestorPage() {
                         <div className="flex flex-1 min-w-0 flex-col gap-0.5">
                           <p className="text-sm font-medium text-foreground truncate">{task.name}</p>
                           <div className="flex items-center gap-2 flex-nowrap overflow-hidden">
-                            <Badge variant="outline" className="text-[10px] py-0 px-1.5 font-normal shrink-0">
+                            <Badge variant="outline" className="text-[11px] py-0 px-1.5 font-normal shrink-0">
                               {task.status}
                             </Badge>
                             {task.assignee?.display_name && (

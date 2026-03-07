@@ -181,7 +181,7 @@ export default async function OverviewPage() {
                 <Map className="size-4 text-muted-foreground" />
                 <CardTitle className="text-xl font-semibold text-foreground">Game Areas</CardTitle>
               </div>
-              <CardDescription>{areasSubtitle}</CardDescription>
+              <CardDescription className="line-clamp-1">{areasSubtitle}</CardDescription>
             </CardHeader>
             <CardContent>
               <Stagger className="grid grid-cols-1 md:grid-cols-3 gap-4" delayMs={delay(TIMING.areasInner)}>
@@ -251,7 +251,7 @@ export default async function OverviewPage() {
                               <span className="font-medium">{name}</span>{' '}
                               <span className="text-muted-foreground">{item.action.toLowerCase()}</span>
                             </p>
-                            <p className="text-xs text-muted-foreground font-mono">{item.target}</p>
+                            <p className="text-xs text-muted-foreground font-mono truncate">{item.target}</p>
                           </div>
                           <span className="shrink-0 text-xs text-muted-foreground">{timeAgo(item.created_at)}</span>
                         </div>

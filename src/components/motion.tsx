@@ -145,6 +145,7 @@ export function HoverCard({
   return (
     <motion.div
       whileHover={{ y: -2 }}
+      whileTap={{ scale: 0.98 }}
       transition={springs.smooth}
       className={className}
     >
