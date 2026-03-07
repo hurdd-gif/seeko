@@ -275,6 +275,11 @@ html {
   backface-visibility: hidden;
 }
 
+/* Hide mobile bottom nav when a full-screen modal is open */
+:root[data-modal-open] .mobile-bottom-nav {
+  display: none !important;
+}
+
 /* Kill paragraph margin inside table cells so rows aren't bloated */
 .doc-content td p,
 .doc-content th p,

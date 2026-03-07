@@ -9,6 +9,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Select } from '@/components/ui/select';
 import { toast } from 'sonner';
 import type { Profile } from '@/lib/types';
+import { uuid } from '@/lib/utils';
 
 type TeamMember = Profile & { paypal_email?: string };
 
@@ -41,7 +42,7 @@ export function PaymentCreateDialog({
   onCreated,
 }: PaymentCreateDialogProps) {
   const [recipient, setRecipient] = useState<TeamMember | null>(initialRecipient);
-  const [items, setItems] = useState<LineItem[]>([{ id: crypto.randomUUID(), label: '', amount: '' }]);
+  const [items, setItems] = useState<LineItem[]>([{ id: uuid(), label: '', amount: '' }]);
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -52,7 +53,7 @@ export function PaymentCreateDialog({
 
   useEffect(() => {
     if (open) {
-      setItems([{ id: crypto.randomUUID(), label: '', amount: '' }]);
+      setItems([{ id: uuid(), label: '', amount: '' }]);
       setSaving(false);
       setSuccess(false);
       setCopied(false);
@@ -62,7 +63,7 @@ export function PaymentCreateDialog({
   const total = items.reduce((sum, i) => sum + (parseFloat(i.amount) || 0), 0);
 
   function addItem() {
-    setItems(prev => [...prev, { id: crypto.randomUUID(), label: '', amount: '' }]);
+    setItems(prev => [...prev, { id: uuid(), label: '', amount: '' }]);
   }
 
   function removeItem(id: string) {
@@ -88,7 +89,7 @@ export function PaymentCreateDialog({
 
   function handleClose() {
     setRecipient(initialRecipient);
-    setItems([{ id: crypto.randomUUID(), label: '', amount: '' }]);
+    setItems([{ id: uuid(), label: '', amount: '' }]);
     setSaving(false);
     setSuccess(false);
     setCopied(false);

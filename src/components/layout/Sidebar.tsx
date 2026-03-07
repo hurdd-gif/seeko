@@ -70,6 +70,8 @@ import {
   ChevronRight,
   TrendingUp,
   DollarSign,
+  MoreHorizontal,
+  X,
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { Button } from '@/components/ui/button';
@@ -125,7 +127,18 @@ export function Sidebar({
   const [hovered, setHovered] = useState(false);
   const [tooltip, setTooltip] = useState<{ label: string; y: number } | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
   useEffect(() => setMounted(true), []);
+
+  // Watch for data-modal-open attribute on <html> to hide bottom nav
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setModalOpen(document.documentElement.hasAttribute('data-modal-open'));
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-modal-open'] });
+    return () => observer.disconnect();
+  }, []);
 
   const toggleCollapsed = () => {
     setCollapsed(prev => {
@@ -396,7 +409,12 @@ export function Sidebar({
           <>
             {createPortal(
               <header
-                className={`md:hidden flex items-center justify-between px-4 h-14 w-full shrink-0 ${!useHeaderSlot ? 'fixed top-0 left-0 right-0 z-40 mobile-fixed-layer' : ''}`}
+                className={`md:hidden flex items-center justify-between px-4 h-14 w-full shrink-0 border-b border-border/50 ${!useHeaderSlot ? 'fixed top-0 left-0 right-0 z-40 mobile-fixed-layer' : ''}`}
+                style={{
+                  background: 'rgba(26, 26, 26, 0.92)',
+                  backdropFilter: 'saturate(180%) blur(16px)',
+                  WebkitBackdropFilter: 'saturate(180%) blur(16px)',
+                }}
               >
                 <div className="flex items-center gap-2.5">
                   <Image src="/seeko-s.png" alt="SEEKO" width={20} height={20} unoptimized />
@@ -423,38 +441,144 @@ export function Sidebar({
               headerEl
             )}
             {createPortal(
-              <nav
-                className="md:hidden fixed bottom-0 left-0 right-0 z-50"
-                style={{
-                  background: 'rgba(26, 26, 26, 0.96)',
-                  backdropFilter: 'saturate(180%) blur(16px)',
-                  WebkitBackdropFilter: 'saturate(180%) blur(16px)',
-                  paddingBottom: 'env(safe-area-inset-bottom)',
-                }}
-              >
-                <div className="flex items-stretch h-14">
-                  {NAV.map(({ href, mobileLabel, icon: Icon, tourKey }) => {
-                    const isActive = href === '/' ? pathname === '/' : pathname.startsWith(href);
-                    const tourId = tourKey != null ? TOUR_STEP_IDS[tourKey] : undefined;
-                    return (
-                      <motion.div key={href} className="flex flex-1" whileTap={{ scale: BOTTOM_NAV.tapScale }} transition={BOTTOM_NAV.tapSpring}>
-                        <Link
-                          id={tourId}
-                          href={href}
-                          onClick={() => trigger('selection')}
-                          className={[
-                            'flex flex-1 flex-col items-center justify-center gap-1 text-[10px] font-medium transition-colors',
-                            isActive ? 'text-seeko-accent' : 'text-muted-foreground',
-                          ].join(' ')}
-                        >
-                          <Icon className="size-5" />
-                          {mobileLabel}
-                        </Link>
+              <>
+                <nav
+                  className={`md:hidden fixed bottom-0 left-0 right-0 z-50 transition-opacity duration-150 mobile-bottom-nav ${moreOpen || modalOpen ? 'opacity-0 pointer-events-none' : ''}`}
+                  style={{
+                    background: 'rgba(26, 26, 26, 0.96)',
+                    backdropFilter: 'saturate(180%) blur(16px)',
+                    WebkitBackdropFilter: 'saturate(180%) blur(16px)',
+                    paddingBottom: 'env(safe-area-inset-bottom)',
+                  }}
+                >
+                  {/* Active indicator bar */}
+                  <div className="relative flex items-stretch h-14">
+                    {(() => {
+                      const MAX_MOBILE_TABS = 5;
+                      const primaryNav = NAV.slice(0, MAX_MOBILE_TABS - (NAV.length > MAX_MOBILE_TABS ? 1 : 0));
+                      const overflowNav = NAV.length > MAX_MOBILE_TABS ? NAV.slice(MAX_MOBILE_TABS - 1) : [];
+                      const hasOverflow = overflowNav.length > 0;
+                      const isOverflowActive = overflowNav.some(({ href }) =>
+                        href === '/' ? pathname === '/' : pathname.startsWith(href)
+                      );
+
+                      return (
+                        <>
+                          {primaryNav.map(({ href, mobileLabel, icon: Icon, tourKey }) => {
+                            const isActive = href === '/' ? pathname === '/' : pathname.startsWith(href);
+                            const tourId = tourKey != null ? TOUR_STEP_IDS[tourKey] : undefined;
+                            return (
+                              <motion.div key={href} className="flex flex-1" whileTap={{ scale: BOTTOM_NAV.tapScale }} transition={BOTTOM_NAV.tapSpring}>
+                                <Link
+                                  id={tourId}
+                                  href={href}
+                                  onClick={() => { trigger('selection'); setMoreOpen(false); }}
+                                  className={[
+                                    'flex flex-1 flex-col items-center justify-center gap-1 text-[10px] font-medium transition-colors relative',
+                                    isActive ? 'text-seeko-accent' : 'text-muted-foreground',
+                                  ].join(' ')}
+                                >
+                                  {isActive && (
+                                    <motion.div
+                                      layoutId="mobile-nav-indicator"
+                                      className="absolute top-0 left-1/2 -translate-x-1/2 w-5 h-0.5 rounded-full bg-seeko-accent"
+                                      transition={BOTTOM_NAV.tapSpring}
+                                    />
+                                  )}
+                                  <Icon className="size-5" />
+                                  {mobileLabel}
+                                </Link>
+                              </motion.div>
+                            );
+                          })}
+                          {hasOverflow && (
+                            <motion.div className="flex flex-1" whileTap={{ scale: BOTTOM_NAV.tapScale }} transition={BOTTOM_NAV.tapSpring}>
+                              <button
+                                onClick={() => { trigger('selection'); setMoreOpen(prev => !prev); }}
+                                className={[
+                                  'flex flex-1 flex-col items-center justify-center gap-1 text-[10px] font-medium transition-colors relative',
+                                  moreOpen || isOverflowActive ? 'text-seeko-accent' : 'text-muted-foreground',
+                                ].join(' ')}
+                              >
+                                {isOverflowActive && !moreOpen && (
+                                  <motion.div
+                                    layoutId="mobile-nav-indicator"
+                                    className="absolute top-0 left-1/2 -translate-x-1/2 w-5 h-0.5 rounded-full bg-seeko-accent"
+                                    transition={BOTTOM_NAV.tapSpring}
+                                  />
+                                )}
+                                <MoreHorizontal className="size-5" />
+                                More
+                              </button>
+                            </motion.div>
+                          )}
+                        </>
+                      );
+                    })()}
+                  </div>
+                </nav>
+                {/* More menu overlay */}
+                <AnimatePresence>
+                  {moreOpen && (
+                    <>
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.15 }}
+                        className="md:hidden fixed inset-0 z-[60] bg-black/40"
+                        onClick={() => setMoreOpen(false)}
+                      />
+                      <motion.div
+                        initial={{ opacity: 0, y: 60 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 60 }}
+                        transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                        className="md:hidden fixed bottom-0 left-0 right-0 z-[61] rounded-t-2xl border-t border-border/50 overflow-hidden"
+                        style={{
+                          background: 'rgba(26, 26, 26, 0.98)',
+                          backdropFilter: 'saturate(180%) blur(20px)',
+                          WebkitBackdropFilter: 'saturate(180%) blur(20px)',
+                          paddingBottom: 'env(safe-area-inset-bottom)',
+                        }}
+                      >
+                        {/* Drag handle */}
+                        <div className="flex justify-center pt-3 pb-1">
+                          <div className="w-9 h-1 rounded-full bg-white/[0.15]" />
+                        </div>
+                        <div className="flex items-center justify-between px-5 pb-2">
+                          <span className="text-sm font-semibold text-foreground">More</span>
+                          <button
+                            onClick={() => setMoreOpen(false)}
+                            className="flex size-8 items-center justify-center rounded-full bg-white/[0.06] text-muted-foreground"
+                          >
+                            <X className="size-4" />
+                          </button>
+                        </div>
+                        <div className="flex flex-col gap-1 px-3 pb-4">
+                          {NAV.slice(4).map(({ href, mobileLabel, icon: Icon }) => {
+                            const isActive = href === '/' ? pathname === '/' : pathname.startsWith(href);
+                            return (
+                              <Link
+                                key={href}
+                                href={href}
+                                onClick={() => { trigger('selection'); setMoreOpen(false); }}
+                                className={[
+                                  'flex items-center gap-3 rounded-xl px-4 py-3.5 text-sm font-medium transition-colors',
+                                  isActive ? 'bg-seeko-accent/10 text-seeko-accent' : 'text-foreground hover:bg-white/[0.04]',
+                                ].join(' ')}
+                              >
+                                <Icon className="size-5" />
+                                {mobileLabel}
+                              </Link>
+                            );
+                          })}
+                        </div>
                       </motion.div>
-                    );
-                  })}
-                </div>
-              </nav>,
+                    </>
+                  )}
+                </AnimatePresence>
+              </>,
               document.body
             )}
           </>

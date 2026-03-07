@@ -235,7 +235,12 @@ export function InvestorSidebar({ email, displayName, avatarUrl, isAdmin = false
           <>
             {createPortal(
               <header
-                className={`md:hidden flex items-center justify-between px-4 h-14 w-full shrink-0 ${!useHeaderSlot ? 'fixed top-0 left-0 right-0 z-40 mobile-fixed-layer' : ''}`}
+                className={`md:hidden flex items-center justify-between px-4 h-14 w-full shrink-0 border-b border-border ${!useHeaderSlot ? 'fixed top-0 left-0 right-0 z-40 mobile-fixed-layer' : ''}`}
+                style={{
+                  background: 'rgba(26, 26, 26, 0.80)',
+                  backdropFilter: 'saturate(180%) blur(20px)',
+                  WebkitBackdropFilter: 'saturate(180%) blur(20px)',
+                }}
               >
                 <div className="flex items-center gap-2.5 min-w-0">
                   <Image src="/seeko-s.png" alt="SEEKO" width={20} height={20} unoptimized />
@@ -262,60 +267,76 @@ export function InvestorSidebar({ email, displayName, avatarUrl, isAdmin = false
                   paddingBottom: 'env(safe-area-inset-bottom)',
                 }}
               >
-                <div className="flex items-stretch h-14">
-                  <motion.div className="flex flex-1" whileTap={{ scale: BOTTOM_NAV.tapScale }} transition={BOTTOM_NAV.tapSpring}>
-                    <Link
-                      href="/investor"
-                      onClick={() => trigger('selection')}
-                      className={[
-                        'flex flex-1 flex-col items-center justify-center gap-1 text-[10px] font-medium transition-colors',
-                        pathname === '/investor' ? 'text-seeko-accent' : 'text-muted-foreground',
-                      ].join(' ')}
-                    >
-                      <LayoutDashboard className="size-5" />
-                      Dashboard
-                    </Link>
-                  </motion.div>
-                  <motion.div className="flex flex-1" whileTap={{ scale: BOTTOM_NAV.tapScale }} transition={BOTTOM_NAV.tapSpring}>
-                    <Link
-                      href="/investor/payments"
-                      onClick={() => trigger('selection')}
-                      className={[
-                        'flex flex-1 flex-col items-center justify-center gap-1 text-[10px] font-medium transition-colors',
-                        pathname === '/investor/payments' ? 'text-seeko-accent' : 'text-muted-foreground',
-                      ].join(' ')}
-                    >
-                      <DollarSign className="size-5" />
-                      Payments
-                    </Link>
-                  </motion.div>
-                  <motion.div className="flex flex-1" whileTap={{ scale: BOTTOM_NAV.tapScale }} transition={BOTTOM_NAV.tapSpring}>
-                    <button
-                      type="button"
-                      onClick={(e) => { trigger('selection'); handleDownloadPdf(e); }}
-                      disabled={pdfLoading}
-                      className="flex flex-1 flex-col items-center justify-center gap-1 text-[10px] font-medium transition-colors text-muted-foreground disabled:opacity-50"
-                    >
-                      <FileDown className="size-5" />
-                      {pdfLoading ? '…' : 'PDF'}
-                    </button>
-                  </motion.div>
-                  {isAdmin && (
-                    <motion.div className="flex flex-1" whileTap={{ scale: BOTTOM_NAV.tapScale }} transition={BOTTOM_NAV.tapSpring}>
+                <LayoutGroup id="investor-mobile-nav">
+                  <div className="flex items-stretch h-14">
+                    <motion.div className="relative flex flex-1" whileTap={{ scale: BOTTOM_NAV.tapScale }} transition={BOTTOM_NAV.tapSpring}>
+                      {pathname === '/investor' && (
+                        <motion.div
+                          layoutId="investor-mobile-indicator"
+                          className="absolute top-0 left-1/2 -translate-x-1/2 w-5 h-0.5 rounded-full bg-seeko-accent"
+                          transition={NAV_HIGHLIGHT.spring}
+                        />
+                      )}
                       <Link
-                        href="/"
+                        href="/investor"
                         onClick={() => trigger('selection')}
                         className={[
                           'flex flex-1 flex-col items-center justify-center gap-1 text-[10px] font-medium transition-colors',
-                          pathname === '/' ? 'text-seeko-accent' : 'text-muted-foreground',
+                          pathname === '/investor' ? 'text-seeko-accent' : 'text-muted-foreground',
                         ].join(' ')}
                       >
-                        <Home className="size-5" />
-                        Main
+                        <LayoutDashboard className="size-5" />
+                        Dashboard
                       </Link>
                     </motion.div>
-                  )}
-                </div>
+                    <motion.div className="relative flex flex-1" whileTap={{ scale: BOTTOM_NAV.tapScale }} transition={BOTTOM_NAV.tapSpring}>
+                      {pathname === '/investor/payments' && (
+                        <motion.div
+                          layoutId="investor-mobile-indicator"
+                          className="absolute top-0 left-1/2 -translate-x-1/2 w-5 h-0.5 rounded-full bg-seeko-accent"
+                          transition={NAV_HIGHLIGHT.spring}
+                        />
+                      )}
+                      <Link
+                        href="/investor/payments"
+                        onClick={() => trigger('selection')}
+                        className={[
+                          'flex flex-1 flex-col items-center justify-center gap-1 text-[10px] font-medium transition-colors',
+                          pathname === '/investor/payments' ? 'text-seeko-accent' : 'text-muted-foreground',
+                        ].join(' ')}
+                      >
+                        <DollarSign className="size-5" />
+                        Payments
+                      </Link>
+                    </motion.div>
+                    <motion.div className="relative flex flex-1" whileTap={{ scale: BOTTOM_NAV.tapScale }} transition={BOTTOM_NAV.tapSpring}>
+                      <button
+                        type="button"
+                        onClick={(e) => { trigger('selection'); handleDownloadPdf(e); }}
+                        disabled={pdfLoading}
+                        className="flex flex-1 flex-col items-center justify-center gap-1 text-[10px] font-medium transition-colors text-muted-foreground disabled:opacity-50"
+                      >
+                        <FileDown className="size-5" />
+                        {pdfLoading ? '…' : 'PDF'}
+                      </button>
+                    </motion.div>
+                    {isAdmin && (
+                      <motion.div className="relative flex flex-1" whileTap={{ scale: BOTTOM_NAV.tapScale }} transition={BOTTOM_NAV.tapSpring}>
+                        <Link
+                          href="/"
+                          onClick={() => trigger('selection')}
+                          className={[
+                            'flex flex-1 flex-col items-center justify-center gap-1 text-[10px] font-medium transition-colors',
+                            pathname === '/' ? 'text-seeko-accent' : 'text-muted-foreground',
+                          ].join(' ')}
+                        >
+                          <Home className="size-5" />
+                          Main
+                        </Link>
+                      </motion.div>
+                    )}
+                  </div>
+                </LayoutGroup>
               </nav>,
               document.body
             )}

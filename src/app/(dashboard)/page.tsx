@@ -21,6 +21,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { AnimatedNumber } from '@/components/ui/AnimatedNumber';
 import { UpcomingTasks } from '@/components/dashboard/UpcomingTasks';
 import { DashboardAreaCard } from '@/components/dashboard/DashboardAreaCard';
+import { CollapsibleAreas } from '@/components/dashboard/CollapsibleAreas';
 import {
   CheckSquare,
   Activity,
@@ -133,10 +134,10 @@ export default async function OverviewPage() {
   const completed  = tasks.filter(t => t.status === 'Complete').length;
 
   const stats = [
-    { label: 'Open Tasks',    value: openTasks,   icon: CheckSquare, accent: true, primary: true, href: '/tasks' },
-    { label: 'Completed',     value: completed,    icon: Activity,    accent: false, primary: false },
-    { label: 'Team Members',  value: team.length, icon: Users,       accent: false, primary: false },
-    { label: 'Documents',     value: docs.length, icon: FileText,    accent: false, primary: false },
+    { label: 'Open Tasks',  value: openTasks,   icon: CheckSquare, accent: true, primary: true, href: '/tasks' },
+    { label: 'Completed',   value: completed,    icon: Activity,    accent: false, primary: false },
+    { label: 'Team',        value: team.length, icon: Users,       accent: false, primary: false },
+    { label: 'Docs',        value: docs.length, icon: FileText,    accent: false, primary: false },
   ];
 
   const upcoming = tasks
@@ -216,28 +217,6 @@ export default async function OverviewPage() {
           </StaggerItem>
         ))}
       </Stagger>
-
-      {/* ── Game Areas ──────────────────────────────────── */}
-      {areas.length > 0 && (
-        <FadeRise delay={delay(TIMING.areas)} y={SECTION.offsetY}>
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <Map className="size-4 text-muted-foreground" />
-                <CardTitle className="text-xl font-semibold text-foreground">Game Areas</CardTitle>
-              </div>
-              <CardDescription className="line-clamp-1">{areasSubtitle}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Stagger className="grid grid-cols-1 md:grid-cols-3 gap-4" delayMs={delay(TIMING.areasInner)}>
-                {areas.map(area => (
-                  <DashboardAreaCard key={area.id} area={area} isAdmin={isAdmin} />
-                ))}
-              </Stagger>
-            </CardContent>
-          </Card>
-        </FadeRise>
-      )}
 
       {/* ── Tasks + Activity ────────────────────────────── */}
       <FadeRise delay={delay(TIMING.grid)} y={SECTION.offsetY}>
@@ -328,6 +307,35 @@ export default async function OverviewPage() {
 
         </div>
       </FadeRise>
+
+      {/* ── Game Areas — after tasks on mobile for better priority ── */}
+      {areas.length > 0 && (
+        <FadeRise delay={delay(TIMING.areas)} y={SECTION.offsetY}>
+          {/* Desktop: always expanded */}
+          <div className="hidden md:block">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <Map className="size-4 text-muted-foreground" />
+                  <CardTitle className="text-xl font-semibold text-foreground">Game Areas</CardTitle>
+                </div>
+                <CardDescription className="line-clamp-1">{areasSubtitle}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Stagger className="grid grid-cols-1 md:grid-cols-3 gap-4" delayMs={delay(TIMING.areasInner)}>
+                  {areas.map(area => (
+                    <DashboardAreaCard key={area.id} area={area} isAdmin={isAdmin} />
+                  ))}
+                </Stagger>
+              </CardContent>
+            </Card>
+          </div>
+          {/* Mobile: collapsible */}
+          <div className="md:hidden">
+            <CollapsibleAreas areas={areas} isAdmin={isAdmin} subtitle={areasSubtitle} />
+          </div>
+        </FadeRise>
+      )}
     </div>
   );
 }

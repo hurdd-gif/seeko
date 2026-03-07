@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'motion/react';
 import { createBrowserClient } from '@supabase/ssr';
@@ -16,6 +16,7 @@ import {
   UserPlus,
   Trash2,
   ArrowRightLeft,
+  X,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Task, Profile, TaskWithAssignee, TaskStatus, Department, Priority } from '@/lib/types';
@@ -339,7 +340,18 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
   }, [allTasks, deleted]);
 
   /* ---------------------------------------------------------------- */
-  /*  Render: task row (3-column grid)                                 */
+  /*  Status bottom sheet (mobile)                                     */
+  /* ---------------------------------------------------------------- */
+
+  const [statusSheetTask, setStatusSheetTask] = useState<Task | TaskWithAssignee | null>(null);
+
+  const openStatusSheet = useCallback((e: React.MouseEvent | React.TouchEvent, task: Task | TaskWithAssignee) => {
+    e.stopPropagation();
+    setStatusSheetTask(task);
+  }, []);
+
+  /* ---------------------------------------------------------------- */
+  /*  Render: task row — responsive (stacked on mobile)                */
   /* ---------------------------------------------------------------- */
 
   const renderTaskRow = (task: Task | TaskWithAssignee) => {
@@ -362,19 +374,18 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
 
     return (
       <StaggerItem key={task.id}>
+        {/* Desktop: original row layout */}
         <div
           role="button"
           tabIndex={0}
           onClick={() => setSelectedTask(task)}
           onKeyDown={e => { if (e.key === 'Enter') setSelectedTask(task); }}
-          className="flex items-center gap-4 px-4 py-3 transition-colors hover:bg-muted/50 cursor-pointer"
+          className="hidden md:flex items-center gap-4 px-4 py-3 transition-colors hover:bg-muted/50 cursor-pointer"
         >
-          {/* Task name */}
           <span className="min-w-0 flex-1 truncate text-sm text-foreground">
             {task.name}
           </span>
 
-          {/* Assignee avatar */}
           <div className="flex items-center -space-x-2 w-24 justify-center shrink-0">
             {assignee ? (
               <Avatar className="size-8 border-2 border-card">
@@ -388,7 +399,6 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
             )}
           </div>
 
-          {/* Status pill */}
           <div className="w-32 flex justify-center shrink-0">
             {isAdmin ? (
               <DropdownMenu>
@@ -426,7 +436,6 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
             )}
           </div>
 
-          {/* Kebab menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -495,6 +504,100 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
               )}
             </DropdownMenuContent>
           </DropdownMenu>
+        </div>
+
+        {/* Mobile: stacked layout — full-width name, status + assignee on second line */}
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => setSelectedTask(task)}
+          onKeyDown={e => { if (e.key === 'Enter') setSelectedTask(task); }}
+          className="flex md:hidden flex-col gap-2 px-4 py-3 transition-colors active:bg-muted/50 cursor-pointer"
+        >
+          <div className="flex items-center gap-3">
+            <span className="min-w-0 flex-1 text-sm font-medium text-foreground line-clamp-2">
+              {task.name}
+            </span>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-8 shrink-0"
+                  onClick={e => e.stopPropagation()}
+                >
+                  <MoreHorizontal className="size-4" />
+                  <span className="sr-only">Task actions</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-44">
+                {isAdmin && (
+                  <>
+                    <DropdownMenuLabel>Assign to</DropdownMenuLabel>
+                    {team.map(member => (
+                      <DropdownMenuItem key={member.id} onClick={() => handleAssign(task.id, member.id)} className="flex items-center gap-2">
+                        <Avatar className="size-5">
+                          <AvatarImage src={member.avatar_url ?? undefined} alt={member.display_name ?? ''} />
+                          <AvatarFallback className="text-[7px] bg-secondary">{getInitials(member.display_name ?? '?')}</AvatarFallback>
+                        </Avatar>
+                        <span className="text-xs truncate">{member.display_name ?? 'Unnamed'}</span>
+                        {assignee?.id === member.id && <CheckCircle2 className="size-3 text-seeko-accent ml-auto" />}
+                      </DropdownMenuItem>
+                    ))}
+                    {assignee && (
+                      <DropdownMenuItem onClick={() => handleAssign(task.id, null)} className="flex items-center gap-2 text-muted-foreground">
+                        <UserPlus className="size-3.5" />
+                        <span className="text-xs">Unassign</span>
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuSeparator />
+                  </>
+                )}
+                {(isAdmin || task.assignee_id === currentUserId) && (
+                  <DropdownMenuItem onClick={() => setHandoffTask(task)} className="flex items-center gap-2">
+                    <ArrowRightLeft className="size-3.5" />
+                    <span>Hand Off</span>
+                  </DropdownMenuItem>
+                )}
+                {isAdmin && (
+                  <DropdownMenuItem onClick={() => handleDelete(task.id)} className="flex items-center gap-2 text-destructive">
+                    <Trash2 className="size-3.5" />
+                    <span>Delete</span>
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+          <div className="flex items-center gap-2">
+            {/* Tappable status pill — opens bottom sheet on mobile */}
+            <button
+              onClick={e => {
+                e.stopPropagation();
+                if (isAdmin || task.assignee_id === currentUserId) openStatusSheet(e, task);
+              }}
+              className={cn(
+                'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-wide whitespace-nowrap',
+                badgeStyle,
+                (isAdmin || task.assignee_id === currentUserId) && 'active:scale-95 transition-transform'
+              )}
+            >
+              <BadgeIcon className="size-3" />
+              {status}
+            </button>
+            {assignee && (
+              <div className="flex items-center gap-1.5 ml-auto">
+                <Avatar className="size-5 border border-card">
+                  <AvatarImage src={assignee.avatar_url ?? undefined} alt={assignee.display_name ?? ''} />
+                  <AvatarFallback className="text-[7px] bg-secondary">
+                    {getInitials(assignee.display_name ?? '?')}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="text-xs text-muted-foreground truncate max-w-[100px]">
+                  {assignee.display_name?.split(' ')[0] ?? ''}
+                </span>
+              </div>
+            )}
+          </div>
         </div>
       </StaggerItem>
     );
@@ -605,13 +708,15 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
           />
         </div>
 
-        {/* Column headers */}
-        <div className="flex items-center gap-4 border-b border-border px-4 py-2">
+        {/* Column headers — desktop only */}
+        <div className="hidden md:flex items-center gap-4 border-b border-border px-4 py-2">
           <span className="flex-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">Name</span>
-          <span className="w-24 text-center text-xs font-medium uppercase tracking-wide text-muted-foreground shrink-0">Assignees</span>
+          <span className="w-24 text-center text-xs font-medium uppercase tracking-wide text-muted-foreground shrink-0">Assignee</span>
           <span className="w-32 text-center text-xs font-medium uppercase tracking-wide text-muted-foreground shrink-0">Status</span>
           <span className="w-8 shrink-0" />
         </div>
+        {/* Mobile separator */}
+        <div className="md:hidden border-b border-border" />
 
         {/* Task rows */}
         <CardContent className="p-0">
@@ -696,6 +801,81 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
           }}
         />
       )}
+
+      {/* Status change bottom sheet (mobile) */}
+      <AnimatePresence>
+        {statusSheetTask && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              className="fixed inset-0 z-50 bg-black/40"
+              onClick={() => setStatusSheetTask(null)}
+            />
+            <motion.div
+              initial={{ opacity: 0, y: 200 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 200 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 32 }}
+              className="fixed bottom-0 left-0 right-0 z-[51] rounded-t-2xl border-t border-border/50"
+              style={{
+                background: 'rgba(34, 34, 34, 0.98)',
+                backdropFilter: 'saturate(180%) blur(20px)',
+                WebkitBackdropFilter: 'saturate(180%) blur(20px)',
+                paddingBottom: 'calc(env(safe-area-inset-bottom) + 0.75rem)',
+              }}
+            >
+              <div className="flex items-center justify-between px-5 pt-4 pb-1">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-foreground truncate">{statusSheetTask.name}</p>
+                  <p className="text-xs text-muted-foreground">Change status</p>
+                </div>
+                <button
+                  onClick={() => setStatusSheetTask(null)}
+                  className="flex size-8 items-center justify-center rounded-full bg-white/[0.06] text-muted-foreground shrink-0 ml-3"
+                >
+                  <X className="size-4" />
+                </button>
+              </div>
+              <div className="grid grid-cols-2 gap-2 px-4 py-3">
+                {ALL_STATUSES.filter(s => isAdmin || s !== 'Blocked').map(s => {
+                  const cfg = STATUS_ICONS[s];
+                  const Icon = cfg.icon;
+                  const currentStatus = getEffectiveStatus(statusSheetTask);
+                  const isCurrentStatus = s === currentStatus;
+                  const style = STATUS_BADGE_STYLE[s] ?? '';
+                  return (
+                    <motion.button
+                      key={s}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => {
+                        handleStatusChange(statusSheetTask.id, s);
+                        setStatusSheetTask(null);
+                      }}
+                      className={cn(
+                        'flex items-center gap-3 rounded-xl border px-4 py-3.5 text-left transition-colors',
+                        isCurrentStatus
+                          ? style + ' ring-1 ring-foreground/10'
+                          : 'border-border/50 hover:bg-white/[0.04]'
+                      )}
+                    >
+                      <Icon className={cn('size-5', cfg.className)} />
+                      <div>
+                        <p className={cn('text-sm font-medium', isCurrentStatus ? '' : 'text-foreground')}>{s}</p>
+                        {isCurrentStatus && (
+                          <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Current</p>
+                        )}
+                      </div>
+                    </motion.button>
+                  );
+                })}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -12,7 +12,7 @@ import { Select } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Camera, Check, Eye, MousePointer, Monitor, UserX, AlertTriangle, RotateCcw, DollarSign } from 'lucide-react';
+import { Camera, Check, Eye, MousePointer, Monitor, UserX, AlertTriangle, RotateCcw, DollarSign, Vibrate } from 'lucide-react';
 import { toast } from 'sonner';
 import { Profile, UserEvent, Task, Payment } from '@/lib/types';
 import { useHaptics } from '@/components/HapticsProvider';
@@ -20,6 +20,7 @@ import { useTour } from '@/components/ui/tour';
 import { PaymentRequestDialog } from '@/components/dashboard/PaymentRequestDialog';
 import { formatCurrency } from '@/lib/format';
 import { cn } from '@/lib/utils';
+import { Switch } from '@/components/ui/switch';
 
 const COMMON_TIMEZONES = [
   'America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles',
@@ -350,6 +351,8 @@ export function SettingsPanel({ profile, isAdmin, team, revalidate, completedTas
 
       <ReplayTourCard userId={profile.id} />
 
+      <HapticsToggleCard />
+
       {!profile.is_investor && (
         <Card>
           <CardHeader>
@@ -675,5 +678,34 @@ function ReplayTourCard({ userId }: { userId: string }) {
         </div>
       </CardHeader>
     </Card>
+  );
+}
+
+function HapticsToggleCard() {
+  const { enabled, setEnabled, trigger } = useHaptics();
+
+  return (
+    <div className="md:hidden">
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Vibrate className="size-4 text-muted-foreground" />
+              <div>
+                <CardTitle>Haptic Feedback</CardTitle>
+                <CardDescription>Vibration feedback on taps and actions.</CardDescription>
+              </div>
+            </div>
+            <Switch
+              checked={enabled}
+              onCheckedChange={(v) => {
+                setEnabled(v);
+                if (v) trigger('success');
+              }}
+            />
+          </div>
+        </CardHeader>
+      </Card>
+    </div>
   );
 }

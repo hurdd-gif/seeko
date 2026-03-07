@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { createBrowserClient } from '@supabase/ssr';
 import { motion, AnimatePresence, LayoutGroup } from 'motion/react';
 import {
@@ -28,7 +29,7 @@ import { toast } from 'sonner';
 import { Dialog, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
 import { HandoffDialog } from './HandoffDialog';
 import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
+import { cn, uuid } from '@/lib/utils';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -121,6 +122,45 @@ function renderContent(text: string, teamNames: string[], docTitles: string[]): 
   });
 }
 
+function useLongPress(callback: () => void, ms = 400) {
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const firedRef = useRef(false);
+
+  const start = useCallback((e: React.TouchEvent) => {
+    firedRef.current = false;
+    timerRef.current = setTimeout(() => {
+      firedRef.current = true;
+      callback();
+    }, ms);
+  }, [callback, ms]);
+
+  const cancel = useCallback(() => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = null;
+  }, []);
+
+  const end = useCallback((e: React.TouchEvent) => {
+    cancel();
+    // If the long-press fired, swallow the touchend to prevent ghost taps
+    if (firedRef.current) {
+      e.preventDefault();
+    }
+  }, [cancel]);
+
+  const preventContext = useCallback((e: React.SyntheticEvent) => {
+    // Prevent native iOS context menu from appearing
+    e.preventDefault();
+  }, []);
+
+  return {
+    onTouchStart: start,
+    onTouchEnd: end,
+    onTouchMove: cancel,
+    onTouchCancel: cancel,
+    onContextMenu: preventContext,
+  };
+}
+
 function CommentItem({
   comment,
   isOwn,
@@ -155,6 +195,9 @@ function CommentItem({
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [showReactionPicker, setShowReactionPicker] = useState(false);
   const reactionPickerRef = useRef<HTMLDivElement>(null);
+  const [mobileActions, setMobileActions] = useState(false);
+
+  const longPress = useLongPress(useCallback(() => setMobileActions(true), []));
 
   const [lightbox, setLightbox] = useState<{ url: string; name: string; type: string } | null>(null);
 
@@ -209,7 +252,9 @@ function CommentItem({
       }}
       exit={{ opacity: 0, height: 0, marginBottom: 0 }}
       transition={{ duration: isHighlighted ? 2 : 0.15, backgroundColor: { duration: 2, delay: 0.5 } }}
-      className={cn('group relative flex gap-3 rounded-md px-2 -mx-2', isGrouped ? 'py-0 mt-0.5 pl-[44px]' : 'py-1 mt-3 first:mt-0')}
+      className={cn('group relative flex gap-3 rounded-md px-2 -mx-2 md:select-auto select-none [&_*]:select-none md:[&_*]:select-auto', isGrouped ? 'py-0 mt-0.5 pl-[44px]' : 'py-1 mt-3 first:mt-0')}
+      style={{ WebkitTouchCallout: 'none', WebkitUserSelect: 'none' } as React.CSSProperties}
+      {...longPress}
     >
       {!isGrouped && (
         <Avatar className="size-8 shrink-0 mt-0.5">
@@ -444,7 +489,7 @@ function CommentItem({
             <div className="relative" ref={reactionPickerRef}>
               <button
                 onClick={() => setShowReactionPicker(v => !v)}
-                className="inline-flex items-center justify-center size-6 rounded-full border border-transparent text-muted-foreground/40 opacity-0 group-hover:opacity-100 hover:border-border hover:text-muted-foreground transition-all text-xs"
+                className="inline-flex items-center justify-center size-6 rounded-full border border-transparent text-muted-foreground/40 md:opacity-0 md:group-hover:opacity-100 hover:border-border hover:text-muted-foreground transition-all text-xs"
               >
                 +
               </button>
@@ -474,9 +519,9 @@ function CommentItem({
         )}
       </div>
 
-      {/* Hover actions — overlay top-right of message row */}
+      {/* Hover actions — desktop only, overlay top-right of message row */}
       {!editing && !confirmingDelete && (
-        <div className="absolute top-0.5 right-1 flex items-center gap-0.5 rounded-md border border-border bg-card px-0.5 py-0.5 opacity-0 group-hover:opacity-100 transition-opacity z-10 shadow-sm">
+        <div className="absolute top-0.5 right-1 hidden md:flex items-center gap-0.5 rounded-md border border-border bg-card px-0.5 py-0.5 opacity-0 group-hover:opacity-100 transition-opacity z-10 shadow-sm">
           <button onClick={() => onReply(comment)} className="rounded p-1 text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors" title="Reply"><Reply className="size-3" /></button>
           {isOwn && (
             <>
@@ -485,6 +530,76 @@ function CommentItem({
             </>
           )}
         </div>
+      )}
+
+      {/* Mobile action sheet — triggered by long-press, portaled to body */}
+      {typeof document !== 'undefined' && createPortal(
+        <AnimatePresence>
+          {mobileActions && (
+            <motion.div
+              className="fixed inset-0 z-[100] flex items-end justify-center md:hidden"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+            >
+              <div className="absolute inset-0 bg-black/50" onClick={() => setMobileActions(false)} />
+              <motion.div
+                initial={{ y: '100%' }}
+                animate={{ y: 0 }}
+                exit={{ y: '100%' }}
+                transition={{ type: 'spring', stiffness: 400, damping: 34 }}
+                className="relative w-full max-w-md rounded-t-2xl border-t border-border bg-card pb-[env(safe-area-inset-bottom)]"
+              >
+                <div className="flex justify-center pt-3 pb-1">
+                  <div className="h-1 w-10 rounded-full bg-muted-foreground/20" />
+                </div>
+                {/* Quick reactions */}
+                <div className="flex justify-center gap-2 px-4 py-3">
+                  {REACTION_EMOJIS.map(emoji => (
+                    <button
+                      key={emoji}
+                      onClick={() => { onReact(comment.id, emoji); setMobileActions(false); }}
+                      className="flex items-center justify-center size-10 rounded-full bg-muted/60 text-base active:scale-90 transition-transform"
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
+                <div className="border-t border-border mx-4" />
+                {/* Actions */}
+                <div className="flex flex-col py-2 px-2">
+                  <button
+                    onClick={() => { onReply(comment); setMobileActions(false); }}
+                    className="flex items-center gap-3 rounded-lg px-4 py-3 text-sm text-foreground active:bg-muted/60 transition-colors"
+                  >
+                    <Reply className="size-4 text-muted-foreground" />
+                    Reply
+                  </button>
+                  {isOwn && (
+                    <>
+                      <button
+                        onClick={() => { setEditText(comment.content); setEditing(true); setMobileActions(false); }}
+                        className="flex items-center gap-3 rounded-lg px-4 py-3 text-sm text-foreground active:bg-muted/60 transition-colors"
+                      >
+                        <Pencil className="size-4 text-muted-foreground" />
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => { setConfirmingDelete(true); setMobileActions(false); }}
+                        className="flex items-center gap-3 rounded-lg px-4 py-3 text-sm text-red-400 active:bg-red-500/10 transition-colors"
+                      >
+                        <Trash2 className="size-4" />
+                        Delete
+                      </button>
+                    </>
+                  )}
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>,
+        document.body
       )}
     </motion.div>
   );
@@ -512,6 +627,13 @@ interface TaskDetailProps {
 
 export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId, highlightCommentId, isAdmin = false }: TaskDetailProps) {
   const isDesktop = useMediaQuery('(min-width: 768px)');
+
+  // Signal to bottom nav that a modal is open (so it can hide)
+  useEffect(() => {
+    if (!open) return;
+    document.documentElement.setAttribute('data-modal-open', '');
+    return () => document.documentElement.removeAttribute('data-modal-open');
+  }, [open]);
 
   // Escape key handler for desktop slide-out
   useEffect(() => {
@@ -722,7 +844,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
     } else {
       // Add reaction (optimistic)
       const optimistic: TaskCommentReaction = {
-        id: crypto.randomUUID(),
+        id: uuid(),
         comment_id: commentId,
         user_id: currentUserId,
         emoji,
@@ -753,6 +875,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
     const q = autocompleteQuery.toLowerCase();
     if (autocompleteMode === 'slash') {
       return SLASH_COMMANDS
+        .filter(c => isAdmin || c.cmd !== '/blocked')
         .filter(c => c.label.toLowerCase().includes(q) || c.cmd.toLowerCase().includes('/' + q))
         .map(c => ({ id: c.cmd, label: c.label, icon: 'slash' as const, cmd: c.cmd, slashIcon: c.icon, slashClassName: c.className }));
     }
@@ -842,7 +965,8 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
   }
 
   const handleSlashCommand = useCallback(async (command: string): Promise<boolean> => {
-    if (!isAdmin) return false;
+    const canChangeStatus = isAdmin || task.assignee_id === currentUserId;
+    if (!canChangeStatus) return false;
     const cmd = command.toLowerCase().trim();
     const statusMap: Record<string, string> = {
       '/complete': 'Complete',
@@ -856,10 +980,11 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
     };
     const newStatus = statusMap[cmd];
     if (!newStatus) return false;
+    if (newStatus === 'Blocked' && !isAdmin) return false;
     await supabase.from('tasks').update({ status: newStatus }).eq('id', task.id);
     toast.success(`Status changed to ${newStatus}`);
     return true;
-  }, [isAdmin, task.id, supabase]);
+  }, [isAdmin, task.id, task.assignee_id, currentUserId, supabase]);
 
   const handleSend = useCallback(async () => {
     if ((!input.trim() && pendingFiles.length === 0) || sending) return;
@@ -877,7 +1002,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
 
     const currentProfile = team.find(m => m.id === currentUserId);
     const optimistic: TaskComment = {
-      id: crypto.randomUUID(),
+      id: uuid(),
       task_id: task.id,
       user_id: currentUserId,
       content: input.trim(),
@@ -1044,7 +1169,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
                 animate={{ opacity: PANEL.backdropOpacity.open }}
                 exit={{ opacity: PANEL.backdropOpacity.closed }}
                 transition={{ duration: DURATION_BACKDROP_MS / 1000 }}
-                className="fixed inset-0 z-50"
+                className="fixed inset-0 z-[70]"
               >
                 <div
                   role="presentation"
@@ -1344,7 +1469,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
         </div>
       )}
 
-      <div className="flex items-end gap-2 rounded-lg bg-muted/20 p-2">
+      <div className="flex items-end gap-2 rounded-lg bg-muted/40 md:bg-muted/20 border border-border/50 md:border-transparent p-2">
         <textarea
           ref={inputRef}
           value={input}
@@ -1352,8 +1477,11 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
           onKeyDown={handleKeyDown}
           placeholder="Write a message..."
           rows={1}
-          className="flex-1 resize-none bg-transparent text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none min-h-[36px] max-h-[120px] py-1.5"
+          className="flex-1 resize-none bg-transparent text-[15px] md:text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none min-h-[36px] max-h-[120px] py-1.5"
           style={{ height: 'auto', overflow: 'hidden' }}
+          onFocus={() => {
+            setTimeout(() => commentsEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 300);
+          }}
           onInput={e => {
             const el = e.currentTarget;
             el.style.height = 'auto';
@@ -1361,8 +1489,8 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
             el.style.overflow = el.scrollHeight > 120 ? 'auto' : 'hidden';
           }}
         />
-        <label className="cursor-pointer rounded p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors shrink-0">
-          <Paperclip className="size-4" />
+        <label className="cursor-pointer rounded p-2 md:p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors shrink-0">
+          <Paperclip className="size-5 md:size-4" />
           <input
             type="file"
             multiple
@@ -1376,11 +1504,11 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
         </label>
         <Button
           size="icon"
-          className={cn('size-8 shrink-0 transition-colors', (input.trim() || pendingFiles.length > 0) && !sending ? 'bg-seeko-accent text-black hover:bg-seeko-accent/90' : '')}
+          className={cn('size-10 md:size-8 shrink-0 transition-colors rounded-full md:rounded-md', (input.trim() || pendingFiles.length > 0) && !sending ? 'bg-seeko-accent text-black hover:bg-seeko-accent/90' : '')}
           onClick={handleSend}
           disabled={!input.trim() && pendingFiles.length === 0 || sending}
         >
-          <Send className="size-3.5" />
+          <Send className="size-4 md:size-3.5" />
         </Button>
       </div>
     </div>
@@ -1388,7 +1516,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
 
   const tabBar = (
     <LayoutGroup>
-      <div className="flex gap-1 px-6 py-1.5 shrink-0 border-b border-border">
+      <div className="flex gap-1 px-4 md:px-6 py-1.5 shrink-0 border-b border-border">
         <button
           className={cn(
             'relative rounded-lg px-4 py-1.5 text-sm font-medium transition-colors',
@@ -1432,7 +1560,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
         {open && (
           /* Centered card modal */
           <motion.div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 z-[60] flex items-end md:items-center justify-center p-0 md:p-4"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -1443,14 +1571,14 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
               onClick={() => onOpenChange(false)}
             />
             <motion.div
-              className="relative w-full rounded-xl border border-border bg-card shadow-2xl flex flex-col overflow-hidden"
+              className="relative w-full rounded-t-2xl md:rounded-xl border border-border bg-card shadow-2xl flex flex-col overflow-hidden"
               initial={{ opacity: 0, scale: 0.95, y: 10, maxWidth: 576, maxHeight: '70vh' }}
               animate={{
                 opacity: 1,
                 scale: 1,
                 y: 0,
                 maxWidth: activeTab === 'chat' ? 820 : 576,
-                maxHeight: activeTab === 'chat' ? '92vh' : '70vh',
+                maxHeight: activeTab === 'chat' ? '95dvh' : '75vh',
               }}
               exit={{ opacity: 0, scale: 0.97, y: 8 }}
               transition={{
@@ -1458,8 +1586,12 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
                 opacity: { duration: 0.12 },
               }}
             >
+              {/* Drag handle — mobile only */}
+              <div className="flex justify-center pt-2.5 pb-0 md:hidden">
+                <div className="h-1 w-10 rounded-full bg-muted-foreground/20" />
+              </div>
               {/* Header */}
-              <div className="flex items-start gap-3 px-6 pt-5 pb-3 shrink-0">
+              <div className="flex items-start gap-3 px-4 md:px-6 pt-3 md:pt-5 pb-3 shrink-0">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2.5">
                     <h2 className="text-xl font-semibold text-foreground truncate">{task.name}</h2>
@@ -1496,7 +1628,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
               {/* Tab content */}
               <AnimatePresence mode="wait" initial={false}>
                 {activeTab === 'details' && (
-                  <motion.div key="details" className="flex-1 overflow-y-auto px-6 py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ type: 'spring', stiffness: 500, damping: 35, opacity: { duration: 0.12 } }}>
+                  <motion.div key="details" className="flex-1 overflow-y-auto px-4 md:px-6 py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ type: 'spring', stiffness: 500, damping: 35, opacity: { duration: 0.12 } }}>
                     {detailsContent}
                   </motion.div>
                 )}
@@ -1519,10 +1651,10 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
                       if (files.length > 0) setPendingFiles(prev => [...prev, ...files]);
                     }}
                   >
-                    <div className="flex-1 overflow-y-auto px-6 py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                    <div className="flex-1 overflow-y-auto px-3 md:px-6 py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                       {chatMessages}
                     </div>
-                    <div className="shrink-0 border-t border-border px-5 py-3">
+                    <div className="shrink-0 border-t border-border px-3 md:px-5 py-3">
                       {chatCompose}
                     </div>
                   </motion.div>

@@ -19,6 +19,7 @@ import { FadeRise, Stagger, StaggerItem } from '@/components/motion';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Badge } from '@/components/ui/badge';
 import { InvestorAreaCard } from '@/components/dashboard/InvestorAreaCard';
+import { CollapsibleInvestorAreas } from '@/components/dashboard/CollapsibleInvestorAreas';
 import {
   CheckSquare,
   Map,
@@ -136,45 +137,134 @@ export default async function InvestorPage() {
         )}
       </FadeRise>
 
-      {/* ── Game Areas ──────────────────────────────────── */}
+      {/* ── Blocked tasks callout — early on mobile for visibility ── */}
+      {blocked > 0 && (
+        <FadeRise delay={delay(TIMING.hero + 50)}>
+          <Card className="border-red-900/40 bg-red-950/10">
+            <CardContent className="flex items-center gap-3 py-4">
+              <AlertCircle className="size-4 text-red-400 shrink-0" />
+              <p className="text-sm text-muted-foreground">
+                <span className="font-medium text-foreground">{blocked} task{blocked !== 1 ? 's' : ''} blocked.</span>
+                {' '}The team is actively working to unblock progress.
+              </p>
+            </CardContent>
+          </Card>
+        </FadeRise>
+      )}
+
+      {/* ── Overdue tasks callout ───────────────────────── */}
+      {overdueCount > 0 && (
+        <FadeRise delay={delay(TIMING.hero + (blocked > 0 ? 100 : 50))}>
+          <Card className="border-amber-900/40 bg-amber-950/10">
+            <CardContent className="flex items-center gap-3 py-4">
+              <AlertCircle className="size-4 text-amber-400 shrink-0" />
+              <p className="text-sm text-muted-foreground">
+                <span className="font-medium text-foreground">{overdueCount} task{overdueCount !== 1 ? 's' : ''} past due.</span>
+                {' '}The team is reprioritising and updating deadlines.
+              </p>
+            </CardContent>
+          </Card>
+        </FadeRise>
+      )}
+
+      {/* ── This Week — promoted above areas on mobile ──── */}
       <FadeRise delay={delay(TIMING.areas)}>
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Map className="size-4 text-muted-foreground" />
-              <CardTitle className="text-xl font-semibold text-foreground">Game Areas</CardTitle>
-            </div>
-            <CardDescription className="line-clamp-1">
-              {areas.length > 0 ? areasSubtitle : 'Progress by area.'}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {areas.length === 0 ? (
+        <div className="md:hidden">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <TrendingUp className="size-4 text-muted-foreground" />
+                <CardTitle className="text-xl font-semibold text-foreground">This Week</CardTitle>
+              </div>
+              <CardDescription>Summary of the last 7 days.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {updates.length === 0 ? (
+                <EmptyState
+                  icon="TrendingUp"
+                  title="No updates yet"
+                  description="Activity from the past week will be summarised here."
+                />
+              ) : (
+                <ul className="flex flex-col gap-3">
+                  {updates.map((bullet, i) => (
+                    <li key={i} className="flex items-start gap-2.5">
+                      <span
+                        className="mt-1.5 h-1.5 w-1.5 rounded-full shrink-0"
+                        style={{ backgroundColor: 'var(--color-seeko-accent)' }}
+                        aria-hidden
+                      />
+                      <span className="text-sm text-muted-foreground">{bullet}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </FadeRise>
+
+      {/* ── Game Areas ──────────────────────────────────── */}
+      <FadeRise delay={delay(TIMING.areas + 50)}>
+        {areas.length === 0 ? (
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Map className="size-4 text-muted-foreground" />
+                <CardTitle className="text-xl font-semibold text-foreground">Game Areas</CardTitle>
+              </div>
+              <CardDescription>Progress by area.</CardDescription>
+            </CardHeader>
+            <CardContent>
               <EmptyState
                 icon="Map"
                 title="No game areas yet"
                 description="Areas will appear here when the team adds them."
               />
-            ) : (
-              <Stagger
-                className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4"
-                delayMs={delay(TIMING.areasStaggerDelayMs)}
-                staggerMs={0.08}
-              >
-                {areas.map(area => (
-                  <InvestorAreaCard
-                    key={area.id}
-                    area={area}
-                    tasksInArea={tasks.filter(t => t.area_id === area.id)}
-                  />
-                ))}
-              </Stagger>
-            )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        ) : (
+          <>
+            {/* Desktop: always expanded */}
+            <div className="hidden md:block">
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center gap-2">
+                    <Map className="size-4 text-muted-foreground" />
+                    <CardTitle className="text-xl font-semibold text-foreground">Game Areas</CardTitle>
+                  </div>
+                  <CardDescription className="line-clamp-1">{areasSubtitle}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Stagger
+                    className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4"
+                    delayMs={delay(TIMING.areasStaggerDelayMs)}
+                    staggerMs={0.08}
+                  >
+                    {areas.map(area => (
+                      <InvestorAreaCard
+                        key={area.id}
+                        area={area}
+                        tasksInArea={tasks.filter(t => t.area_id === area.id)}
+                      />
+                    ))}
+                  </Stagger>
+                </CardContent>
+              </Card>
+            </div>
+            {/* Mobile: collapsible */}
+            <div className="md:hidden">
+              <CollapsibleInvestorAreas
+                areas={areas}
+                tasks={tasks as TaskWithAssignee[]}
+                subtitle={areasSubtitle}
+              />
+            </div>
+          </>
+        )}
       </FadeRise>
 
-      {/* ── Recent Tasks + Updates ─────────────────────────── */}
+      {/* ── Recent Tasks + Updates (desktop grid) ────────── */}
       <FadeRise delay={delay(TIMING.grid)}>
         <div className="grid grid-cols-1 gap-6 md:grid-cols-5">
 
@@ -202,11 +292,33 @@ export default async function InvestorPage() {
                 >
                   {(tasks as TaskWithAssignee[])
                     .slice(0, 15)
-                    .map((task, i) => (
-                      <StaggerItem key={task.id} className="flex gap-3 py-4 border-b border-border last:border-0 last:pb-0">
-                        <div className="flex flex-1 min-w-0 flex-col gap-0.5">
-                          <p className="text-sm font-medium text-foreground truncate">{task.name}</p>
-                          <div className="flex items-center gap-2 flex-nowrap overflow-hidden">
+                    .map((task) => (
+                      <StaggerItem key={task.id}>
+                        {/* Desktop row */}
+                        <div className="hidden md:flex gap-3 py-4 border-b border-border last:border-0 last:pb-0">
+                          <div className="flex flex-1 min-w-0 flex-col gap-0.5">
+                            <p className="text-sm font-medium text-foreground truncate">{task.name}</p>
+                            <div className="flex items-center gap-2 flex-nowrap overflow-hidden">
+                              <Badge variant="outline" className="text-[11px] py-0 px-1.5 font-normal shrink-0">
+                                {task.status}
+                              </Badge>
+                              {task.assignee?.display_name && (
+                                <span className="text-xs text-muted-foreground truncate">
+                                  {task.assignee.display_name}
+                                </span>
+                              )}
+                              {task.deadline && (
+                                <span className="text-xs text-muted-foreground shrink-0">
+                                  Due {new Date(task.deadline).toLocaleDateString()}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        {/* Mobile row — stacked layout */}
+                        <div className="flex md:hidden flex-col gap-1.5 py-3.5 border-b border-border last:border-0 last:pb-0">
+                          <p className="text-sm font-medium text-foreground line-clamp-2">{task.name}</p>
+                          <div className="flex items-center gap-2">
                             <Badge variant="outline" className="text-[11px] py-0 px-1.5 font-normal shrink-0">
                               {task.status}
                             </Badge>
@@ -215,12 +327,12 @@ export default async function InvestorPage() {
                                 {task.assignee.display_name}
                               </span>
                             )}
-                            {task.deadline && (
-                              <span className="text-xs text-muted-foreground shrink-0">
-                                Due {new Date(task.deadline).toLocaleDateString()}
-                              </span>
-                            )}
                           </div>
+                          {task.deadline && (
+                            <span className="text-[11px] text-muted-foreground">
+                              Due {new Date(task.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                            </span>
+                          )}
                         </div>
                       </StaggerItem>
                     ))}
@@ -229,8 +341,8 @@ export default async function InvestorPage() {
             </CardContent>
           </Card>
 
-          {/* Updates / Weekly Summary */}
-          <Card className="md:col-span-2">
+          {/* Updates / Weekly Summary — desktop only (mobile version is above) */}
+          <Card className="hidden md:block md:col-span-2">
             <CardHeader>
               <div className="flex items-center gap-2">
                 <TrendingUp className="size-4 text-muted-foreground" />
@@ -264,36 +376,6 @@ export default async function InvestorPage() {
 
         </div>
       </FadeRise>
-
-      {/* ── Blocked tasks callout ───────────────────────── */}
-      {blocked > 0 && (
-        <FadeRise delay={delay(TIMING.grid + 100)}>
-          <Card className="border-red-900/40 bg-red-950/10">
-            <CardContent className="flex items-center gap-3 py-4">
-              <AlertCircle className="size-4 text-red-400 shrink-0" />
-              <p className="text-sm text-muted-foreground">
-                <span className="font-medium text-foreground">{blocked} task{blocked !== 1 ? 's' : ''} blocked.</span>
-                {' '}The team is actively working to unblock progress.
-              </p>
-            </CardContent>
-          </Card>
-        </FadeRise>
-      )}
-
-      {/* ── Overdue tasks callout ───────────────────────── */}
-      {overdueCount > 0 && (
-        <FadeRise delay={delay(TIMING.grid + (blocked > 0 ? 150 : 100))}>
-          <Card className="border-amber-900/40 bg-amber-950/10">
-            <CardContent className="flex items-center gap-3 py-4">
-              <AlertCircle className="size-4 text-amber-400 shrink-0" />
-              <p className="text-sm text-muted-foreground">
-                <span className="font-medium text-foreground">{overdueCount} task{overdueCount !== 1 ? 's' : ''} past due.</span>
-                {' '}The team is reprioritising and updating deadlines.
-              </p>
-            </CardContent>
-          </Card>
-        </FadeRise>
-      )}
 
     </div>
   );
