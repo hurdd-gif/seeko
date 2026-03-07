@@ -33,7 +33,12 @@ export async function POST(
 
   const { id: taskId } = await params;
 
-  const formData = await req.formData();
+  let formData: FormData;
+  try {
+    formData = await req.formData();
+  } catch {
+    return NextResponse.json({ error: 'Invalid multipart form data' }, { status: 400 });
+  }
   const file = formData.get('file') as File | null;
   const commentId = formData.get('comment_id') as string | null;
 
