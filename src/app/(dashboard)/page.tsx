@@ -199,7 +199,7 @@ export default async function OverviewPage() {
         <div className="grid grid-cols-1 gap-6 md:grid-cols-5">
 
           {/* Upcoming Tasks — primary focus card */}
-          <Card className="lg:col-span-3">
+          <Card className="md:col-span-3">
             <CardHeader>
               <CardTitle className="text-xl font-semibold text-foreground">Upcoming Tasks</CardTitle>
               <CardDescription>
@@ -219,7 +219,7 @@ export default async function OverviewPage() {
           </Card>
 
           {/* Recent Activity */}
-          <Card className="lg:col-span-2">
+          <Card className="md:col-span-2">
             <CardHeader>
               <CardTitle className="text-xl font-semibold text-foreground">Recent Activity</CardTitle>
               <CardDescription>Latest actions.</CardDescription>

@@ -216,7 +216,7 @@ export default async function InvestorPage() {
                               </span>
                             )}
                             {task.deadline && (
-                              <span className="text-xs text-muted-foreground truncate shrink-0">
+                              <span className="text-xs text-muted-foreground shrink-0">
                                 Due {new Date(task.deadline).toLocaleDateString()}
                               </span>
                             )}
