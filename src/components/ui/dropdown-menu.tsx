@@ -37,8 +37,12 @@ const DropdownMenuTrigger = React.forwardRef<
 >(({ children, asChild, ...props }, ref) => {
   const { open, setOpen } = useDropdown()
   if (asChild && React.isValidElement(children)) {
+    const childProps = children.props as Record<string, unknown>;
     return React.cloneElement(children as React.ReactElement<Record<string, unknown>>, {
-      onClick: () => setOpen(!open),
+      onClick: (e: React.MouseEvent) => {
+        if (typeof childProps.onClick === 'function') (childProps.onClick as (e: React.MouseEvent) => void)(e);
+        setOpen(!open);
+      },
       ref,
     })
   }
