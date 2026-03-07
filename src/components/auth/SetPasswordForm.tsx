@@ -2,8 +2,11 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { motion, AnimatePresence } from 'motion/react';
+import { Loader2, ArrowRight } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useHaptics } from '@/components/HapticsProvider';
+import { DURATION_STATE_MS } from '@/lib/motion';
 
 export function SetPasswordForm() {
   const router = useRouter();
@@ -88,9 +91,30 @@ export function SetPasswordForm() {
       <button
         type="submit"
         disabled={loading}
-        className="w-full py-2 px-4 rounded-lg bg-seeko-accent text-primary-foreground font-semibold text-sm hover:bg-seeko-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        className="w-full py-2 px-4 rounded-lg bg-seeko-accent text-primary-foreground font-semibold text-sm hover:bg-seeko-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors min-w-[140px] inline-flex items-center justify-center gap-2"
       >
-        {loading ? 'Saving…' : 'Set password'}
+        <AnimatePresence mode="wait">
+          <motion.span
+            key={loading ? 'loading' : 'idle'}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: DURATION_STATE_MS / 1000 }}
+            className="inline-flex items-center gap-2"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="size-4 shrink-0 animate-spin" />
+                Saving…
+              </>
+            ) : (
+              <>
+                Set password
+                <ArrowRight className="size-4 shrink-0" />
+              </>
+            )}
+          </motion.span>
+        </AnimatePresence>
       </button>
     </form>
   );

@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
+import { ArrowRight, Sparkles, ChevronLeft, Rocket } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogContent,
@@ -19,6 +20,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { BUTTON_SPRING, DURATION_STATE_MS } from '@/lib/motion';
 
 export interface TourStep {
   content: ReactNode;
@@ -293,15 +295,53 @@ export function TourProvider({
                 <div>
                   {currentStep > 0 && (
                     <Button variant="ghost" size="sm" onClick={previousStep}>
+                      <ChevronLeft className="size-3.5" />
                       Previous
                     </Button>
                   )}
                 </div>
-                <div className="flex gap-2">
-                  <Button size="sm" onClick={nextStep}>
-                    {currentStep === steps.length - 1 ? 'Finish' : 'Next'}
+                <motion.div
+                  animate={{
+                    scale: currentStep === steps.length - 1 ? 1.02 : 1,
+                    backgroundColor:
+                      currentStep === steps.length - 1
+                        ? 'var(--color-seeko-accent)'
+                        : 'transparent',
+                  }}
+                  transition={BUTTON_SPRING}
+                  className="inline-block rounded-md"
+                >
+                  <Button
+                    size="sm"
+                    onClick={nextStep}
+                    className={`min-w-[90px] gap-1.5 ${
+                      currentStep === steps.length - 1
+                        ? 'bg-seeko-accent text-background hover:bg-seeko-accent/90'
+                        : ''
+                    }`}
+                  >
+                    <AnimatePresence mode="wait">
+                      {(() => {
+                        const isLast = currentStep === steps.length - 1;
+                        const Icon = isLast ? Sparkles : ArrowRight;
+                        const label = isLast ? 'Finish' : 'Next';
+                        return (
+                          <motion.span
+                            key={isLast ? 'finish' : 'next'}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: DURATION_STATE_MS / 1000 }}
+                            className="inline-flex items-center gap-1.5"
+                          >
+                            {label}
+                            <Icon className="size-3.5 shrink-0" />
+                          </motion.span>
+                        );
+                      })()}
+                    </AnimatePresence>
                   </Button>
-                </div>
+                </motion.div>
               </div>
             </motion.div>
           </>
@@ -360,7 +400,11 @@ export function TourAlertDialog({
           <Button variant="outline" onClick={handleSkip}>
             Skip tour
           </Button>
-          <Button onClick={handleStart}>
+          <Button
+            onClick={handleStart}
+            className="bg-seeko-accent text-background hover:bg-seeko-accent/90 gap-1.5"
+          >
+            <Rocket className="size-4 shrink-0" />
             Start tour
           </Button>
         </AlertDialogFooter>

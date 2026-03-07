@@ -108,6 +108,8 @@ export function DashboardTourWrapper({ children, showTour, userId }: DashboardTo
   );
 }
 
+const CMD_K_STEP_INDEX = TOUR_STEPS.findIndex((s) => s.selectorId === TOUR_STEP_IDS.CMD_K);
+
 function TourContent({
   showTour,
   tourOpen,
@@ -119,7 +121,7 @@ function TourContent({
   setTourOpen: (v: boolean) => void;
   steps: TourStep[];
 }) {
-  const { setSteps } = useTour();
+  const { setSteps, currentStep } = useTour();
 
   useEffect(() => {
     setSteps(steps);
@@ -130,6 +132,16 @@ function TourContent({
       setTourOpen(true);
     }
   }, [showTour, steps.length, setTourOpen]);
+
+  // Auto-open the command palette when the tour reaches the Cmd+K step
+  useEffect(() => {
+    if (currentStep === CMD_K_STEP_INDEX) {
+      const timer = setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('open-command-palette'));
+      }, 400);
+      return () => clearTimeout(timer);
+    }
+  }, [currentStep]);
 
   return null;
 }

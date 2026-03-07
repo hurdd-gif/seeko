@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
 import { createBrowserClient } from '@supabase/ssr';
-import { Check, X } from 'lucide-react';
+import { Check, X, ArrowRight, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { BUTTON_SPRING, DURATION_STATE_MS } from '@/lib/motion';
 
 const STEPS = [
   {
@@ -167,7 +169,17 @@ export function GettingStarted({ userId }: { userId: string }) {
                           : 'border-border bg-transparent'
                     )}
                   >
-                    {isCompleted && <Check className="size-3" strokeWidth={3} />}
+                    <AnimatePresence>
+                      {isCompleted && (
+                        <motion.span
+                          initial={{ scale: 0, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          transition={{ type: 'spring', stiffness: 500, damping: 25 }}
+                        >
+                          <Check className="size-3" strokeWidth={3} />
+                        </motion.span>
+                      )}
+                    </AnimatePresence>
                   </div>
                   <div>
                     <p
@@ -194,15 +206,47 @@ export function GettingStarted({ userId }: { userId: string }) {
             <Button variant="ghost" size="sm" onClick={handleSkip}>
               Skip
             </Button>
-            {allDone ? (
-              <Button size="sm" onClick={handleDone} disabled={showConfetti}>
-                Done
+            <motion.div
+              animate={{
+                scale: allDone ? 1.02 : 1,
+                backgroundColor: allDone
+                  ? 'var(--color-seeko-accent)'
+                  : 'transparent',
+              }}
+              transition={BUTTON_SPRING}
+              className="inline-block rounded-md"
+            >
+              <Button
+                size="sm"
+                onClick={allDone ? handleDone : handleNext}
+                disabled={showConfetti}
+                className={`min-w-[90px] gap-1.5 ${
+                  allDone
+                    ? 'bg-seeko-accent text-background hover:bg-seeko-accent/90'
+                    : ''
+                }`}
+              >
+                <AnimatePresence mode="wait">
+                  {(() => {
+                    const Icon = allDone ? Sparkles : ArrowRight;
+                    const label = allDone ? 'Done' : 'Next';
+                    return (
+                      <motion.span
+                        key={allDone ? 'done' : 'next'}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: DURATION_STATE_MS / 1000 }}
+                        className="inline-flex items-center gap-1.5"
+                      >
+                        {label}
+                        <Icon className="size-3.5 shrink-0" />
+                      </motion.span>
+                    );
+                  })()}
+                </AnimatePresence>
               </Button>
-            ) : (
-              <Button size="sm" onClick={handleNext}>
-                Next
-              </Button>
-            )}
+            </motion.div>
           </div>
         </div>
       </div>
