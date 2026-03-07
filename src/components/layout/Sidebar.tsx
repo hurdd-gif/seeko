@@ -69,6 +69,7 @@ import {
   ChevronLeft,
   ChevronRight,
   TrendingUp,
+  DollarSign,
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { Button } from '@/components/ui/button';
@@ -152,7 +153,10 @@ export function Sidebar({
           ? { ...item, label: isAdmin ? 'All Tasks' : 'My Tasks', mobileLabel: 'Tasks' as const }
           : item
       ),
-    ...(isAdmin ? [NAV_INVESTOR] : []),
+    ...(isAdmin ? [
+      { href: '/payments', label: 'Payments', mobileLabel: 'Pay' as const, icon: DollarSign, tourKey: undefined as undefined },
+      NAV_INVESTOR,
+    ] : []),
   ];
 
   const label = displayName || email;
@@ -239,18 +243,11 @@ export function Sidebar({
                 {isActive && (
                   <motion.div
                     layoutId="nav-highlight"
-                    className="absolute inset-0 rounded-lg bg-seeko-accent/[0.08]"
+                    className="absolute inset-0 rounded-lg bg-muted"
                     transition={NAV_HIGHLIGHT.spring}
                   />
                 )}
-                {isActive && !collapsed && (
-                  <motion.div
-                    layoutId="nav-accent-bar"
-                    className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full bg-seeko-accent"
-                    transition={NAV_HIGHLIGHT.spring}
-                  />
-                )}
-                <span className={`relative flex items-center justify-center size-7 rounded-md shrink-0 ${isActive ? 'bg-seeko-accent/[0.12]' : ''}`}>
+                <span className="relative flex items-center justify-center size-7 shrink-0">
                   <Icon className={`h-4 w-4 ${isActive ? 'text-seeko-accent' : ''}`} />
                 </span>
                 <AnimatePresence>
@@ -281,7 +278,7 @@ export function Sidebar({
         </nav>
 
         <div className="p-3 border-t border-sidebar-border">
-          <div className={`flex items-center ${collapsed ? 'justify-center' : 'gap-2.5 rounded-lg bg-white/[0.03] px-2.5 py-2 mb-2'}`}>
+          <div className={`flex items-center ${collapsed ? 'justify-center' : 'gap-2.5 rounded-lg bg-white/[0.06] px-2.5 py-2 mb-2'}`}>
             {collapsed ? (
               <Link href="/settings">
                 <motion.div
