@@ -6,7 +6,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion, LayoutGroup } from 'motion/react';
-import { LogOut, LayoutDashboard, FileDown, Settings, Home } from 'lucide-react';
+import { LogOut, LayoutDashboard, FileDown, Settings, Home, DollarSign } from 'lucide-react';
 import { toast } from 'sonner';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -125,6 +125,29 @@ export function InvestorSidebar({ email, displayName, avatarUrl, isAdmin = false
                 <LayoutDashboard className={`h-4 w-4 ${pathname === '/investor' ? 'text-seeko-accent' : ''}`} />
               </span>
               <span className="relative whitespace-nowrap">Dashboard</span>
+            </Link>
+
+            {/* Payments */}
+            <Link
+              href="/investor/payments"
+              className={[
+                'relative flex items-center rounded-lg py-2 text-sm gap-3 px-3',
+                pathname === '/investor/payments'
+                  ? 'text-seeko-accent font-medium'
+                  : 'text-muted-foreground hover:text-sidebar-foreground hover:bg-white/5 transition-colors',
+              ].join(' ')}
+            >
+              {pathname === '/investor/payments' && (
+                <motion.div
+                  layoutId="investor-nav-highlight"
+                  className="absolute inset-0 rounded-lg bg-white/[0.06]"
+                  transition={NAV_HIGHLIGHT.spring}
+                />
+              )}
+              <span className="relative flex items-center justify-center size-7 shrink-0">
+                <DollarSign className={`h-4 w-4 ${pathname === '/investor/payments' ? 'text-seeko-accent' : ''}`} />
+              </span>
+              <span className="relative whitespace-nowrap">Payments</span>
             </Link>
 
             {/* Back to main dashboard (admins only) */}
@@ -251,6 +274,19 @@ export function InvestorSidebar({ email, displayName, avatarUrl, isAdmin = false
                     >
                       <LayoutDashboard className="size-5" />
                       Dashboard
+                    </Link>
+                  </motion.div>
+                  <motion.div className="flex flex-1" whileTap={{ scale: BOTTOM_NAV.tapScale }} transition={BOTTOM_NAV.tapSpring}>
+                    <Link
+                      href="/investor/payments"
+                      onClick={() => trigger('selection')}
+                      className={[
+                        'flex flex-1 flex-col items-center justify-center gap-1 text-[10px] font-medium transition-colors',
+                        pathname === '/investor/payments' ? 'text-seeko-accent' : 'text-muted-foreground',
+                      ].join(' ')}
+                    >
+                      <DollarSign className="size-5" />
+                      Payments
                     </Link>
                   </motion.div>
                   <motion.div className="flex flex-1" whileTap={{ scale: BOTTOM_NAV.tapScale }} transition={BOTTOM_NAV.tapSpring}>

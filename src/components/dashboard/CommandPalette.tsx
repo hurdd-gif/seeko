@@ -1,14 +1,26 @@
 'use client';
 
+/* ─────────────────────────────────────────────────────────
+ * COMMAND PALETTE — ANIMATION STORYBOARD
+ *
+ *   open    backdrop fades in, palette scales 0.95 → 1.0 (spring)
+ *           rows stagger in from left (30ms per row)
+ *   nav     ↑↓ keys move highlight, Enter selects
+ *   close   scale 1.0 → 0.97, opacity 1 → 0 (120ms)
+ * ───────────────────────────────────────────────────────── */
+
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { useRouter } from 'next/navigation';
 import {
-  LayoutDashboard, Users, FileText, Activity, Settings, Search, PanelLeftClose,
+  LayoutDashboard, Users, FileText, Activity, Settings, Search, PanelLeftClose, DollarSign,
 } from 'lucide-react';
 import { useCommandPalette } from '@/lib/hooks/useCommandPalette';
-import { springs } from '@/components/motion';
 import type { Profile, Doc } from '@/lib/types';
+import { cn } from '@/lib/utils';
+
+const SPRING = { type: 'spring' as const, stiffness: 500, damping: 30 };
+const ROW_STAGGER = 0.025;
 
 type CommandItem = {
   id: string;
@@ -46,6 +58,7 @@ export function CommandPalette({ team, docs, isContractor = false }: CommandPale
       { id: 'p-team', label: 'Team', section: 'Pages', icon: Users, action: () => go('/team') },
       { id: 'p-docs', label: 'Docs', section: 'Pages', icon: FileText, action: () => go('/docs') },
       ...(!isContractor ? [{ id: 'p-activity', label: 'Activity', section: 'Pages' as const, icon: Activity, action: () => go('/activity') }] : []),
+      ...(!isContractor ? [{ id: 'p-payments', label: 'Payments', section: 'Pages' as const, icon: DollarSign, action: () => go('/payments') }] : []),
       { id: 'p-settings', label: 'Settings', section: 'Pages', icon: Settings, action: () => go('/settings') },
     ];
     const teamItems: CommandItem[] = team.map((m) => ({
@@ -68,7 +81,7 @@ export function CommandPalette({ team, docs, isContractor = false }: CommandPale
       { id: 'a-sidebar', label: 'Toggle Sidebar', section: 'Actions', icon: PanelLeftClose, action: () => { setOpen(false); document.dispatchEvent(new CustomEvent('toggle-sidebar')); } },
     ];
     return [...pages, ...teamItems, ...docItems, ...actions];
-  }, [team, docs, go, setOpen]);
+  }, [team, docs, go, setOpen, isContractor]);
 
   const filtered = useMemo(() => {
     if (!query) return items.slice(0, 12);
@@ -78,6 +91,20 @@ export function CommandPalette({ team, docs, isContractor = false }: CommandPale
       return haystack.includes(q);
     }).slice(0, 12);
   }, [query, items]);
+
+  // Group filtered items by section
+  const grouped = useMemo(() => {
+    const sections = new Map<string, CommandItem[]>();
+    const order: string[] = [];
+    for (const item of filtered) {
+      if (!sections.has(item.section)) {
+        sections.set(item.section, []);
+        order.push(item.section);
+      }
+      sections.get(item.section)!.push(item);
+    }
+    return order.map(section => ({ section, items: sections.get(section)! }));
+  }, [filtered]);
 
   useEffect(() => setSelectedIndex(0), [filtered]);
 
@@ -107,16 +134,19 @@ export function CommandPalette({ team, docs, isContractor = false }: CommandPale
   }, [open, filtered, selectedIndex]);
 
   useEffect(() => {
-    const el = listRef.current?.children[selectedIndex] as HTMLElement | undefined;
+    const el = listRef.current?.querySelector('[data-selected="true"]') as HTMLElement | undefined;
     el?.scrollIntoView({ block: 'nearest' });
   }, [selectedIndex]);
+
+  // Track flat index across grouped sections for keyboard nav
+  let flatIndex = 0;
 
   return (
     <AnimatePresence>
       {open && (
         <>
           <motion.div
-            className="fixed inset-0 z-[103] bg-black/60 backdrop-blur-sm"
+            className="fixed inset-0 z-[103] bg-black/50 backdrop-blur-sm"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -124,15 +154,19 @@ export function CommandPalette({ team, docs, isContractor = false }: CommandPale
             onClick={() => setOpen(false)}
           />
           <motion.div
-            className="fixed inset-x-0 top-[20%] z-[104] mx-auto w-full max-w-lg"
+            className="fixed inset-x-0 top-[18%] z-[104] mx-auto w-full max-w-lg"
             initial={shouldReduce ? undefined : { opacity: 0, scale: 0.95, y: -8 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: -8 }}
-            transition={springs.snappy}
+            exit={{ opacity: 0, scale: 0.97, y: -8 }}
+            transition={SPRING}
           >
-            <div id="tour-command-palette" className="mx-4 overflow-hidden rounded-xl border border-border bg-card/95 shadow-2xl backdrop-blur-xl">
-              <div className="flex items-center gap-3 border-b border-border px-4 py-3">
-                <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+            <div
+              id="tour-command-palette"
+              className="mx-4 overflow-hidden rounded-xl border border-white/[0.08] bg-popover/80 backdrop-blur-xl backdrop-saturate-150 shadow-xl"
+            >
+              {/* Search input */}
+              <div className="flex items-center gap-3 border-b border-white/[0.06] px-4 py-3">
+                <Search className="size-4 text-muted-foreground shrink-0" />
                 <input
                   ref={inputRef}
                   value={query}
@@ -140,31 +174,72 @@ export function CommandPalette({ team, docs, isContractor = false }: CommandPale
                   placeholder="Search pages, team, docs..."
                   className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
                 />
-                <kbd className="hidden md:inline-flex items-center rounded border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground font-mono">
+                <kbd className="hidden md:inline-flex items-center gap-0.5 rounded-md border border-white/[0.08] bg-white/[0.04] px-1.5 py-0.5 text-[10px] text-muted-foreground font-mono">
                   ESC
                 </kbd>
               </div>
-              <div ref={listRef} className="max-h-72 overflow-y-auto py-2">
-                {filtered.length === 0 && (
-                  <p className="px-4 py-6 text-center text-sm text-muted-foreground">No results</p>
+
+              {/* Results */}
+              <div ref={listRef} className="max-h-72 overflow-y-auto p-1.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                {filtered.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-8 text-center">
+                    <Search className="size-6 text-muted-foreground/30" />
+                    <p className="mt-2 text-sm text-muted-foreground">No results for &ldquo;{query}&rdquo;</p>
+                    <p className="mt-1 text-xs text-muted-foreground/60">Try a different search term</p>
+                  </div>
+                ) : (
+                  grouped.map(group => {
+                    const rows = group.items.map(item => {
+                      const Icon = item.icon;
+                      const currentIndex = flatIndex++;
+                      const isSelected = currentIndex === selectedIndex;
+                      return (
+                        <motion.button
+                          key={item.id}
+                          data-selected={isSelected}
+                          initial={shouldReduce ? undefined : { opacity: 0, x: -8 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ ...SPRING, delay: currentIndex * ROW_STAGGER }}
+                          onClick={() => item.action()}
+                          onMouseEnter={() => setSelectedIndex(currentIndex)}
+                          className={cn(
+                            'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm transition-colors',
+                            isSelected
+                              ? 'bg-white/[0.08] text-foreground'
+                              : 'text-muted-foreground hover:text-foreground'
+                          )}
+                        >
+                          <Icon className="size-4 shrink-0" />
+                          <span className="flex-1 truncate">{item.label}</span>
+                        </motion.button>
+                      );
+                    });
+
+                    return (
+                      <div key={group.section}>
+                        <div className="px-3 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+                          {group.section}
+                        </div>
+                        {rows}
+                      </div>
+                    );
+                  })
                 )}
-                {filtered.map((item, i) => {
-                  const Icon = item.icon;
-                  return (
-                    <button
-                      key={item.id}
-                      onClick={() => item.action()}
-                      onMouseEnter={() => setSelectedIndex(i)}
-                      className={`flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm transition-colors ${
-                        i === selectedIndex ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'
-                      }`}
-                    >
-                      <Icon className="h-4 w-4 shrink-0" />
-                      <span className="flex-1 truncate">{item.label}</span>
-                      <span className="text-[10px] font-mono text-muted-foreground/60 uppercase">{item.section}</span>
-                    </button>
-                  );
-                })}
+              </div>
+
+              {/* Footer hint */}
+              <div className="flex items-center justify-between border-t border-white/[0.06] px-4 py-2">
+                <div className="flex items-center gap-3 text-[10px] text-muted-foreground/50">
+                  <span className="flex items-center gap-1">
+                    <kbd className="rounded border border-white/[0.08] bg-white/[0.04] px-1 py-0.5 font-mono">↑↓</kbd>
+                    navigate
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <kbd className="rounded border border-white/[0.08] bg-white/[0.04] px-1 py-0.5 font-mono">↵</kbd>
+                    select
+                  </span>
+                </div>
+                <span className="text-[10px] text-muted-foreground/50 font-mono">⌘K</span>
               </div>
             </div>
           </motion.div>

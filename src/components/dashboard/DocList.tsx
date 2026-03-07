@@ -1,17 +1,23 @@
 'use client';
 
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { FileText, Lock, Pencil, Trash2, Plus, Search, Clock } from 'lucide-react';
+import { FileText, Lock, Pencil, Trash2, Plus, Search, Clock, ChevronDown, Circle } from 'lucide-react';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 import { Doc } from '@/lib/types';
 import type { Profile } from '@/lib/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select } from '@/components/ui/select';
 import { Dialog, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '@/components/ui/dropdown-menu';
 import { Stagger, StaggerItem, HoverCard } from '@/components/motion';
 import { EmptyState } from '@/components/ui/empty-state';
 import { DocEditor } from './DocEditor';
@@ -20,6 +26,9 @@ import { DocContent } from './DocContent';
 import { useHaptics } from '@/components/HapticsProvider';
 
 const DEPARTMENTS = ['Coding', 'Visual Art', 'UI/UX', 'Animation', 'Asset Creation'] as const;
+
+/** Threshold for "recently updated" indicator (48 hours) */
+const RECENTLY_UPDATED_MS = 48 * 60 * 60 * 1000;
 
 function timeAgo(dateStr: string | undefined | null): string {
   if (!dateStr) return '';
@@ -34,6 +43,12 @@ function timeAgo(dateStr: string | undefined | null): string {
   return new Date(dateStr).toLocaleDateString();
 }
 
+function isRecentlyUpdated(doc: Doc): boolean {
+  const ts = doc.updated_at ?? doc.created_at;
+  if (!ts) return false;
+  return Date.now() - new Date(ts).getTime() < RECENTLY_UPDATED_MS;
+}
+
 /* ─────────────────────────────────────────────────────────
  * ANIMATION STORYBOARD
  *
@@ -46,6 +61,56 @@ const LIST = {
   staggerMs: 70,   // ms between each card
   delayMs:   0,    // ms before first card
 };
+
+/* ─────────────────────────────────────────────────────────
+ * FilterPill (matches Tasks page pattern)
+ * ───────────────────────────────────────────────────────── */
+
+function FilterPill({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: { value: string; label: string }[];
+  onChange: (value: string) => void;
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          className={cn(
+            'inline-flex items-center gap-1.5 rounded-full border px-4 py-1.5 text-xs font-medium uppercase tracking-wide transition-colors',
+            value !== 'all'
+              ? 'border-foreground/20 bg-muted text-foreground'
+              : 'border-border text-muted-foreground hover:text-foreground hover:border-foreground/20'
+          )}
+        >
+          {value !== 'all' ? options.find(o => o.value === value)?.label ?? label : label}
+          <ChevronDown className="size-3 text-muted-foreground" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start">
+        {options.map(opt => (
+          <DropdownMenuItem
+            key={opt.value}
+            onClick={() => onChange(opt.value)}
+            selected={opt.value === value}
+            className="text-xs"
+          >
+            {opt.label}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────
+ * DocList
+ * ───────────────────────────────────────────────────────── */
 
 interface DocListProps {
   docs: Doc[];
@@ -63,10 +128,6 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, cu
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [departmentFilter, setDepartmentFilter] = useState<string>('all');
-  const [isQuickCreating, setIsQuickCreating] = useState(false);
-  const [quickCreateTitle, setQuickCreateTitle] = useState('');
-  const [quickCreateLoading, setQuickCreateLoading] = useState(false);
-  const quickCreateRef = useRef<HTMLInputElement>(null);
   const searchParams = useSearchParams();
 
   const isLocked = (d: Doc) => {
@@ -76,6 +137,7 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, cu
     const granted = !!d.granted_user_ids?.length && d.granted_user_ids.includes(currentUserId);
     return hasDeptRestriction && !inDept && !granted;
   };
+
   const sortedDocs = useMemo(() => {
     const byLock = [...docs].sort((a, b) =>
       isLocked(a) === isLocked(b) ? 0 : isLocked(a) ? 1 : -1
@@ -87,6 +149,33 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, cu
     if (departmentFilter === 'all') return bySearch;
     return bySearch.filter(d => d.restricted_department?.includes(departmentFilter));
   }, [docs, searchQuery, departmentFilter, isAdmin, userDepartment, currentUserId]);
+
+  /** Group docs: unlocked by department, locked collected at end */
+  const grouped = useMemo(() => {
+    const unlocked: Doc[] = [];
+    const locked: Doc[] = [];
+    for (const d of sortedDocs) {
+      if (isLocked(d)) locked.push(d);
+      else unlocked.push(d);
+    }
+
+    // Group unlocked docs by primary department (or "Shared" if none)
+    const groups = new Map<string, Doc[]>();
+    for (const d of unlocked) {
+      const dept = d.restricted_department?.length ? d.restricted_department[0] : 'Shared';
+      if (!groups.has(dept)) groups.set(dept, []);
+      groups.get(dept)!.push(d);
+    }
+
+    // Sort: Shared first, then alphabetical
+    const sorted = Array.from(groups.entries()).sort(([a], [b]) => {
+      if (a === 'Shared') return -1;
+      if (b === 'Shared') return 1;
+      return a.localeCompare(b);
+    });
+
+    return { groups: sorted, locked };
+  }, [sortedDocs]);
 
   useEffect(() => {
     const docId = searchParams.get('doc');
@@ -117,90 +206,98 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, cu
     trigger('success');
   };
 
-  const handleQuickCreate = async () => {
-    const title = quickCreateTitle.trim();
-    if (!title) return;
-    setQuickCreateLoading(true);
-    try {
-      const res = await fetch('/api/docs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, content: '' }),
-      });
-      if (!res.ok) throw new Error('Failed to create');
-      const doc = await res.json();
-      setDocs(prev => [...prev, doc]);
-      setQuickCreateTitle('');
-      setIsQuickCreating(false);
-      toast.success(`Created "${doc.title}"`);
-      trigger('success');
-    } catch {
-      toast.error('Failed to create document');
-    } finally {
-      setQuickCreateLoading(false);
-    }
+  /* ── Render: unlocked doc card ─────────────────────────── */
+  const renderDocCard = (doc: Doc) => {
+    const recent = isRecentlyUpdated(doc);
+    return (
+      <StaggerItem key={doc.id}>
+        {deletingId === doc.id ? (
+          <DocDeleteConfirm
+            docId={doc.id}
+            docTitle={doc.title}
+            onDelete={handleDelete}
+            onCancel={() => setDeletingId(null)}
+          />
+        ) : (
+          <HoverCard>
+            <Card
+              className="group cursor-pointer transition-colors hover:border-foreground/20"
+              onClick={() => setSelected(doc)}
+            >
+              <CardContent className="flex items-start gap-3.5 p-4">
+                <div className="relative flex size-9 shrink-0 items-center justify-center rounded-md bg-secondary">
+                  <FileText className="size-4 text-foreground" />
+                  {recent && (
+                    <span className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-seeko-accent" />
+                  )}
+                </div>
+                <div className="flex flex-col gap-1 min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex flex-wrap items-center gap-2 min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">{doc.title}</p>
+                      {recent && (
+                        <Badge variant="outline" className="text-[10px] font-medium text-seeko-accent border-seeko-accent/25 shrink-0">Updated</Badge>
+                      )}
+                      {doc.restricted_department?.map(dept => (
+                        <Badge key={dept} variant="outline" className="text-xs font-normal text-muted-foreground shrink-0">{dept}</Badge>
+                      ))}
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {(doc.updated_at || doc.created_at) && (
+                        <span className="text-[11px] text-muted-foreground/50 hidden sm:inline">
+                          {timeAgo(doc.updated_at ?? doc.created_at!)}
+                        </span>
+                      )}
+                      {isAdmin && (
+                        <>
+                          <button
+                            type="button"
+                            title="Edit"
+                            onClick={(e) => { e.stopPropagation(); setEditingDoc(doc); }}
+                            className="flex size-7 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground opacity-0 group-hover:opacity-100"
+                          >
+                            <Pencil className="size-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            title="Delete"
+                            onClick={(e) => { e.stopPropagation(); setDeletingId(doc.id); }}
+                            className="flex size-7 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive opacity-0 group-hover:opacity-100"
+                          >
+                            <Trash2 className="size-3.5" />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  {isAdmin && doc.granted_user_ids?.length ? (
+                    <p className="text-[11px] text-muted-foreground/70">
+                      Also granted: {team.filter(p => doc.granted_user_ids?.includes(p.id)).map(p => p.display_name ?? 'Unknown').join(', ')}
+                    </p>
+                  ) : null}
+                  {doc.content ? (
+                    <p className="text-xs text-muted-foreground/80 leading-relaxed line-clamp-2">
+                      {doc.content.replace(/<[^>]*>/g, '').slice(0, 200)}
+                    </p>
+                  ) : null}
+                </div>
+              </CardContent>
+            </Card>
+          </HoverCard>
+        )}
+      </StaggerItem>
+    );
   };
-
-  useEffect(() => {
-    if (isQuickCreating) {
-      setTimeout(() => quickCreateRef.current?.focus(), 50);
-    }
-  }, [isQuickCreating]);
-
-  useEffect(() => {
-    if (!isAdmin) return;
-    function onKeyDown(e: KeyboardEvent) {
-      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'n') {
-        e.preventDefault();
-        setIsQuickCreating(true);
-      }
-    }
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [isAdmin]);
 
   return (
     <>
-      {/* Admin: New Document button + quick create */}
+      {/* Admin: New Document button */}
       {isAdmin && (
-        <div className="flex items-center justify-end gap-2 mb-3">
-          <button
-            onClick={() => setIsQuickCreating(true)}
-            className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <Plus className="h-4 w-4" />
-            Quick create
-          </button>
+        <div className="flex justify-end mb-3">
           <Button size="sm" onClick={() => setEditingDoc('new')}>
             <Plus className="size-3.5 mr-1.5" />
             New Document
           </Button>
-        </div>
-      )}
-      {isQuickCreating && (
-        <div className="flex items-center gap-2 mb-3">
-          <input
-            ref={quickCreateRef}
-            value={quickCreateTitle}
-            onChange={(e) => setQuickCreateTitle(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') handleQuickCreate(); if (e.key === 'Escape') { setIsQuickCreating(false); setQuickCreateTitle(''); } }}
-            placeholder="Document title..."
-            disabled={quickCreateLoading}
-            className="flex-1 rounded-lg border border-border bg-muted px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-1 focus:ring-seeko-accent/40"
-          />
-          <button
-            onClick={handleQuickCreate}
-            disabled={quickCreateLoading || !quickCreateTitle.trim()}
-            className="text-sm text-seeko-accent hover:underline disabled:opacity-50"
-          >
-            {quickCreateLoading ? 'Creating...' : 'Create'}
-          </button>
-          <button
-            onClick={() => { setIsQuickCreating(false); setQuickCreateTitle(''); }}
-            className="text-sm text-muted-foreground hover:text-foreground"
-          >
-            Cancel
-          </button>
         </div>
       )}
 
@@ -220,8 +317,9 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, cu
         />
       ) : (
         <>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4 mb-3">
-            <div className="relative flex-1 min-w-0">
+          {/* Search + filter row */}
+          <div className="flex flex-wrap items-center gap-2 mb-4">
+            <div className="relative flex-1 min-w-[200px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
               <Input
                 type="search"
@@ -231,16 +329,15 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, cu
                 className="pl-9 h-9 w-full"
               />
             </div>
-            <Select
+            <FilterPill
+              label="Department"
               value={departmentFilter}
-              onChange={e => setDepartmentFilter(e.target.value)}
-              className="w-full sm:w-[180px] h-9"
-            >
-              <option value="all">All departments</option>
-              {DEPARTMENTS.map(dept => (
-                <option key={dept} value={dept}>{dept}</option>
-              ))}
-            </Select>
+              options={[
+                { value: 'all', label: 'All' },
+                ...DEPARTMENTS.map(d => ({ value: d, label: d })),
+              ]}
+              onChange={setDepartmentFilter}
+            />
           </div>
 
           {sortedDocs.length === 0 ? (
@@ -248,110 +345,50 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, cu
               No documents match your search or filter.
             </p>
           ) : (
-        <Stagger
-          className="flex flex-col gap-3"
-          staggerMs={LIST.staggerMs / 1000}
-          delayMs={LIST.delayMs / 1000}
-        >
-          {sortedDocs.map(doc => {
-            const locked = isLocked(doc);
-            return (
-              <StaggerItem key={doc.id}>
-                {deletingId === doc.id ? (
-                  <DocDeleteConfirm
-                    docId={doc.id}
-                    docTitle={doc.title}
-                    onDelete={handleDelete}
-                    onCancel={() => setDeletingId(null)}
-                  />
-                ) : locked ? (
-                  <Card
-                    className="cursor-default bg-muted/20 transition-colors"
+            <div className="flex flex-col gap-6">
+              {/* Grouped unlocked docs */}
+              {grouped.groups.map(([dept, deptDocs]) => (
+                <div key={dept}>
+                  <div className="flex items-center gap-2 mb-2.5">
+                    <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/60">{dept}</p>
+                    <div className="flex-1 h-px bg-border/50" />
+                    <span className="text-[11px] text-muted-foreground/40">{deptDocs.length}</span>
+                  </div>
+                  <Stagger
+                    className="flex flex-col gap-2"
+                    staggerMs={LIST.staggerMs / 1000}
+                    delayMs={LIST.delayMs / 1000}
                   >
-                    <CardContent className="flex items-start gap-3.5 p-4">
-                      <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-muted/80">
-                        <Lock className="size-4 text-muted-foreground" />
+                    {deptDocs.map(renderDocCard)}
+                  </Stagger>
+                </div>
+              ))}
+
+              {/* Condensed locked docs */}
+              {grouped.locked.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-2.5">
+                    <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/40">Restricted</p>
+                    <div className="flex-1 h-px bg-border/50" />
+                    <span className="text-[11px] text-muted-foreground/40">{grouped.locked.length}</span>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    {grouped.locked.map(doc => (
+                      <div
+                        key={doc.id}
+                        className="flex items-center gap-2.5 rounded-lg px-3 py-2 bg-muted/10"
+                      >
+                        <Lock className="size-3.5 text-muted-foreground/40 shrink-0" />
+                        <p className="text-sm text-muted-foreground/50 truncate flex-1">{doc.title}</p>
+                        {doc.restricted_department?.map(dept => (
+                          <span key={dept} className="text-[10px] text-muted-foreground/30 shrink-0">{dept}</span>
+                        ))}
                       </div>
-                      <div className="flex flex-col gap-1 min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <p className="text-sm font-medium text-muted-foreground">{doc.title}</p>
-                          {doc.restricted_department?.map(dept => (
-                            <Badge key={dept} variant="outline" className="text-xs font-normal text-muted-foreground">{dept} only</Badge>
-                          ))}
-                        </div>
-                        <p className="text-xs text-muted-foreground/60">
-                          Restricted to: {doc.restricted_department?.join(', ')}.
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ) : (
-                  <HoverCard>
-                    <Card
-                      className="group cursor-pointer transition-colors hover:border-foreground/20"
-                      onClick={() => setSelected(doc)}
-                    >
-                    <CardContent className="flex items-start gap-3.5 p-4">
-                      <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-secondary">
-                        <FileText className="size-4 text-foreground" />
-                      </div>
-                      <div className="flex flex-col gap-1 min-w-0 flex-1">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex flex-wrap items-center gap-2 min-w-0">
-                            <p className="text-sm font-medium text-foreground truncate">{doc.title}</p>
-                            {doc.restricted_department?.length
-                              ? doc.restricted_department.map(dept => (
-                                  <Badge key={dept} variant="outline" className="text-xs font-normal text-muted-foreground shrink-0">{dept} only</Badge>
-                                ))
-                              : <Badge variant="outline" className="text-xs font-normal shrink-0">Document</Badge>
-                            }
-                          </div>
-                          {isAdmin && (
-                            <div className="flex items-center gap-1 shrink-0">
-                              <button
-                                type="button"
-                                title="Edit"
-                                onClick={(e) => { e.stopPropagation(); setEditingDoc(doc); }}
-                                className="flex size-7 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-                              >
-                                <Pencil className="size-3.5" />
-                              </button>
-                              <button
-                                type="button"
-                                title="Delete"
-                                onClick={(e) => { e.stopPropagation(); setDeletingId(doc.id); }}
-                                className="flex size-7 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-                              >
-                                <Trash2 className="size-3.5" />
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                        {doc.granted_user_ids?.length ? (
-                          <p className="text-[11px] text-muted-foreground/70">
-                            Also: {team.filter(p => doc.granted_user_ids?.includes(p.id)).map(p => `@${p.display_name ?? 'Unknown'}`).join(', ')}
-                          </p>
-                        ) : null}
-                        {(doc.updated_at || doc.created_at) && (
-                          <p className="flex items-center gap-1 text-[11px] text-muted-foreground/70">
-                            <Clock className="size-3" />
-                            Updated {timeAgo(doc.updated_at ?? doc.created_at!)}
-                          </p>
-                        )}
-                        {doc.content ? (
-                          <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">
-                            {doc.content.replace(/<[^>]*>/g, '').slice(0, 200)}
-                          </p>
-                        ) : null}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </HoverCard>
-                )}
-              </StaggerItem>
-            );
-          })}
-        </Stagger>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           )}
         </>
       )}

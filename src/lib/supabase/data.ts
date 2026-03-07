@@ -55,16 +55,6 @@ export async function fetchTeam(): Promise<Profile[]> {
   return all.filter(p => !p.is_investor);
 }
 
-export async function fetchAllDocs(): Promise<Doc[]> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from('docs')
-    .select('id, title, restricted_department, granted_user_ids')
-    .order('title', { ascending: true });
-  if (error) throw error;
-  return (data ?? []) as Doc[];
-}
-
 export async function fetchDocs(parentId?: string): Promise<Doc[]> {
   const supabase = await createClient();
 
@@ -80,6 +70,16 @@ export async function fetchDocs(parentId?: string): Promise<Doc[]> {
   }
 
   const { data, error } = await query;
+  if (error) throw error;
+  return (data ?? []) as Doc[];
+}
+
+export async function fetchAllDocs(): Promise<Doc[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('docs')
+    .select('*')
+    .order('sort_order', { ascending: true });
   if (error) throw error;
   return (data ?? []) as Doc[];
 }

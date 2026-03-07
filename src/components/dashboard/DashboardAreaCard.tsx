@@ -3,10 +3,10 @@
 import { useState } from 'react';
 import { motion } from 'motion/react';
 import { useRouter } from 'next/navigation';
-import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/select';
 import { StaggerItem, HoverCard } from '@/components/motion';
 import {
   Dialog,
@@ -73,40 +73,38 @@ export function DashboardAreaCard({ area, isAdmin }: DashboardAreaCardProps) {
   };
 
   const cardContent = (
-    <Card>
-      <CardContent className="p-4 space-y-3">
-        <div className="flex items-start justify-between gap-2">
-          <p className="text-sm font-medium text-foreground">{area.name}</p>
-          {area.phase && (
-            <span className="shrink-0 rounded border border-border px-1.5 py-0.5 text-xs text-muted-foreground font-mono">
-              {area.phase}
-            </span>
-          )}
-        </div>
-        {area.description && (
-          <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">
-            {area.description}
-          </p>
+    <div className="space-y-3 p-4">
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-sm font-medium text-foreground">{area.name}</p>
+        {area.phase && (
+          <span className="shrink-0 rounded-md border border-white/[0.08] px-1.5 py-0.5 text-xs text-muted-foreground font-mono">
+            {area.phase}
+          </span>
         )}
-        <div>
-          <div className="flex items-center justify-between mb-1.5">
-            <span className="text-xs text-muted-foreground">Progress</span>
-            <span className="text-xs font-mono text-muted-foreground">
-              {area.progress}%
-            </span>
-          </div>
-          <div className="w-full h-1.5 rounded-full bg-secondary overflow-hidden">
-            <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: `${area.progress}%` }}
-              transition={{ type: 'spring', stiffness: 200, damping: 25, delay: 0.3 }}
-              className="h-full rounded-full"
-              style={{ backgroundColor: 'var(--color-seeko-accent)' }}
-            />
-          </div>
+      </div>
+      {area.description && (
+        <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">
+          {area.description}
+        </p>
+      )}
+      <div>
+        <div className="flex items-center justify-between mb-1.5">
+          <span className="text-xs text-muted-foreground">Progress</span>
+          <span className="text-xs font-mono text-muted-foreground">
+            {area.progress}%
+          </span>
         </div>
-      </CardContent>
-    </Card>
+        <div className="w-full h-2 rounded-full bg-secondary overflow-hidden">
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: `${area.progress}%` }}
+            transition={{ type: 'spring', stiffness: 200, damping: 25, delay: 0.3 }}
+            className="h-full rounded-full"
+            style={{ backgroundColor: 'var(--color-seeko-accent)' }}
+          />
+        </div>
+      </div>
+    </div>
   );
 
   return (
@@ -117,12 +115,14 @@ export function DashboardAreaCard({ area, isAdmin }: DashboardAreaCardProps) {
             <button
               type="button"
               onClick={handleOpen}
-              className="w-full text-left rounded-xl border border-border bg-card transition-colors hover:bg-card/90 hover:border-border/80 focus:outline-none focus:ring-2 focus:ring-seeko-accent/30"
+              className="w-full text-left rounded-lg bg-white/[0.03] transition-colors hover:bg-white/[0.06] focus:outline-none focus:ring-2 focus:ring-seeko-accent/30"
             >
               {cardContent}
             </button>
           ) : (
-            cardContent
+            <div className="rounded-lg bg-white/[0.03]">
+              {cardContent}
+            </div>
           )}
         </HoverCard>
       </StaggerItem>
@@ -145,31 +145,27 @@ export function DashboardAreaCard({ area, isAdmin }: DashboardAreaCardProps) {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="area-phase">Phase</Label>
-            <select
-              id="area-phase"
+            <Label>Phase</Label>
+            <Select
               value={phase}
               onChange={e => setPhase(e.target.value)}
-              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <option value="">—</option>
               {PHASES.map(p => (
                 <option key={p} value={p}>{p}</option>
               ))}
-            </select>
+            </Select>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="area-status">Status</Label>
-            <select
-              id="area-status"
+            <Label>Status</Label>
+            <Select
               value={status}
               onChange={e => setStatus(e.target.value)}
-              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               {STATUSES.map(s => (
                 <option key={s} value={s}>{s}</option>
               ))}
-            </select>
+            </Select>
           </div>
           <div className="space-y-2">
             <Label htmlFor="area-description">Description</Label>
@@ -178,7 +174,7 @@ export function DashboardAreaCard({ area, isAdmin }: DashboardAreaCardProps) {
               value={description}
               onChange={e => setDescription(e.target.value)}
               rows={3}
-              className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
+              className="flex w-full rounded-lg border-0 bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
               placeholder="Optional"
             />
           </div>

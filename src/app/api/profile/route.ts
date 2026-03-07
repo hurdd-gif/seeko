@@ -37,7 +37,6 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: 'No fields to update' }, { status: 400 });
   }
 
-  // Use service role singleton (same as invite route) to bypass RLS + trigger checks
   const admin = getServiceClient();
 
   const { error } = await admin

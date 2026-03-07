@@ -27,8 +27,14 @@ import {
   Users,
   FileText,
   Map,
+  ArrowRight,
+  UserPlus,
+  MessageSquare,
+  Pencil,
+  Trash2,
 } from 'lucide-react';
 import Link from 'next/link';
+import { cn } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -56,6 +62,17 @@ const SECTION = {
   offsetY: 20,   // px each section slides up from
 };
 
+// ── Activity kind → icon + color ────────────────────────────────
+const ACTIVITY_ICONS: Record<string, { icon: typeof Activity; className: string; bg: string }> = {
+  assigned:    { icon: UserPlus,       className: 'text-seeko-accent',  bg: 'bg-emerald-500/10' },
+  completed:   { icon: CheckSquare,    className: 'text-emerald-500',   bg: 'bg-emerald-500/10' },
+  created:     { icon: FileText,       className: 'text-blue-400',      bg: 'bg-blue-500/10' },
+  updated:     { icon: Pencil,         className: 'text-amber-400',     bg: 'bg-amber-500/10' },
+  commented:   { icon: MessageSquare,  className: 'text-violet-400',    bg: 'bg-violet-500/10' },
+  deleted:     { icon: Trash2,         className: 'text-red-400',       bg: 'bg-red-500/10' },
+};
+const ACTIVITY_DEFAULT = { icon: Activity, className: 'text-muted-foreground', bg: 'bg-secondary' };
+
 // ────────────────────────────────────────────────────────────────
 
 function getInitials(name: string): string {
@@ -75,6 +92,24 @@ function timeAgo(dateStr: string): string {
   const hours = Math.floor(mins / 60);
   if (hours < 24) return `${hours}h ago`;
   return `${Math.floor(hours / 24)}d ago`;
+}
+
+function buildGreetingContext(tasks: Task[]): string {
+  const open = tasks.filter(t => t.status !== 'Complete');
+  const blocked = open.filter(t => t.status === 'Blocked').length;
+  const now = new Date();
+  const weekFromNow = new Date(now.getTime() + 7 * 86400000);
+  const dueSoon = open.filter(t => {
+    if (!t.deadline) return false;
+    const d = new Date(t.deadline + 'T23:59:59');
+    return d <= weekFromNow;
+  }).length;
+
+  if (blocked > 0 && dueSoon > 0) return `${blocked} blocked, ${dueSoon} due this week.`;
+  if (blocked > 0) return `${blocked} task${blocked === 1 ? ' is' : 's are'} blocked.`;
+  if (dueSoon > 0) return `${dueSoon} task${dueSoon === 1 ? '' : 's'} due this week.`;
+  if (open.length === 0) return "You're all caught up.";
+  return "Here's what's happening.";
 }
 
 export default async function OverviewPage() {
@@ -115,6 +150,8 @@ export default async function OverviewPage() {
     ? areas.map(a => a.name).join(' · ')
     : 'No active areas';
 
+  const greetingContext = buildGreetingContext(tasks);
+
   return (
     <div className="flex flex-col gap-6">
 
@@ -126,7 +163,7 @@ export default async function OverviewPage() {
             ? `Welcome back, ${profile.display_name.split(' ')[0]}.`
             : 'Welcome back.'
           }{' '}
-          {openTasks === 0 ? "You're all caught up." : "Here's what's happening."}
+          {greetingContext}
         </p>
       </FadeRise>
 
@@ -137,10 +174,18 @@ export default async function OverviewPage() {
             <HoverCard>
               {'href' in stat && stat.href ? (
                 <Link href={stat.href} className="block">
-                  <Card className="transition-colors hover:bg-card/90">
+                  <Card className={cn(
+                    'transition-colors hover:bg-card/90',
+                    stat.primary && 'border-seeko-accent/20 bg-seeko-accent/[0.04]'
+                  )}>
                     <CardHeader className="flex flex-row items-center justify-between pb-2">
                       <CardDescription className="text-sm font-medium">{stat.label}</CardDescription>
-                      <stat.icon className="size-4 text-muted-foreground" />
+                      <div className={cn(
+                        'flex size-8 items-center justify-center rounded-lg',
+                        stat.primary ? 'bg-seeko-accent/10' : 'bg-secondary'
+                      )}>
+                        <stat.icon className={cn('size-4', stat.primary ? 'text-seeko-accent' : 'text-muted-foreground')} />
+                      </div>
                     </CardHeader>
                     <CardContent>
                       <span
@@ -156,13 +201,12 @@ export default async function OverviewPage() {
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between pb-2">
                     <CardDescription className="text-sm font-medium">{stat.label}</CardDescription>
-                    <stat.icon className="size-4 text-muted-foreground" />
+                    <div className="flex size-8 items-center justify-center rounded-lg bg-secondary">
+                      <stat.icon className="size-4 text-muted-foreground" />
+                    </div>
                   </CardHeader>
                   <CardContent>
-                    <span
-                      className={stat.primary ? 'text-3xl font-semibold tracking-tight' : 'text-2xl font-semibold tracking-tight'}
-                      style={stat.accent ? { color: 'var(--color-seeko-accent)' } : undefined}
-                    >
+                    <span className="text-2xl font-semibold tracking-tight">
                       <AnimatedNumber value={stat.value} />
                     </span>
                   </CardContent>
@@ -216,14 +260,23 @@ export default async function OverviewPage() {
                 docs={docs}
                 currentUserId={user?.id ?? ''}
               />
+              {upcoming.length > 0 && (
+                <Link
+                  href="/tasks"
+                  className="mt-4 flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-white/[0.04] transition-colors"
+                >
+                  View all tasks
+                  <ArrowRight className="size-3" />
+                </Link>
+              )}
             </CardContent>
           </Card>
 
           {/* Recent Activity */}
-          <Card className="md:col-span-2">
+          <Card className="md:col-span-2 overflow-hidden">
             <CardHeader>
               <CardTitle className="text-xl font-semibold text-foreground">Recent Activity</CardTitle>
-              <CardDescription>Latest actions.</CardDescription>
+              <CardDescription>Latest actions across the team.</CardDescription>
             </CardHeader>
             <CardContent>
               {activity.length === 0 ? (
@@ -233,33 +286,42 @@ export default async function OverviewPage() {
                   description="Latest actions will show here."
                 />
               ) : (
-                <Stagger className="flex flex-col gap-4" staggerMs={delay(TIMING.activityStagger)} delayMs={delay(TIMING.activityDelay)}>
-                  {activity.map(item => {
-                    const prof = item.profiles as unknown as { display_name?: string; avatar_url?: string } | undefined;
-                    const name = prof?.display_name ?? 'Unknown';
-                    const avatar = prof?.avatar_url;
-                    return (
-                      <StaggerItem key={item.id}>
-                        <div className="flex items-start gap-3">
-                          <Avatar className="size-8">
-                            <AvatarImage src={avatar} alt={name} />
-                            <AvatarFallback className="bg-secondary text-foreground text-xs">
-                              {getInitials(name)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1 space-y-0.5">
-                            <p className="text-sm text-foreground">
-                              <span className="font-medium">{name}</span>{' '}
-                              <span className="text-muted-foreground">{item.action.toLowerCase()}</span>
-                            </p>
-                            <p className="text-xs text-muted-foreground font-mono truncate">{item.target}</p>
+                <>
+                  <Stagger className="flex flex-col gap-3" staggerMs={delay(TIMING.activityStagger)} delayMs={delay(TIMING.activityDelay)}>
+                    {activity.map(item => {
+                      const prof = item.profiles as unknown as { display_name?: string; avatar_url?: string } | undefined;
+                      const name = prof?.display_name ?? 'Unknown';
+                      const avatar = prof?.avatar_url;
+                      const actionWord = item.action?.toLowerCase() ?? '';
+                      const kindCfg = ACTIVITY_ICONS[actionWord] ?? ACTIVITY_DEFAULT;
+                      const KindIcon = kindCfg.icon;
+                      return (
+                        <StaggerItem key={item.id}>
+                          <div className="flex items-start gap-3">
+                            <div className={cn('mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full', kindCfg.bg, kindCfg.className)}>
+                              <KindIcon className="size-3.5" />
+                            </div>
+                            <div className="flex-1 min-w-0 space-y-0.5">
+                              <p className="text-sm text-foreground">
+                                <span className="font-medium">{name}</span>{' '}
+                                <span className="text-muted-foreground">{actionWord}</span>
+                              </p>
+                              <p className="text-xs text-muted-foreground font-mono truncate">{item.target}</p>
+                            </div>
+                            <span className="shrink-0 text-xs text-muted-foreground">{timeAgo(item.created_at)}</span>
                           </div>
-                          <span className="shrink-0 text-xs text-muted-foreground">{timeAgo(item.created_at)}</span>
-                        </div>
-                      </StaggerItem>
-                    );
-                  })}
-                </Stagger>
+                        </StaggerItem>
+                      );
+                    })}
+                  </Stagger>
+                  <Link
+                    href="/activity"
+                    className="mt-4 flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-white/[0.04] transition-colors"
+                  >
+                    View all activity
+                    <ArrowRight className="size-3" />
+                  </Link>
+                </>
               )}
             </CardContent>
           </Card>

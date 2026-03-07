@@ -7,16 +7,20 @@ import { Label } from '@/components/ui/label';
 import { X, Plus, Trash2, DollarSign, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { PaymentConfetti } from '@/components/dashboard/PaymentConfetti';
+import type { Task } from '@/lib/types';
 
 interface PaymentRequestDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCreated?: () => void;
+  onSubmitted?: () => void;
+  paypalEmail?: string;
+  completedTasks?: Pick<Task, 'id' | 'name' | 'bounty'>[];
 }
 
-type LineItem = { label: string; amount: string };
+type LineItem = { label: string; amount: string; task_id?: string };
 
-export function PaymentRequestDialog({ open, onOpenChange, onCreated }: PaymentRequestDialogProps) {
+export function PaymentRequestDialog({ open, onOpenChange, onCreated, onSubmitted, paypalEmail, completedTasks }: PaymentRequestDialogProps) {
   const [description, setDescription] = useState('');
   const [items, setItems] = useState<LineItem[]>([{ label: '', amount: '' }]);
   const [submitting, setSubmitting] = useState(false);
@@ -81,6 +85,7 @@ export function PaymentRequestDialog({ open, onOpenChange, onCreated }: PaymentR
       setSuccess(true);
       toast.success('Payment request submitted!');
       onCreated?.();
+      onSubmitted?.();
     } catch {
       toast.error('Network error. Please try again.');
       setSubmitting(false);
@@ -180,7 +185,10 @@ export function PaymentRequestDialog({ open, onOpenChange, onCreated }: PaymentR
 
               <div className="flex items-center justify-between pt-2 border-t border-border">
                 <span className="text-sm font-medium text-muted-foreground">Total</span>
-                <span className="text-lg font-semibold text-foreground">
+                <span
+                  className="text-lg font-semibold"
+                  style={{ color: total > 0 ? 'var(--color-seeko-accent)' : undefined }}
+                >
                   {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(total)}
                 </span>
               </div>

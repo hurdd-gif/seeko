@@ -14,11 +14,20 @@ export default async function SettingsPage() {
   const isAdmin = profile.is_admin;
   const team = isAdmin ? await fetchTeam().catch(() => []) : [];
 
+  // Fetch user's completed tasks for payment request dialog
+  const { data: completedTasks } = await supabase
+    .from('tasks')
+    .select('id, name, bounty')
+    .eq('assignee_id', user.id)
+    .eq('status', 'Complete')
+    .order('updated_at', { ascending: false });
+
   return (
     <SettingsPanel
       profile={profile}
       isAdmin={isAdmin}
       team={team}
+      completedTasks={completedTasks ?? []}
     />
   );
 }
