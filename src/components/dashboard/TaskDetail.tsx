@@ -21,7 +21,7 @@ import {
   ArrowRightLeft,
 } from 'lucide-react';
 import Link from 'next/link';
-import { Task, TaskWithAssignee, TaskComment, TaskDeliverable, TaskHandoff, Profile, Doc } from '@/lib/types';
+import { Task, TaskWithAssignee, TaskComment, TaskCommentReaction, TaskDeliverable, TaskHandoff, Profile, Doc } from '@/lib/types';
 import { toast } from 'sonner';
 import { Dialog, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
 import { HandoffDialog } from './HandoffDialog';
@@ -31,6 +31,8 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { DURATION_BACKDROP_MS, PANEL_SPRING, PANEL, SLIDEOUT, SLIDEOUT_SPRING } from '@/lib/motion';
+
+const REACTION_EMOJIS = ['👍', '👎', '🎉', '😂', '❓', '🔥', '❤️'];
 
 function useMediaQuery(query: string): boolean {
   const [matches, setMatches] = useState(false);
@@ -125,6 +127,8 @@ function CommentItem({
   docTitles,
   onEdit,
   onDelete,
+  onReact,
+  currentUserId,
 }: {
   comment: TaskComment;
   isOwn: boolean;
@@ -133,6 +137,8 @@ function CommentItem({
   docTitles: string[];
   onEdit: (id: string, content: string) => void;
   onDelete: (id: string) => void;
+  onReact: (commentId: string, emoji: string) => void;
+  currentUserId: string;
 }) {
   const highlightRef = useRef<HTMLDivElement>(null);
   const [editing, setEditing] = useState(false);
@@ -276,6 +282,53 @@ function CommentItem({
             {renderContent(comment.content, teamNames, docTitles)}
           </p>
         )}
+
+        {/* Reactions row */}
+        {!editing && (
+          <div className="flex items-center gap-1 mt-1.5 flex-wrap">
+            {/* Grouped existing reactions */}
+            {Object.entries(
+              (comment.reactions ?? []).reduce<Record<string, { count: number; hasOwn: boolean }>>((acc, r) => {
+                if (!acc[r.emoji]) acc[r.emoji] = { count: 0, hasOwn: false };
+                acc[r.emoji].count++;
+                if (r.user_id === currentUserId) acc[r.emoji].hasOwn = true;
+                return acc;
+              }, {})
+            ).map(([emoji, { count, hasOwn }]) => (
+              <button
+                key={emoji}
+                onClick={() => onReact(comment.id, emoji)}
+                className={cn(
+                  'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs transition-colors',
+                  hasOwn
+                    ? 'border-foreground/20 bg-foreground/10 text-foreground'
+                    : 'border-border text-muted-foreground hover:border-foreground/20'
+                )}
+              >
+                <span>{emoji}</span>
+                <span className="tabular-nums">{count}</span>
+              </button>
+            ))}
+
+            {/* Add reaction button — visible on hover */}
+            <div className="relative group/react">
+              <button className="inline-flex items-center justify-center size-6 rounded-full border border-transparent text-muted-foreground/40 opacity-0 group-hover:opacity-100 hover:border-border hover:text-muted-foreground transition-all text-xs">
+                +
+              </button>
+              <div className="absolute bottom-full left-0 mb-1 hidden group-hover/react:flex gap-1 rounded-lg border border-border bg-card p-1.5 shadow-lg z-10">
+                {REACTION_EMOJIS.map(emoji => (
+                  <button
+                    key={emoji}
+                    onClick={() => onReact(comment.id, emoji)}
+                    className="rounded p-1 text-sm hover:bg-muted transition-colors"
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </motion.div>
   );
@@ -346,10 +399,13 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
     setLoading(true);
     const { data } = await supabase
       .from('task_comments')
-      .select('*, profiles(id, display_name, avatar_url)')
+      .select('*, profiles(id, display_name, avatar_url), task_comment_reactions(id, emoji, user_id)')
       .eq('task_id', task.id)
       .order('created_at', { ascending: true });
-    setComments((data ?? []) as TaskComment[]);
+    setComments((data ?? []).map((c: Record<string, unknown>) => ({
+      ...c,
+      reactions: c.task_comment_reactions ?? [],
+    })) as TaskComment[]);
     setLoading(false);
   }, [task.id, supabase]);
 
@@ -423,11 +479,14 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
           // Fetch full comment with profile join, then add to state
           supabase
             .from('task_comments')
-            .select('*, profiles(id, display_name, avatar_url)')
+            .select('*, profiles(id, display_name, avatar_url), task_comment_reactions(id, emoji, user_id)')
             .eq('id', incoming.id)
             .single()
             .then(({ data }) => {
-              if (data && isMounted) setComments(prev => [...prev, data as TaskComment]);
+              if (data && isMounted) {
+                const mapped = { ...data, reactions: (data as Record<string, unknown>).task_comment_reactions ?? [] } as TaskComment;
+                setComments(prev => [...prev, mapped]);
+              }
             });
         }
       )
@@ -478,6 +537,48 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
     setComments(prev => prev.filter(c => c.id !== commentId));
     await supabase.from('task_comments').delete().eq('id', commentId);
   }, [supabase]);
+
+  const handleToggleReaction = useCallback(async (commentId: string, emoji: string) => {
+    const existing = comments
+      .find(c => c.id === commentId)
+      ?.reactions?.find(r => r.emoji === emoji && r.user_id === currentUserId);
+
+    if (existing) {
+      // Remove reaction (optimistic)
+      setComments(prev => prev.map(c =>
+        c.id === commentId
+          ? { ...c, reactions: (c.reactions ?? []).filter(r => r.id !== existing.id) }
+          : c
+      ));
+      await supabase.from('task_comment_reactions').delete().eq('id', existing.id);
+    } else {
+      // Add reaction (optimistic)
+      const optimistic: TaskCommentReaction = {
+        id: crypto.randomUUID(),
+        comment_id: commentId,
+        user_id: currentUserId,
+        emoji,
+        created_at: new Date().toISOString(),
+      };
+      setComments(prev => prev.map(c =>
+        c.id === commentId
+          ? { ...c, reactions: [...(c.reactions ?? []), optimistic] }
+          : c
+      ));
+      const { data } = await supabase.from('task_comment_reactions').insert({
+        comment_id: commentId,
+        user_id: currentUserId,
+        emoji,
+      }).select('id').single();
+      if (data) {
+        setComments(prev => prev.map(c =>
+          c.id === commentId
+            ? { ...c, reactions: (c.reactions ?? []).map(r => r.id === optimistic.id ? { ...r, id: data.id } : r) }
+            : c
+        ));
+      }
+    }
+  }, [comments, currentUserId, supabase]);
 
   const autocompleteCandidates = useMemo(() => {
     if (autocompleteMode === null) return [];
@@ -881,6 +982,8 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
             isOwn={comment.user_id === currentUserId}
             onEdit={handleEditComment}
             onDelete={handleDeleteComment}
+            onReact={handleToggleReaction}
+            currentUserId={currentUserId}
           />
         ))}
       </AnimatePresence>
