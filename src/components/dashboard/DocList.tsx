@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { FileText, Lock, Pencil, Trash2, Plus, Search, Clock } from 'lucide-react';
 import { toast } from 'sonner';
@@ -63,6 +63,10 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, cu
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [departmentFilter, setDepartmentFilter] = useState<string>('all');
+  const [isQuickCreating, setIsQuickCreating] = useState(false);
+  const [quickCreateTitle, setQuickCreateTitle] = useState('');
+  const [quickCreateLoading, setQuickCreateLoading] = useState(false);
+  const quickCreateRef = useRef<HTMLInputElement>(null);
   const searchParams = useSearchParams();
 
   const isLocked = (d: Doc) => {
@@ -113,15 +117,90 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, cu
     trigger('success');
   };
 
+  const handleQuickCreate = async () => {
+    const title = quickCreateTitle.trim();
+    if (!title) return;
+    setQuickCreateLoading(true);
+    try {
+      const res = await fetch('/api/docs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, content: '' }),
+      });
+      if (!res.ok) throw new Error('Failed to create');
+      const doc = await res.json();
+      setDocs(prev => [...prev, doc]);
+      setQuickCreateTitle('');
+      setIsQuickCreating(false);
+      toast.success(`Created "${doc.title}"`);
+      trigger('success');
+    } catch {
+      toast.error('Failed to create document');
+    } finally {
+      setQuickCreateLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isQuickCreating) {
+      setTimeout(() => quickCreateRef.current?.focus(), 50);
+    }
+  }, [isQuickCreating]);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    function onKeyDown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'n') {
+        e.preventDefault();
+        setIsQuickCreating(true);
+      }
+    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isAdmin]);
+
   return (
     <>
-      {/* Admin: New Document button */}
+      {/* Admin: New Document button + quick create */}
       {isAdmin && (
-        <div className="flex justify-end mb-3">
+        <div className="flex items-center justify-end gap-2 mb-3">
+          <button
+            onClick={() => setIsQuickCreating(true)}
+            className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            Quick create
+          </button>
           <Button size="sm" onClick={() => setEditingDoc('new')}>
             <Plus className="size-3.5 mr-1.5" />
             New Document
           </Button>
+        </div>
+      )}
+      {isQuickCreating && (
+        <div className="flex items-center gap-2 mb-3">
+          <input
+            ref={quickCreateRef}
+            value={quickCreateTitle}
+            onChange={(e) => setQuickCreateTitle(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') handleQuickCreate(); if (e.key === 'Escape') { setIsQuickCreating(false); setQuickCreateTitle(''); } }}
+            placeholder="Document title..."
+            disabled={quickCreateLoading}
+            className="flex-1 rounded-lg border border-border bg-muted px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-1 focus:ring-seeko-accent/40"
+          />
+          <button
+            onClick={handleQuickCreate}
+            disabled={quickCreateLoading || !quickCreateTitle.trim()}
+            className="text-sm text-seeko-accent hover:underline disabled:opacity-50"
+          >
+            {quickCreateLoading ? 'Creating...' : 'Create'}
+          </button>
+          <button
+            onClick={() => { setIsQuickCreating(false); setQuickCreateTitle(''); }}
+            className="text-sm text-muted-foreground hover:text-foreground"
+          >
+            Cancel
+          </button>
         </div>
       )}
 
