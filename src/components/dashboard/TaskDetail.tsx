@@ -20,9 +20,10 @@ import {
   Download,
   ArrowRightLeft,
   Reply,
+  Paperclip,
 } from 'lucide-react';
 import Link from 'next/link';
-import { Task, TaskWithAssignee, TaskComment, TaskCommentReaction, TaskDeliverable, TaskHandoff, Profile, Doc } from '@/lib/types';
+import { Task, TaskWithAssignee, TaskComment, TaskCommentAttachment, TaskCommentReaction, TaskDeliverable, TaskHandoff, Profile, Doc } from '@/lib/types';
 import { toast } from 'sonner';
 import { Dialog, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
 import { HandoffDialog } from './HandoffDialog';
@@ -310,6 +311,35 @@ function CommentItem({
           </p>
         )}
 
+        {(comment.attachments ?? []).length > 0 && (
+          <div className="flex flex-wrap gap-2 mt-2">
+            {(comment.attachments ?? []).map(att => {
+              const isImage = att.file_type.startsWith('image/');
+              return isImage ? (
+                <a key={att.id} href={att.file_url} target="_blank" rel="noopener noreferrer" className="block">
+                  <img
+                    src={att.file_url}
+                    alt={att.file_name}
+                    className="rounded-md border border-border max-w-[200px] max-h-[150px] object-cover"
+                  />
+                </a>
+              ) : (
+                <a
+                  key={att.id}
+                  href={att.file_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 rounded-md border border-border bg-muted/30 px-3 py-2 text-xs hover:bg-muted/50 transition-colors"
+                >
+                  <FileText className="size-4 text-muted-foreground" />
+                  <span className="truncate max-w-[140px]">{att.file_name}</span>
+                  <Download className="size-3 text-muted-foreground" />
+                </a>
+              );
+            })}
+          </div>
+        )}
+
         {/* Reactions row */}
         {!editing && (
           <div className="flex items-center gap-1 mt-1.5 flex-wrap">
@@ -412,6 +442,8 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
   const [autocompleteQuery, setAutocompleteQuery] = useState('');
   const [autocompleteIndex, setAutocompleteIndex] = useState(0);
   const [replyTo, setReplyTo] = useState<TaskComment | null>(null);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const commentsEndRef = useRef<HTMLDivElement>(null);
 
@@ -427,12 +459,13 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
     setLoading(true);
     const { data } = await supabase
       .from('task_comments')
-      .select('*, profiles(id, display_name, avatar_url), task_comment_reactions(id, emoji, user_id)')
+      .select('*, profiles(id, display_name, avatar_url), task_comment_reactions(id, emoji, user_id), task_comment_attachments(id, file_url, file_name, file_type, file_size)')
       .eq('task_id', task.id)
       .order('created_at', { ascending: true });
     setComments((data ?? []).map((c: Record<string, unknown>) => ({
       ...c,
       reactions: c.task_comment_reactions ?? [],
+      attachments: c.task_comment_attachments ?? [],
     })) as TaskComment[]);
     setLoading(false);
   }, [task.id, supabase]);
@@ -507,12 +540,13 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
           // Fetch full comment with profile join, then add to state
           supabase
             .from('task_comments')
-            .select('*, profiles(id, display_name, avatar_url), task_comment_reactions(id, emoji, user_id)')
+            .select('*, profiles(id, display_name, avatar_url), task_comment_reactions(id, emoji, user_id), task_comment_attachments(id, file_url, file_name, file_type, file_size)')
             .eq('id', incoming.id)
             .single()
             .then(({ data }) => {
               if (data && isMounted) {
-                const mapped = { ...data, reactions: (data as Record<string, unknown>).task_comment_reactions ?? [] } as TaskComment;
+                const d = data as Record<string, unknown>;
+                const mapped = { ...data, reactions: d.task_comment_reactions ?? [], attachments: d.task_comment_attachments ?? [] } as TaskComment;
                 setComments(prev => [...prev, mapped]);
               }
             });
@@ -674,7 +708,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
   }
 
   const handleSend = useCallback(async () => {
-    if (!input.trim() || sending) return;
+    if ((!input.trim() && pendingFiles.length === 0) || sending) return;
     setSending(true);
 
     const currentProfile = team.find(m => m.id === currentUserId);
@@ -749,8 +783,21 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
       await supabase.from('notifications').insert(notifs);
     }
 
+    // Upload pending files
+    if (pendingFiles.length > 0) {
+      for (const file of pendingFiles) {
+        const form = new FormData();
+        form.append('file', file);
+        form.append('comment_id', realCommentId);
+        await fetch(`/api/tasks/${task.id}/comments/attachments`, { method: 'POST', body: form });
+      }
+      setPendingFiles([]);
+      // Reload comments to get attachment data
+      loadComments();
+    }
+
     setSending(false);
-  }, [input, sending, task.id, currentUserId, team, comments, supabase, replyTo]);
+  }, [input, sending, task.id, currentUserId, team, comments, supabase, replyTo, pendingFiles, loadComments]);
 
   const statusCfg = STATUS_DISPLAY[task.status] ?? STATUS_DISPLAY['In Progress'];
   const StatusIcon = statusCfg.icon;
@@ -1082,6 +1129,23 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
         )}
       </AnimatePresence>
 
+      {pendingFiles.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 px-2 py-2">
+          {pendingFiles.map((file, i) => (
+            <div key={i} className="flex items-center gap-1.5 rounded-md border border-border bg-muted/30 px-2 py-1 text-xs">
+              <Paperclip className="size-3 text-muted-foreground" />
+              <span className="truncate max-w-[120px]">{file.name}</span>
+              <button
+                onClick={() => setPendingFiles(prev => prev.filter((_, j) => j !== i))}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <X className="size-3" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
       <div className="flex items-end gap-2 rounded-lg border border-border bg-muted/30 p-2">
         <textarea
           ref={inputRef}
@@ -1099,11 +1163,24 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
             el.style.overflow = el.scrollHeight > 120 ? 'auto' : 'hidden';
           }}
         />
+        <label className="cursor-pointer rounded p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors shrink-0">
+          <Paperclip className="size-4" />
+          <input
+            type="file"
+            multiple
+            className="hidden"
+            onChange={e => {
+              const files = Array.from(e.target.files ?? []);
+              if (files.length > 0) setPendingFiles(prev => [...prev, ...files]);
+              e.target.value = '';
+            }}
+          />
+        </label>
         <Button
           size="icon"
           className="size-8 shrink-0"
           onClick={handleSend}
-          disabled={!input.trim() || sending}
+          disabled={!input.trim() && pendingFiles.length === 0 || sending}
         >
           <Send className="size-3.5" />
         </Button>
@@ -1192,7 +1269,19 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
                     {detailsContent}
                   </div>
                 ) : (
-                  <div className="flex flex-1 flex-col overflow-hidden">
+                  <div
+                    className={cn('flex flex-1 flex-col overflow-hidden', isDragging && 'ring-2 ring-inset ring-seeko-accent/50')}
+                    onDragOver={e => { e.preventDefault(); setIsDragging(true); }}
+                    onDragLeave={e => {
+                      if (!e.currentTarget.contains(e.relatedTarget as Node)) setIsDragging(false);
+                    }}
+                    onDrop={e => {
+                      e.preventDefault();
+                      setIsDragging(false);
+                      const files = Array.from(e.dataTransfer.files);
+                      if (files.length > 0) setPendingFiles(prev => [...prev, ...files]);
+                    }}
+                  >
                     <div className="flex-1 overflow-y-auto p-4 space-y-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                       {chatMessages}
                     </div>
@@ -1216,7 +1305,19 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
                   {detailsContent}
                 </div>
               ) : (
-                <div className="flex flex-1 flex-col overflow-hidden">
+                <div
+                  className={cn('flex flex-1 flex-col overflow-hidden', isDragging && 'ring-2 ring-inset ring-seeko-accent/50')}
+                  onDragOver={e => { e.preventDefault(); setIsDragging(true); }}
+                  onDragLeave={e => {
+                    if (!e.currentTarget.contains(e.relatedTarget as Node)) setIsDragging(false);
+                  }}
+                  onDrop={e => {
+                    e.preventDefault();
+                    setIsDragging(false);
+                    const files = Array.from(e.dataTransfer.files);
+                    if (files.length > 0) setPendingFiles(prev => [...prev, ...files]);
+                  }}
+                >
                   <div className="flex-1 overflow-y-auto p-4 space-y-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                     {chatMessages}
                   </div>
