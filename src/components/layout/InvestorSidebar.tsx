@@ -239,7 +239,7 @@ export function InvestorSidebar({ email, displayName, avatarUrl, isAdmin = false
             {createPortal(
               <nav
                 className="mobile-fixed-layer md:hidden fixed bottom-0 left-0 right-0 z-50 mx-auto w-max max-w-[calc(100vw-24px)] flex justify-center items-center"
-                style={{ marginBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}
+                style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
               >
                 <div
                   className="w-max flex items-center justify-center rounded-full border border-border/50 shadow-lg"

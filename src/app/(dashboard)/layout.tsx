@@ -27,7 +27,7 @@ export default async function DashboardLayout({
   return (
     <DashboardTourWrapper showTour={showTour} userId={user.id}>
       <div className="flex h-dvh flex-col overflow-hidden bg-background md:min-h-screen md:h-auto md:overflow-visible md:flex-row">
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto md:flex-row md:overflow-visible">
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden md:flex-row md:overflow-visible">
           <div id="dashboard-mobile-header-slot" className="md:hidden shrink-0" aria-hidden="true" />
           <Sidebar
           email={user.email ?? ''}
