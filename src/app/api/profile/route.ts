@@ -41,7 +41,7 @@ export async function PATCH(request: NextRequest) {
 
   const { error } = await admin
     .from('profiles')
-    .update(updates)
+    .update(updates as never)
     .eq('id', userId);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
