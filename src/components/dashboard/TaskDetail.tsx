@@ -19,6 +19,7 @@ import {
   Package,
   Download,
   ArrowRightLeft,
+  Reply,
 } from 'lucide-react';
 import Link from 'next/link';
 import { Task, TaskWithAssignee, TaskComment, TaskCommentReaction, TaskDeliverable, TaskHandoff, Profile, Doc } from '@/lib/types';
@@ -128,6 +129,8 @@ function CommentItem({
   onEdit,
   onDelete,
   onReact,
+  onReply,
+  allComments,
   currentUserId,
 }: {
   comment: TaskComment;
@@ -138,6 +141,8 @@ function CommentItem({
   onEdit: (id: string, content: string) => void;
   onDelete: (id: string) => void;
   onReact: (commentId: string, emoji: string) => void;
+  onReply: (comment: TaskComment) => void;
+  allComments: TaskComment[];
   currentUserId: string;
 }) {
   const highlightRef = useRef<HTMLDivElement>(null);
@@ -199,22 +204,33 @@ function CommentItem({
           {wasEdited && (
             <span className="text-[11px] text-muted-foreground/60 italic">( edited )</span>
           )}
-          {isOwn && !editing && !confirmingDelete && (
+          {!editing && !confirmingDelete && (
             <div className="ml-auto flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
               <button
-                onClick={() => { setEditText(comment.content); setEditing(true); }}
+                onClick={() => onReply(comment)}
                 className="rounded p-1 text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
-                title="Edit"
+                title="Reply"
               >
-                <Pencil className="size-3" />
+                <Reply className="size-3" />
               </button>
-              <button
-                onClick={() => setConfirmingDelete(true)}
-                className="rounded p-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                title="Delete"
-              >
-                <Trash2 className="size-3" />
-              </button>
+              {isOwn && (
+                <>
+                  <button
+                    onClick={() => { setEditText(comment.content); setEditing(true); }}
+                    className="rounded p-1 text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+                    title="Edit"
+                  >
+                    <Pencil className="size-3" />
+                  </button>
+                  <button
+                    onClick={() => setConfirmingDelete(true)}
+                    className="rounded p-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                    title="Delete"
+                  >
+                    <Trash2 className="size-3" />
+                  </button>
+                </>
+              )}
             </div>
           )}
         </div>
@@ -246,6 +262,17 @@ function CommentItem({
             </motion.div>
           )}
         </AnimatePresence>
+
+        {comment.reply_to_id && (() => {
+          const parent = allComments.find(c => c.id === comment.reply_to_id);
+          const parentName = parent?.profiles?.display_name ?? 'Unknown';
+          return (
+            <div className="flex items-center gap-1 text-[11px] text-muted-foreground/70 mb-0.5">
+              <Reply className="size-2.5" />
+              <span>replying to <span className="font-medium">{parentName}</span></span>
+            </div>
+          );
+        })()}
 
         {editing ? (
           <div className="mt-1">
@@ -384,6 +411,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
   const [autocompleteMode, setAutocompleteMode] = useState<AutocompleteMode>(null);
   const [autocompleteQuery, setAutocompleteQuery] = useState('');
   const [autocompleteIndex, setAutocompleteIndex] = useState(0);
+  const [replyTo, setReplyTo] = useState<TaskComment | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const commentsEndRef = useRef<HTMLDivElement>(null);
 
@@ -656,6 +684,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
       user_id: currentUserId,
       content: input.trim(),
       created_at: new Date().toISOString(),
+      reply_to_id: replyTo?.id,
       profiles: {
         id: currentUserId,
         display_name: currentProfile?.display_name,
@@ -664,11 +693,13 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
     };
     setComments(prev => [...prev, optimistic]);
     setInput('');
+    setReplyTo(null);
 
     const { data: inserted } = await supabase.from('task_comments').insert({
       task_id: task.id,
       user_id: currentUserId,
       content: optimistic.content,
+      reply_to_id: replyTo?.id ?? null,
     }).select('id').single();
 
     const realCommentId = inserted?.id ?? optimistic.id;
@@ -719,7 +750,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
     }
 
     setSending(false);
-  }, [input, sending, task.id, currentUserId, team, comments, supabase]);
+  }, [input, sending, task.id, currentUserId, team, comments, supabase, replyTo]);
 
   const statusCfg = STATUS_DISPLAY[task.status] ?? STATUS_DISPLAY['In Progress'];
   const StatusIcon = statusCfg.icon;
@@ -983,6 +1014,8 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
             onEdit={handleEditComment}
             onDelete={handleDeleteComment}
             onReact={handleToggleReaction}
+            onReply={setReplyTo}
+            allComments={comments}
             currentUserId={currentUserId}
           />
         ))}
@@ -993,6 +1026,28 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
 
   const chatCompose = (
     <div className="relative">
+      <AnimatePresence>
+        {replyTo && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="flex items-center gap-2 bg-muted/30 px-3 py-2 overflow-hidden"
+          >
+            <Reply className="size-3 text-muted-foreground" />
+            <span className="text-xs text-muted-foreground">
+              Replying to <span className="font-medium text-foreground">{replyTo.profiles?.display_name ?? 'Unknown'}</span>
+            </span>
+            <button
+              onClick={() => setReplyTo(null)}
+              className="ml-auto rounded p-0.5 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <X className="size-3" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <AnimatePresence>
         {autocompleteMode !== null && autocompleteCandidates.length > 0 && (
           <motion.div
