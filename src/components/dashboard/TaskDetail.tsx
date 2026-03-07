@@ -29,7 +29,19 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { DURATION_BACKDROP_MS, PANEL_SPRING, PANEL } from '@/lib/motion';
+import { DURATION_BACKDROP_MS, PANEL_SPRING, PANEL, SLIDEOUT, SLIDEOUT_SPRING } from '@/lib/motion';
+
+function useMediaQuery(query: string): boolean {
+  const [matches, setMatches] = useState(false);
+  useEffect(() => {
+    const mql = window.matchMedia(query);
+    setMatches(mql.matches);
+    const handler = (e: MediaQueryListEvent) => setMatches(e.matches);
+    mql.addEventListener('change', handler);
+    return () => mql.removeEventListener('change', handler);
+  }, [query]);
+  return matches;
+}
 
 const STATUS_DISPLAY: Record<string, { icon: typeof Circle; label: string; className: string }> = {
   'Complete':     { icon: CheckCircle2, label: 'Complete',    className: 'text-[var(--color-status-complete)]' },
@@ -282,6 +294,26 @@ interface TaskDetailProps {
 }
 
 export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId, highlightCommentId, isAdmin = false }: TaskDetailProps) {
+  const isDesktop = useMediaQuery('(min-width: 768px)');
+
+  // Escape key handler for desktop slide-out
+  useEffect(() => {
+    if (!open || !isDesktop) return;
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onOpenChange(false);
+    };
+    document.addEventListener('keydown', handleEsc);
+    return () => document.removeEventListener('keydown', handleEsc);
+  }, [open, isDesktop, onOpenChange]);
+
+  // Lock body scroll when desktop slide-out is open
+  useEffect(() => {
+    if (!open || !isDesktop) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, [open, isDesktop]);
+
   const [comments, setComments] = useState<TaskComment[]>([]);
   const [loading, setLoading] = useState(false);
   const [deliverables, setDeliverables] = useState<TaskDeliverable[]>([]);
@@ -595,14 +627,8 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
     : ('assignee' in task ? (task as TaskWithAssignee).assignee : null);
   const canHandOff = isAdmin || task.assignee_id === currentUserId || effectiveAssigneeId === currentUserId;
 
-  return (
+  const panelContent = (
     <>
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogClose onClose={() => onOpenChange(false)} />
-      <DialogHeader>
-        <DialogTitle className="pr-8">{task.name}</DialogTitle>
-      </DialogHeader>
-
       <div className="flex flex-wrap items-center gap-2 mb-4">
         <div className={`flex items-center gap-1.5 ${statusCfg.className}`}>
           <StatusIcon className="size-3.5" />
@@ -928,21 +954,75 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
           </div>
         </>
       )}
-    </Dialog>
+    </>
+  );
 
-    {showHandoff && (
-      <HandoffDialog
-        task={task}
-        team={team}
-        currentUserId={currentUserId}
-        open={showHandoff}
-        onOpenChange={setShowHandoff}
-        onHandoffComplete={(toUserId) => {
-          setLocalAssigneeId(toUserId);
-          loadHandoffs();
-        }}
-      />
-    )}
+  return (
+    <>
+      <AnimatePresence>
+        {open && (
+          isDesktop ? (
+            /* Desktop: slide-out panel from right */
+            <div className="fixed inset-0 z-50">
+              <motion.div
+                className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
+                onClick={() => onOpenChange(false)}
+              />
+              <motion.div
+                className="absolute right-0 top-0 h-full w-full max-w-[480px] border-l border-border bg-card shadow-xl flex flex-col overflow-hidden"
+                initial={SLIDEOUT.initial}
+                animate={SLIDEOUT.animate}
+                exit={SLIDEOUT.exit}
+                transition={SLIDEOUT_SPRING}
+              >
+                {/* Header: close button + task name */}
+                <div className="flex items-center gap-2 border-b border-border px-4 py-3 shrink-0">
+                  <h2 className="flex-1 text-lg font-semibold text-foreground truncate pr-2">{task.name}</h2>
+                  <button
+                    onClick={() => onOpenChange(false)}
+                    className="rounded-sm p-1 text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <X className="size-4" />
+                    <span className="sr-only">Close</span>
+                  </button>
+                </div>
+
+                {/* Scrollable content */}
+                <div className="flex-1 overflow-y-auto p-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                  {panelContent}
+                </div>
+              </motion.div>
+            </div>
+          ) : (
+            /* Mobile: existing Dialog */
+            <Dialog open={open} onOpenChange={onOpenChange}>
+              <DialogClose onClose={() => onOpenChange(false)} />
+              <DialogHeader>
+                <DialogTitle className="pr-8">{task.name}</DialogTitle>
+              </DialogHeader>
+              {panelContent}
+            </Dialog>
+          )
+        )}
+      </AnimatePresence>
+
+      {showHandoff && (
+        <HandoffDialog
+          task={task}
+          team={team}
+          currentUserId={currentUserId}
+          open={showHandoff}
+          onOpenChange={setShowHandoff}
+          onHandoffComplete={(toUserId) => {
+            setLocalAssigneeId(toUserId);
+            loadHandoffs();
+          }}
+        />
+      )}
     </>
   );
 }

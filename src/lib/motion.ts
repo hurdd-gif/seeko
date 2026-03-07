@@ -30,3 +30,16 @@ export const PANEL = {
   cardScale: { closed: 0.97, open: 1 },
   cardOpacity: { closed: 0, open: 1 },
 } as const;
+
+/** Slide-out panel — slides in from right edge. */
+export const SLIDEOUT = {
+  initial: { x: '100%' },
+  animate: { x: 0 },
+  exit: { x: '100%' },
+} as const;
+
+export const SLIDEOUT_SPRING = {
+  type: 'spring' as const,
+  stiffness: 400,
+  damping: 34,
+};
