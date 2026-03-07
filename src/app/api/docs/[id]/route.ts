@@ -48,7 +48,7 @@ export async function PATCH(
   if (title !== undefined) updates.title = title;
   if (content !== undefined) updates.content = content;
   if ('restricted_department' in body) updates.restricted_department = restricted_department ?? null;
-  if ('granted_user_ids' in body) updates.granted_user_ids = granted_user_ids?.length ? granted_user_ids : null;
+  if ('granted_user_ids' in body) updates.granted_user_ids = Array.isArray(granted_user_ids) && granted_user_ids.length ? granted_user_ids : null;
   updates.updated_at = new Date().toISOString();
 
   const service = createServiceClient(

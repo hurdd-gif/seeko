@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
       content,
       sort_order: sort_order ?? 0,
       restricted_department: restricted_department ?? null,
-      granted_user_ids: granted_user_ids?.length ? granted_user_ids : null,
+      granted_user_ids: Array.isArray(granted_user_ids) && granted_user_ids.length ? granted_user_ids : null,
     })
     .select()
     .single();
