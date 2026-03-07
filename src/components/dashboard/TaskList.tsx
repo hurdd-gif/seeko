@@ -1,31 +1,24 @@
 'use client';
 
 import { useState, useMemo, useCallback, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'motion/react';
 import { createBrowserClient } from '@supabase/ssr';
 import {
-  MoreHorizontal,
   MoreVertical,
   Circle,
   Timer,
   AlertCircle,
   CheckCircle2,
-  Clock,
-  UserPlus,
-  Trash2,
   Plus,
-  ArrowRightLeft,
   ChevronDown,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Task, Profile, TaskWithAssignee, TaskStatus, Department, Priority } from '@/lib/types';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -112,12 +105,6 @@ const ALL_STATUSES: TaskStatus[] = ['Complete', 'In Progress', 'In Review', 'Blo
 const DEPARTMENTS: Department[] = ['Coding', 'Visual Art', 'UI/UX', 'Animation', 'Asset Creation'];
 const PRIORITIES: Priority[] = ['High', 'Medium', 'Low'];
 
-const PRIORITY_STYLE: Record<string, string> = {
-  High:   'bg-red-500/15 text-red-400 border-red-500/30',
-  Medium: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
-  Low:    'bg-muted text-muted-foreground border-border',
-};
-
 export function filterTasks(tasks: Task[], query: string, status: string): Task[] {
   return tasks.filter(t => {
     const matchesQuery = !query || t.name.toLowerCase().includes(query.toLowerCase());
@@ -128,27 +115,6 @@ export function filterTasks(tasks: Task[], query: string, status: string): Task[
 
 function getInitials(name: string): string {
   return name.split(' ').map(p => p[0]).join('').toUpperCase().slice(0, 2) || '?';
-}
-
-/** Format deadline: relative ("in 2 hours", "1 hour ago") when within 24h, otherwise "Mon DD, YYYY". */
-function formatDeadline(deadline: string): string {
-  const dateOnly = deadline.includes('T') ? deadline : deadline + 'T12:00:00';
-  const deadlineTime = new Date(dateOnly).getTime();
-  const now = Date.now();
-  const diffMs = deadlineTime - now;
-  const diffMins = Math.round(diffMs / (1000 * 60));
-  const diffHours = Math.round(diffMs / (1000 * 60 * 60));
-
-  if (Math.abs(diffMs) <= 24 * 60 * 60 * 1000) {
-    if (Math.abs(diffMins) < 60) {
-      if (diffMins === 0) return 'now';
-      return diffMins > 0 ? `in ${diffMins}m` : `${Math.abs(diffMins)}m ago`;
-    }
-    if (diffHours > 0) return `in ${diffHours}h`;
-    return `${Math.abs(diffHours)}h ago`;
-  }
-
-  return new Date(deadline + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 /* ------------------------------------------------------------------ */
@@ -164,7 +130,6 @@ interface TaskListProps {
 }
 
 export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs = [], currentUserId = '' }: TaskListProps) {
-  const router = useRouter();
   const searchParams = useSearchParams();
 
   /* --- filter state --- */
@@ -174,7 +139,6 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
 
   /* --- task mutation state --- */
   const [taskStatuses, setTaskStatuses] = useState<Record<string, TaskStatus>>({});
-  const [taskDepts, setTaskDepts] = useState<Record<string, Department>>({});
   const [taskPriorities, setTaskPriorities] = useState<Record<string, Priority>>({});
   const [assignments, setAssignments] = useState<Record<string, string | null>>({});
   const [deleted, setDeleted] = useState<Set<string>>(new Set());
@@ -273,11 +237,6 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
       });
   }, []);
 
-  const handleToggleComplete = useCallback((taskId: string, currentStatus: string) => {
-    const newStatus: TaskStatus = currentStatus === 'Complete' ? 'In Progress' : 'Complete';
-    handleStatusChange(taskId, newStatus);
-  }, [handleStatusChange]);
-
   const handleAssign = useCallback(async (taskId: string, memberId: string | null) => {
     setAssignments(prev => ({ ...prev, [taskId]: memberId }));
     await supabase.from('tasks').update({ assignee_id: memberId }).eq('id', taskId);
@@ -298,23 +257,7 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
     }
   }, [supabase, allTasks]);
 
-  const handleDeptChange = useCallback(async (taskId: string, dept: Department) => {
-    setTaskDepts(prev => ({ ...prev, [taskId]: dept }));
-    await supabase.from('tasks').update({ department: dept }).eq('id', taskId);
-  }, [supabase]);
-
-  const handlePriorityChange = useCallback(async (taskId: string, priority: Priority) => {
-    setTaskPriorities(prev => ({ ...prev, [taskId]: priority }));
-    await supabase.from('tasks').update({ priority }).eq('id', taskId);
-  }, [supabase]);
-
-  const handleDelete = useCallback(async (taskId: string) => {
-    setDeleted(prev => new Set(prev).add(taskId));
-    await supabase.from('tasks').delete().eq('id', taskId);
-  }, [supabase]);
-
   const getEffectiveStatus = useCallback((task: Task): TaskStatus => taskStatuses[task.id] ?? task.status, [taskStatuses]);
-  const getEffectiveDept = useCallback((task: Task): Department => (taskDepts[task.id] ?? task.department) as Department, [taskDepts]);
   const getEffectivePriority = useCallback((task: Task): Priority => (taskPriorities[task.id] ?? task.priority) as Priority, [taskPriorities]);
 
   /* ---------------------------------------------------------------- */
@@ -445,6 +388,25 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
               <BadgeIcon className="size-3" />
               {status}
             </span>
+          )}
+        </div>
+
+        {/* Mobile: status + avatar below task name */}
+        <div className="flex items-center gap-2 sm:hidden col-span-full -mt-1">
+          <span
+            className={cn(
+              'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wide',
+              badgeStyle
+            )}
+          >
+            <BadgeIcon className="size-2.5" />
+            {status}
+          </span>
+          {assignee && (
+            <Avatar className="size-5 border border-card">
+              <AvatarImage src={assignee.avatar_url ?? undefined} />
+              <AvatarFallback className="text-[7px] bg-secondary">{getInitials(assignee.display_name ?? '?')}</AvatarFallback>
+            </Avatar>
           )}
         </div>
       </StaggerItem>
