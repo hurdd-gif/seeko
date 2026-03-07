@@ -48,11 +48,11 @@ function useMediaQuery(query: string): boolean {
   return matches;
 }
 
-const STATUS_DISPLAY: Record<string, { icon: typeof Circle; label: string; className: string }> = {
-  'Complete':     { icon: CheckCircle2, label: 'Complete',    className: 'text-[var(--color-status-complete)]' },
-  'In Progress':  { icon: Timer,        label: 'In Progress', className: 'text-[var(--color-status-progress)]' },
-  'In Review':    { icon: AlertCircle,   label: 'In Review',   className: 'text-[var(--color-status-review)]' },
-  'Blocked':      { icon: Circle,        label: 'Blocked',     className: 'text-[var(--color-status-blocked)]' },
+const STATUS_DISPLAY: Record<string, { icon: typeof Circle; label: string; className: string; color: string }> = {
+  'Complete':     { icon: CheckCircle2, label: 'Complete',    className: 'text-[var(--color-status-complete)]', color: 'var(--color-status-complete)' },
+  'In Progress':  { icon: Timer,        label: 'In Progress', className: 'text-[var(--color-status-progress)]', color: 'var(--color-status-progress)' },
+  'In Review':    { icon: AlertCircle,   label: 'In Review',   className: 'text-[var(--color-status-review)]', color: 'var(--color-status-review)' },
+  'Blocked':      { icon: Circle,        label: 'Blocked',     className: 'text-[var(--color-status-blocked)]', color: 'var(--color-status-blocked)' },
 };
 
 /* Handoff panel: see @/lib/motion for storyboard and PANEL_SPRING. */
@@ -125,6 +125,7 @@ function CommentItem({
   comment,
   isOwn,
   isHighlighted,
+  isGrouped,
   teamNames,
   docTitles,
   onEdit,
@@ -137,6 +138,7 @@ function CommentItem({
   comment: TaskComment;
   isOwn: boolean;
   isHighlighted?: boolean;
+  isGrouped?: boolean;
   teamNames: string[];
   docTitles: string[];
   onEdit: (id: string, content: string) => void;
@@ -151,6 +153,10 @@ function CommentItem({
   const [editText, setEditText] = useState(comment.content);
   const editRef = useRef<HTMLTextAreaElement>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [showReactionPicker, setShowReactionPicker] = useState(false);
+  const reactionPickerRef = useRef<HTMLDivElement>(null);
+
+  const [lightbox, setLightbox] = useState<{ url: string; name: string; type: string } | null>(null);
 
   const prof = comment.profiles;
   const name = prof?.display_name ?? 'Unknown';
@@ -163,6 +169,17 @@ function CommentItem({
       editRef.current?.select();
     }
   }, [editing]);
+
+  useEffect(() => {
+    if (!showReactionPicker) return;
+    function handleClick(e: MouseEvent) {
+      if (reactionPickerRef.current && !reactionPickerRef.current.contains(e.target as Node)) {
+        setShowReactionPicker(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [showReactionPicker]);
 
   function handleSaveEdit() {
     if (!editText.trim() || editText.trim() === comment.content) {
@@ -192,49 +209,27 @@ function CommentItem({
       }}
       exit={{ opacity: 0, height: 0, marginBottom: 0 }}
       transition={{ duration: isHighlighted ? 2 : 0.15, backgroundColor: { duration: 2, delay: 0.5 } }}
-      className="group flex gap-3 rounded-md px-2 py-1 -mx-2"
+      className={cn('group relative flex gap-3 rounded-md px-2 -mx-2', isGrouped ? 'py-0 mt-0.5 pl-[44px]' : 'py-1 mt-3 first:mt-0')}
     >
-      <Avatar className="size-7 shrink-0 mt-0.5">
-        <AvatarImage src={avatar ?? undefined} alt={name} />
-        <AvatarFallback className="text-[8px] bg-secondary">{getInitials(name)}</AvatarFallback>
-      </Avatar>
+      {!isGrouped && (
+        <Avatar className="size-8 shrink-0 mt-0.5">
+          <AvatarImage src={avatar ?? undefined} alt={name} />
+          <AvatarFallback className="text-[9px] bg-secondary">{getInitials(name)}</AvatarFallback>
+        </Avatar>
+      )}
       <div className="flex-1 min-w-0">
-        <div className="flex items-baseline gap-2">
-          <span className="text-sm font-medium text-foreground">{name}</span>
-          <span className="font-mono text-[11px] text-muted-foreground cursor-default" title={formatLocalTime(comment.created_at)}>{timeAgo(comment.created_at)}</span>
-          {wasEdited && (
-            <span className="text-[11px] text-muted-foreground/60 italic">( edited )</span>
-          )}
-          {!editing && !confirmingDelete && (
-            <div className="ml-auto flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-              <button
-                onClick={() => onReply(comment)}
-                className="rounded p-1 text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
-                title="Reply"
-              >
-                <Reply className="size-3" />
-              </button>
-              {isOwn && (
-                <>
-                  <button
-                    onClick={() => { setEditText(comment.content); setEditing(true); }}
-                    className="rounded p-1 text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
-                    title="Edit"
-                  >
-                    <Pencil className="size-3" />
-                  </button>
-                  <button
-                    onClick={() => setConfirmingDelete(true)}
-                    className="rounded p-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                    title="Delete"
-                  >
-                    <Trash2 className="size-3" />
-                  </button>
-                </>
-              )}
-            </div>
-          )}
-        </div>
+        {!isGrouped && (
+          <div className="flex items-baseline gap-2">
+            <span className="text-sm font-medium text-foreground">{name}</span>
+            <span className="font-mono text-[11px] text-muted-foreground cursor-default" title={formatLocalTime(comment.created_at)}>{timeAgo(comment.created_at)}</span>
+            {wasEdited && (
+              <span className="text-[11px] text-muted-foreground/60 italic">( edited )</span>
+            )}
+          </div>
+        )}
+        {isGrouped && wasEdited && (
+          <span className="text-[11px] text-muted-foreground/60 italic">( edited )</span>
+        )}
 
         <AnimatePresence>
           {confirmingDelete && (
@@ -306,7 +301,7 @@ function CommentItem({
             </div>
           </div>
         ) : (
-          <p className="text-sm text-foreground/80 mt-0.5 whitespace-pre-wrap break-words">
+          <p className="text-sm text-foreground mt-0.5 whitespace-pre-wrap break-words">
             {renderContent(comment.content, teamNames, docTitles)}
           </p>
         )}
@@ -315,15 +310,46 @@ function CommentItem({
           <div className="flex flex-wrap gap-2 mt-2">
             {(comment.attachments ?? []).map(att => {
               const isImage = att.file_type.startsWith('image/');
-              return isImage ? (
-                <a key={att.id} href={att.file_url} target="_blank" rel="noopener noreferrer" className="block">
-                  <img
-                    src={att.file_url}
-                    alt={att.file_name}
-                    className="rounded-md border border-border max-w-[200px] max-h-[150px] object-cover"
-                  />
-                </a>
-              ) : (
+              const isVideo = att.file_type.startsWith('video/');
+              if (isImage) {
+                return (
+                  <button
+                    key={att.id}
+                    type="button"
+                    onClick={() => setLightbox({ url: att.file_url, name: att.file_name, type: att.file_type })}
+                    className="block cursor-zoom-in"
+                  >
+                    <img
+                      src={att.file_url}
+                      alt={att.file_name}
+                      className="rounded-md border border-border max-w-[200px] max-h-[150px] object-cover hover:opacity-90 transition-opacity"
+                    />
+                  </button>
+                );
+              }
+              if (isVideo) {
+                return (
+                  <button
+                    key={att.id}
+                    type="button"
+                    onClick={() => setLightbox({ url: att.file_url, name: att.file_name, type: att.file_type })}
+                    className="relative block cursor-pointer group"
+                  >
+                    <video
+                      src={att.file_url}
+                      className="rounded-md border border-border max-w-[200px] max-h-[150px] object-cover"
+                      muted
+                      preload="metadata"
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-md group-hover:bg-black/40 transition-colors">
+                      <div className="size-8 rounded-full bg-white/90 flex items-center justify-center">
+                        <span className="ml-0.5 border-l-[10px] border-l-black border-y-[6px] border-y-transparent" />
+                      </div>
+                    </div>
+                  </button>
+                );
+              }
+              return (
                 <a
                   key={att.id}
                   href={att.file_url}
@@ -340,9 +366,53 @@ function CommentItem({
           </div>
         )}
 
+        {/* Lightbox */}
+        <AnimatePresence>
+          {lightbox && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm cursor-zoom-out"
+              onClick={() => setLightbox(null)}
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                className="relative max-w-[90vw] max-h-[90vh]"
+                onClick={e => e.stopPropagation()}
+              >
+                {lightbox.type.startsWith('video/') ? (
+                  <video
+                    src={lightbox.url}
+                    controls
+                    autoPlay
+                    className="max-w-[90vw] max-h-[85vh] rounded-lg"
+                  />
+                ) : (
+                  <img
+                    src={lightbox.url}
+                    alt={lightbox.name}
+                    className="max-w-[90vw] max-h-[85vh] rounded-lg object-contain"
+                  />
+                )}
+                <button
+                  onClick={() => setLightbox(null)}
+                  className="absolute -top-3 -right-3 rounded-full bg-card border border-border p-1.5 text-muted-foreground hover:text-foreground shadow-lg transition-colors"
+                >
+                  <X className="size-4" />
+                </button>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Reactions row */}
         {!editing && (
-          <div className="flex items-center gap-1 mt-1.5 flex-wrap">
+          <div className="flex items-center gap-1 mt-2.5 flex-wrap">
             {/* Grouped existing reactions */}
             {Object.entries(
               (comment.reactions ?? []).reduce<Record<string, { count: number; hasOwn: boolean }>>((acc, r) => {
@@ -356,42 +426,78 @@ function CommentItem({
                 key={emoji}
                 onClick={() => onReact(comment.id, emoji)}
                 className={cn(
-                  'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs transition-colors',
+                  'group/pill inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs transition-colors',
                   hasOwn
                     ? 'border-foreground/20 bg-foreground/10 text-foreground'
                     : 'border-border text-muted-foreground hover:border-foreground/20'
                 )}
               >
+                {hasOwn && (
+                  <X className="size-2.5 text-muted-foreground opacity-0 group-hover/pill:opacity-100 transition-opacity -ml-0.5" />
+                )}
                 <span>{emoji}</span>
                 <span className="tabular-nums">{count}</span>
               </button>
             ))}
 
-            {/* Add reaction button — visible on hover */}
-            <div className="relative group/react">
-              <button className="inline-flex items-center justify-center size-6 rounded-full border border-transparent text-muted-foreground/40 opacity-0 group-hover:opacity-100 hover:border-border hover:text-muted-foreground transition-all text-xs">
+            {/* Add reaction button — click to toggle picker */}
+            <div className="relative" ref={reactionPickerRef}>
+              <button
+                onClick={() => setShowReactionPicker(v => !v)}
+                className="inline-flex items-center justify-center size-6 rounded-full border border-transparent text-muted-foreground/40 opacity-0 group-hover:opacity-100 hover:border-border hover:text-muted-foreground transition-all text-xs"
+              >
                 +
               </button>
-              <div className="absolute bottom-full left-0 mb-1 hidden group-hover/react:flex gap-1 rounded-lg border border-border bg-card p-1.5 shadow-lg z-10">
-                {REACTION_EMOJIS.map(emoji => (
-                  <button
-                    key={emoji}
-                    onClick={() => onReact(comment.id, emoji)}
-                    className="rounded p-1 text-sm hover:bg-muted transition-colors"
+              <AnimatePresence>
+                {showReactionPicker && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 4, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 4, scale: 0.95 }}
+                    transition={{ duration: 0.1 }}
+                    className="absolute bottom-full left-0 mb-1 flex gap-1 rounded-lg border border-border bg-card p-1.5 shadow-lg z-10"
                   >
-                    {emoji}
-                  </button>
-                ))}
-              </div>
+                    {REACTION_EMOJIS.map(emoji => (
+                      <button
+                        key={emoji}
+                        onClick={() => { onReact(comment.id, emoji); setShowReactionPicker(false); }}
+                        className="rounded p-1 text-sm hover:bg-muted transition-colors"
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </div>
         )}
       </div>
+
+      {/* Hover actions — overlay top-right of message row */}
+      {!editing && !confirmingDelete && (
+        <div className="absolute top-0.5 right-1 flex items-center gap-0.5 rounded-md border border-border bg-card px-0.5 py-0.5 opacity-0 group-hover:opacity-100 transition-opacity z-10 shadow-sm">
+          <button onClick={() => onReply(comment)} className="rounded p-1 text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors" title="Reply"><Reply className="size-3" /></button>
+          {isOwn && (
+            <>
+              <button onClick={() => { setEditText(comment.content); setEditing(true); }} className="rounded p-1 text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors" title="Edit"><Pencil className="size-3" /></button>
+              <button onClick={() => setConfirmingDelete(true)} className="rounded p-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors" title="Delete"><Trash2 className="size-3" /></button>
+            </>
+          )}
+        </div>
+      )}
     </motion.div>
   );
 }
 
-type AutocompleteMode = 'mention' | 'doc' | null;
+type AutocompleteMode = 'mention' | 'doc' | 'slash' | null;
+
+const SLASH_COMMANDS = [
+  { cmd: '/in progress', label: 'In Progress', icon: Timer, className: 'text-[var(--color-status-progress)]' },
+  { cmd: '/in review', label: 'In Review', icon: AlertCircle, className: 'text-[var(--color-status-review)]' },
+  { cmd: '/complete', label: 'Complete', icon: CheckCircle2, className: 'text-[var(--color-status-complete)]' },
+  { cmd: '/blocked', label: 'Blocked', icon: Circle, className: 'text-[var(--color-status-blocked)]' },
+];
 
 interface TaskDetailProps {
   task: Task | TaskWithAssignee;
@@ -645,6 +751,11 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
   const autocompleteCandidates = useMemo(() => {
     if (autocompleteMode === null) return [];
     const q = autocompleteQuery.toLowerCase();
+    if (autocompleteMode === 'slash') {
+      return SLASH_COMMANDS
+        .filter(c => c.label.toLowerCase().includes(q) || c.cmd.toLowerCase().includes('/' + q))
+        .map(c => ({ id: c.cmd, label: c.label, icon: 'slash' as const, cmd: c.cmd, slashIcon: c.icon, slashClassName: c.className }));
+    }
     if (autocompleteMode === 'mention') {
       return team
         .filter(m => (m.display_name ?? '').toLowerCase().includes(q))
@@ -660,6 +771,17 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
   function detectAutocomplete(value: string) {
     const cursorPos = inputRef.current?.selectionStart ?? value.length;
     const textBeforeCursor = value.slice(0, cursorPos);
+
+    // Slash commands (admin only) — match `/` at start of input
+    if (isAdmin) {
+      const slashMatch = textBeforeCursor.match(/^\/(.*)$/i);
+      if (slashMatch) {
+        setAutocompleteMode('slash');
+        setAutocompleteQuery(slashMatch[1]);
+        setAutocompleteIndex(0);
+        return;
+      }
+    }
 
     const mentionMatch = textBeforeCursor.match(/@(\w*)$/);
     if (mentionMatch) {
@@ -685,7 +807,19 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
     detectAutocomplete(value);
   }
 
-  function insertAutocomplete(label: string) {
+  function insertAutocomplete(label: string, candidateId?: string) {
+    // For slash commands, fill the full command and auto-send
+    if (autocompleteMode === 'slash' && candidateId) {
+      setInput(candidateId); // e.g. "/in review"
+      setAutocompleteMode(null);
+      // Auto-execute the slash command
+      setTimeout(async () => {
+        const handled = await handleSlashCommand(candidateId);
+        if (handled) setInput('');
+      }, 0);
+      return;
+    }
+
     const cursorPos = inputRef.current?.selectionStart ?? input.length;
     const textBefore = input.slice(0, cursorPos);
     const textAfter = input.slice(cursorPos);
@@ -701,14 +835,44 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
     if (autocompleteMode !== null && autocompleteCandidates.length > 0) {
       if (e.key === 'ArrowDown') { e.preventDefault(); setAutocompleteIndex(i => (i + 1) % autocompleteCandidates.length); return; }
       if (e.key === 'ArrowUp') { e.preventDefault(); setAutocompleteIndex(i => (i - 1 + autocompleteCandidates.length) % autocompleteCandidates.length); return; }
-      if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); insertAutocomplete(autocompleteCandidates[autocompleteIndex].label); return; }
+      if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); const c = autocompleteCandidates[autocompleteIndex]; insertAutocomplete(c.label, c.id); return; }
       if (e.key === 'Escape') { setAutocompleteMode(null); return; }
     }
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
   }
 
+  const handleSlashCommand = useCallback(async (command: string): Promise<boolean> => {
+    if (!isAdmin) return false;
+    const cmd = command.toLowerCase().trim();
+    const statusMap: Record<string, string> = {
+      '/complete': 'Complete',
+      '/done': 'Complete',
+      '/in progress': 'In Progress',
+      '/progress': 'In Progress',
+      '/in review': 'In Review',
+      '/review': 'In Review',
+      '/blocked': 'Blocked',
+      '/block': 'Blocked',
+    };
+    const newStatus = statusMap[cmd];
+    if (!newStatus) return false;
+    await supabase.from('tasks').update({ status: newStatus }).eq('id', task.id);
+    toast.success(`Status changed to ${newStatus}`);
+    return true;
+  }, [isAdmin, task.id, supabase]);
+
   const handleSend = useCallback(async () => {
     if ((!input.trim() && pendingFiles.length === 0) || sending) return;
+
+    // Check for slash commands (admin only)
+    if (input.trim().startsWith('/') && pendingFiles.length === 0) {
+      const handled = await handleSlashCommand(input.trim());
+      if (handled) {
+        setInput('');
+        return;
+      }
+    }
+
     setSending(true);
 
     const currentProfile = team.find(m => m.id === currentUserId);
@@ -797,7 +961,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
     }
 
     setSending(false);
-  }, [input, sending, task.id, currentUserId, team, comments, supabase, replyTo, pendingFiles, loadComments]);
+  }, [input, sending, task.id, currentUserId, team, comments, supabase, replyTo, pendingFiles, loadComments, handleSlashCommand]);
 
   const statusCfg = STATUS_DISPLAY[task.status] ?? STATUS_DISPLAY['In Progress'];
   const StatusIcon = statusCfg.icon;
@@ -810,41 +974,51 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
 
   const detailsContent = (
     <>
-      <div className="flex flex-wrap items-center gap-2 mb-4">
-        <div className={`flex items-center gap-1.5 ${statusCfg.className}`}>
-          <StatusIcon className="size-3.5" />
-          <span className="text-xs font-medium">{statusCfg.label}</span>
+      {/* Metadata row */}
+      <div className="rounded-lg bg-muted/40 px-3.5 py-3 mb-4">
+        <div className="flex items-center gap-4 flex-wrap">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Priority</span>
+            <Badge variant="outline" className="text-xs">{task.priority}</Badge>
+          </div>
+          <div className="w-px h-4 bg-border" />
+          <div className="flex items-center gap-1.5">
+            <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Dept</span>
+            <Badge variant="secondary" className="text-xs">{task.department}</Badge>
+          </div>
+          {task.deadline && (
+            <>
+              <div className="w-px h-4 bg-border" />
+              <div className="flex items-center gap-1.5 cursor-default" title={formatLocalTime(task.deadline)}>
+                <Clock className="size-3 text-muted-foreground" />
+                <span className="text-xs text-foreground">{new Date(task.deadline + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+              </div>
+            </>
+          )}
         </div>
-        <Badge variant="secondary" className="text-xs">{task.department}</Badge>
-        <Badge variant="outline" className="text-xs">{task.priority}</Badge>
-        {task.deadline && (
-          <div className="flex items-center gap-1 text-xs text-muted-foreground cursor-default" title={task.deadline ? formatLocalTime(task.deadline) : undefined}>
-            <Clock className="size-3" />
-            <span>{new Date(task.deadline + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-          </div>
-        )}
-        {assignee && (
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Avatar className="size-4">
-              <AvatarImage src={assignee.avatar_url ?? undefined} />
-              <AvatarFallback className="text-[6px] bg-secondary">{getInitials(assignee.display_name ?? '?')}</AvatarFallback>
-            </Avatar>
-            <span>{assignee.display_name}</span>
-          </div>
-        )}
-        {canHandOff && (
-          <button
-            onClick={() => setShowHandoff(true)}
-            className="ml-auto flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium text-muted-foreground border border-border hover:bg-muted/50 hover:text-foreground transition-colors"
-          >
-            <ArrowRightLeft className="size-3.5" />
-            Hand Off
-          </button>
-        )}
       </div>
 
-      {task.description && (
-        <p className="text-sm text-muted-foreground mb-4">{task.description}</p>
+      {/* Actions */}
+      {canHandOff && (
+        <button
+          onClick={() => setShowHandoff(true)}
+          className="flex w-full items-center justify-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors mb-4"
+        >
+          <ArrowRightLeft className="size-3.5" />
+          Hand Off Task
+        </button>
+      )}
+
+      {/* Description */}
+      {task.description ? (
+        <div className="mb-4">
+          <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">Description</span>
+          <p className="text-sm text-muted-foreground mt-1 leading-relaxed">{task.description}</p>
+        </div>
+      ) : (
+        <div className="mb-4 py-4 text-center">
+          <p className="text-xs text-muted-foreground/40">No description added</p>
+        </div>
       )}
 
       {handoffs.length > 0 && (
@@ -1046,26 +1220,42 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
         <p className="text-xs text-muted-foreground text-center py-4">Loading comments...</p>
       )}
       {!loading && comments.length === 0 && (
-        <p className="text-xs text-muted-foreground text-center py-4">No comments yet. Start the conversation.</p>
+        <div className="flex flex-col items-center justify-center py-12 gap-3">
+          <div className="rounded-full bg-muted/60 p-3">
+            <MessageSquare className="size-5 text-muted-foreground" />
+          </div>
+          <div className="text-center">
+            <p className="text-sm font-medium text-muted-foreground">No messages yet</p>
+            <p className="text-xs text-muted-foreground/60 mt-0.5">Start the conversation below</p>
+          </div>
+        </div>
       )}
 
       <AnimatePresence>
-        {comments.map(comment => (
-          <CommentItem
-            key={comment.id}
-            isHighlighted={highlightCommentId === comment.id}
-            teamNames={teamNames}
-            docTitles={docTitles}
-            comment={comment}
-            isOwn={comment.user_id === currentUserId}
-            onEdit={handleEditComment}
-            onDelete={handleDeleteComment}
-            onReact={handleToggleReaction}
-            onReply={setReplyTo}
-            allComments={comments}
-            currentUserId={currentUserId}
-          />
-        ))}
+        {comments.map((comment, idx) => {
+          const prev = idx > 0 ? comments[idx - 1] : null;
+          const isGrouped = prev
+            && prev.user_id === comment.user_id
+            && !comment.reply_to_id
+            && (new Date(comment.created_at).getTime() - new Date(prev.created_at).getTime()) < 5 * 60 * 1000;
+          return (
+            <CommentItem
+              key={comment.id}
+              isHighlighted={highlightCommentId === comment.id}
+              isGrouped={!!isGrouped}
+              teamNames={teamNames}
+              docTitles={docTitles}
+              comment={comment}
+              isOwn={comment.user_id === currentUserId}
+              onEdit={handleEditComment}
+              onDelete={handleDeleteComment}
+              onReact={handleToggleReaction}
+              onReply={setReplyTo}
+              allComments={comments}
+              currentUserId={currentUserId}
+            />
+          );
+        })}
       </AnimatePresence>
       <div ref={commentsEndRef} />
     </>
@@ -1079,7 +1269,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="flex items-center gap-2 bg-muted/30 px-3 py-2 overflow-hidden"
+            className="flex items-center gap-2 bg-muted/30 px-4 py-2.5 overflow-hidden"
           >
             <Reply className="size-3 text-muted-foreground" />
             <span className="text-xs text-muted-foreground">
@@ -1104,27 +1294,35 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
             transition={{ duration: 0.1 }}
             className="absolute bottom-full mb-1 left-0 w-full rounded-lg border border-border bg-card shadow-lg z-10 overflow-hidden"
           >
-            {autocompleteCandidates.map((candidate, i) => (
-              <button
-                key={candidate.id}
-                className={`flex w-full items-center gap-2 px-3 py-2 text-sm transition-colors ${i === autocompleteIndex ? 'bg-secondary text-foreground' : 'text-muted-foreground hover:bg-secondary/50'}`}
-                onMouseDown={e => { e.preventDefault(); insertAutocomplete(candidate.label); }}
-                onMouseEnter={() => setAutocompleteIndex(i)}
-              >
-                {candidate.icon === 'user' ? (
-                  <Avatar className="size-5">
-                    <AvatarImage src={candidate.avatar ?? undefined} />
-                    <AvatarFallback className="text-[7px] bg-secondary">{getInitials(candidate.label)}</AvatarFallback>
-                  </Avatar>
-                ) : (
-                  <FileText className="size-4 text-blue-400" />
-                )}
-                <span className="truncate">{candidate.label}</span>
-                {candidate.icon === 'user' && candidate.role && (
-                  <span className="text-xs text-muted-foreground ml-auto">{candidate.role}</span>
-                )}
-              </button>
-            ))}
+            {autocompleteCandidates.map((candidate, i) => {
+              const SlashIcon = candidate.icon === 'slash' && 'slashIcon' in candidate ? candidate.slashIcon as typeof Circle : null;
+              return (
+                <button
+                  key={candidate.id}
+                  className={`flex w-full items-center gap-2 px-3 py-2 text-sm transition-colors ${i === autocompleteIndex ? 'bg-secondary text-foreground' : 'text-muted-foreground hover:bg-secondary/50'}`}
+                  onMouseDown={e => { e.preventDefault(); insertAutocomplete(candidate.label, candidate.id); }}
+                  onMouseEnter={() => setAutocompleteIndex(i)}
+                >
+                  {candidate.icon === 'slash' && SlashIcon ? (
+                    <SlashIcon className={`size-4 ${'slashClassName' in candidate ? candidate.slashClassName as string : ''}`} />
+                  ) : candidate.icon === 'user' ? (
+                    <Avatar className="size-5">
+                      <AvatarImage src={candidate.avatar ?? undefined} />
+                      <AvatarFallback className="text-[7px] bg-secondary">{getInitials(candidate.label)}</AvatarFallback>
+                    </Avatar>
+                  ) : (
+                    <FileText className="size-4 text-blue-400" />
+                  )}
+                  <span className="truncate">{candidate.label}</span>
+                  {candidate.icon === 'slash' && 'cmd' in candidate && (
+                    <span className="text-xs text-muted-foreground/50 ml-auto font-mono">{candidate.cmd as string}</span>
+                  )}
+                  {candidate.icon === 'user' && candidate.role && (
+                    <span className="text-xs text-muted-foreground ml-auto">{candidate.role}</span>
+                  )}
+                </button>
+              );
+            })}
           </motion.div>
         )}
       </AnimatePresence>
@@ -1146,13 +1344,13 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
         </div>
       )}
 
-      <div className="flex items-end gap-2 rounded-lg border border-border bg-muted/30 p-2">
+      <div className="flex items-end gap-2 rounded-lg bg-muted/20 p-2">
         <textarea
           ref={inputRef}
           value={input}
           onChange={e => handleInputChange(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Write a comment... @ to mention, # to link doc"
+          placeholder="Write a message..."
           rows={1}
           className="flex-1 resize-none bg-transparent text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none min-h-[36px] max-h-[120px] py-1.5"
           style={{ height: 'auto', overflow: 'hidden' }}
@@ -1178,7 +1376,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
         </label>
         <Button
           size="icon"
-          className="size-8 shrink-0"
+          className={cn('size-8 shrink-0 transition-colors', (input.trim() || pendingFiles.length > 0) && !sending ? 'bg-seeko-accent text-black hover:bg-seeko-accent/90' : '')}
           onClick={handleSend}
           disabled={!input.trim() && pendingFiles.length === 0 || sending}
         >
@@ -1190,37 +1388,39 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
 
   const tabBar = (
     <LayoutGroup>
-      <div className="flex border-b border-border px-4 shrink-0">
+      <div className="flex gap-1 px-6 py-1.5 shrink-0 border-b border-border">
         <button
           className={cn(
-            'px-4 py-2.5 text-sm font-medium transition-colors relative',
-            activeTab === 'details' ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
+            'relative rounded-lg px-4 py-1.5 text-sm font-medium transition-colors',
+            activeTab === 'details' ? 'text-seeko-accent' : 'text-muted-foreground hover:text-foreground'
           )}
           onClick={() => setActiveTab('details')}
         >
-          Details
           {activeTab === 'details' && (
             <motion.div
-              className="absolute bottom-0 left-0 right-0 h-0.5 bg-foreground"
-              layoutId="tab-indicator"
+              className="absolute inset-0 rounded-lg bg-muted"
+              layoutId="tab-highlight"
+              transition={{ type: 'spring', stiffness: 380, damping: 30 }}
             />
           )}
+          <span className="relative">Details</span>
         </button>
         <button
           className={cn(
-            'px-4 py-2.5 text-sm font-medium transition-colors relative',
-            activeTab === 'chat' ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
+            'relative rounded-lg px-4 py-1.5 text-sm font-medium transition-colors',
+            activeTab === 'chat' ? 'text-seeko-accent' : 'text-muted-foreground hover:text-foreground'
           )}
           onClick={() => setActiveTab('chat')}
         >
-          Chat
-          <span className="ml-1.5 text-xs text-muted-foreground">({comments.length})</span>
           {activeTab === 'chat' && (
             <motion.div
-              className="absolute bottom-0 left-0 right-0 h-0.5 bg-foreground"
-              layoutId="tab-indicator"
+              className="absolute inset-0 rounded-lg bg-muted"
+              layoutId="tab-highlight"
+              transition={{ type: 'spring', stiffness: 380, damping: 30 }}
             />
           )}
+          <span className="relative">Chat</span>
+          <span className="relative ml-1.5 text-xs text-muted-foreground">({comments.length})</span>
         </button>
       </div>
     </LayoutGroup>
@@ -1230,87 +1430,73 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
     <>
       <AnimatePresence>
         {open && (
-          isDesktop ? (
-            /* Desktop: slide-out panel from right */
-            <div className="fixed inset-0 z-50">
-              <motion.div
-                className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.15 }}
-                onClick={() => onOpenChange(false)}
-              />
-              <motion.div
-                className="absolute right-0 top-0 h-full w-full max-w-[480px] border-l border-border bg-card shadow-xl flex flex-col overflow-hidden"
-                initial={SLIDEOUT.initial}
-                animate={SLIDEOUT.animate}
-                exit={SLIDEOUT.exit}
-                transition={SLIDEOUT_SPRING}
-              >
-                {/* Header: close button + task name */}
-                <div className="flex items-center gap-2 border-b border-border px-4 py-3 shrink-0">
-                  <h2 className="flex-1 text-lg font-semibold text-foreground truncate pr-2">{task.name}</h2>
-                  <button
-                    onClick={() => onOpenChange(false)}
-                    className="rounded-sm p-1 text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    <X className="size-4" />
-                    <span className="sr-only">Close</span>
-                  </button>
-                </div>
-
-                {/* Tab bar */}
-                {tabBar}
-
-                {/* Tab content */}
-                <AnimatePresence mode="wait">
-                  {activeTab === 'details' && (
-                    <motion.div key="details" className="flex-1 overflow-y-auto p-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.1 }}>
-                      {detailsContent}
-                    </motion.div>
-                  )}
-                  {activeTab === 'chat' && (
-                    <motion.div
-                      key="chat"
-                      className={cn('flex flex-1 flex-col overflow-hidden', isDragging && 'ring-2 ring-inset ring-seeko-accent/50')}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.1 }}
-                      onDragOver={e => { e.preventDefault(); setIsDragging(true); }}
-                      onDragLeave={e => {
-                        if (!e.currentTarget.contains(e.relatedTarget as Node)) setIsDragging(false);
-                      }}
-                      onDrop={e => {
-                        e.preventDefault();
-                        setIsDragging(false);
-                        const files = Array.from(e.dataTransfer.files);
-                        if (files.length > 0) setPendingFiles(prev => [...prev, ...files]);
-                      }}
+          /* Centered card modal */
+          <motion.div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+          >
+            <div
+              className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+              onClick={() => onOpenChange(false)}
+            />
+            <motion.div
+              className="relative w-full rounded-xl border border-border bg-card shadow-2xl flex flex-col overflow-hidden"
+              initial={{ opacity: 0, scale: 0.95, y: 10, maxWidth: 576, maxHeight: '70vh' }}
+              animate={{
+                opacity: 1,
+                scale: 1,
+                y: 0,
+                maxWidth: activeTab === 'chat' ? 820 : 576,
+                maxHeight: activeTab === 'chat' ? '92vh' : '70vh',
+              }}
+              exit={{ opacity: 0, scale: 0.97, y: 8 }}
+              transition={{
+                type: 'spring', stiffness: 400, damping: 34,
+                opacity: { duration: 0.12 },
+              }}
+            >
+              {/* Header */}
+              <div className="flex items-start gap-3 px-6 pt-5 pb-3 shrink-0">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2.5">
+                    <h2 className="text-xl font-semibold text-foreground truncate">{task.name}</h2>
+                    <div
+                      className="flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium shrink-0"
+                      style={{ color: statusCfg.color, borderColor: `color-mix(in srgb, ${statusCfg.color} 25%, transparent)`, backgroundColor: `color-mix(in srgb, ${statusCfg.color} 10%, transparent)` }}
                     >
-                      <div className="flex-1 overflow-y-auto p-4 space-y-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                        {chatMessages}
-                      </div>
-                      <div className="shrink-0 border-t border-border p-3">
-                        {chatCompose}
-                      </div>
-                    </motion.div>
+                      <StatusIcon className="size-3" />
+                      {statusCfg.label}
+                    </div>
+                  </div>
+                  {assignee && (
+                    <div className="flex items-center gap-1.5 mt-1.5">
+                      <Avatar className="size-5">
+                        <AvatarImage src={assignee.avatar_url ?? undefined} />
+                        <AvatarFallback className="text-[7px] bg-secondary">{getInitials(assignee.display_name ?? '?')}</AvatarFallback>
+                      </Avatar>
+                      <span className="text-xs text-muted-foreground">{assignee.display_name}</span>
+                    </div>
                   )}
-                </AnimatePresence>
-              </motion.div>
-            </div>
-          ) : (
-            /* Mobile: existing Dialog */
-            <Dialog open={open} onOpenChange={onOpenChange}>
-              <DialogClose onClose={() => onOpenChange(false)} />
-              <DialogHeader>
-                <DialogTitle className="pr-8">{task.name}</DialogTitle>
-              </DialogHeader>
+                </div>
+                <button
+                  onClick={() => onOpenChange(false)}
+                  className="rounded-lg p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0"
+                >
+                  <X className="size-4" />
+                  <span className="sr-only">Close</span>
+                </button>
+              </div>
+
+              {/* Tab bar */}
               {tabBar}
-              <AnimatePresence mode="wait">
+
+              {/* Tab content */}
+              <AnimatePresence mode="wait" initial={false}>
                 {activeTab === 'details' && (
-                  <motion.div key="details" className="flex-1 overflow-y-auto p-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.1 }}>
+                  <motion.div key="details" className="flex-1 overflow-y-auto px-6 py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ type: 'spring', stiffness: 500, damping: 35, opacity: { duration: 0.12 } }}>
                     {detailsContent}
                   </motion.div>
                 )}
@@ -1318,10 +1504,10 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
                   <motion.div
                     key="chat"
                     className={cn('flex flex-1 flex-col overflow-hidden', isDragging && 'ring-2 ring-inset ring-seeko-accent/50')}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.1 }}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    transition={{ type: 'spring', stiffness: 500, damping: 35, opacity: { duration: 0.12 } }}
                     onDragOver={e => { e.preventDefault(); setIsDragging(true); }}
                     onDragLeave={e => {
                       if (!e.currentTarget.contains(e.relatedTarget as Node)) setIsDragging(false);
@@ -1333,17 +1519,17 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
                       if (files.length > 0) setPendingFiles(prev => [...prev, ...files]);
                     }}
                   >
-                    <div className="flex-1 overflow-y-auto p-4 space-y-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                    <div className="flex-1 overflow-y-auto px-6 py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                       {chatMessages}
                     </div>
-                    <div className="shrink-0 border-t border-border p-3">
+                    <div className="shrink-0 border-t border-border px-5 py-3">
                       {chatCompose}
                     </div>
                   </motion.div>
                 )}
               </AnimatePresence>
-            </Dialog>
-          )
+            </motion.div>
+          </motion.div>
         )}
       </AnimatePresence>
 

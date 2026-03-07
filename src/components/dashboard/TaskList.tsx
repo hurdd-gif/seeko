@@ -28,6 +28,8 @@ import {
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { TaskDetail } from '@/components/dashboard/TaskDetail';
@@ -204,14 +206,14 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
   }, [newName, newDept, newPriority, newDeadline, supabase]);
 
   const handleStatusChange = useCallback(async (taskId: string, newStatus: TaskStatus) => {
-    if (newStatus === 'Complete') {
+    if (newStatus === 'Complete' && !isAdmin) {
       const task = allTasks.find(t => t.id === taskId);
       if (task) setDeliverableTask(task);
       return;
     }
     setTaskStatuses(prev => ({ ...prev, [taskId]: newStatus }));
     await supabase.from('tasks').update({ status: newStatus }).eq('id', taskId);
-  }, [supabase, allTasks]);
+  }, [supabase, allTasks, isAdmin]);
 
   const doCompleteTask = useCallback(async (taskId: string) => {
     setTaskStatuses(prev => ({ ...prev, [taskId]: 'Complete' }));
@@ -423,26 +425,31 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-44">
-              {isAdmin && team.map(member => (
-                <DropdownMenuItem key={member.id} onClick={() => handleAssign(task.id, member.id)} className="flex items-center gap-2">
-                  <Avatar className="size-5">
-                    <AvatarImage src={member.avatar_url ?? undefined} alt={member.display_name ?? ''} />
-                    <AvatarFallback className="text-[7px] bg-secondary">{getInitials(member.display_name ?? '?')}</AvatarFallback>
-                  </Avatar>
-                  <span className="text-xs truncate">{member.display_name ?? 'Unnamed'}</span>
-                  {assignee?.id === member.id && <CheckCircle2 className="size-3 text-seeko-accent ml-auto" />}
-                </DropdownMenuItem>
-              ))}
-              {isAdmin && assignee && (
-                <DropdownMenuItem onClick={() => handleAssign(task.id, null)} className="flex items-center gap-2 text-muted-foreground">
-                  <UserPlus className="size-3.5" />
-                  <span className="text-xs">Unassign</span>
-                </DropdownMenuItem>
+              {isAdmin && (
+                <>
+                  <DropdownMenuLabel>Assign to</DropdownMenuLabel>
+                  {team.map(member => (
+                    <DropdownMenuItem key={member.id} onClick={() => handleAssign(task.id, member.id)} className="flex items-center gap-2">
+                      <Avatar className="size-5">
+                        <AvatarImage src={member.avatar_url ?? undefined} alt={member.display_name ?? ''} />
+                        <AvatarFallback className="text-[7px] bg-secondary">{getInitials(member.display_name ?? '?')}</AvatarFallback>
+                      </Avatar>
+                      <span className="text-xs truncate">{member.display_name ?? 'Unnamed'}</span>
+                      {assignee?.id === member.id && <CheckCircle2 className="size-3 text-seeko-accent ml-auto" />}
+                    </DropdownMenuItem>
+                  ))}
+                  {assignee && (
+                    <DropdownMenuItem onClick={() => handleAssign(task.id, null)} className="flex items-center gap-2 text-muted-foreground">
+                      <UserPlus className="size-3.5" />
+                      <span className="text-xs">Unassign</span>
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuSeparator />
+                </>
               )}
-              {isAdmin && <div className="my-1 h-px bg-border" />}
               {!isAdmin && task.assignee_id === currentUserId && (
                 <>
-                  {ALL_STATUSES.filter(s => s !== status).map(s => {
+                  {ALL_STATUSES.filter(s => s !== status && s !== 'Blocked').map(s => {
                     const cfg = STATUS_ICONS[s];
                     const Icon = cfg.icon;
                     return (
@@ -456,7 +463,7 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
                       </DropdownMenuItem>
                     );
                   })}
-                  <div className="my-1 h-px bg-border" />
+                  <DropdownMenuSeparator />
                 </>
               )}
               {(isAdmin || task.assignee_id === currentUserId) && (

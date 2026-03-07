@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { createClient as createSupabaseClient } from '@supabase/supabase-js';
+import { getServiceClient } from '@/lib/supabase/service';
 
 export async function PATCH(request: NextRequest) {
   // Verify the caller is an authenticated admin
@@ -18,26 +18,31 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  let body: { userId?: string; department?: string };
+  let body: { userId?: string; department?: string; is_contractor?: boolean };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
-  const { userId, department } = body;
-  if (!userId || !department) {
-    return NextResponse.json({ error: 'Missing userId or department' }, { status: 400 });
+  const { userId, department, is_contractor } = body;
+  if (!userId) {
+    return NextResponse.json({ error: 'Missing userId' }, { status: 400 });
   }
 
-  // Use service role to bypass RLS when updating another user's row
-  const admin = createSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
+  const updates: Record<string, unknown> = {};
+  if (department !== undefined) updates.department = department;
+  if (is_contractor !== undefined) updates.is_contractor = is_contractor;
+
+  if (Object.keys(updates).length === 0) {
+    return NextResponse.json({ error: 'No fields to update' }, { status: 400 });
+  }
+
+  // Use service role singleton (same as invite route) to bypass RLS + trigger checks
+  const admin = getServiceClient();
 
   const { error } = await admin
     .from('profiles')
-    .update({ department })
+    .update(updates)
     .eq('id', userId);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
