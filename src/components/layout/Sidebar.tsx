@@ -418,7 +418,7 @@ export function Sidebar({
               <nav
                 className="md:hidden fixed bottom-0 left-0 right-0 z-50"
                 style={{
-                  background: 'rgba(18, 18, 18, 0.96)',
+                  background: 'rgba(26, 26, 26, 0.96)',
                   backdropFilter: 'saturate(180%) blur(16px)',
                   WebkitBackdropFilter: 'saturate(180%) blur(16px)',
                   paddingBottom: 'env(safe-area-inset-bottom)',

@@ -39,8 +39,8 @@ export default async function DashboardLayout({
           unreadCount={unreadCount}
           notifications={notifications}
         />
-        <main className="flex-1 min-w-0 overflow-hidden pt-[env(safe-area-inset-top)] md:pt-0 md:overflow-auto" id="tour-main">
-          <div className="max-w-5xl mx-auto px-4 md:px-6 py-4 md:py-8 pb-[calc(3.5rem+env(safe-area-inset-bottom))] md:pb-8">
+        <main className="flex-1 min-w-0 overflow-x-hidden pt-[env(safe-area-inset-top)] md:pt-0 md:overflow-auto" id="tour-main">
+          <div className="max-w-5xl mx-auto px-4 md:px-6 py-4 md:py-8 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-8">
             {children}
           </div>
         </main>
