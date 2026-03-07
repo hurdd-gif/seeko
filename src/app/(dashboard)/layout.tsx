@@ -28,6 +28,18 @@ export default async function DashboardLayout({
     fetchTeam().catch(() => []),
     fetchAllDocs().catch(() => []),
   ]);
+
+  // Filter docs by access: admins see all; others only see unrestricted docs,
+  // docs matching their department, or docs they're explicitly granted access to.
+  const isAdmin = profile?.is_admin ?? false;
+  const userDept = profile?.department ?? '';
+  const accessibleDocs = isAdmin ? allDocs : allDocs.filter((d) => {
+    if (!d.restricted_department?.length) return true;
+    if (d.restricted_department.includes(userDept)) return true;
+    if (d.granted_user_ids?.includes(user.id)) return true;
+    return false;
+  });
+
   const showTour = profile?.onboarded === 1 && profile?.tour_completed === 0;
 
   return (
@@ -56,7 +68,8 @@ export default async function DashboardLayout({
       <ActivityTracker userId={user.id} />
       <CommandPalette
         team={team.map((m) => ({ id: m.id, display_name: m.display_name }))}
-        docs={allDocs.map((d) => ({ id: d.id, title: d.title }))}
+        docs={accessibleDocs.map((d) => ({ id: d.id, title: d.title }))}
+        isContractor={profile?.is_contractor ?? false}
       />
     </DashboardTourWrapper>
   );

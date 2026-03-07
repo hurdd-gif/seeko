@@ -59,7 +59,7 @@ export async function fetchAllDocs(): Promise<Doc[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from('docs')
-    .select('id, title')
+    .select('id, title, restricted_department, granted_user_ids')
     .order('title', { ascending: true });
   if (error) throw error;
   return (data ?? []) as Doc[];

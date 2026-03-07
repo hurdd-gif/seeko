@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
@@ -54,6 +55,9 @@ interface TourProviderProps {
 
 const TourContext = createContext<TourContextType | null>(null);
 
+/* ── Spring used for cutout + tooltip glide ── */
+const POSITION_SPRING = { type: 'spring' as const, stiffness: 280, damping: 30 };
+
 function TourOverlay({
   elementPosition,
 }: {
@@ -64,6 +68,7 @@ function TourOverlay({
   const left = elementPosition.left - pad;
   const w = elementPosition.width + pad * 2;
   const h = elementPosition.height + pad * 2;
+
   return (
     <motion.div
       className="fixed inset-0 z-[100]"
@@ -72,13 +77,37 @@ function TourOverlay({
       exit={{ opacity: 0 }}
       transition={{ duration: 0.2 }}
     >
-      <div className="absolute left-0 right-0 bg-black/60" style={{ top: 0, height: Math.max(0, top) }} />
-      <div className="absolute bg-black/60" style={{ top, left: 0, width: Math.max(0, left), height: h }} />
-      <div className="absolute bg-black/60" style={{ top, left: left + w, right: 0, height: h }} />
-      <div className="absolute left-0 right-0 bg-black/60" style={{ top: top + h, bottom: 0 }} />
-      <div
+      {/* Top */}
+      <motion.div
+        className="absolute left-0 right-0 bg-black/60"
+        style={{ top: 0 }}
+        animate={{ height: Math.max(0, top) }}
+        transition={POSITION_SPRING}
+      />
+      {/* Left */}
+      <motion.div
+        className="absolute bg-black/60"
+        style={{ left: 0 }}
+        animate={{ top, width: Math.max(0, left), height: h }}
+        transition={POSITION_SPRING}
+      />
+      {/* Right */}
+      <motion.div
+        className="absolute right-0 bg-black/60"
+        animate={{ top, left: left + w, height: h }}
+        transition={POSITION_SPRING}
+      />
+      {/* Bottom */}
+      <motion.div
+        className="absolute left-0 right-0 bottom-0 bg-black/60"
+        animate={{ top: top + h }}
+        transition={POSITION_SPRING}
+      />
+      {/* Highlight border */}
+      <motion.div
         className="absolute rounded-lg border-2 border-seeko-accent pointer-events-none"
-        style={{ top, left, width: w, height: h }}
+        animate={{ top, left, width: w, height: h }}
+        transition={POSITION_SPRING}
       />
     </motion.div>
   );
@@ -158,6 +187,7 @@ export function TourProvider({
     height: number;
   } | null>(null);
   const [isCompleted, setIsCompleted] = useState(isTourCompleted);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const updateElementPosition = useCallback(() => {
     if (currentStep >= 0 && currentStep < steps.length) {
@@ -166,23 +196,45 @@ export function TourProvider({
       const pos = getElementPosition(step.selectorId);
       if (pos) {
         setElementPosition(pos);
-        const contentPos = calculateContentPosition(pos, step.position ?? 'bottom');
-        setContentPosition(contentPos);
+        setContentPosition(calculateContentPosition(pos, step.position ?? 'bottom'));
+        // Stop polling once found
+        if (pollRef.current) {
+          clearInterval(pollRef.current);
+          pollRef.current = null;
+        }
+        return true;
       }
+      // Element not found — keep previous position (don't null it)
+      return false;
     } else {
       setElementPosition(null);
       setContentPosition(null);
+      return true;
     }
   }, [currentStep, steps]);
 
+  // On step change: try to find element, poll if not found (handles delayed renders like Cmd+K palette)
   useEffect(() => {
-    updateElementPosition();
+    const found = updateElementPosition();
+    if (!found && currentStep >= 0) {
+      pollRef.current = setInterval(() => {
+        const ok = updateElementPosition();
+        if (ok && pollRef.current) {
+          clearInterval(pollRef.current);
+          pollRef.current = null;
+        }
+      }, 80);
+    }
     window.addEventListener('resize', updateElementPosition);
     window.addEventListener('scroll', updateElementPosition, true);
 
     return () => {
       window.removeEventListener('resize', updateElementPosition);
       window.removeEventListener('scroll', updateElementPosition, true);
+      if (pollRef.current) {
+        clearInterval(pollRef.current);
+        pollRef.current = null;
+      }
     };
   }, [updateElementPosition]);
 
@@ -271,19 +323,14 @@ export function TourProvider({
         {currentStep >= 0 && elementPosition && contentPosition && (
           <>
             <TourOverlay elementPosition={elementPosition} />
-            {/* Tooltip content */}
+            {/* Tooltip content — position animated with spring */}
             <motion.div
               className="fixed z-[101] rounded-xl border border-border bg-card p-4 shadow-xl"
-              style={{
-                top: contentPosition.top,
-                left: contentPosition.left,
-                width: contentPosition.width,
-                minHeight: contentPosition.height,
-              }}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
+              style={{ width: contentPosition.width, minHeight: contentPosition.height }}
+              initial={{ opacity: 0, y: 8, top: contentPosition.top, left: contentPosition.left }}
+              animate={{ opacity: 1, y: 0, top: contentPosition.top, left: contentPosition.left }}
               exit={{ opacity: 0, y: 8 }}
-              transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+              transition={POSITION_SPRING}
             >
               <div className="mb-3 text-xs font-medium text-muted-foreground">
                 {currentStep + 1} / {steps.length}

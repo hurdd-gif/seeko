@@ -22,9 +22,10 @@ type CommandItem = {
 interface CommandPaletteProps {
   team: Pick<Profile, 'id' | 'display_name'>[];
   docs: Pick<Doc, 'id' | 'title'>[];
+  isContractor?: boolean;
 }
 
-export function CommandPalette({ team, docs }: CommandPaletteProps) {
+export function CommandPalette({ team, docs, isContractor = false }: CommandPaletteProps) {
   const { open, setOpen } = useCommandPalette();
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -44,7 +45,7 @@ export function CommandPalette({ team, docs }: CommandPaletteProps) {
       { id: 'p-overview', label: 'Overview', section: 'Pages', icon: LayoutDashboard, action: () => go('/') },
       { id: 'p-team', label: 'Team', section: 'Pages', icon: Users, action: () => go('/team') },
       { id: 'p-docs', label: 'Docs', section: 'Pages', icon: FileText, action: () => go('/docs') },
-      { id: 'p-activity', label: 'Activity', section: 'Pages', icon: Activity, action: () => go('/activity') },
+      ...(!isContractor ? [{ id: 'p-activity', label: 'Activity', section: 'Pages' as const, icon: Activity, action: () => go('/activity') }] : []),
       { id: 'p-settings', label: 'Settings', section: 'Pages', icon: Settings, action: () => go('/settings') },
     ];
     const teamItems: CommandItem[] = team.map((m) => ({
