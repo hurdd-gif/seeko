@@ -349,9 +349,39 @@ export function DocEditor({ doc, onSave, onCancel, team = [] }: DocEditorProps) 
     }
   };
 
+  const setDialogFooter = useDialogFooter();
+
+  useEffect(() => {
+    if (!setDialogFooter) return;
+    setDialogFooter(
+      <>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => { trigger('selection'); onCancel(); }}
+          disabled={saving}
+          className="min-w-[4.5rem] min-h-[2.5rem] touch-manipulation"
+        >
+          Cancel
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          onClick={handleSave}
+          disabled={saving}
+          className="min-w-[7rem] min-h-[2.5rem] touch-manipulation"
+        >
+          {saving ? 'Saving…' : doc ? 'Save changes' : 'Create document'}
+        </Button>
+      </>
+    );
+    return () => { setDialogFooter(null); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- sync footer when saving/doc change
+  }, [setDialogFooter, saving, doc]);
+
   if (!isDesktop && !editor) return null;
 
-  const setDialogFooter = useDialogFooter();
   const actionBar = (
     <>
       <Button
@@ -375,14 +405,6 @@ export function DocEditor({ doc, onSave, onCancel, team = [] }: DocEditorProps) 
       </Button>
     </>
   );
-
-  useEffect(() => {
-    if (setDialogFooter) {
-      setDialogFooter(actionBar);
-      return () => { setDialogFooter(null); };
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- actionBar is recreated each render; we only need to sync when footer/saving/doc change
-  }, [setDialogFooter, saving, doc]);
 
   return (
     <div className="flex flex-col gap-4">

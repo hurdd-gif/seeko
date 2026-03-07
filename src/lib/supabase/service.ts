@@ -13,7 +13,12 @@ export function getServiceClient() {
     if (!url || !key) {
       throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
     }
-    serviceClient = createClient(url, key);
+    serviceClient = createClient(url, key, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    });
   }
   return serviceClient;
 }

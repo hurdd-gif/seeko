@@ -139,7 +139,7 @@ function Dialog({ open, onOpenChange, children, resizable = false, contentClassN
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <motion.div
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm"
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -149,7 +149,7 @@ function Dialog({ open, onOpenChange, children, resizable = false, contentClassN
           <motion.div
             ref={panelRef}
             className={cn(
-              "relative z-50 flex flex-col rounded-xl border border-border bg-card shadow-lg mx-4",
+              "relative z-50 flex flex-col rounded-xl border border-white/[0.08] bg-popover/80 backdrop-blur-xl backdrop-saturate-150 shadow-xl mx-4",
               !resizable && "w-full max-w-[900px] max-h-[90vh] sm:max-h-[88vh]",
               !resizable && footer != null && "h-[90vh] sm:h-[88vh]",
               contentClassName
@@ -166,7 +166,7 @@ function Dialog({ open, onOpenChange, children, resizable = false, contentClassN
                   {children}
                 </div>
                 {footer != null ? (
-                  <div className="shrink-0 border-t border-border bg-card px-6 py-4 flex flex-wrap items-center justify-end gap-3">
+                  <div className="shrink-0 border-t border-white/[0.06] px-6 py-4 flex flex-wrap items-center justify-end gap-3">
                     {footer}
                   </div>
                 ) : null}

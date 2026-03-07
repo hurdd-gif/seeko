@@ -8,11 +8,11 @@ import { Stagger, StaggerItem } from '@/components/motion';
 import { EmptyState } from '@/components/ui/empty-state';
 import { TaskDetail } from '@/components/dashboard/TaskDetail';
 
-const STATUS_ICONS: Record<string, { icon: typeof Circle; className: string }> = {
-  'Complete':     { icon: CheckCircle2, className: 'text-[var(--color-status-complete)]' },
-  'In Progress':  { icon: Timer,        className: 'text-[var(--color-status-progress)]' },
-  'In Review':    { icon: AlertCircle,   className: 'text-[var(--color-status-review)]' },
-  'Blocked':      { icon: Circle,        className: 'text-[var(--color-status-blocked)]' },
+const STATUS_ICONS: Record<string, { icon: typeof Circle; className: string; bg: string }> = {
+  'Complete':     { icon: CheckCircle2, className: 'text-[var(--color-status-complete)]', bg: 'bg-emerald-500/10' },
+  'In Progress':  { icon: Timer,        className: 'text-[var(--color-status-progress)]', bg: 'bg-amber-500/10' },
+  'In Review':    { icon: AlertCircle,   className: 'text-[var(--color-status-review)]',  bg: 'bg-blue-500/10' },
+  'Blocked':      { icon: Circle,        className: 'text-[var(--color-status-blocked)]', bg: 'bg-red-500/10' },
 };
 
 const PRIORITY_VARIANT: Record<string, 'destructive' | 'default' | 'outline'> = {
@@ -52,44 +52,42 @@ export function UpcomingTasks({ tasks, team, docs, currentUserId }: UpcomingTask
 
   return (
     <>
-      <Stagger className="flex flex-col gap-4" staggerMs={0.06} delayMs={0.05}>
-        {tasks.map(task => (
-          <StaggerItem key={task.id}>
-            <button
-              onClick={() => setSelectedTask(task)}
-              className="flex w-full cursor-pointer items-center justify-between rounded-md border border-border p-3 text-left transition-colors hover:bg-muted/60"
-            >
-              <div className="flex items-center gap-3 min-w-0 flex-1">
-                {(() => {
-                  const cfg = STATUS_ICONS[task.status] ?? STATUS_ICONS['In Progress'];
-                  const Icon = cfg.icon;
-                  return (
-                    <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-secondary" title={task.status}>
-                      <Icon className={`size-4 ${cfg.className}`} />
-                    </div>
-                  );
-                })()}
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-foreground">{task.name}</p>
-                  <p className="text-xs text-muted-foreground font-mono">
-                    {task.department ?? 'Unassigned'}
-                  </p>
+      <Stagger className="flex flex-col gap-3" staggerMs={0.06} delayMs={0.05}>
+        {tasks.map(task => {
+          const cfg = STATUS_ICONS[task.status] ?? STATUS_ICONS['In Progress'];
+          const Icon = cfg.icon;
+          return (
+            <StaggerItem key={task.id}>
+              <button
+                onClick={() => setSelectedTask(task)}
+                className="flex w-full cursor-pointer items-center justify-between rounded-lg p-3 text-left transition-colors hover:bg-white/[0.04]"
+              >
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <div className={`flex size-9 shrink-0 items-center justify-center rounded-lg ${cfg.bg}`} title={task.status}>
+                    <Icon className={`size-4 ${cfg.className}`} />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-foreground">{task.name}</p>
+                    <p className="text-xs text-muted-foreground font-mono">
+                      {task.department ?? 'Unassigned'}
+                    </p>
+                  </div>
                 </div>
-              </div>
-              <div className="flex shrink-0 items-center gap-2 ml-2">
-                <Badge
-                  variant={PRIORITY_VARIANT[task.priority] ?? 'outline'}
-                  className="text-xs"
-                >
-                  {task.priority}
-                </Badge>
-                {task.deadline && (
-                  <p className="text-xs text-muted-foreground">Due {formatDeadlineDisplay(task.deadline)}</p>
-                )}
-              </div>
-            </button>
-          </StaggerItem>
-        ))}
+                <div className="flex shrink-0 items-center gap-2 ml-2">
+                  <Badge
+                    variant={PRIORITY_VARIANT[task.priority] ?? 'outline'}
+                    className="text-xs"
+                  >
+                    {task.priority}
+                  </Badge>
+                  {task.deadline && (
+                    <p className="text-xs text-muted-foreground">Due {formatDeadlineDisplay(task.deadline)}</p>
+                  )}
+                </div>
+              </button>
+            </StaggerItem>
+          );
+        })}
       </Stagger>
 
       {selectedTask && (

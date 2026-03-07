@@ -43,8 +43,9 @@ const NAV_HIGHLIGHT = {
 };
 
 const AVATAR = {
-  hoverScale:  1.08,   // scale up on hover
-  spring: { type: 'spring' as const, stiffness: 300, damping: 25 },
+  hoverScale:  1.1,    // scale up on hover
+  hoverRing:   2,      // ring width px (applied via boxShadow)
+  spring: { type: 'spring' as const, stiffness: 400, damping: 20 },
 };
 
 const BOTTOM_NAV = {
@@ -283,7 +284,7 @@ export function Sidebar({
                 <motion.div
                   whileHover={{
                     scale: AVATAR.hoverScale,
-                    boxShadow: '0 0 0 3px rgba(110, 231, 183, 0.35)',
+                    boxShadow: `0 0 0 ${AVATAR.hoverRing}px var(--color-seeko-accent)`,
                   }}
                   transition={AVATAR.spring}
                   className="rounded-full"

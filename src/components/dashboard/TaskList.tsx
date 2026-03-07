@@ -41,6 +41,12 @@ import { Stagger, StaggerItem } from '@/components/motion';
 /*  FilterPill                                                         */
 /* ------------------------------------------------------------------ */
 
+interface FilterOption {
+  value: string;
+  label: string;
+  avatarUrl?: string | null;
+}
+
 function FilterPill({
   label,
   value,
@@ -49,7 +55,7 @@ function FilterPill({
 }: {
   label: string;
   value: string;
-  options: { value: string; label: string }[];
+  options: FilterOption[];
   onChange: (value: string) => void;
 }) {
   return (
@@ -71,9 +77,18 @@ function FilterPill({
         {options.map(opt => (
           <DropdownMenuItem
             key={opt.value}
+            selected={opt.value === value}
             onClick={() => onChange(opt.value)}
-            className={cn('text-xs', opt.value === value && 'font-medium')}
+            className="text-xs"
           >
+            {opt.avatarUrl !== undefined && (
+              <Avatar className="size-5 shrink-0">
+                <AvatarImage src={opt.avatarUrl ?? undefined} alt={opt.label} />
+                <AvatarFallback className="text-[7px] bg-secondary">
+                  {opt.label.slice(0, 2).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+            )}
             {opt.label}
           </DropdownMenuItem>
         ))}
@@ -308,18 +323,18 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
     });
   }, [allTasks, filterStatus, filterPriority, filterAssignee, deleted, getEffectiveStatus, getEffectivePriority]);
 
-  const assigneeOptions = useMemo(() => {
-    const seen = new Map<string, string>();
+  const assigneeOptions: FilterOption[] = useMemo(() => {
+    const seen = new Map<string, { name: string; avatarUrl: string | null }>();
     for (const t of allTasks) {
       if (deleted.has(t.id)) continue;
       const a = getAssignee(t);
       if (a?.id && a.display_name && !seen.has(a.id)) {
-        seen.set(a.id, a.display_name);
+        seen.set(a.id, { name: a.display_name, avatarUrl: a.avatar_url ?? null });
       }
     }
     return [
       { value: 'All', label: 'All' },
-      ...Array.from(seen, ([id, name]) => ({ value: id, label: name })),
+      ...Array.from(seen, ([id, { name, avatarUrl }]) => ({ value: id, label: name, avatarUrl })),
     ];
   }, [allTasks, deleted]);
 

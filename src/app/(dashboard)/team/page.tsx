@@ -2,40 +2,35 @@
  * ANIMATION STORYBOARD
  *
  *    0ms   heading fades up
- *   80ms   subtitle fades up
- *  150ms   invite form (admin) fades up
- *  200ms   members card rises in
- *  260ms   member rows stagger in (60ms apart)
- *  320ms   contractors card rises in, rows stagger
+ *   80ms   subtitle + online cluster fades up
+ *  150ms   invite button (admin) fades up
+ *  200ms   team card rises in
+ *  260ms   department sections stagger in (60ms apart)
  * ───────────────────────────────────────────────────────── */
 
 import { fetchTeam } from '@/lib/supabase/data';
 import { createClient } from '@/lib/supabase/server';
 import { Profile } from '@/lib/types';
 import { FadeRise, Stagger, StaggerItem } from '@/components/motion';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import { EmptyState } from '@/components/ui/empty-state';
-import { Globe, Clock, Users } from 'lucide-react';
+import { Globe, Clock } from 'lucide-react';
 import { InviteForm } from '@/components/dashboard/InviteForm';
 import { DepartmentSelect } from '@/components/dashboard/DepartmentSelect';
 import { ContractorToggle } from '@/components/dashboard/ContractorToggle';
 
 const TIMING = {
-  heading:    0,   // page title
-  subtitle:  80,   // description line
-  invite:   150,   // invite form (admin)
-  members:  200,   // members card rises
-  membersStagger: 260, // member rows stagger
-  contractors: 320,   // contractors card, rows stagger
+  heading:    0,
+  subtitle:  80,
+  invite:   150,
+  card:     200,
+  rows:     260,
 };
 
-/** FadeRise/Stagger delay in seconds */
 const delay = (ms: number) => ms / 1000;
 
-/** Department text color — match DepartmentSelect / TaskList so admins and non-admins see same colors */
 const DEPT_COLOR: Record<string, string> = {
   'Coding':         'text-emerald-400',
   'Visual Art':     'text-blue-300',
@@ -45,18 +40,12 @@ const DEPT_COLOR: Record<string, string> = {
 };
 
 function getInitials(name: string): string {
-  return name
-    .split(' ')
-    .map(part => part[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2) || '?';
+  return name.split(' ').map(part => part[0]).join('').toUpperCase().slice(0, 2) || '?';
 }
 
 function isOnline(lastSeen?: string): boolean {
   if (!lastSeen) return false;
-  const diff = Date.now() - new Date(lastSeen).getTime();
-  return diff < 2 * 60 * 1000;
+  return Date.now() - new Date(lastSeen).getTime() < 2 * 60 * 1000;
 }
 
 function lastSeenLabel(lastSeen?: string, mustSetPassword?: boolean): string {
@@ -97,16 +86,20 @@ function tzAbbrev(tz?: string): string {
   }
 }
 
+/* ─────────────────────────────────────────────────────────
+ * MemberRow — single team member
+ * ───────────────────────────────────────────────────────── */
+
 function MemberRow({ member, isAdmin }: { member: Profile; isAdmin: boolean }) {
   const online = isOnline(member.last_seen_at);
   const localTime = currentTimeInTz(member.timezone);
   const offset = tzAbbrev(member.timezone);
 
   return (
-    <div className="flex items-center gap-3 py-3">
+    <div className="flex items-center gap-3 rounded-lg px-3 py-2.5 -mx-3 hover:bg-white/[0.02] transition-colors">
       {/* Avatar */}
       <div className="relative shrink-0">
-        <Avatar className="size-9">
+        <Avatar className="size-10">
           <AvatarImage src={member.avatar_url} alt={member.display_name ?? ''} />
           <AvatarFallback className="bg-secondary text-foreground text-xs">
             {getInitials(member.display_name ?? '?')}
@@ -131,10 +124,6 @@ function MemberRow({ member, isAdmin }: { member: Profile; isAdmin: boolean }) {
           </span>
         </div>
 
-        {member.email && (
-          <p className="text-xs text-muted-foreground/70 hidden sm:block">{member.email}</p>
-        )}
-
         <div className="flex items-center gap-2 mt-0.5 flex-wrap">
           {member.role && (
             <p className="text-xs text-muted-foreground">{member.role}</p>
@@ -145,11 +134,11 @@ function MemberRow({ member, isAdmin }: { member: Profile; isAdmin: boolean }) {
             </span>
           )}
           {member.timezone && (
-            <div className="hidden sm:flex items-center gap-1 text-xs text-muted-foreground">
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
               {member.role && <span className="text-muted-foreground/30">·</span>}
               <Clock className="size-2.5" />
               <span>{localTime}</span>
-              <span className="text-muted-foreground/50">{offset}</span>
+              <span className="text-muted-foreground/50 hidden sm:inline">{offset}</span>
             </div>
           )}
         </div>
@@ -176,7 +165,7 @@ function MemberRow({ member, isAdmin }: { member: Profile; isAdmin: boolean }) {
               </Badge>
             )
         }
-        <span className={`text-[11px] ${online ? 'text-seeko-accent' : 'text-muted-foreground/60'}`}>
+        <span className={`text-[11px] w-16 text-right ${online ? 'text-seeko-accent' : 'text-muted-foreground/60'}`}>
           {lastSeenLabel(member.last_seen_at, member.must_set_password)}
         </span>
       </div>
@@ -184,8 +173,77 @@ function MemberRow({ member, isAdmin }: { member: Profile; isAdmin: boolean }) {
   );
 }
 
+/* ─────────────────────────────────────────────────────────
+ * Online cluster — compact avatar row of active users
+ * ───────────────────────────────────────────────────────── */
+
+function OnlineCluster({ members }: { members: Profile[] }) {
+  const online = members.filter(m => isOnline(m.last_seen_at));
+  if (online.length === 0) return null;
+
+  return (
+    <div className="flex items-center gap-2">
+      <div className="flex items-center -space-x-2">
+        {online.slice(0, 6).map(m => (
+          <Avatar key={m.id} className="size-7 ring-2 ring-background">
+            <AvatarImage src={m.avatar_url} alt={m.display_name ?? ''} />
+            <AvatarFallback className="bg-secondary text-foreground text-[9px]">
+              {getInitials(m.display_name ?? '?')}
+            </AvatarFallback>
+          </Avatar>
+        ))}
+        {online.length > 6 && (
+          <div className="size-7 rounded-full bg-muted ring-2 ring-background flex items-center justify-center text-[10px] font-medium text-muted-foreground">
+            +{online.length - 6}
+          </div>
+        )}
+      </div>
+      <span className="text-xs text-seeko-accent font-medium">{online.length} online</span>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────
+ * Department section — group header + member rows
+ * ───────────────────────────────────────────────────────── */
+
+function DepartmentSection({
+  label,
+  members,
+  isAdmin,
+  colorClass,
+}: {
+  label: string;
+  members: Profile[];
+  isAdmin: boolean;
+  colorClass?: string;
+}) {
+  return (
+    <div>
+      <div className="flex items-center gap-2 mb-1 px-3">
+        <p className={`text-[11px] font-semibold uppercase tracking-widest ${colorClass ?? 'text-muted-foreground/60'}`}>
+          {label}
+        </p>
+        <div className="flex-1 h-px bg-border/50" />
+        <span className="text-[11px] text-muted-foreground/40">{members.length}</span>
+      </div>
+      <Stagger className="flex flex-col" staggerMs={0.04}>
+        {members.map(member => (
+          <StaggerItem key={member.id}>
+            <MemberRow member={member} isAdmin={isAdmin} />
+          </StaggerItem>
+        ))}
+      </Stagger>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────
+ * TeamPage
+ * ───────────────────────────────────────────────────────── */
+
 export default async function TeamPage() {
-  const team = await fetchTeam().catch((e) => { throw new Error('Failed to load team.'); });
+  const team = await fetchTeam().catch(() => { throw new Error('Failed to load team.'); });
 
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -195,42 +253,50 @@ export default async function TeamPage() {
   const members = team.filter(m => !m.is_contractor);
   const contractors = team.filter(m => m.is_contractor);
 
-  const onlineCount = team.filter(m => isOnline(m.last_seen_at)).length;
+  // Group members by department
+  const deptGroups = new Map<string, Profile[]>();
+  for (const m of members) {
+    const dept = m.department ?? 'Unassigned';
+    if (!deptGroups.has(dept)) deptGroups.set(dept, []);
+    deptGroups.get(dept)!.push(m);
+  }
+  // Sort: departments with color first (alphabetical), Unassigned last
+  const sortedDeptGroups = Array.from(deptGroups.entries()).sort(([a], [b]) => {
+    if (a === 'Unassigned') return 1;
+    if (b === 'Unassigned') return -1;
+    return a.localeCompare(b);
+  });
 
   return (
     <div className="space-y-6">
-      <div>
-        <FadeRise delay={delay(TIMING.heading)}>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Team</h1>
-        </FadeRise>
+      {/* Header */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <FadeRise delay={delay(TIMING.heading)}>
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground">Team</h1>
+          </FadeRise>
+          <FadeRise delay={delay(TIMING.subtitle)}>
+            <p className="text-sm text-muted-foreground mt-1">
+              {team.length} people
+            </p>
+          </FadeRise>
+        </div>
         <FadeRise delay={delay(TIMING.subtitle)}>
-          <p className="text-sm text-muted-foreground mt-1">
-            {team.length} people · {onlineCount} online now
-          </p>
+          <OnlineCluster members={team} />
         </FadeRise>
       </div>
 
+      {/* Invite form — admin only */}
       {isAdmin && (
         <FadeRise delay={delay(TIMING.invite)} y={12}>
           <InviteForm />
         </FadeRise>
       )}
 
-      <FadeRise delay={delay(TIMING.members)} y={12}>
+      {/* Main team card */}
+      <FadeRise delay={delay(TIMING.card)} y={12}>
         <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-xl font-semibold text-foreground">Members</CardTitle>
-                <CardDescription>{members.length} team members</CardDescription>
-              </div>
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <span className="size-2 rounded-full bg-seeko-accent" />
-                <span>{onlineCount} online</span>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
+          <CardContent className="pt-5 pb-4">
             {members.length === 0 ? (
               <EmptyState
                 icon="Users"
@@ -238,54 +304,56 @@ export default async function TeamPage() {
                 description="Invite people to get started."
               />
             ) : (
-              <Stagger className="flex flex-col" staggerMs={0.06} delayMs={delay(TIMING.membersStagger)}>
-                {members.map((member, i) => (
-                  <StaggerItem key={member.id}>
-                    <MemberRow member={member} isAdmin={isAdmin} />
-                    {i < members.length - 1 && <Separator />}
-                  </StaggerItem>
+              <div className="flex flex-col gap-5">
+                {sortedDeptGroups.map(([dept, deptMembers]) => (
+                  <DepartmentSection
+                    key={dept}
+                    label={dept}
+                    members={deptMembers}
+                    isAdmin={isAdmin}
+                    colorClass={dept !== 'Unassigned' ? DEPT_COLOR[dept]?.replace('text-', 'text-') : undefined}
+                  />
                 ))}
-              </Stagger>
+              </div>
             )}
           </CardContent>
         </Card>
       </FadeRise>
 
-      <FadeRise delay={delay(TIMING.contractors)} y={12}>
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Globe className="size-4 text-muted-foreground" />
-              <div>
-                <CardTitle className="text-xl font-semibold text-foreground">Contractors</CardTitle>
-                <CardDescription>
-                  {contractors.length === 0
-                    ? 'No contractors added yet.'
-                    : `${contractors.length} contractor${contractors.length !== 1 ? 's' : ''}`}
-                </CardDescription>
+      {/* Contractors section */}
+      {(contractors.length > 0 || isAdmin) && (
+        <FadeRise delay={delay(TIMING.rows)} y={12}>
+          <Card>
+            <CardContent className="pt-5 pb-4">
+              <div className="flex items-center gap-2 mb-1 px-3">
+                <Globe className="size-3.5 text-muted-foreground/60" />
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/60">
+                  Contractors
+                </p>
+                <div className="flex-1 h-px bg-border/50" />
+                <span className="text-[11px] text-muted-foreground/40">{contractors.length}</span>
               </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {contractors.length === 0 ? (
-              <EmptyState
-                icon="Globe"
-                title="No contractors yet"
-                description="Mark team members as contractors in the database to show them here."
-              />
-            ) : (
-              <Stagger className="flex flex-col" staggerMs={0.06} delayMs={delay(TIMING.contractors + 60)}>
-                {contractors.map((member, i) => (
-                  <StaggerItem key={member.id}>
-                    <MemberRow member={member} isAdmin={isAdmin} />
-                    {i < contractors.length - 1 && <Separator />}
-                  </StaggerItem>
-                ))}
-              </Stagger>
-            )}
-          </CardContent>
-        </Card>
-      </FadeRise>
+              {contractors.length === 0 ? (
+                <EmptyState
+                  icon="Globe"
+                  title="No contractors yet"
+                  description={isAdmin
+                    ? 'Use the "Make Contractor" toggle on any member above to move them here.'
+                    : 'No contractors have been added to the team.'}
+                />
+              ) : (
+                <Stagger className="flex flex-col" staggerMs={0.04}>
+                  {contractors.map(member => (
+                    <StaggerItem key={member.id}>
+                      <MemberRow member={member} isAdmin={isAdmin} />
+                    </StaggerItem>
+                  ))}
+                </Stagger>
+              )}
+            </CardContent>
+          </Card>
+        </FadeRise>
+      )}
     </div>
   );
 }

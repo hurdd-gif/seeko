@@ -11,6 +11,8 @@ import { Select } from '@/components/ui/select';
 
 const DEPARTMENTS = ['Coding', 'Visual Art', 'UI/UX', 'Animation', 'Asset Creation'];
 
+const COLLAPSE_SPRING = { type: 'spring' as const, stiffness: 360, damping: 39, mass: 2.4 };
+
 export function InviteForm() {
   const [email, setEmail] = useState('');
   const [department, setDepartment] = useState('');
@@ -78,7 +80,7 @@ export function InviteForm() {
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+            transition={COLLAPSE_SPRING}
             className="overflow-hidden"
           >
             <CardContent className="pt-0">
