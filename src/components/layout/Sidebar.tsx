@@ -388,14 +388,7 @@ export function Sidebar({
           <>
             {createPortal(
               <header
-                className={`md:hidden flex items-center justify-between px-4 h-14 w-full shrink-0 border-b border-border/30 ${!useHeaderSlot ? 'fixed top-0 left-0 right-0 z-40 mobile-fixed-layer' : ''}`}
-                style={{
-                  background: 'rgba(21, 21, 21, 0.85)',
-                  ...(useHeaderSlot ? {} : {
-                    backdropFilter: 'saturate(180%) blur(12px)',
-                    WebkitBackdropFilter: 'saturate(180%) blur(12px)',
-                  }),
-                }}
+                className={`md:hidden flex items-center justify-between px-4 h-14 w-full shrink-0 ${!useHeaderSlot ? 'fixed top-0 left-0 right-0 z-40 mobile-fixed-layer' : ''}`}
               >
                 <div className="flex items-center gap-2.5">
                   <Image src="/seeko-s.png" alt="SEEKO" width={20} height={20} unoptimized />
@@ -423,7 +416,7 @@ export function Sidebar({
             )}
             {createPortal(
               <nav
-                className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-border/40"
+                className="md:hidden fixed bottom-0 left-0 right-0 z-50"
                 style={{
                   background: 'rgba(18, 18, 18, 0.96)',
                   backdropFilter: 'saturate(180%) blur(16px)',
