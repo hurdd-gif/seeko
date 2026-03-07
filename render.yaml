@@ -13,3 +13,7 @@ services:
         sync: false
       - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
+      - key: PAYMENTS_ACCESS_HASH
+        sync: false
+      - key: PAYMENTS_JWT_SECRET
+        sync: false

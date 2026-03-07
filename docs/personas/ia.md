@@ -76,6 +76,30 @@ Every authenticated user gets a profile row automatically on signup. This double
 | granted_user_ids | uuid[] | User IDs granted access when doc is department-restricted |
 | created_at | timestamptz |                                          |
 
+### 5. payments
+
+| Column       | Type             | Notes                                  |
+|--------------|------------------|----------------------------------------|
+| id           | uuid (PK)        | Auto-generated                         |
+| recipient_id | uuid (FK)        | → profiles.id                          |
+| amount       | decimal          | Total payment amount                   |
+| currency     | text             | Default 'USD'                          |
+| description  | text             | Summary of what payment covers         |
+| status       | payment_status   | pending, paid, cancelled               |
+| paid_at      | timestamptz      | When marked as paid                    |
+| created_by   | uuid (FK)        | → profiles.id (admin who created it)   |
+| created_at   | timestamptz      |                                        |
+
+### 6. payment_items
+
+| Column     | Type             | Notes                                  |
+|------------|------------------|----------------------------------------|
+| id         | uuid (PK)        | Auto-generated                         |
+| payment_id | uuid (FK)        | → payments.id (cascade delete)         |
+| task_id    | uuid (FK, null)  | → tasks.id (null for custom items)     |
+| label      | text             | Description                            |
+| amount     | decimal          | Line item amount                       |
+
 ---
 
 ## Enum Types (dropdowns in Table Editor)
@@ -87,6 +111,7 @@ Every authenticated user gets a profile row automatically on signup. This double
 | priority       | High, Medium, Low                                         |
 | area_status    | Active, Planned, Complete                                 |
 | area_phase     | Alpha, Beta, Launch                                       |
+| payment_status | pending, paid, cancelled                                  |
 
 ---
 
@@ -97,6 +122,8 @@ Supabase (seeko-studio project)
 ├── tasks          ← area_id → areas, assignee_id → profiles
 ├── areas          ← Dojo, Battleground, Fighting Club
 ├── profiles       ← auto-created from auth.users (= team roster)
+├── payments       ← recipient_id → profiles, created_by → profiles
+│   └── payment_items ← task_id → tasks (optional)
 └── docs           ← self-referencing tree (parent_id)
     ├── Game Design Doc
     └── Onboarding

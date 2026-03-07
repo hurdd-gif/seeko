@@ -60,6 +60,8 @@ Note: `sync: false` means the value is set manually in the Render dashboard, not
 | `NOTION_AREAS_DB_ID`           | Render + .env.local | Notion Areas database ID             |
 | `NOTION_TEAM_DB_ID`            | Render + .env.local | Notion Team database ID              |
 | `NOTION_DOCS_PAGE_ID`          | Render + .env.local | Notion Docs parent page ID           |
+| `PAYMENTS_ACCESS_HASH`         | Render dashboard   | bcrypt hash of payments password       |
+| `PAYMENTS_JWT_SECRET`          | Render + .env.local | Secret for signing payment session JWTs |
 
 ---
 
