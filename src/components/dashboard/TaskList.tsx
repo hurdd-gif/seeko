@@ -139,7 +139,6 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
 
   /* --- task mutation state --- */
   const [taskStatuses, setTaskStatuses] = useState<Record<string, TaskStatus>>({});
-  const [taskPriorities, setTaskPriorities] = useState<Record<string, Priority>>({});
   const [assignments, setAssignments] = useState<Record<string, string | null>>({});
   const [deleted, setDeleted] = useState<Set<string>>(new Set());
   const [localTasks, setLocalTasks] = useState<Task[]>([]);
@@ -237,28 +236,8 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
       });
   }, []);
 
-  const handleAssign = useCallback(async (taskId: string, memberId: string | null) => {
-    setAssignments(prev => ({ ...prev, [taskId]: memberId }));
-    await supabase.from('tasks').update({ assignee_id: memberId }).eq('id', taskId);
-
-    if (memberId) {
-      const task = allTasks.find(t => t.id === taskId);
-      fetch('/api/notify/user', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: memberId,
-          kind: 'task_assigned',
-          title: 'Task assigned to you',
-          body: task?.name ?? 'A task has been assigned to you',
-          link: `/tasks?task=${taskId}`,
-        }),
-      });
-    }
-  }, [supabase, allTasks]);
-
   const getEffectiveStatus = useCallback((task: Task): TaskStatus => taskStatuses[task.id] ?? task.status, [taskStatuses]);
-  const getEffectivePriority = useCallback((task: Task): Priority => (taskPriorities[task.id] ?? task.priority) as Priority, [taskPriorities]);
+  const getEffectivePriority = useCallback((task: Task): Priority => task.priority as Priority, []);
 
   /* ---------------------------------------------------------------- */
   /*  Assignee helper — works for both admin and member views          */
@@ -493,6 +472,12 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
         {/* Filter pills */}
         <div className="flex flex-wrap items-center gap-2 px-4 py-3">
           <FilterPill
+            label="Assignee"
+            value={filterAssignee}
+            options={assigneeOptions}
+            onChange={setFilterAssignee}
+          />
+          <FilterPill
             label="Status"
             value={filterStatus}
             options={[
@@ -509,12 +494,6 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
               ...PRIORITIES.map(p => ({ value: p, label: p })),
             ]}
             onChange={setFilterPriority}
-          />
-          <FilterPill
-            label="Assignee"
-            value={filterAssignee}
-            options={assigneeOptions}
-            onChange={setFilterAssignee}
           />
         </div>
 
