@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
 
   let query = supabase
     .from('payments')
-    .select('*, recipient:profiles!payments_recipient_id_fkey(id, display_name, avatar_url, department), items:payment_items(*)')
+    .select('*, recipient:profiles!payments_recipient_id_fkey(id, display_name, avatar_url, department, paypal_email), items:payment_items(*)')
     .order('created_at', { ascending: false });
 
   if (isInvestor && !isAdmin) {

@@ -130,7 +130,7 @@ export type Payment = {
   paid_at?: string;
   created_by: string;
   created_at: string;
-  recipient?: Pick<Profile, 'id' | 'display_name' | 'avatar_url' | 'department'>;
+  recipient?: Pick<Profile, 'id' | 'display_name' | 'avatar_url' | 'department' | 'paypal_email'>;
   items?: PaymentItem[];
 };
 
@@ -148,7 +148,10 @@ export type NotificationKind =
   | 'comment_reply'
   | 'task_completed'
   | 'deliverable_uploaded'
-  | 'task_handoff';
+  | 'task_handoff'
+  | 'payment_request'
+  | 'payment_approved'
+  | 'payment_denied';
 
 export type UserEvent = {
   id: string;

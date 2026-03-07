@@ -12,11 +12,13 @@ import { Select } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Camera, Check, Eye, MousePointer, Monitor, UserX, AlertTriangle, RotateCcw } from 'lucide-react';
+import { Camera, Check, Eye, MousePointer, Monitor, UserX, AlertTriangle, RotateCcw, DollarSign } from 'lucide-react';
 import { toast } from 'sonner';
-import { Profile, UserEvent } from '@/lib/types';
+import { Profile, UserEvent, Payment } from '@/lib/types';
 import { useHaptics } from '@/components/HapticsProvider';
 import { useTour } from '@/components/ui/tour';
+import { PaymentRequestDialog } from '@/components/dashboard/PaymentRequestDialog';
+import { cn } from '@/lib/utils';
 
 const COMMON_TIMEZONES = [
   'America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles',
@@ -109,6 +111,10 @@ export function SettingsPanel({ profile, isAdmin, team, revalidate }: SettingsPa
   const [bootError, setBootError] = useState('');
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
+  const [myPayments, setMyPayments] = useState<Payment[]>([]);
+  const [loadingPayments, setLoadingPayments] = useState(false);
+  const [requestDialogOpen, setRequestDialogOpen] = useState(false);
+
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -180,6 +186,25 @@ export function SettingsPanel({ profile, isAdmin, team, revalidate }: SettingsPa
     router.refresh();
     setTimeout(() => setSaved(false), 2000);
   }
+
+  const loadMyPayments = useCallback(async () => {
+    setLoadingPayments(true);
+    try {
+      const res = await fetch('/api/payments/mine');
+      if (res.ok) {
+        const data = await res.json();
+        setMyPayments(data);
+      }
+    } catch {
+      // Non-critical
+    } finally {
+      setLoadingPayments(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadMyPayments();
+  }, [loadMyPayments]);
 
   const loadEvents = useCallback(async () => {
     if (!isAdmin) return;
@@ -321,6 +346,69 @@ export function SettingsPanel({ profile, isAdmin, team, revalidate }: SettingsPa
           </div>
         </CardContent>
       </Card>
+
+      {/* Payments */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <DollarSign className="size-4 text-muted-foreground" />
+              <div>
+                <CardTitle>Payments</CardTitle>
+                <CardDescription>Your payment requests and history.</CardDescription>
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setRequestDialogOpen(true)}
+              className="gap-1.5 shrink-0"
+            >
+              <DollarSign className="size-3.5" />
+              Request Payment
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {loadingPayments ? (
+            <p className="text-xs text-muted-foreground text-center py-6">Loading payments...</p>
+          ) : myPayments.length === 0 ? (
+            <p className="text-xs text-muted-foreground text-center py-6">No payment history yet.</p>
+          ) : (
+            <div className="flex flex-col divide-y divide-border max-h-[300px] overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {myPayments.map(payment => (
+                <div key={payment.id} className="flex items-center justify-between py-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">
+                      {payment.description || `Payment #${payment.id.slice(0, 8)}`}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(payment.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-sm font-medium text-foreground">
+                      {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(payment.amount))}
+                    </span>
+                    <Badge
+                      variant={payment.status === 'cancelled' ? 'destructive' : payment.status === 'pending' ? 'outline' : 'default'}
+                      className={cn("text-[10px] py-0 px-1.5", payment.status === 'paid' && "bg-emerald-500/15 text-emerald-400 border-emerald-500/20")}
+                    >
+                      {payment.status}
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <PaymentRequestDialog
+        open={requestDialogOpen}
+        onOpenChange={setRequestDialogOpen}
+        onCreated={loadMyPayments}
+      />
 
       <ReplayTourCard userId={profile.id} />
 

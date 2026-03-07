@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { createBrowserClient } from '@supabase/ssr';
 import { motion, AnimatePresence } from 'motion/react';
-import { Bell, CheckSquare, AtSign, MessageSquare, CheckCheck, CheckCircle2, Package, ArrowRightLeft, X } from 'lucide-react';
+import { Bell, CheckSquare, AtSign, MessageSquare, CheckCheck, CheckCircle2, Package, ArrowRightLeft, DollarSign, CircleCheck, CircleX, X } from 'lucide-react';
 import { Notification, NotificationKind } from '@/lib/types';
 
 const KIND_CONFIG: Record<NotificationKind, { icon: typeof Bell; className: string }> = {
@@ -15,6 +15,9 @@ const KIND_CONFIG: Record<NotificationKind, { icon: typeof Bell; className: stri
   task_completed: { icon: CheckCircle2, className: 'text-emerald-500' },
   deliverable_uploaded: { icon: Package, className: 'text-violet-400' },
   task_handoff: { icon: ArrowRightLeft, className: 'text-seeko-accent' },
+  payment_request: { icon: DollarSign, className: 'text-amber-400' },
+  payment_approved: { icon: CircleCheck, className: 'text-emerald-400' },
+  payment_denied: { icon: CircleX, className: 'text-red-400' },
 };
 
 function timeAgo(dateStr: string): string {

@@ -13,10 +13,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   Users, CheckCircle2, Clock,
-  CreditCard, Plus,
+  CreditCard, Plus, ChevronDown, ChevronUp, Check, X as XIcon,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { FadeRise, Stagger, StaggerItem, HoverCard } from '@/components/motion';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -24,6 +25,7 @@ import { PaymentsPasswordGate } from '@/components/dashboard/PaymentsPasswordGat
 import { PaymentCreateDialog } from '@/components/dashboard/PaymentCreateDialog';
 import type { Profile, Payment } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 const TIMING = {
   hero: 0,
@@ -302,6 +304,39 @@ export function PaymentsAdmin({ team }: PaymentsAdminProps) {
         </Card>
       </FadeRise>
 
+      {/* Pending Requests */}
+      {(() => {
+        const pendingRequests = payments.filter(p => p.status === 'pending' && p.created_by === p.recipient_id);
+        if (pendingRequests.length === 0) return null;
+        return (
+          <FadeRise delay={delay(TIMING.recent - 100)}>
+            <Card className="border-amber-500/20">
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="text-amber-400 border-amber-500/30 bg-amber-500/10">
+                    {pendingRequests.length}
+                  </Badge>
+                  <CardTitle className="text-xl font-semibold text-foreground">Payment Requests</CardTitle>
+                </div>
+                <CardDescription>Team members requesting payment approval.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col gap-0">
+                  {pendingRequests.map(payment => (
+                    <PendingRequestRow
+                      key={payment.id}
+                      payment={payment}
+                      token={token!}
+                      onAction={() => fetchData(token!)}
+                    />
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </FadeRise>
+        );
+      })()}
+
       <FadeRise delay={delay(TIMING.recent)}>
         <Card>
           <CardHeader>
@@ -355,6 +390,121 @@ export function PaymentsAdmin({ team }: PaymentsAdminProps) {
         token={token}
         onCreated={handlePaymentCreated}
       />
+    </div>
+  );
+}
+
+function PendingRequestRow({ payment, token, onAction }: { payment: Payment; token: string; onAction: () => void }) {
+  const [expanded, setExpanded] = useState(false);
+  const [acting, setActing] = useState(false);
+
+  function formatCurrencyLocal(amount: number): string {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+  }
+
+  async function handleAction(status: 'paid' | 'cancelled') {
+    setActing(true);
+    try {
+      const res = await fetch(`/api/payments/${payment.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'x-payments-token': token },
+        body: JSON.stringify({ status }),
+      });
+      if (res.ok) {
+        toast.success(status === 'paid' ? 'Payment approved' : 'Payment denied');
+        onAction();
+      } else {
+        const data = await res.json();
+        toast.error(data.error ?? 'Failed to update payment');
+      }
+    } catch {
+      toast.error('Network error');
+    } finally {
+      setActing(false);
+    }
+  }
+
+  return (
+    <div className="border-b border-border last:border-0">
+      <span
+        role="button"
+        tabIndex={0}
+        onClick={() => setExpanded(!expanded)}
+        onKeyDown={e => { if (e.key === 'Enter') setExpanded(!expanded); }}
+        className="flex items-center justify-between py-3 px-1 w-full text-left hover:bg-white/[0.02] transition-colors cursor-pointer"
+      >
+        <div className="flex items-center gap-3 min-w-0">
+          <Avatar className="size-8">
+            <AvatarImage src={payment.recipient?.avatar_url ?? undefined} />
+            <AvatarFallback className="bg-secondary text-foreground text-[10px]">
+              {(payment.recipient?.display_name ?? '?').split(' ').map(p => p[0]).join('').toUpperCase().slice(0, 2)}
+            </AvatarFallback>
+          </Avatar>
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-foreground truncate">{payment.recipient?.display_name}</p>
+            {payment.recipient?.paypal_email && (
+              <span
+                role="button"
+                tabIndex={0}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigator.clipboard.writeText(payment.recipient!.paypal_email!);
+                  toast.success('PayPal email copied');
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') { e.stopPropagation(); navigator.clipboard.writeText(payment.recipient!.paypal_email!); toast.success('PayPal email copied'); }
+                }}
+                className="text-xs text-muted-foreground/60 font-mono truncate hover:text-muted-foreground transition-colors cursor-copy block"
+                title="Click to copy"
+              >
+                {payment.recipient.paypal_email}
+              </span>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center gap-3 shrink-0">
+          <span className="text-sm font-semibold text-amber-400">{formatCurrencyLocal(Number(payment.amount))}</span>
+          {expanded ? <ChevronUp className="size-4 text-muted-foreground" /> : <ChevronDown className="size-4 text-muted-foreground" />}
+        </div>
+      </span>
+      {expanded && (
+        <div className="pb-3 px-1 space-y-3">
+          {payment.description && (
+            <p className="text-xs text-muted-foreground">{payment.description}</p>
+          )}
+          {payment.items && payment.items.length > 0 && (
+            <div className="space-y-1">
+              {payment.items.map(item => (
+                <div key={item.id} className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">{item.label}</span>
+                  <span className="text-foreground font-medium">{formatCurrencyLocal(Number(item.amount))}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="flex gap-2 pt-1">
+            <Button
+              size="sm"
+              className="gap-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+              onClick={() => handleAction('paid')}
+              disabled={acting}
+            >
+              <Check className="size-3.5" />
+              Approve
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="gap-1 text-destructive hover:bg-destructive/10"
+              onClick={() => handleAction('cancelled')}
+              disabled={acting}
+            >
+              <XIcon className="size-3.5" />
+              Deny
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
