@@ -25,9 +25,8 @@ const PRIORITY_VARIANT: Record<string, 'destructive' | 'default' | 'outline'> = 
 /** Same format as TaskList / TaskDetail: Month, day, year */
 function formatDeadlineDisplay(dateStr: string): string {
   return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US', {
-    month: 'long',
+    month: 'short',
     day: 'numeric',
-    year: 'numeric',
   });
 }
 
@@ -70,14 +69,14 @@ export function UpcomingTasks({ tasks, team, docs, currentUserId }: UpcomingTask
                     </div>
                   );
                 })()}
-                <div>
-                  <p className="text-sm font-medium text-foreground">{task.name}</p>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-foreground">{task.name}</p>
                   <p className="text-xs text-muted-foreground font-mono">
                     {task.department ?? 'Unassigned'}
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-4">
+              <div className="flex shrink-0 items-center gap-4">
                 <Badge
                   variant={PRIORITY_VARIANT[task.priority] ?? 'outline'}
                   className="text-xs"

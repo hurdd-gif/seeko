@@ -130,7 +130,7 @@ export default async function OverviewPage() {
       </FadeRise>
 
       {/* ── Stat cards ──────────────────────────────────── */}
-      <Stagger className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4" delayMs={delay(TIMING.stats)} staggerMs={delay(TIMING.statsStagger)}>
+      <Stagger className="grid grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-4" delayMs={delay(TIMING.stats)} staggerMs={delay(TIMING.statsStagger)}>
         {stats.map(stat => (
           <StaggerItem key={stat.label}>
             <HoverCard>
@@ -196,7 +196,7 @@ export default async function OverviewPage() {
 
       {/* ── Tasks + Activity ────────────────────────────── */}
       <FadeRise delay={delay(TIMING.grid)} y={SECTION.offsetY}>
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-5">
 
           {/* Upcoming Tasks — primary focus card */}
           <Card className="lg:col-span-3">
