@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { motion, LayoutGroup } from 'motion/react';
+import { motion, LayoutGroup, AnimatePresence } from 'motion/react';
 import { LogOut, LayoutDashboard, FileDown, Settings, Home } from 'lucide-react';
 import { toast } from 'sonner';
 import { Separator } from '@/components/ui/separator';
@@ -212,8 +212,14 @@ export function InvestorSidebar({ email, displayName, avatarUrl, isAdmin = false
           <>
             {createPortal(
               <header
-                className={`md:hidden flex items-center justify-between px-4 h-14 w-full shrink-0 ${!useHeaderSlot ? 'fixed top-0 left-0 right-0 z-40 mobile-fixed-layer' : ''}`}
-                style={useHeaderSlot ? undefined : { background: 'rgba(0,0,0,0)', backdropFilter: 'none' }}
+                className={`md:hidden flex items-center justify-between px-4 h-14 w-full shrink-0 border-b border-border/30 ${!useHeaderSlot ? 'fixed top-0 left-0 right-0 z-40 mobile-fixed-layer' : ''}`}
+                style={{
+                  background: 'rgba(21, 21, 21, 0.85)',
+                  ...(useHeaderSlot ? {} : {
+                    backdropFilter: 'saturate(180%) blur(12px)',
+                    WebkitBackdropFilter: 'saturate(180%) blur(12px)',
+                  }),
+                }}
               >
                 <div className="flex items-center gap-2.5 min-w-0">
                   <Image src="/seeko-s.png" alt="SEEKO" width={20} height={20} unoptimized />
@@ -238,8 +244,9 @@ export function InvestorSidebar({ email, displayName, avatarUrl, isAdmin = false
                 <div
                   className="w-max flex items-center justify-center rounded-full border border-border/50 shadow-lg"
                   style={{
-                    background: 'rgba(0,0,0,0)',
-                    backdropFilter: 'none',
+                    background: 'rgba(26, 26, 26, 0.94)',
+                    backdropFilter: 'saturate(180%) blur(12px)',
+                    WebkitBackdropFilter: 'saturate(180%) blur(12px)',
                     paddingLeft: MOBILE_PILL.pillPaddingX,
                     paddingRight: MOBILE_PILL.pillPaddingX,
                     paddingTop: MOBILE_PILL.pillPaddingY,
@@ -247,6 +254,7 @@ export function InvestorSidebar({ email, displayName, avatarUrl, isAdmin = false
                     gap: MOBILE_PILL.itemGap,
                   }}
                 >
+                  <LayoutGroup id="investor-pill-nav">
                   <Link
                     href="/investor"
                     onClick={() => trigger('selection')}
@@ -262,8 +270,15 @@ export function InvestorSidebar({ email, displayName, avatarUrl, isAdmin = false
                       minWidth: MOBILE_PILL.itemMinWidth,
                     }}
                   >
+                    {pathname === '/investor' && (
+                      <motion.div
+                        layoutId="investor-pill-active"
+                        className="absolute inset-0 rounded-full bg-white/8"
+                        transition={MOBILE_PILL.activeSlideSpring}
+                      />
+                    )}
                     <motion.span
-                      className="relative flex flex-col items-center justify-center"
+                      className="relative z-10 flex flex-col items-center justify-center"
                       style={{ gap: MOBILE_PILL.iconLabelGap }}
                       whileTap={{ scale: MOBILE_PILL.tapScale }}
                       transition={MOBILE_PILL.tapSpring}
@@ -314,8 +329,15 @@ export function InvestorSidebar({ email, displayName, avatarUrl, isAdmin = false
                         minWidth: MOBILE_PILL.itemMinWidth,
                       }}
                     >
+                      {pathname === '/' && (
+                        <motion.div
+                          layoutId="investor-pill-active"
+                          className="absolute inset-0 rounded-full bg-white/8"
+                          transition={MOBILE_PILL.activeSlideSpring}
+                        />
+                      )}
                       <motion.span
-                        className="relative flex flex-col items-center justify-center"
+                        className="relative z-10 flex flex-col items-center justify-center"
                         style={{ gap: MOBILE_PILL.iconLabelGap }}
                         whileTap={{ scale: MOBILE_PILL.tapScale }}
                         transition={MOBILE_PILL.tapSpring}
@@ -325,6 +347,7 @@ export function InvestorSidebar({ email, displayName, avatarUrl, isAdmin = false
                       </motion.span>
                     </Link>
                   )}
+                  </LayoutGroup>
                 </div>
               </nav>,
               document.body
