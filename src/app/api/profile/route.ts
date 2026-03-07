@@ -29,7 +29,7 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: 'Missing userId' }, { status: 400 });
   }
 
-  const updates: Record<string, unknown> = {};
+  const updates: { department?: string; is_contractor?: boolean } = {};
   if (department !== undefined) updates.department = department;
   if (is_contractor !== undefined) updates.is_contractor = is_contractor;
 
