@@ -12,10 +12,11 @@ import { Select } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Camera, Check, Eye, MousePointer, Monitor, UserX, AlertTriangle } from 'lucide-react';
+import { Camera, Check, Eye, MousePointer, Monitor, UserX, AlertTriangle, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 import { Profile, UserEvent } from '@/lib/types';
 import { useHaptics } from '@/components/HapticsProvider';
+import { useTour } from '@/components/ui/tour';
 
 const COMMON_TIMEZONES = [
   'America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles',
@@ -321,6 +322,8 @@ export function SettingsPanel({ profile, isAdmin, team, revalidate }: SettingsPa
         </CardContent>
       </Card>
 
+      <ReplayTourCard userId={profile.id} />
+
       {isAdmin && (
         <Card>
           <CardHeader>
@@ -518,5 +521,49 @@ export function SettingsPanel({ profile, isAdmin, team, revalidate }: SettingsPa
         </form>
       </div>
     </div>
+  );
+}
+
+function ReplayTourCard({ userId }: { userId: string }) {
+  const { setIsTourCompleted, startTour, isTourCompleted } = useTour();
+  const [replaying, setReplaying] = useState(false);
+
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+
+  async function handleReplay() {
+    setReplaying(true);
+    await supabase.from('profiles').update({ tour_completed: 0 }).eq('id', userId);
+    setIsTourCompleted(false);
+    // Small delay so TourProvider picks up the new state
+    setTimeout(() => {
+      startTour();
+      setReplaying(false);
+    }, 100);
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle>Onboarding Tour</CardTitle>
+            <CardDescription>Replay the guided tour to revisit key features.</CardDescription>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleReplay}
+            disabled={replaying}
+            className="gap-1.5 shrink-0"
+          >
+            <RotateCcw className="size-3.5" />
+            {replaying ? 'Starting...' : 'Replay Tour'}
+          </Button>
+        </div>
+      </CardHeader>
+    </Card>
   );
 }

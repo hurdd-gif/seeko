@@ -291,11 +291,7 @@ export function Sidebar({
                 <motion.div
                   whileHover={{
                     scale: AVATAR.hoverScale,
-                    boxShadow: [
-                      '0 0 0 0px rgba(110, 231, 183, 0)',
-                      '0 0 0 3px rgba(110, 231, 183, 0.4)',
-                      '0 0 0 2px rgba(110, 231, 183, 0.25)',
-                    ],
+                    boxShadow: '0 0 0 3px rgba(110, 231, 183, 0.35)',
                   }}
                   transition={AVATAR.spring}
                   className="rounded-full"

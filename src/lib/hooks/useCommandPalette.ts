@@ -18,11 +18,16 @@ export function useCommandPalette() {
     function onOpenEvent() {
       setOpen(true);
     }
+    function onCloseEvent() {
+      setOpen(false);
+    }
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('open-command-palette', onOpenEvent);
+    window.addEventListener('close-command-palette', onCloseEvent);
     return () => {
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('open-command-palette', onOpenEvent);
+      window.removeEventListener('close-command-palette', onCloseEvent);
     };
   }, [toggle, setOpen]);
 

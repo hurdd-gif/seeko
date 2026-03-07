@@ -6,5 +6,5 @@ export const TOUR_STEP_IDS = {
   DOCS: 'tour-docs',
   ACTIVITY: 'tour-activity',
   MAIN: 'tour-main',
-  CMD_K: 'tour-main',
+  CMD_K: 'tour-command-palette',
 } as const;

@@ -115,7 +115,7 @@ export function CommandPalette({ team, docs }: CommandPaletteProps) {
       {open && (
         <>
           <motion.div
-            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+            className="fixed inset-0 z-[103] bg-black/60 backdrop-blur-sm"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -123,13 +123,13 @@ export function CommandPalette({ team, docs }: CommandPaletteProps) {
             onClick={() => setOpen(false)}
           />
           <motion.div
-            className="fixed inset-x-0 top-[20%] z-50 mx-auto w-full max-w-lg"
+            className="fixed inset-x-0 top-[20%] z-[104] mx-auto w-full max-w-lg"
             initial={shouldReduce ? undefined : { opacity: 0, scale: 0.95, y: -8 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: -8 }}
             transition={springs.snappy}
           >
-            <div className="mx-4 overflow-hidden rounded-xl border border-border bg-card/95 shadow-2xl backdrop-blur-xl">
+            <div id="tour-command-palette" className="mx-4 overflow-hidden rounded-xl border border-border bg-card/95 shadow-2xl backdrop-blur-xl">
               <div className="flex items-center gap-3 border-b border-border px-4 py-3">
                 <Search className="h-4 w-4 text-muted-foreground shrink-0" />
                 <input
