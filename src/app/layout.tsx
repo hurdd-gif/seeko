@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Toaster } from "sonner";
 import { Outfit, JetBrains_Mono } from "next/font/google";
 import { HapticsProvider } from "@/components/HapticsProvider";
+import { DevAgentation } from "@/components/dev/agentation";
 import "./globals.css";
 
 const outfit = Outfit({
@@ -48,6 +49,7 @@ export default function RootLayout({
         <HapticsProvider>
           {children}
           <Toaster richColors position="top-center" />
+          <DevAgentation />
         </HapticsProvider>
       </body>
     </html>
