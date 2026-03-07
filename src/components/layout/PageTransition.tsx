@@ -16,11 +16,8 @@ export function PageTransition({ children }: { children: ReactNode }) {
         key={pathname}
         initial={{ opacity: 0, scale: 0.98 }}
         animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.98 }}
-        transition={{
-          enter: { type: 'spring', stiffness: 300, damping: 25 },
-          exit: { duration: 0.15, ease: 'easeOut' },
-        }}
+        exit={{ opacity: 0, scale: 0.98, transition: { duration: 0.15, ease: 'easeOut' } }}
+        transition={{ type: 'spring', stiffness: 300, damping: 25 }}
       >
         {children}
       </motion.div>
