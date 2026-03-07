@@ -327,136 +327,129 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
     const badgeStyle = STATUS_BADGE_STYLE[status] ?? STATUS_BADGE_STYLE['In Progress'];
     const BadgeIcon = STATUS_BADGE_ICON[status] ?? Timer;
 
-    return (
-      <StaggerItem
-        key={task.id}
-        className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-4 px-4 py-3 transition-colors hover:bg-muted/50"
+    const statusBadge = (
+      <span
+        className={cn(
+          'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-wide whitespace-nowrap',
+          badgeStyle
+        )}
       >
-        {/* Column 1: Task name */}
-        <button
+        <BadgeIcon className="size-3" />
+        {status}
+      </span>
+    );
+
+    return (
+      <StaggerItem key={task.id}>
+        <div
+          role="button"
+          tabIndex={0}
           onClick={() => setSelectedTask(task)}
-          className="min-w-0 truncate text-sm text-left text-foreground hover:underline"
+          onKeyDown={e => { if (e.key === 'Enter') setSelectedTask(task); }}
+          className="flex items-center gap-4 px-4 py-3 transition-colors hover:bg-muted/50 cursor-pointer"
         >
-          {task.name}
-        </button>
-
-        {/* Column 2: Avatar stack */}
-        <div className="hidden items-center -space-x-2 sm:flex w-24 justify-center">
-          {assignee ? (
-            <Avatar className="size-8 border-2 border-card">
-              <AvatarImage src={assignee.avatar_url ?? undefined} alt={assignee.display_name ?? ''} />
-              <AvatarFallback className="text-[10px] bg-secondary">
-                {getInitials(assignee.display_name ?? '?')}
-              </AvatarFallback>
-            </Avatar>
-          ) : (
-            <span className="text-xs text-muted-foreground">—</span>
-          )}
-        </div>
-
-        {/* Column 3: Status pill */}
-        <div className="hidden sm:flex w-32 justify-center">
-          {isAdmin ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  className={cn(
-                    'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-wide transition-colors',
-                    badgeStyle
-                  )}
-                >
-                  <BadgeIcon className="size-3" />
-                  {status}
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {ALL_STATUSES.map(s => {
-                  const cfg = STATUS_ICONS[s];
-                  const Icon = cfg.icon;
-                  return (
-                    <DropdownMenuItem
-                      key={s}
-                      onClick={() => handleStatusChange(task.id, s)}
-                      className={cn('flex items-center gap-2 text-xs', s === status && 'font-medium')}
-                    >
-                      <Icon className={cn('size-3.5', cfg.className)} />
-                      <span>{s}</span>
-                    </DropdownMenuItem>
-                  );
-                })}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : (
-            <span
-              className={cn(
-                'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-wide',
-                badgeStyle
-              )}
-            >
-              <BadgeIcon className="size-3" />
-              {status}
-            </span>
-          )}
-        </div>
-
-        {/* Column 4: Row kebab menu */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="size-8 shrink-0">
-              <MoreHorizontal className="size-4" />
-              <span className="sr-only">Task actions</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-44">
-            {isAdmin && team.map(member => (
-              <DropdownMenuItem key={member.id} onClick={() => handleAssign(task.id, member.id)} className="flex items-center gap-2">
-                <Avatar className="size-5">
-                  <AvatarImage src={member.avatar_url ?? undefined} alt={member.display_name ?? ''} />
-                  <AvatarFallback className="text-[7px] bg-secondary">{getInitials(member.display_name ?? '?')}</AvatarFallback>
-                </Avatar>
-                <span className="text-xs truncate">{member.display_name ?? 'Unnamed'}</span>
-                {assignee?.id === member.id && <CheckCircle2 className="size-3 text-seeko-accent ml-auto" />}
-              </DropdownMenuItem>
-            ))}
-            {isAdmin && assignee && (
-              <DropdownMenuItem onClick={() => handleAssign(task.id, null)} className="flex items-center gap-2 text-muted-foreground">
-                <UserPlus className="size-3.5" />
-                <span className="text-xs">Unassign</span>
-              </DropdownMenuItem>
-            )}
-            {isAdmin && <div className="my-1 h-px bg-border" />}
-            {(isAdmin || task.assignee_id === currentUserId) && (
-              <DropdownMenuItem onClick={() => setHandoffTask(task)} className="flex items-center gap-2">
-                <ArrowRightLeft className="size-3.5" />
-                <span>Hand Off</span>
-              </DropdownMenuItem>
-            )}
-            {isAdmin && (
-              <DropdownMenuItem onClick={() => handleDelete(task.id)} className="flex items-center gap-2 text-destructive">
-                <Trash2 className="size-3.5" />
-                <span>Delete</span>
-              </DropdownMenuItem>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
-
-        {/* Mobile: status + avatar below task name */}
-        <div className="flex items-center gap-2 sm:hidden col-span-full -mt-1">
-          <span
-            className={cn(
-              'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wide',
-              badgeStyle
-            )}
-          >
-            <BadgeIcon className="size-2.5" />
-            {status}
+          {/* Task name */}
+          <span className="min-w-0 flex-1 truncate text-sm text-foreground">
+            {task.name}
           </span>
-          {assignee && (
-            <Avatar className="size-5 border border-card">
-              <AvatarImage src={assignee.avatar_url ?? undefined} />
-              <AvatarFallback className="text-[7px] bg-secondary">{getInitials(assignee.display_name ?? '?')}</AvatarFallback>
-            </Avatar>
-          )}
+
+          {/* Assignee avatar */}
+          <div className="flex items-center -space-x-2 w-24 justify-center shrink-0">
+            {assignee ? (
+              <Avatar className="size-8 border-2 border-card">
+                <AvatarImage src={assignee.avatar_url ?? undefined} alt={assignee.display_name ?? ''} />
+                <AvatarFallback className="text-[10px] bg-secondary">
+                  {getInitials(assignee.display_name ?? '?')}
+                </AvatarFallback>
+              </Avatar>
+            ) : (
+              <span className="text-xs text-muted-foreground">—</span>
+            )}
+          </div>
+
+          {/* Status pill */}
+          <div className="w-32 flex justify-center shrink-0">
+            {isAdmin ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    onClick={e => e.stopPropagation()}
+                    className={cn(
+                      'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-wide transition-colors whitespace-nowrap',
+                      badgeStyle
+                    )}
+                  >
+                    <BadgeIcon className="size-3" />
+                    {status}
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {ALL_STATUSES.map(s => {
+                    const cfg = STATUS_ICONS[s];
+                    const Icon = cfg.icon;
+                    return (
+                      <DropdownMenuItem
+                        key={s}
+                        onClick={() => handleStatusChange(task.id, s)}
+                        className={cn('flex items-center gap-2 text-xs', s === status && 'font-medium')}
+                      >
+                        <Icon className={cn('size-3.5', cfg.className)} />
+                        <span>{s}</span>
+                      </DropdownMenuItem>
+                    );
+                  })}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              statusBadge
+            )}
+          </div>
+
+          {/* Kebab menu */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-8 shrink-0"
+                onClick={e => e.stopPropagation()}
+              >
+                <MoreHorizontal className="size-4" />
+                <span className="sr-only">Task actions</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-44">
+              {isAdmin && team.map(member => (
+                <DropdownMenuItem key={member.id} onClick={() => handleAssign(task.id, member.id)} className="flex items-center gap-2">
+                  <Avatar className="size-5">
+                    <AvatarImage src={member.avatar_url ?? undefined} alt={member.display_name ?? ''} />
+                    <AvatarFallback className="text-[7px] bg-secondary">{getInitials(member.display_name ?? '?')}</AvatarFallback>
+                  </Avatar>
+                  <span className="text-xs truncate">{member.display_name ?? 'Unnamed'}</span>
+                  {assignee?.id === member.id && <CheckCircle2 className="size-3 text-seeko-accent ml-auto" />}
+                </DropdownMenuItem>
+              ))}
+              {isAdmin && assignee && (
+                <DropdownMenuItem onClick={() => handleAssign(task.id, null)} className="flex items-center gap-2 text-muted-foreground">
+                  <UserPlus className="size-3.5" />
+                  <span className="text-xs">Unassign</span>
+                </DropdownMenuItem>
+              )}
+              {isAdmin && <div className="my-1 h-px bg-border" />}
+              {(isAdmin || task.assignee_id === currentUserId) && (
+                <DropdownMenuItem onClick={() => setHandoffTask(task)} className="flex items-center gap-2">
+                  <ArrowRightLeft className="size-3.5" />
+                  <span>Hand Off</span>
+                </DropdownMenuItem>
+              )}
+              {isAdmin && (
+                <DropdownMenuItem onClick={() => handleDelete(task.id)} className="flex items-center gap-2 text-destructive">
+                  <Trash2 className="size-3.5" />
+                  <span>Delete</span>
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </StaggerItem>
     );
@@ -568,11 +561,11 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
         </div>
 
         {/* Column headers */}
-        <div className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-4 border-b border-border px-4 py-2">
-          <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Name</span>
-          <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground w-24 text-center hidden sm:block">Assignees</span>
-          <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground w-32 text-center hidden sm:block">Status</span>
-          <span className="w-8" />
+        <div className="flex items-center gap-4 border-b border-border px-4 py-2">
+          <span className="flex-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">Name</span>
+          <span className="w-24 text-center text-xs font-medium uppercase tracking-wide text-muted-foreground shrink-0">Assignees</span>
+          <span className="w-32 text-center text-xs font-medium uppercase tracking-wide text-muted-foreground shrink-0">Status</span>
+          <span className="w-8 shrink-0" />
         </div>
 
         {/* Task rows */}
