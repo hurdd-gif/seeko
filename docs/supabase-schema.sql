@@ -215,3 +215,31 @@ create table public.pending_invites (
 
 alter table public.pending_invites enable row level security;
 -- Service role only — no authenticated user policies needed
+
+-- ─── Payments ───────────────────────────────────────────────────────────────
+-- See migration 20260307000001_payment_tracker.sql for full schema.
+
+create type public.payment_status as enum ('pending', 'paid', 'cancelled');
+
+create table public.payments (
+  id           uuid primary key default gen_random_uuid(),
+  recipient_id uuid not null references public.profiles(id),
+  amount       decimal not null,
+  currency     text not null default 'USD',
+  description  text,
+  status       public.payment_status not null default 'pending',
+  paid_at      timestamptz,
+  created_by   uuid not null references public.profiles(id),
+  created_at   timestamptz default now()
+);
+
+create table public.payment_items (
+  id         uuid primary key default gen_random_uuid(),
+  payment_id uuid not null references public.payments(id) on delete cascade,
+  task_id    uuid references public.tasks(id) on delete set null,
+  label      text not null,
+  amount     decimal not null
+);
+
+-- profiles.paypal_email text (nullable)
+-- tasks.bounty decimal (nullable)

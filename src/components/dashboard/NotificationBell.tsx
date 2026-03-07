@@ -249,11 +249,11 @@ export function NotificationBell({ userId, initialCount, initialNotifications, c
         onMouseEnter={handleBellMouseEnter}
         onMouseLeave={handleBellMouseLeave}
         className={[
-          'relative flex items-center rounded-md py-2.5 text-sm transition-colors text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent/50 w-full',
+          'relative flex items-center rounded-lg py-2 text-sm transition-colors text-muted-foreground hover:text-sidebar-foreground w-full',
           collapsed ? 'justify-center px-0' : 'gap-3 px-3',
         ].join(' ')}
       >
-        <span className="relative shrink-0">
+        <span className="relative flex items-center justify-center size-7 shrink-0">
           <Bell className="h-4 w-4" />
           {collapsed && unreadCount > 0 && (
             <span className="absolute -top-1 -right-1 size-2 rounded-full bg-seeko-accent" />

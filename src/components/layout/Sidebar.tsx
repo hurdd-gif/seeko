@@ -68,6 +68,7 @@ import {
   ChevronLeft,
   ChevronRight,
   TrendingUp,
+  DollarSign,
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { Button } from '@/components/ui/button';
@@ -151,7 +152,10 @@ export function Sidebar({
           ? { ...item, label: isAdmin ? 'All Tasks' : 'My Tasks', mobileLabel: 'Tasks' as const }
           : item
       ),
-    ...(isAdmin ? [NAV_INVESTOR] : []),
+    ...(isAdmin ? [
+      { href: '/payments', label: 'Payments', mobileLabel: 'Pay' as const, icon: DollarSign, tourKey: undefined as undefined },
+      NAV_INVESTOR,
+    ] : []),
   ];
 
   const label = displayName || email;
@@ -168,6 +172,8 @@ export function Sidebar({
         style={{ width: collapsed ? SIDEBAR.collapsedWidth : SIDEBAR.expandedWidth }}
         className="relative hidden md:flex shrink-0 border-r border-sidebar-border bg-sidebar h-screen sticky top-0"
       >
+        {/* Subtle inner glow for depth */}
+        <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-white/[0.02] via-transparent to-transparent" />
         {/* Chevron toggle — outside overflow-hidden so it renders fully */}
         <AnimatePresence>
           {hovered && (
@@ -177,7 +183,7 @@ export function Sidebar({
               exit={{ opacity: 0 }}
               transition={{ duration: CHEVRON.duration }}
               onClick={toggleCollapsed}
-              className="absolute -right-3 top-1/2 -translate-y-1/2 z-20 flex size-6 items-center justify-center rounded-full border border-sidebar-border bg-sidebar shadow-sm text-muted-foreground hover:text-foreground transition-colors"
+              className="absolute -right-3 top-1/2 -translate-y-1/2 z-20 flex size-6 items-center justify-center rounded-full border border-sidebar-border bg-sidebar shadow-md text-muted-foreground hover:text-foreground hover:border-foreground/20 transition-colors"
             >
               <motion.span
                 animate={{ rotate: collapsed ? 180 : 0 }}
@@ -192,9 +198,9 @@ export function Sidebar({
 
         {/* Inner wrapper clips text overflow during width animation */}
         <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
-        <div className={`flex items-center py-5 transition-all ${collapsed ? 'justify-center px-0' : 'gap-2.5 px-4'}`}>
-          <div className="flex h-8 w-8 items-center justify-center shrink-0">
-            <Image src="/seeko-s.png" alt="SEEKO" width={24} height={24} unoptimized />
+        <div className={`flex items-center py-4 transition-all ${collapsed ? 'justify-center px-0' : 'gap-2.5 px-4'}`}>
+          <div className="flex h-8 w-8 items-center justify-center shrink-0 rounded-lg bg-white/[0.04]">
+            <Image src="/seeko-s.png" alt="SEEKO" width={20} height={20} unoptimized />
           </div>
           <AnimatePresence>
             {!collapsed && (
@@ -203,7 +209,7 @@ export function Sidebar({
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={LABEL.enter}
-                className="font-semibold text-base tracking-tight text-sidebar-foreground whitespace-nowrap"
+                className="font-semibold text-sm tracking-widest uppercase text-sidebar-foreground whitespace-nowrap"
               >
                 SEEKO
               </motion.span>
@@ -213,7 +219,7 @@ export function Sidebar({
 
         <Separator className="bg-sidebar-border" />
 
-        <nav className="flex flex-col gap-0.5 p-2 flex-1 mt-1">
+        <nav className="flex flex-col gap-0.5 px-2 py-3 flex-1">
           <LayoutGroup id="sidebar-nav">
           {NAV.map(({ href, label: navLabel, icon: Icon, tourKey }) => {
             const isActive = href === '/' ? pathname === '/' : pathname.startsWith(href);
@@ -226,21 +232,23 @@ export function Sidebar({
                 onMouseEnter={e => handleNavMouseEnter(e, navLabel)}
                 onMouseLeave={handleNavMouseLeave}
                 className={[
-                  'relative flex items-center rounded-md py-2.5 text-sm',
+                  'relative flex items-center rounded-lg py-2 text-sm transition-colors',
                   collapsed ? 'justify-center px-0 w-full' : 'gap-3 px-3',
                   isActive
                     ? 'text-seeko-accent font-medium'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-white/5',
+                    : 'text-muted-foreground hover:text-sidebar-foreground',
                 ].join(' ')}
               >
                 {isActive && (
                   <motion.div
                     layoutId="nav-highlight"
-                    className="absolute inset-0 rounded-md bg-white/5"
+                    className="absolute inset-0 rounded-lg bg-muted"
                     transition={NAV_HIGHLIGHT.spring}
                   />
                 )}
-                <Icon className={`relative h-4 w-4 shrink-0 ${isActive ? 'text-seeko-accent' : ''}`} />
+                <span className="relative flex items-center justify-center size-7 shrink-0">
+                  <Icon className={`h-4 w-4 ${isActive ? 'text-seeko-accent' : ''}`} />
+                </span>
                 <AnimatePresence>
                   {!collapsed && (
                     <motion.span
@@ -268,8 +276,8 @@ export function Sidebar({
           )}
         </nav>
 
-        <div className="p-4 border-t border-sidebar-border">
-          <div className={`flex items-center mb-3 ${collapsed ? 'justify-center' : 'gap-2.5'}`}>
+        <div className="p-3 border-t border-sidebar-border">
+          <div className={`flex items-center ${collapsed ? 'justify-center' : 'gap-2.5 rounded-lg bg-white/[0.06] px-2.5 py-2 mb-2'}`}>
             {collapsed ? (
               <Link href="/settings">
                 <motion.div
@@ -318,10 +326,10 @@ export function Sidebar({
               <Link
                 href="/settings"
                 className={[
-                  'flex items-center gap-2 rounded-md px-0 py-1.5 text-xs transition-colors mb-1',
+                  'flex items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors',
                   pathname.startsWith('/settings')
-                    ? 'text-seeko-accent font-medium'
-                    : 'text-muted-foreground hover:text-foreground',
+                    ? 'text-seeko-accent font-medium bg-seeko-accent/[0.06]'
+                    : 'text-muted-foreground hover:text-sidebar-foreground hover:bg-white/[0.03]',
                 ].join(' ')}
               >
                 <Settings className="h-3.5 w-3.5" />
@@ -345,7 +353,7 @@ export function Sidebar({
               ) : (
                 <button
                   onClick={() => setConfirmingSignOut(true)}
-                  className="flex items-center gap-2 rounded-md px-0 py-1.5 text-xs text-muted-foreground hover:text-[#f87171] transition-colors w-full"
+                  className="flex items-center gap-2 rounded-md px-2 py-1.5 text-xs text-muted-foreground hover:text-[#f87171] hover:bg-red-500/[0.06] transition-colors w-full"
                 >
                   <LogOut className="h-3.5 w-3.5" />
                   Sign out

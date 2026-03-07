@@ -21,6 +21,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Globe, Clock, Users } from 'lucide-react';
 import { InviteForm } from '@/components/dashboard/InviteForm';
 import { DepartmentSelect } from '@/components/dashboard/DepartmentSelect';
+import { ContractorToggle } from '@/components/dashboard/ContractorToggle';
 
 const TIMING = {
   heading:    0,   // page title
@@ -153,16 +154,20 @@ function MemberRow({ member, isAdmin }: { member: Profile; isAdmin: boolean }) {
           )}
         </div>
 
-        {/* Dept select — mobile only */}
+        {/* Dept select + contractor toggle — mobile only */}
         {isAdmin && (
-          <div className="mt-2 md:hidden">
+          <div className="mt-2 md:hidden flex items-center gap-3">
             <DepartmentSelect userId={member.id} department={member.department} />
+            <ContractorToggle userId={member.id} isContractor={member.is_contractor ?? false} />
           </div>
         )}
       </div>
 
       {/* Right column — desktop only */}
       <div className="hidden md:flex items-center gap-2 shrink-0">
+        {isAdmin && (
+          <ContractorToggle userId={member.id} isContractor={member.is_contractor ?? false} />
+        )}
         {isAdmin
           ? <DepartmentSelect userId={member.id} department={member.department} />
           : member.department && (

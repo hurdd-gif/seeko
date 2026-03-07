@@ -2,8 +2,11 @@
 
 import * as React from 'react';
 import { createPortal } from 'react-dom';
+import { motion, AnimatePresence } from 'motion/react';
 import { ChevronDown, Check, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+const SELECT_SPRING = { type: 'spring' as const, stiffness: 500, damping: 30 };
 
 interface SelectOption {
   value: string;
@@ -134,7 +137,7 @@ const Select = React.forwardRef<
           setOpen(v => !v);
         }}
         className={cn(
-          'flex h-9 w-full items-center justify-between rounded-md border-0 bg-card px-3 py-1 text-sm text-foreground transition-colors transition-[box-shadow_var(--focus-ring-duration)_ease-out]',
+          'flex h-9 w-full items-center justify-between rounded-lg border-0 bg-card px-3 py-1 text-sm text-foreground transition-colors transition-[box-shadow_var(--focus-ring-duration)_ease-out]',
           'hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
           'disabled:cursor-not-allowed disabled:opacity-50',
           className
@@ -144,59 +147,79 @@ const Select = React.forwardRef<
         <ChevronDown className={cn('ml-2 size-3.5 shrink-0 text-muted-foreground transition-transform', open && 'rotate-180')} />
       </button>
 
-      {open &&
-        typeof document !== 'undefined' &&
+      {typeof document !== 'undefined' &&
         createPortal(
-          <div
-            id="select-dropdown-portal"
-            role="listbox"
-            className="fixed z-[100] rounded-md bg-popover shadow-lg overflow-hidden min-w-[var(--select-dropdown-width)] w-max max-w-[calc(100vw-16px)]"
-            style={{
-              top: position.top,
-              left: position.left,
-              ['--select-dropdown-width' as string]: `${position.width}px`,
-            }}
-          >
-            {searchable && (
-              <div className="flex items-center gap-2 border-b border-border px-3 py-2">
-                <Search className="size-3.5 text-muted-foreground shrink-0" />
-                <input
-                  ref={searchRef}
-                  type="text"
-                  value={query}
-                  onChange={e => setQuery(e.target.value)}
-                  placeholder="Search..."
-                  className="w-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none min-w-0"
-                />
-              </div>
+          <AnimatePresence>
+            {open && (
+              <motion.div
+                id="select-dropdown-portal"
+                role="listbox"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.97 }}
+                transition={SELECT_SPRING}
+                style={{
+                  position: 'fixed',
+                  zIndex: 100,
+                  top: position.top,
+                  left: position.left,
+                  transformOrigin: 'top left',
+                  ['--select-dropdown-width' as string]: `${position.width}px`,
+                }}
+                className="rounded-xl border border-white/[0.08] bg-popover/80 backdrop-blur-xl backdrop-saturate-150 shadow-xl overflow-hidden min-w-[var(--select-dropdown-width)] w-max max-w-[calc(100vw-16px)]"
+              >
+                {searchable && (
+                  <div className="flex items-center gap-2 border-b border-white/[0.06] px-3 py-2">
+                    <Search className="size-3.5 text-muted-foreground shrink-0" />
+                    <input
+                      ref={searchRef}
+                      type="text"
+                      value={query}
+                      onChange={e => setQuery(e.target.value)}
+                      placeholder="Search..."
+                      className="w-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none min-w-0"
+                    />
+                  </div>
+                )}
+                <div
+                  ref={listRef}
+                  className="max-h-56 overflow-y-auto p-1.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                >
+                  {filtered.length === 0 ? (
+                    <p className="px-2 py-3 text-xs text-muted-foreground text-center">No results</p>
+                  ) : (
+                    filtered.map(opt => {
+                      const isSelected = opt.value === String(value ?? '');
+                      return (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          role="option"
+                          data-active={isSelected}
+                          onClick={() => handleSelect(opt.value)}
+                          className={cn(
+                            'flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm transition-colors text-left',
+                            'hover:bg-white/[0.08] hover:text-foreground',
+                            isSelected && 'bg-white/[0.08] text-foreground font-medium'
+                          )}
+                        >
+                          <motion.span
+                            initial={false}
+                            animate={{ width: isSelected ? 16 : 0, opacity: isSelected ? 1 : 0 }}
+                            transition={SELECT_SPRING}
+                            className="flex items-center justify-center shrink-0 overflow-hidden"
+                          >
+                            <Check className="size-3 text-seeko-accent shrink-0" />
+                          </motion.span>
+                          <span className="truncate min-w-0">{opt.label}</span>
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+              </motion.div>
             )}
-            <div
-              ref={listRef}
-              className="max-h-56 overflow-y-auto p-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-            >
-              {filtered.length === 0 ? (
-                <p className="px-2 py-3 text-xs text-muted-foreground text-center">No results</p>
-              ) : (
-                filtered.map(opt => (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    role="option"
-                    data-active={opt.value === String(value ?? '')}
-                    onClick={() => handleSelect(opt.value)}
-                    className={cn(
-                      'flex w-full items-center gap-2 rounded-sm px-2 py-2 text-sm transition-colors text-left',
-                      'hover:bg-accent hover:text-accent-foreground',
-                      opt.value === String(value ?? '') && 'bg-accent/50 text-foreground font-medium'
-                    )}
-                  >
-                    <Check className={cn('size-3 shrink-0', opt.value === String(value ?? '') ? 'opacity-100' : 'opacity-0')} />
-                    <span className="truncate min-w-0">{opt.label}</span>
-                  </button>
-                ))
-              )}
-            </div>
-          </div>,
+          </AnimatePresence>,
           document.body
         )}
     </div>

@@ -17,6 +17,7 @@ export type Task = {
   assignee_id?: string;
   deadline?: string;
   description?: string;
+  bounty?: number;
   created_at?: string;
   updated_at?: string;
 };
@@ -45,6 +46,7 @@ export type Profile = {
   must_set_password?: boolean;
   last_seen_at?: string;
   timezone?: string;
+  paypal_email?: string;
 };
 
 export type Doc = {
@@ -114,6 +116,30 @@ export type TaskHandoff = {
   created_at: string;
   from_profile?: Pick<Profile, 'id' | 'display_name' | 'avatar_url'>;
   to_profile?: Pick<Profile, 'id' | 'display_name' | 'avatar_url'>;
+};
+
+export type PaymentStatus = 'pending' | 'paid' | 'cancelled';
+
+export type Payment = {
+  id: string;
+  recipient_id: string;
+  amount: number;
+  currency: string;
+  description?: string;
+  status: PaymentStatus;
+  paid_at?: string;
+  created_by: string;
+  created_at: string;
+  recipient?: Pick<Profile, 'id' | 'display_name' | 'avatar_url' | 'department'>;
+  items?: PaymentItem[];
+};
+
+export type PaymentItem = {
+  id: string;
+  payment_id: string;
+  task_id?: string;
+  label: string;
+  amount: number;
 };
 
 export type NotificationKind =
