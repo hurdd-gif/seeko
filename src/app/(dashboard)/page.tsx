@@ -131,7 +131,7 @@ export default async function OverviewPage() {
       </FadeRise>
 
       {/* ── Stat cards ──────────────────────────────────── */}
-      <Stagger className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4" delayMs={delay(TIMING.stats)} staggerMs={delay(TIMING.statsStagger)}>
+      <Stagger className="grid grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-4" delayMs={delay(TIMING.stats)} staggerMs={delay(TIMING.statsStagger)}>
         {stats.map(stat => (
           <StaggerItem key={stat.label}>
             <HoverCard>
@@ -182,7 +182,7 @@ export default async function OverviewPage() {
                 <Map className="size-4 text-muted-foreground" />
                 <CardTitle className="text-xl font-semibold text-foreground">Game Areas</CardTitle>
               </div>
-              <CardDescription>{areasSubtitle}</CardDescription>
+              <CardDescription className="line-clamp-1">{areasSubtitle}</CardDescription>
             </CardHeader>
             <CardContent>
               <Stagger className="grid grid-cols-1 md:grid-cols-3 gap-4" delayMs={delay(TIMING.areasInner)}>
@@ -197,10 +197,10 @@ export default async function OverviewPage() {
 
       {/* ── Tasks + Activity ────────────────────────────── */}
       <FadeRise delay={delay(TIMING.grid)} y={SECTION.offsetY}>
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-5">
 
           {/* Upcoming Tasks — primary focus card */}
-          <Card className="lg:col-span-3">
+          <Card className="md:col-span-3">
             <CardHeader>
               <CardTitle className="text-xl font-semibold text-foreground">Upcoming Tasks</CardTitle>
               <CardDescription>
@@ -220,7 +220,7 @@ export default async function OverviewPage() {
           </Card>
 
           {/* Recent Activity */}
-          <Card className="lg:col-span-2">
+          <Card className="md:col-span-2">
             <CardHeader>
               <CardTitle className="text-xl font-semibold text-foreground">Recent Activity</CardTitle>
               <CardDescription>Latest actions.</CardDescription>
@@ -252,7 +252,7 @@ export default async function OverviewPage() {
                               <span className="font-medium">{name}</span>{' '}
                               <span className="text-muted-foreground">{item.action.toLowerCase()}</span>
                             </p>
-                            <p className="text-xs text-muted-foreground font-mono">{item.target}</p>
+                            <p className="text-xs text-muted-foreground font-mono truncate">{item.target}</p>
                           </div>
                           <span className="shrink-0 text-xs text-muted-foreground">{timeAgo(item.created_at)}</span>
                         </div>

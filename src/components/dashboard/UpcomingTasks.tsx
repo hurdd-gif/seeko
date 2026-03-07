@@ -25,9 +25,8 @@ const PRIORITY_VARIANT: Record<string, 'destructive' | 'default' | 'outline'> = 
 /** Same format as TaskList / TaskDetail: Month, day, year */
 function formatDeadlineDisplay(dateStr: string): string {
   return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US', {
-    month: 'long',
+    month: 'short',
     day: 'numeric',
-    year: 'numeric',
   });
 }
 
@@ -60,24 +59,24 @@ export function UpcomingTasks({ tasks, team, docs, currentUserId }: UpcomingTask
               onClick={() => setSelectedTask(task)}
               className="flex w-full cursor-pointer items-center justify-between rounded-md border border-border p-3 text-left transition-colors hover:bg-muted/60"
             >
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 min-w-0 flex-1">
                 {(() => {
                   const cfg = STATUS_ICONS[task.status] ?? STATUS_ICONS['In Progress'];
                   const Icon = cfg.icon;
                   return (
-                    <div className="flex size-9 items-center justify-center rounded-md bg-secondary" title={task.status}>
+                    <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-secondary" title={task.status}>
                       <Icon className={`size-4 ${cfg.className}`} />
                     </div>
                   );
                 })()}
-                <div>
-                  <p className="text-sm font-medium text-foreground">{task.name}</p>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-foreground">{task.name}</p>
                   <p className="text-xs text-muted-foreground font-mono">
                     {task.department ?? 'Unassigned'}
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-4">
+              <div className="flex shrink-0 items-center gap-2 ml-2">
                 <Badge
                   variant={PRIORITY_VARIANT[task.priority] ?? 'outline'}
                   className="text-xs"

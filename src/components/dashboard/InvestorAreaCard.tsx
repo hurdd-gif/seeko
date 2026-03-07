@@ -113,7 +113,7 @@ export function InvestorAreaCard({ area, tasksInArea }: InvestorAreaCardProps) {
           {tasksInArea.length === 0 ? (
             <p className="text-sm text-muted-foreground">No tasks in this area yet.</p>
           ) : (
-            <ul className="space-y-2">
+            <ul className="space-y-2 max-h-[60dvh] overflow-y-auto">
               {tasksInArea.map(task => (
                 <li
                   key={task.id}

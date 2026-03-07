@@ -47,25 +47,9 @@ const AVATAR = {
   spring: { type: 'spring' as const, stiffness: 300, damping: 25 },
 };
 
-/* ─────────────────────────────────────────────────────────
- * MOBILE PILL NAV STORYBOARD
- *
- *   tap    tab scale 1 → 0.94 (spring), release → 1
- *   switch active pill background slides to new tab (layoutId spring)
- *   spacing pill padding, item padding, gap all from MOBILE_PILL
- * ───────────────────────────────────────────────────────── */
-
-const MOBILE_PILL = {
-  pillPaddingX: 4,     // px — inner horizontal padding of pill (reduced so pill fits iPhone)
-  pillPaddingY: 5,     // px — inner vertical padding of pill
-  itemGap: 4,         // px — gap between tab items
-  itemPaddingX: 8,     // px — each tab horizontal padding
-  itemPaddingY: 8,    // px — each tab vertical padding
-  itemMinWidth: 44,   // px — minimum width per tab (fits 6 items in ~320px)
-  iconLabelGap: 2,    // px — gap between icon and label
-  tapScale: 0.94,
+const BOTTOM_NAV = {
   tapSpring: { type: 'spring' as const, stiffness: 450, damping: 28 },
-  activeSlideSpring: { type: 'spring' as const, stiffness: 380, damping: 30 },
+  tapScale: 0.92,
 };
 
 import { useState, useEffect } from 'react';
@@ -404,7 +388,6 @@ export function Sidebar({
             {createPortal(
               <header
                 className={`md:hidden flex items-center justify-between px-4 h-14 w-full shrink-0 ${!useHeaderSlot ? 'fixed top-0 left-0 right-0 z-40 mobile-fixed-layer' : ''}`}
-                style={useHeaderSlot ? undefined : { background: 'rgba(0,0,0,0)', backdropFilter: 'none' }}
               >
                 <div className="flex items-center gap-2.5">
                   <Image src="/seeko-s.png" alt="SEEKO" width={20} height={20} unoptimized />
@@ -419,7 +402,7 @@ export function Sidebar({
                     />
                   )}
                   <Link href="/settings" onClick={() => trigger('selection')}>
-                    <Avatar className="size-8">
+                    <Avatar className="size-10">
                       <AvatarImage src={avatarUrl} alt={label} />
                       <AvatarFallback className="bg-secondary text-foreground text-[10px]">
                         {getInitials(label)}
@@ -432,57 +415,35 @@ export function Sidebar({
             )}
             {createPortal(
               <nav
-                className="mobile-fixed-layer md:hidden fixed bottom-0 left-0 right-0 z-50 mx-auto w-max max-w-[calc(100vw-24px)] flex justify-center items-center"
-                style={{ marginBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}
+                className="md:hidden fixed bottom-0 left-0 right-0 z-50"
+                style={{
+                  background: 'rgba(26, 26, 26, 0.96)',
+                  backdropFilter: 'saturate(180%) blur(16px)',
+                  WebkitBackdropFilter: 'saturate(180%) blur(16px)',
+                  paddingBottom: 'env(safe-area-inset-bottom)',
+                }}
               >
-                <div
-                  className="w-max flex items-center justify-center rounded-full border border-border/50 shadow-lg"
-                  style={{
-                    background: 'rgba(26, 26, 26, 0.94)',
-                    backdropFilter: 'saturate(180%) blur(12px)',
-                    WebkitBackdropFilter: 'saturate(180%) blur(12px)',
-                    paddingLeft: MOBILE_PILL.pillPaddingX,
-                    paddingRight: MOBILE_PILL.pillPaddingX,
-                    paddingTop: MOBILE_PILL.pillPaddingY,
-                    paddingBottom: MOBILE_PILL.pillPaddingY,
-                    gap: MOBILE_PILL.itemGap,
-                  }}
-                >
-                  <LayoutGroup id="mobile-nav">
+                <div className="flex items-stretch h-14">
                   {NAV.map(({ href, mobileLabel, icon: Icon, tourKey }) => {
                     const isActive = href === '/' ? pathname === '/' : pathname.startsWith(href);
                     const tourId = tourKey != null ? TOUR_STEP_IDS[tourKey] : undefined;
                     return (
-                      <Link
-                        key={href}
-                        id={tourId}
-                        href={href}
-                        onClick={() => trigger('selection')}
-                        className={[
-                          'relative flex flex-col items-center justify-center rounded-full text-[10px] font-medium transition-colors',
-                          isActive ? 'text-seeko-accent' : 'text-muted-foreground',
-                        ].join(' ')}
-                        style={{
-                          paddingLeft: MOBILE_PILL.itemPaddingX,
-                          paddingRight: MOBILE_PILL.itemPaddingX,
-                          paddingTop: MOBILE_PILL.itemPaddingY,
-                          paddingBottom: MOBILE_PILL.itemPaddingY,
-                          minWidth: MOBILE_PILL.itemMinWidth,
-                        }}
-                      >
-                        <motion.span
-                          className="relative flex flex-col items-center justify-center"
-                          style={{ gap: MOBILE_PILL.iconLabelGap }}
-                          whileTap={{ scale: MOBILE_PILL.tapScale }}
-                          transition={MOBILE_PILL.tapSpring}
+                      <motion.div key={href} className="flex flex-1" whileTap={{ scale: BOTTOM_NAV.tapScale }} transition={BOTTOM_NAV.tapSpring}>
+                        <Link
+                          id={tourId}
+                          href={href}
+                          onClick={() => trigger('selection')}
+                          className={[
+                            'flex flex-1 flex-col items-center justify-center gap-1 text-[10px] font-medium transition-colors',
+                            isActive ? 'text-seeko-accent' : 'text-muted-foreground',
+                          ].join(' ')}
                         >
-                          <Icon className={`h-4 w-4 ${isActive ? 'text-seeko-accent' : ''}`} />
+                          <Icon className="size-5" />
                           {mobileLabel}
-                        </motion.span>
-                      </Link>
+                        </Link>
+                      </motion.div>
                     );
                   })}
-                  </LayoutGroup>
                 </div>
               </nav>,
               document.body

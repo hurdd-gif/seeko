@@ -24,17 +24,9 @@ const NAV_HIGHLIGHT = {
  *   spacing from MOBILE_PILL for consistency with main nav
  * ───────────────────────────────────────────────────────── */
 
-const MOBILE_PILL = {
-  pillPaddingX: 4,
-  pillPaddingY: 5,
-  itemGap: 4,
-  itemPaddingX: 8,
-  itemPaddingY: 8,
-  itemMinWidth: 44,
-  iconLabelGap: 2,
-  tapScale: 0.94,
+const BOTTOM_NAV = {
   tapSpring: { type: 'spring' as const, stiffness: 450, damping: 28 },
-  activeSlideSpring: { type: 'spring' as const, stiffness: 380, damping: 30 },
+  tapScale: 0.92,
 };
 
 function getInitials(name: string): string {
@@ -213,14 +205,13 @@ export function InvestorSidebar({ email, displayName, avatarUrl, isAdmin = false
             {createPortal(
               <header
                 className={`md:hidden flex items-center justify-between px-4 h-14 w-full shrink-0 ${!useHeaderSlot ? 'fixed top-0 left-0 right-0 z-40 mobile-fixed-layer' : ''}`}
-                style={useHeaderSlot ? undefined : { background: 'rgba(0,0,0,0)', backdropFilter: 'none' }}
               >
                 <div className="flex items-center gap-2.5 min-w-0">
                   <Image src="/seeko-s.png" alt="SEEKO" width={20} height={20} unoptimized />
                   <span className="font-semibold text-sm tracking-tight text-sidebar-foreground truncate">SEEKO</span>
                 </div>
                 <Link href="/investor/settings" className="shrink-0" onClick={() => trigger('selection')}>
-                  <Avatar className="size-8">
+                  <Avatar className="size-10">
                     <AvatarImage src={avatarUrl} alt={label} />
                     <AvatarFallback className="bg-secondary text-foreground text-[10px]">
                       {getInitials(label)}
@@ -232,101 +223,54 @@ export function InvestorSidebar({ email, displayName, avatarUrl, isAdmin = false
             )}
             {createPortal(
               <nav
-                className="mobile-fixed-layer md:hidden fixed bottom-0 left-0 right-0 z-50 mx-auto w-max max-w-[calc(100vw-24px)] flex justify-center items-center"
-                style={{ marginBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}
+                className="md:hidden fixed bottom-0 left-0 right-0 z-50"
+                style={{
+                  background: 'rgba(26, 26, 26, 0.96)',
+                  backdropFilter: 'saturate(180%) blur(16px)',
+                  WebkitBackdropFilter: 'saturate(180%) blur(16px)',
+                  paddingBottom: 'env(safe-area-inset-bottom)',
+                }}
               >
-                <div
-                  className="w-max flex items-center justify-center rounded-full border border-border/50 shadow-lg"
-                  style={{
-                    background: 'rgba(0,0,0,0)',
-                    backdropFilter: 'none',
-                    paddingLeft: MOBILE_PILL.pillPaddingX,
-                    paddingRight: MOBILE_PILL.pillPaddingX,
-                    paddingTop: MOBILE_PILL.pillPaddingY,
-                    paddingBottom: MOBILE_PILL.pillPaddingY,
-                    gap: MOBILE_PILL.itemGap,
-                  }}
-                >
-                  <LayoutGroup id="investor-mobile-nav">
-                  <Link
-                    href="/investor"
-                    onClick={() => trigger('selection')}
-                    className={[
-                      'relative flex flex-col items-center justify-center rounded-full text-[10px] font-medium transition-colors',
-                      pathname === '/investor' ? 'text-seeko-accent' : 'text-muted-foreground',
-                    ].join(' ')}
-                    style={{
-                      paddingLeft: MOBILE_PILL.itemPaddingX,
-                      paddingRight: MOBILE_PILL.itemPaddingX,
-                      paddingTop: MOBILE_PILL.itemPaddingY,
-                      paddingBottom: MOBILE_PILL.itemPaddingY,
-                      minWidth: MOBILE_PILL.itemMinWidth,
-                    }}
-                  >
-                    <motion.span
-                      className="relative flex flex-col items-center justify-center"
-                      style={{ gap: MOBILE_PILL.iconLabelGap }}
-                      whileTap={{ scale: MOBILE_PILL.tapScale }}
-                      transition={MOBILE_PILL.tapSpring}
-                    >
-                      <LayoutDashboard className={`h-5 w-5 ${pathname === '/investor' ? 'text-seeko-accent' : ''}`} />
-                      Dashboard
-                    </motion.span>
-                  </Link>
-                  <motion.span
-                    className="flex flex-col items-center justify-center"
-                    style={{
-                      paddingLeft: MOBILE_PILL.itemPaddingX,
-                      paddingRight: MOBILE_PILL.itemPaddingX,
-                      paddingTop: MOBILE_PILL.itemPaddingY,
-                      paddingBottom: MOBILE_PILL.itemPaddingY,
-                      minWidth: MOBILE_PILL.itemMinWidth,
-                      gap: MOBILE_PILL.iconLabelGap,
-                    }}
-                    whileTap={{ scale: MOBILE_PILL.tapScale }}
-                    transition={MOBILE_PILL.tapSpring}
-                  >
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        trigger('selection');
-                        handleDownloadPdf(e);
-                      }}
-                      disabled={pdfLoading}
-                      className="flex flex-col items-center justify-center rounded-full text-[10px] font-medium transition-colors text-muted-foreground disabled:opacity-50"
-                    >
-                      <FileDown className="h-5 w-5" />
-                      {pdfLoading ? '…' : 'PDF'}
-                    </button>
-                  </motion.span>
-                  {isAdmin && (
+                <div className="flex items-stretch h-14">
+                  <motion.div className="flex flex-1" whileTap={{ scale: BOTTOM_NAV.tapScale }} transition={BOTTOM_NAV.tapSpring}>
                     <Link
-                      href="/"
+                      href="/investor"
                       onClick={() => trigger('selection')}
                       className={[
-                        'relative flex flex-col items-center justify-center rounded-full text-[10px] font-medium transition-colors',
-                        pathname === '/' ? 'text-seeko-accent' : 'text-muted-foreground',
+                        'flex flex-1 flex-col items-center justify-center gap-1 text-[10px] font-medium transition-colors',
+                        pathname === '/investor' ? 'text-seeko-accent' : 'text-muted-foreground',
                       ].join(' ')}
-                      style={{
-                        paddingLeft: MOBILE_PILL.itemPaddingX,
-                        paddingRight: MOBILE_PILL.itemPaddingX,
-                        paddingTop: MOBILE_PILL.itemPaddingY,
-                        paddingBottom: MOBILE_PILL.itemPaddingY,
-                        minWidth: MOBILE_PILL.itemMinWidth,
-                      }}
                     >
-                      <motion.span
-                        className="relative flex flex-col items-center justify-center"
-                        style={{ gap: MOBILE_PILL.iconLabelGap }}
-                        whileTap={{ scale: MOBILE_PILL.tapScale }}
-                        transition={MOBILE_PILL.tapSpring}
-                      >
-                        <Home className={`h-5 w-5 ${pathname === '/' ? 'text-seeko-accent' : ''}`} />
-                        Main
-                      </motion.span>
+                      <LayoutDashboard className="size-5" />
+                      Dashboard
                     </Link>
+                  </motion.div>
+                  <motion.div className="flex flex-1" whileTap={{ scale: BOTTOM_NAV.tapScale }} transition={BOTTOM_NAV.tapSpring}>
+                    <button
+                      type="button"
+                      onClick={(e) => { trigger('selection'); handleDownloadPdf(e); }}
+                      disabled={pdfLoading}
+                      className="flex flex-1 flex-col items-center justify-center gap-1 text-[10px] font-medium transition-colors text-muted-foreground disabled:opacity-50"
+                    >
+                      <FileDown className="size-5" />
+                      {pdfLoading ? '…' : 'PDF'}
+                    </button>
+                  </motion.div>
+                  {isAdmin && (
+                    <motion.div className="flex flex-1" whileTap={{ scale: BOTTOM_NAV.tapScale }} transition={BOTTOM_NAV.tapSpring}>
+                      <Link
+                        href="/"
+                        onClick={() => trigger('selection')}
+                        className={[
+                          'flex flex-1 flex-col items-center justify-center gap-1 text-[10px] font-medium transition-colors',
+                          pathname === '/' ? 'text-seeko-accent' : 'text-muted-foreground',
+                        ].join(' ')}
+                      >
+                        <Home className="size-5" />
+                        Main
+                      </Link>
+                    </motion.div>
                   )}
-                  </LayoutGroup>
                 </div>
               </nav>,
               document.body

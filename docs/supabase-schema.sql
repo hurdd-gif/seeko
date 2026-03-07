@@ -136,6 +136,30 @@ create policy "Authenticated users can read tasks"
 -- Files uploaded when completing a task. Visible only to admins (Deliverables tab).
 -- See migration 20260305000002_task_deliverables.sql for table + storage bucket.
 
+-- ─── Task Comment Reactions ──────────────────────────────────────────────────
+
+create table public.task_comment_reactions (
+  id         uuid primary key default gen_random_uuid(),
+  comment_id uuid not null references public.task_comments(id) on delete cascade,
+  user_id    uuid not null references public.profiles(id) on delete cascade,
+  emoji      text not null,
+  created_at timestamptz default now(),
+  unique (comment_id, user_id, emoji)
+);
+
+-- ─── Task Comment Attachments ───────────────────────────────────────────────
+
+create table public.task_comment_attachments (
+  id           uuid primary key default gen_random_uuid(),
+  comment_id   uuid not null references public.task_comments(id) on delete cascade,
+  file_url     text not null,
+  file_name    text not null,
+  file_type    text not null default 'application/octet-stream',
+  file_size    int not null default 0,
+  storage_path text not null,
+  created_at   timestamptz default now()
+);
+
 -- ─── Docs ─────────────────────────────────────────────────────────────────────
 
 create table public.docs (

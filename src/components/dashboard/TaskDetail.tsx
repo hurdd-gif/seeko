@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence, LayoutGroup } from 'motion/react';
 import {
   Clock,
   MessageSquare,
@@ -19,17 +19,34 @@ import {
   Package,
   Download,
   ArrowRightLeft,
+  Reply,
+  Paperclip,
 } from 'lucide-react';
 import Link from 'next/link';
-import { Task, TaskWithAssignee, TaskComment, TaskDeliverable, TaskHandoff, Profile, Doc } from '@/lib/types';
+import { Task, TaskWithAssignee, TaskComment, TaskCommentAttachment, TaskCommentReaction, TaskDeliverable, TaskHandoff, Profile, Doc } from '@/lib/types';
 import { toast } from 'sonner';
 import { Dialog, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
 import { HandoffDialog } from './HandoffDialog';
 import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { DURATION_BACKDROP_MS, PANEL_SPRING, PANEL } from '@/lib/motion';
+import { DURATION_BACKDROP_MS, PANEL_SPRING, PANEL, SLIDEOUT, SLIDEOUT_SPRING } from '@/lib/motion';
+
+const REACTION_EMOJIS = ['👍', '👎', '🎉', '😂', '❓', '🔥', '❤️'];
+
+function useMediaQuery(query: string): boolean {
+  const [matches, setMatches] = useState(false);
+  useEffect(() => {
+    const mql = window.matchMedia(query);
+    setMatches(mql.matches);
+    const handler = (e: MediaQueryListEvent) => setMatches(e.matches);
+    mql.addEventListener('change', handler);
+    return () => mql.removeEventListener('change', handler);
+  }, [query]);
+  return matches;
+}
 
 const STATUS_DISPLAY: Record<string, { icon: typeof Circle; label: string; className: string }> = {
   'Complete':     { icon: CheckCircle2, label: 'Complete',    className: 'text-[var(--color-status-complete)]' },
@@ -112,6 +129,10 @@ function CommentItem({
   docTitles,
   onEdit,
   onDelete,
+  onReact,
+  onReply,
+  allComments,
+  currentUserId,
 }: {
   comment: TaskComment;
   isOwn: boolean;
@@ -120,6 +141,10 @@ function CommentItem({
   docTitles: string[];
   onEdit: (id: string, content: string) => void;
   onDelete: (id: string) => void;
+  onReact: (commentId: string, emoji: string) => void;
+  onReply: (comment: TaskComment) => void;
+  allComments: TaskComment[];
+  currentUserId: string;
 }) {
   const highlightRef = useRef<HTMLDivElement>(null);
   const [editing, setEditing] = useState(false);
@@ -176,26 +201,37 @@ function CommentItem({
       <div className="flex-1 min-w-0">
         <div className="flex items-baseline gap-2">
           <span className="text-sm font-medium text-foreground">{name}</span>
-          <span className="text-[11px] text-muted-foreground cursor-default" title={formatLocalTime(comment.created_at)}>{timeAgo(comment.created_at)}</span>
+          <span className="font-mono text-[11px] text-muted-foreground cursor-default" title={formatLocalTime(comment.created_at)}>{timeAgo(comment.created_at)}</span>
           {wasEdited && (
             <span className="text-[11px] text-muted-foreground/60 italic">( edited )</span>
           )}
-          {isOwn && !editing && !confirmingDelete && (
+          {!editing && !confirmingDelete && (
             <div className="ml-auto flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
               <button
-                onClick={() => { setEditText(comment.content); setEditing(true); }}
+                onClick={() => onReply(comment)}
                 className="rounded p-1 text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
-                title="Edit"
+                title="Reply"
               >
-                <Pencil className="size-3" />
+                <Reply className="size-3" />
               </button>
-              <button
-                onClick={() => setConfirmingDelete(true)}
-                className="rounded p-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                title="Delete"
-              >
-                <Trash2 className="size-3" />
-              </button>
+              {isOwn && (
+                <>
+                  <button
+                    onClick={() => { setEditText(comment.content); setEditing(true); }}
+                    className="rounded p-1 text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+                    title="Edit"
+                  >
+                    <Pencil className="size-3" />
+                  </button>
+                  <button
+                    onClick={() => setConfirmingDelete(true)}
+                    className="rounded p-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                    title="Delete"
+                  >
+                    <Trash2 className="size-3" />
+                  </button>
+                </>
+              )}
             </div>
           )}
         </div>
@@ -227,6 +263,17 @@ function CommentItem({
             </motion.div>
           )}
         </AnimatePresence>
+
+        {comment.reply_to_id && (() => {
+          const parent = allComments.find(c => c.id === comment.reply_to_id);
+          const parentName = parent?.profiles?.display_name ?? 'Unknown';
+          return (
+            <div className="flex items-center gap-1 text-[11px] text-muted-foreground/70 mb-0.5">
+              <Reply className="size-2.5" />
+              <span>replying to <span className="font-medium">{parentName}</span></span>
+            </div>
+          );
+        })()}
 
         {editing ? (
           <div className="mt-1">
@@ -263,6 +310,82 @@ function CommentItem({
             {renderContent(comment.content, teamNames, docTitles)}
           </p>
         )}
+
+        {(comment.attachments ?? []).length > 0 && (
+          <div className="flex flex-wrap gap-2 mt-2">
+            {(comment.attachments ?? []).map(att => {
+              const isImage = att.file_type.startsWith('image/');
+              return isImage ? (
+                <a key={att.id} href={att.file_url} target="_blank" rel="noopener noreferrer" className="block">
+                  <img
+                    src={att.file_url}
+                    alt={att.file_name}
+                    className="rounded-md border border-border max-w-[200px] max-h-[150px] object-cover"
+                  />
+                </a>
+              ) : (
+                <a
+                  key={att.id}
+                  href={att.file_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 rounded-md border border-border bg-muted/30 px-3 py-2 text-xs hover:bg-muted/50 transition-colors"
+                >
+                  <FileText className="size-4 text-muted-foreground" />
+                  <span className="truncate max-w-[140px]">{att.file_name}</span>
+                  <Download className="size-3 text-muted-foreground" />
+                </a>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Reactions row */}
+        {!editing && (
+          <div className="flex items-center gap-1 mt-1.5 flex-wrap">
+            {/* Grouped existing reactions */}
+            {Object.entries(
+              (comment.reactions ?? []).reduce<Record<string, { count: number; hasOwn: boolean }>>((acc, r) => {
+                if (!acc[r.emoji]) acc[r.emoji] = { count: 0, hasOwn: false };
+                acc[r.emoji].count++;
+                if (r.user_id === currentUserId) acc[r.emoji].hasOwn = true;
+                return acc;
+              }, {})
+            ).map(([emoji, { count, hasOwn }]) => (
+              <button
+                key={emoji}
+                onClick={() => onReact(comment.id, emoji)}
+                className={cn(
+                  'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs transition-colors',
+                  hasOwn
+                    ? 'border-foreground/20 bg-foreground/10 text-foreground'
+                    : 'border-border text-muted-foreground hover:border-foreground/20'
+                )}
+              >
+                <span>{emoji}</span>
+                <span className="tabular-nums">{count}</span>
+              </button>
+            ))}
+
+            {/* Add reaction button — visible on hover */}
+            <div className="relative group/react">
+              <button className="inline-flex items-center justify-center size-6 rounded-full border border-transparent text-muted-foreground/40 opacity-0 group-hover:opacity-100 hover:border-border hover:text-muted-foreground transition-all text-xs">
+                +
+              </button>
+              <div className="absolute bottom-full left-0 mb-1 hidden group-hover/react:flex gap-1 rounded-lg border border-border bg-card p-1.5 shadow-lg z-10">
+                {REACTION_EMOJIS.map(emoji => (
+                  <button
+                    key={emoji}
+                    onClick={() => onReact(comment.id, emoji)}
+                    className="rounded p-1 text-sm hover:bg-muted transition-colors"
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </motion.div>
   );
@@ -282,6 +405,27 @@ interface TaskDetailProps {
 }
 
 export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId, highlightCommentId, isAdmin = false }: TaskDetailProps) {
+  const isDesktop = useMediaQuery('(min-width: 768px)');
+
+  // Escape key handler for desktop slide-out
+  useEffect(() => {
+    if (!open || !isDesktop) return;
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onOpenChange(false);
+    };
+    document.addEventListener('keydown', handleEsc);
+    return () => document.removeEventListener('keydown', handleEsc);
+  }, [open, isDesktop, onOpenChange]);
+
+  // Lock body scroll when desktop slide-out is open
+  useEffect(() => {
+    if (!open || !isDesktop) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, [open, isDesktop]);
+
+  const [activeTab, setActiveTab] = useState<'details' | 'chat'>('details');
   const [comments, setComments] = useState<TaskComment[]>([]);
   const [loading, setLoading] = useState(false);
   const [deliverables, setDeliverables] = useState<TaskDeliverable[]>([]);
@@ -297,6 +441,9 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
   const [autocompleteMode, setAutocompleteMode] = useState<AutocompleteMode>(null);
   const [autocompleteQuery, setAutocompleteQuery] = useState('');
   const [autocompleteIndex, setAutocompleteIndex] = useState(0);
+  const [replyTo, setReplyTo] = useState<TaskComment | null>(null);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const commentsEndRef = useRef<HTMLDivElement>(null);
 
@@ -312,10 +459,14 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
     setLoading(true);
     const { data } = await supabase
       .from('task_comments')
-      .select('*, profiles(id, display_name, avatar_url)')
+      .select('*, profiles(id, display_name, avatar_url), task_comment_reactions(id, emoji, user_id), task_comment_attachments(id, file_url, file_name, file_type, file_size)')
       .eq('task_id', task.id)
       .order('created_at', { ascending: true });
-    setComments((data ?? []) as TaskComment[]);
+    setComments((data ?? []).map((c: Record<string, unknown>) => ({
+      ...c,
+      reactions: c.task_comment_reactions ?? [],
+      attachments: c.task_comment_attachments ?? [],
+    })) as TaskComment[]);
     setLoading(false);
   }, [task.id, supabase]);
 
@@ -389,11 +540,15 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
           // Fetch full comment with profile join, then add to state
           supabase
             .from('task_comments')
-            .select('*, profiles(id, display_name, avatar_url)')
+            .select('*, profiles(id, display_name, avatar_url), task_comment_reactions(id, emoji, user_id), task_comment_attachments(id, file_url, file_name, file_type, file_size)')
             .eq('id', incoming.id)
             .single()
             .then(({ data }) => {
-              if (data && isMounted) setComments(prev => [...prev, data as TaskComment]);
+              if (data && isMounted) {
+                const d = data as Record<string, unknown>;
+                const mapped = { ...data, reactions: d.task_comment_reactions ?? [], attachments: d.task_comment_attachments ?? [] } as TaskComment;
+                setComments(prev => [...prev, mapped]);
+              }
             });
         }
       )
@@ -444,6 +599,48 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
     setComments(prev => prev.filter(c => c.id !== commentId));
     await supabase.from('task_comments').delete().eq('id', commentId);
   }, [supabase]);
+
+  const handleToggleReaction = useCallback(async (commentId: string, emoji: string) => {
+    const existing = comments
+      .find(c => c.id === commentId)
+      ?.reactions?.find(r => r.emoji === emoji && r.user_id === currentUserId);
+
+    if (existing) {
+      // Remove reaction (optimistic)
+      setComments(prev => prev.map(c =>
+        c.id === commentId
+          ? { ...c, reactions: (c.reactions ?? []).filter(r => r.id !== existing.id) }
+          : c
+      ));
+      await supabase.from('task_comment_reactions').delete().eq('id', existing.id);
+    } else {
+      // Add reaction (optimistic)
+      const optimistic: TaskCommentReaction = {
+        id: crypto.randomUUID(),
+        comment_id: commentId,
+        user_id: currentUserId,
+        emoji,
+        created_at: new Date().toISOString(),
+      };
+      setComments(prev => prev.map(c =>
+        c.id === commentId
+          ? { ...c, reactions: [...(c.reactions ?? []), optimistic] }
+          : c
+      ));
+      const { data } = await supabase.from('task_comment_reactions').insert({
+        comment_id: commentId,
+        user_id: currentUserId,
+        emoji,
+      }).select('id').single();
+      if (data) {
+        setComments(prev => prev.map(c =>
+          c.id === commentId
+            ? { ...c, reactions: (c.reactions ?? []).map(r => r.id === optimistic.id ? { ...r, id: data.id } : r) }
+            : c
+        ));
+      }
+    }
+  }, [comments, currentUserId, supabase]);
 
   const autocompleteCandidates = useMemo(() => {
     if (autocompleteMode === null) return [];
@@ -511,7 +708,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
   }
 
   const handleSend = useCallback(async () => {
-    if (!input.trim() || sending) return;
+    if ((!input.trim() && pendingFiles.length === 0) || sending) return;
     setSending(true);
 
     const currentProfile = team.find(m => m.id === currentUserId);
@@ -521,6 +718,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
       user_id: currentUserId,
       content: input.trim(),
       created_at: new Date().toISOString(),
+      reply_to_id: replyTo?.id,
       profiles: {
         id: currentUserId,
         display_name: currentProfile?.display_name,
@@ -529,11 +727,13 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
     };
     setComments(prev => [...prev, optimistic]);
     setInput('');
+    setReplyTo(null);
 
     const { data: inserted } = await supabase.from('task_comments').insert({
       task_id: task.id,
       user_id: currentUserId,
       content: optimistic.content,
+      reply_to_id: replyTo?.id ?? null,
     }).select('id').single();
 
     const realCommentId = inserted?.id ?? optimistic.id;
@@ -583,8 +783,21 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
       await supabase.from('notifications').insert(notifs);
     }
 
+    // Upload pending files
+    if (pendingFiles.length > 0) {
+      for (const file of pendingFiles) {
+        const form = new FormData();
+        form.append('file', file);
+        form.append('comment_id', realCommentId);
+        await fetch(`/api/tasks/${task.id}/comments/attachments`, { method: 'POST', body: form });
+      }
+      setPendingFiles([]);
+      // Reload comments to get attachment data
+      loadComments();
+    }
+
     setSending(false);
-  }, [input, sending, task.id, currentUserId, team, comments, supabase]);
+  }, [input, sending, task.id, currentUserId, team, comments, supabase, replyTo, pendingFiles, loadComments]);
 
   const statusCfg = STATUS_DISPLAY[task.status] ?? STATUS_DISPLAY['In Progress'];
   const StatusIcon = statusCfg.icon;
@@ -595,14 +808,8 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
     : ('assignee' in task ? (task as TaskWithAssignee).assignee : null);
   const canHandOff = isAdmin || task.assignee_id === currentUserId || effectiveAssigneeId === currentUserId;
 
-  return (
+  const detailsContent = (
     <>
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogClose onClose={() => onOpenChange(false)} />
-      <DialogHeader>
-        <DialogTitle className="pr-8">{task.name}</DialogTitle>
-      </DialogHeader>
-
       <div className="flex flex-wrap items-center gap-2 mb-4">
         <div className={`flex items-center gap-1.5 ${statusCfg.className}`}>
           <StatusIcon className="size-3.5" />
@@ -639,104 +846,6 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
       {task.description && (
         <p className="text-sm text-muted-foreground mb-4">{task.description}</p>
       )}
-
-      <Separator />
-
-      <div className="mt-4">
-        <div className="flex items-center gap-2 mb-4">
-          <MessageSquare className="size-4 text-muted-foreground" />
-          <h3 className="text-sm font-medium text-foreground">Comments</h3>
-          <span className="text-xs text-muted-foreground">({comments.length})</span>
-        </div>
-
-        <div className="max-h-[280px] overflow-y-auto space-y-4 mb-4">
-          {loading && comments.length === 0 && (
-            <p className="text-xs text-muted-foreground text-center py-4">Loading comments...</p>
-          )}
-          {!loading && comments.length === 0 && (
-            <p className="text-xs text-muted-foreground text-center py-4">No comments yet. Start the conversation.</p>
-          )}
-
-          <AnimatePresence>
-            {comments.map(comment => (
-              <CommentItem
-                key={comment.id}
-                isHighlighted={highlightCommentId === comment.id}
-                teamNames={teamNames}
-                docTitles={docTitles}
-                comment={comment}
-                isOwn={comment.user_id === currentUserId}
-                onEdit={handleEditComment}
-                onDelete={handleDeleteComment}
-              />
-            ))}
-          </AnimatePresence>
-          <div ref={commentsEndRef} />
-        </div>
-
-        <div className="relative">
-          <AnimatePresence>
-            {autocompleteMode !== null && autocompleteCandidates.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 4 }}
-                transition={{ duration: 0.1 }}
-                className="absolute bottom-full mb-1 left-0 w-full rounded-lg border border-border bg-card shadow-lg z-10 overflow-hidden"
-              >
-                {autocompleteCandidates.map((candidate, i) => (
-                  <button
-                    key={candidate.id}
-                    className={`flex w-full items-center gap-2 px-3 py-2 text-sm transition-colors ${i === autocompleteIndex ? 'bg-secondary text-foreground' : 'text-muted-foreground hover:bg-secondary/50'}`}
-                    onMouseDown={e => { e.preventDefault(); insertAutocomplete(candidate.label); }}
-                    onMouseEnter={() => setAutocompleteIndex(i)}
-                  >
-                    {candidate.icon === 'user' ? (
-                      <Avatar className="size-5">
-                        <AvatarImage src={candidate.avatar ?? undefined} />
-                        <AvatarFallback className="text-[7px] bg-secondary">{getInitials(candidate.label)}</AvatarFallback>
-                      </Avatar>
-                    ) : (
-                      <FileText className="size-4 text-blue-400" />
-                    )}
-                    <span className="truncate">{candidate.label}</span>
-                    {candidate.icon === 'user' && candidate.role && (
-                      <span className="text-xs text-muted-foreground ml-auto">{candidate.role}</span>
-                    )}
-                  </button>
-                ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          <div className="flex items-end gap-2 rounded-lg border border-border bg-muted/30 p-2">
-            <textarea
-              ref={inputRef}
-              value={input}
-              onChange={e => handleInputChange(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Write a comment... @ to mention, # to link doc"
-              rows={1}
-              className="flex-1 resize-none bg-transparent text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none min-h-[36px] max-h-[120px] py-1.5"
-              style={{ height: 'auto', overflow: 'hidden' }}
-              onInput={e => {
-                const el = e.currentTarget;
-                el.style.height = 'auto';
-                el.style.height = Math.min(el.scrollHeight, 120) + 'px';
-                el.style.overflow = el.scrollHeight > 120 ? 'auto' : 'hidden';
-              }}
-            />
-            <Button
-              size="icon"
-              className="size-8 shrink-0"
-              onClick={handleSend}
-              disabled={!input.trim() || sending}
-            >
-              <Send className="size-3.5" />
-            </Button>
-          </div>
-        </div>
-      </div>
 
       {handoffs.length > 0 && (
         <>
@@ -826,7 +935,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
                                 <span className="text-xs font-medium text-foreground truncate">{toName}</span>
                               </div>
                               <span
-                                className="ml-auto shrink-0 rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground tabular-nums"
+                                className="ml-auto shrink-0 rounded-full bg-muted px-2 py-0.5 font-mono text-[11px] text-muted-foreground tabular-nums"
                                 title={formatLocalTime(h.created_at)}
                               >
                                 {timeAgo(h.created_at)}
@@ -928,21 +1037,329 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
           </div>
         </>
       )}
-    </Dialog>
+    </>
+  );
 
-    {showHandoff && (
-      <HandoffDialog
-        task={task}
-        team={team}
-        currentUserId={currentUserId}
-        open={showHandoff}
-        onOpenChange={setShowHandoff}
-        onHandoffComplete={(toUserId) => {
-          setLocalAssigneeId(toUserId);
-          loadHandoffs();
-        }}
-      />
-    )}
+  const chatMessages = (
+    <>
+      {loading && comments.length === 0 && (
+        <p className="text-xs text-muted-foreground text-center py-4">Loading comments...</p>
+      )}
+      {!loading && comments.length === 0 && (
+        <p className="text-xs text-muted-foreground text-center py-4">No comments yet. Start the conversation.</p>
+      )}
+
+      <AnimatePresence>
+        {comments.map(comment => (
+          <CommentItem
+            key={comment.id}
+            isHighlighted={highlightCommentId === comment.id}
+            teamNames={teamNames}
+            docTitles={docTitles}
+            comment={comment}
+            isOwn={comment.user_id === currentUserId}
+            onEdit={handleEditComment}
+            onDelete={handleDeleteComment}
+            onReact={handleToggleReaction}
+            onReply={setReplyTo}
+            allComments={comments}
+            currentUserId={currentUserId}
+          />
+        ))}
+      </AnimatePresence>
+      <div ref={commentsEndRef} />
+    </>
+  );
+
+  const chatCompose = (
+    <div className="relative">
+      <AnimatePresence>
+        {replyTo && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="flex items-center gap-2 bg-muted/30 px-3 py-2 overflow-hidden"
+          >
+            <Reply className="size-3 text-muted-foreground" />
+            <span className="text-xs text-muted-foreground">
+              Replying to <span className="font-medium text-foreground">{replyTo.profiles?.display_name ?? 'Unknown'}</span>
+            </span>
+            <button
+              onClick={() => setReplyTo(null)}
+              className="ml-auto rounded p-0.5 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <X className="size-3" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {autocompleteMode !== null && autocompleteCandidates.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 4 }}
+            transition={{ duration: 0.1 }}
+            className="absolute bottom-full mb-1 left-0 w-full rounded-lg border border-border bg-card shadow-lg z-10 overflow-hidden"
+          >
+            {autocompleteCandidates.map((candidate, i) => (
+              <button
+                key={candidate.id}
+                className={`flex w-full items-center gap-2 px-3 py-2 text-sm transition-colors ${i === autocompleteIndex ? 'bg-secondary text-foreground' : 'text-muted-foreground hover:bg-secondary/50'}`}
+                onMouseDown={e => { e.preventDefault(); insertAutocomplete(candidate.label); }}
+                onMouseEnter={() => setAutocompleteIndex(i)}
+              >
+                {candidate.icon === 'user' ? (
+                  <Avatar className="size-5">
+                    <AvatarImage src={candidate.avatar ?? undefined} />
+                    <AvatarFallback className="text-[7px] bg-secondary">{getInitials(candidate.label)}</AvatarFallback>
+                  </Avatar>
+                ) : (
+                  <FileText className="size-4 text-blue-400" />
+                )}
+                <span className="truncate">{candidate.label}</span>
+                {candidate.icon === 'user' && candidate.role && (
+                  <span className="text-xs text-muted-foreground ml-auto">{candidate.role}</span>
+                )}
+              </button>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {pendingFiles.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 px-2 py-2">
+          {pendingFiles.map((file, i) => (
+            <div key={i} className="flex items-center gap-1.5 rounded-md border border-border bg-muted/30 px-2 py-1 text-xs">
+              <Paperclip className="size-3 text-muted-foreground" />
+              <span className="truncate max-w-[120px]">{file.name}</span>
+              <button
+                onClick={() => setPendingFiles(prev => prev.filter((_, j) => j !== i))}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <X className="size-3" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="flex items-end gap-2 rounded-lg border border-border bg-muted/30 p-2">
+        <textarea
+          ref={inputRef}
+          value={input}
+          onChange={e => handleInputChange(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="Write a comment... @ to mention, # to link doc"
+          rows={1}
+          className="flex-1 resize-none bg-transparent text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none min-h-[36px] max-h-[120px] py-1.5"
+          style={{ height: 'auto', overflow: 'hidden' }}
+          onInput={e => {
+            const el = e.currentTarget;
+            el.style.height = 'auto';
+            el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+            el.style.overflow = el.scrollHeight > 120 ? 'auto' : 'hidden';
+          }}
+        />
+        <label className="cursor-pointer rounded p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors shrink-0">
+          <Paperclip className="size-4" />
+          <input
+            type="file"
+            multiple
+            className="hidden"
+            onChange={e => {
+              const files = Array.from(e.target.files ?? []);
+              if (files.length > 0) setPendingFiles(prev => [...prev, ...files]);
+              e.target.value = '';
+            }}
+          />
+        </label>
+        <Button
+          size="icon"
+          className="size-8 shrink-0"
+          onClick={handleSend}
+          disabled={!input.trim() && pendingFiles.length === 0 || sending}
+        >
+          <Send className="size-3.5" />
+        </Button>
+      </div>
+    </div>
+  );
+
+  const tabBar = (
+    <LayoutGroup>
+      <div className="flex border-b border-border px-4 shrink-0">
+        <button
+          className={cn(
+            'px-4 py-2.5 text-sm font-medium transition-colors relative',
+            activeTab === 'details' ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
+          )}
+          onClick={() => setActiveTab('details')}
+        >
+          Details
+          {activeTab === 'details' && (
+            <motion.div
+              className="absolute bottom-0 left-0 right-0 h-0.5 bg-foreground"
+              layoutId="tab-indicator"
+            />
+          )}
+        </button>
+        <button
+          className={cn(
+            'px-4 py-2.5 text-sm font-medium transition-colors relative',
+            activeTab === 'chat' ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
+          )}
+          onClick={() => setActiveTab('chat')}
+        >
+          Chat
+          <span className="ml-1.5 text-xs text-muted-foreground">({comments.length})</span>
+          {activeTab === 'chat' && (
+            <motion.div
+              className="absolute bottom-0 left-0 right-0 h-0.5 bg-foreground"
+              layoutId="tab-indicator"
+            />
+          )}
+        </button>
+      </div>
+    </LayoutGroup>
+  );
+
+  return (
+    <>
+      <AnimatePresence>
+        {open && (
+          isDesktop ? (
+            /* Desktop: slide-out panel from right */
+            <div className="fixed inset-0 z-50">
+              <motion.div
+                className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
+                onClick={() => onOpenChange(false)}
+              />
+              <motion.div
+                className="absolute right-0 top-0 h-full w-full max-w-[480px] border-l border-border bg-card shadow-xl flex flex-col overflow-hidden"
+                initial={SLIDEOUT.initial}
+                animate={SLIDEOUT.animate}
+                exit={SLIDEOUT.exit}
+                transition={SLIDEOUT_SPRING}
+              >
+                {/* Header: close button + task name */}
+                <div className="flex items-center gap-2 border-b border-border px-4 py-3 shrink-0">
+                  <h2 className="flex-1 text-lg font-semibold text-foreground truncate pr-2">{task.name}</h2>
+                  <button
+                    onClick={() => onOpenChange(false)}
+                    className="rounded-sm p-1 text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <X className="size-4" />
+                    <span className="sr-only">Close</span>
+                  </button>
+                </div>
+
+                {/* Tab bar */}
+                {tabBar}
+
+                {/* Tab content */}
+                <AnimatePresence mode="wait">
+                  {activeTab === 'details' && (
+                    <motion.div key="details" className="flex-1 overflow-y-auto p-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.1 }}>
+                      {detailsContent}
+                    </motion.div>
+                  )}
+                  {activeTab === 'chat' && (
+                    <motion.div
+                      key="chat"
+                      className={cn('flex flex-1 flex-col overflow-hidden', isDragging && 'ring-2 ring-inset ring-seeko-accent/50')}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.1 }}
+                      onDragOver={e => { e.preventDefault(); setIsDragging(true); }}
+                      onDragLeave={e => {
+                        if (!e.currentTarget.contains(e.relatedTarget as Node)) setIsDragging(false);
+                      }}
+                      onDrop={e => {
+                        e.preventDefault();
+                        setIsDragging(false);
+                        const files = Array.from(e.dataTransfer.files);
+                        if (files.length > 0) setPendingFiles(prev => [...prev, ...files]);
+                      }}
+                    >
+                      <div className="flex-1 overflow-y-auto p-4 space-y-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                        {chatMessages}
+                      </div>
+                      <div className="shrink-0 border-t border-border p-3">
+                        {chatCompose}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
+            </div>
+          ) : (
+            /* Mobile: existing Dialog */
+            <Dialog open={open} onOpenChange={onOpenChange}>
+              <DialogClose onClose={() => onOpenChange(false)} />
+              <DialogHeader>
+                <DialogTitle className="pr-8">{task.name}</DialogTitle>
+              </DialogHeader>
+              {tabBar}
+              <AnimatePresence mode="wait">
+                {activeTab === 'details' && (
+                  <motion.div key="details" className="flex-1 overflow-y-auto p-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.1 }}>
+                    {detailsContent}
+                  </motion.div>
+                )}
+                {activeTab === 'chat' && (
+                  <motion.div
+                    key="chat"
+                    className={cn('flex flex-1 flex-col overflow-hidden', isDragging && 'ring-2 ring-inset ring-seeko-accent/50')}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.1 }}
+                    onDragOver={e => { e.preventDefault(); setIsDragging(true); }}
+                    onDragLeave={e => {
+                      if (!e.currentTarget.contains(e.relatedTarget as Node)) setIsDragging(false);
+                    }}
+                    onDrop={e => {
+                      e.preventDefault();
+                      setIsDragging(false);
+                      const files = Array.from(e.dataTransfer.files);
+                      if (files.length > 0) setPendingFiles(prev => [...prev, ...files]);
+                    }}
+                  >
+                    <div className="flex-1 overflow-y-auto p-4 space-y-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                      {chatMessages}
+                    </div>
+                    <div className="shrink-0 border-t border-border p-3">
+                      {chatCompose}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </Dialog>
+          )
+        )}
+      </AnimatePresence>
+
+      {showHandoff && (
+        <HandoffDialog
+          task={task}
+          team={team}
+          currentUserId={currentUserId}
+          open={showHandoff}
+          onOpenChange={setShowHandoff}
+          onHandoffComplete={(toUserId) => {
+            setLocalAssigneeId(toUserId);
+            loadHandoffs();
+          }}
+        />
+      )}
     </>
   );
 }

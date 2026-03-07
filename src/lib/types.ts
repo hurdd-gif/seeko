@@ -80,7 +80,29 @@ export type TaskComment = {
   content: string;
   created_at: string;
   updated_at?: string;
+  reply_to_id?: string;
   profiles?: Pick<Profile, 'id' | 'display_name' | 'avatar_url'>;
+  reactions?: TaskCommentReaction[];
+  attachments?: TaskCommentAttachment[];
+};
+
+export type TaskCommentReaction = {
+  id: string;
+  comment_id: string;
+  user_id: string;
+  emoji: string;
+  created_at: string;
+};
+
+export type TaskCommentAttachment = {
+  id: string;
+  comment_id: string;
+  file_url: string;
+  file_name: string;
+  file_type: string;
+  file_size: number;
+  storage_path: string;
+  created_at: string;
 };
 
 export type TaskHandoff = {

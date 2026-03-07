@@ -144,7 +144,7 @@ export default async function InvestorPage() {
               <Map className="size-4 text-muted-foreground" />
               <CardTitle className="text-xl font-semibold text-foreground">Game Areas</CardTitle>
             </div>
-            <CardDescription>
+            <CardDescription className="line-clamp-1">
               {areas.length > 0 ? areasSubtitle : 'Progress by area.'}
             </CardDescription>
           </CardHeader>
@@ -157,7 +157,7 @@ export default async function InvestorPage() {
               />
             ) : (
               <Stagger
-                className="grid grid-cols-1 md:grid-cols-3 gap-4"
+                className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4"
                 delayMs={delay(TIMING.areasStaggerDelayMs)}
                 staggerMs={0.08}
               >
@@ -176,10 +176,10 @@ export default async function InvestorPage() {
 
       {/* ── Recent Tasks + Updates ─────────────────────────── */}
       <FadeRise delay={delay(TIMING.grid)}>
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-5">
 
           {/* Recent Tasks */}
-          <Card className="lg:col-span-3">
+          <Card className="md:col-span-3">
             <CardHeader>
               <div className="flex items-center gap-2">
                 <CheckSquare className="size-4 text-muted-foreground" />
@@ -206,17 +206,17 @@ export default async function InvestorPage() {
                       <StaggerItem key={task.id} className="flex gap-3 py-4 border-b border-border last:border-0 last:pb-0">
                         <div className="flex flex-1 min-w-0 flex-col gap-0.5">
                           <p className="text-sm font-medium text-foreground truncate">{task.name}</p>
-                          <div className="flex flex-wrap items-center gap-2">
-                            <Badge variant="outline" className="text-[10px] py-0 px-1.5 font-normal">
+                          <div className="flex items-center gap-2 flex-nowrap overflow-hidden">
+                            <Badge variant="outline" className="text-[11px] py-0 px-1.5 font-normal shrink-0">
                               {task.status}
                             </Badge>
                             {task.assignee?.display_name && (
-                              <span className="text-xs text-muted-foreground">
+                              <span className="text-xs text-muted-foreground truncate">
                                 {task.assignee.display_name}
                               </span>
                             )}
                             {task.deadline && (
-                              <span className="text-xs text-muted-foreground">
+                              <span className="text-xs text-muted-foreground shrink-0">
                                 Due {new Date(task.deadline).toLocaleDateString()}
                               </span>
                             )}
@@ -230,7 +230,7 @@ export default async function InvestorPage() {
           </Card>
 
           {/* Updates / Weekly Summary */}
-          <Card className="lg:col-span-2">
+          <Card className="md:col-span-2">
             <CardHeader>
               <div className="flex items-center gap-2">
                 <TrendingUp className="size-4 text-muted-foreground" />

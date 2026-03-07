@@ -1,6 +1,6 @@
 'use client';
 
-import { motion, type Transition } from 'motion/react';
+import { motion, useReducedMotion, type Transition } from 'motion/react';
 import { type ReactNode } from 'react';
 
 // ── Spring configs ──────────────────────────────────────────────
@@ -40,6 +40,8 @@ export function FadeRise({
   className?: string;
   y?: number;
 }) {
+  const shouldReduce = useReducedMotion();
+  if (shouldReduce) return <div className={className}>{children}</div>;
   return (
     <motion.div
       initial={{ opacity: 0, y }}
@@ -62,6 +64,8 @@ export function FadeScale({
   delay?: number;
   className?: string;
 }) {
+  const shouldReduce = useReducedMotion();
+  if (shouldReduce) return <div className={className}>{children}</div>;
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.8 }}
@@ -86,6 +90,12 @@ export function Stagger({
   staggerMs?: number;
   delayMs?: number;
 }) {
+  const shouldReduce = useReducedMotion();
+
+  if (shouldReduce) {
+    return <div className={className}>{children}</div>;
+  }
+
   const variants = staggerMs === 0.08 && delayMs === 0.1
     ? staggerContainer
     : {
@@ -130,9 +140,12 @@ export function HoverCard({
   children: ReactNode;
   className?: string;
 }) {
+  const shouldReduce = useReducedMotion();
+  if (shouldReduce) return <div className={className}>{children}</div>;
   return (
     <motion.div
       whileHover={{ y: -2 }}
+      whileTap={{ scale: 0.98 }}
       transition={springs.smooth}
       className={className}
     >

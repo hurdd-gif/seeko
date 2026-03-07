@@ -32,7 +32,12 @@ export async function POST(req: NextRequest) {
   const admin = await getAdminUser();
   if (!admin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-  const body = await req.json();
+  let body: Record<string, unknown>;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
+  }
   const { title, content, sort_order, restricted_department, granted_user_ids } = body;
 
   const service = createServiceClient(
@@ -47,7 +52,7 @@ export async function POST(req: NextRequest) {
       content,
       sort_order: sort_order ?? 0,
       restricted_department: restricted_department ?? null,
-      granted_user_ids: granted_user_ids?.length ? granted_user_ids : null,
+      granted_user_ids: Array.isArray(granted_user_ids) && granted_user_ids.length ? granted_user_ids : null,
     })
     .select()
     .single();
