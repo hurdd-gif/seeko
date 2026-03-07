@@ -53,7 +53,7 @@ export async function PATCH(
         user_id: data.recipient_id,
         kind: approved ? 'payment_approved' : 'payment_denied',
         title: approved
-          ? `Payment approved: ${formatCurrency(Number(data.amount))}`
+          ? `Payment accepted: ${formatCurrency(Number(data.amount))}`
           : `Payment denied: ${formatCurrency(Number(data.amount))}`,
         body: data.description || null,
         link: '/settings',

@@ -411,7 +411,7 @@ function PendingRequestRow({ payment, token, onAction }: { payment: Payment; tok
         body: JSON.stringify({ status }),
       });
       if (res.ok) {
-        toast.success(status === 'paid' ? 'Payment approved' : 'Payment denied');
+        toast.success(status === 'paid' ? 'Payment accepted' : 'Payment denied');
         onAction();
       } else {
         const data = await res.json();
@@ -490,7 +490,7 @@ function PendingRequestRow({ payment, token, onAction }: { payment: Payment; tok
               disabled={acting}
             >
               <Check className="size-3.5" />
-              Approve
+              Accept
             </Button>
             <Button
               size="sm"

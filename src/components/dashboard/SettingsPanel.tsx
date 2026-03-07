@@ -394,7 +394,7 @@ export function SettingsPanel({ profile, isAdmin, team, revalidate }: SettingsPa
                       variant={payment.status === 'cancelled' ? 'destructive' : payment.status === 'pending' ? 'outline' : 'default'}
                       className={cn("text-[10px] py-0 px-1.5", payment.status === 'paid' && "bg-emerald-500/15 text-emerald-400 border-emerald-500/20")}
                     >
-                      {payment.status}
+                      {payment.status === 'paid' ? 'accepted' : payment.status === 'cancelled' ? 'denied' : payment.status}
                     </Badge>
                   </div>
                 </div>
