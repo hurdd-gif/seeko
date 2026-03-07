@@ -36,14 +36,19 @@ export async function PATCH(
   if (!admin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const { id } = await params;
-  const body = await req.json();
+  let body: Record<string, unknown>;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
+  }
   const { title, content, restricted_department, granted_user_ids } = body;
 
   const updates: Record<string, unknown> = {};
   if (title !== undefined) updates.title = title;
   if (content !== undefined) updates.content = content;
   if ('restricted_department' in body) updates.restricted_department = restricted_department ?? null;
-  if ('granted_user_ids' in body) updates.granted_user_ids = granted_user_ids?.length ? granted_user_ids : null;
+  if ('granted_user_ids' in body) updates.granted_user_ids = Array.isArray(granted_user_ids) && granted_user_ids.length ? granted_user_ids : null;
   updates.updated_at = new Date().toISOString();
 
   const service = createServiceClient(

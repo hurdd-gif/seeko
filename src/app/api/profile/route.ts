@@ -18,7 +18,13 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  const { userId, department } = await request.json();
+  let body: { userId?: string; department?: string };
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
+  }
+  const { userId, department } = body;
   if (!userId || !department) {
     return NextResponse.json({ error: 'Missing userId or department' }, { status: 400 });
   }
