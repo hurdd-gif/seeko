@@ -1,11 +1,12 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { fetchProfile, fetchNotifications, fetchUnreadNotificationCount } from '@/lib/supabase/data';
+import { fetchProfile, fetchNotifications, fetchUnreadNotificationCount, fetchTeam, fetchDocs } from '@/lib/supabase/data';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { DashboardTourWrapper } from '@/components/dashboard/DashboardTourWrapper';
 import { PresenceHeartbeat } from '@/components/PresenceHeartbeat';
 import { ActivityTracker } from '@/components/ActivityTracker';
 import { PageTransition } from '@/components/layout/PageTransition';
+import { CommandPalette } from '@/components/dashboard/CommandPalette';
 
 export default async function DashboardLayout({
   children,
@@ -22,6 +23,10 @@ export default async function DashboardLayout({
   const [notifications, unreadCount] = await Promise.all([
     fetchNotifications(user.id, 20).catch(() => []),
     fetchUnreadNotificationCount(user.id).catch(() => 0),
+  ]);
+  const [team, allDocs] = await Promise.all([
+    fetchTeam().catch(() => []),
+    fetchDocs().catch(() => []),
   ]);
   const showTour = profile?.onboarded === 1 && profile?.tour_completed === 0;
 
@@ -49,6 +54,10 @@ export default async function DashboardLayout({
       </div>
       <PresenceHeartbeat userId={user.id} />
       <ActivityTracker userId={user.id} />
+      <CommandPalette
+        team={team.map((m) => ({ id: m.id, display_name: m.display_name }))}
+        docs={allDocs.map((d) => ({ id: d.id, title: d.title }))}
+      />
     </DashboardTourWrapper>
   );
 }
