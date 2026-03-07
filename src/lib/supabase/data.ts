@@ -167,3 +167,14 @@ export async function fetchUnreadNotificationCount(userId: string): Promise<numb
   if (error) return 0;
   return count ?? 0;
 }
+
+export async function fetchTeamWithPaypalEmails(): Promise<(Profile & { paypal_email?: string })[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .order('display_name', { ascending: true });
+
+  if (error) throw error;
+  return (data ?? []) as (Profile & { paypal_email?: string })[];
+}
