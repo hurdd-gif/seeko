@@ -257,6 +257,17 @@ html {
   cursor: col-resize;
 }
 
+/* Sonner toast overrides */
+[data-sonner-toaster] [data-sonner-toast] {
+  --normal-bg: rgba(34, 34, 34, 0.85);
+  --normal-border: var(--color-border);
+  --normal-text: var(--color-foreground);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid var(--color-border);
+  font-family: var(--font-sans);
+}
+
 /* Mobile fixed chrome: promote to own layer so it stays fixed during scroll (iOS) */
 .mobile-fixed-layer {
   transform: translateZ(0);
