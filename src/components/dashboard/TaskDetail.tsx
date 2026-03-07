@@ -19,13 +19,20 @@ import {
   Package,
   Download,
   ArrowRightLeft,
+  ChevronDown,
 } from 'lucide-react';
 import Link from 'next/link';
-import { Task, TaskWithAssignee, TaskComment, TaskDeliverable, TaskHandoff, Profile, Doc } from '@/lib/types';
+import { Task, TaskWithAssignee, TaskComment, TaskDeliverable, TaskHandoff, Profile, Doc, TaskStatus } from '@/lib/types';
 import { toast } from 'sonner';
 import { Dialog, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
 import { HandoffDialog } from './HandoffDialog';
 import { Badge } from '@/components/ui/badge';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -604,10 +611,40 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
       </DialogHeader>
 
       <div className="flex flex-wrap items-center gap-2 mb-4">
-        <div className={`flex items-center gap-1.5 ${statusCfg.className}`}>
-          <StatusIcon className="size-3.5" />
-          <span className="text-xs font-medium">{statusCfg.label}</span>
-        </div>
+        {(isAdmin || task.assignee_id === currentUserId) ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className={`flex items-center gap-1.5 transition-opacity hover:opacity-80 ${statusCfg.className}`}>
+                <StatusIcon className="size-3.5" />
+                <span className="text-xs font-medium">{statusCfg.label}</span>
+                <ChevronDown className="size-3 ml-0.5" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              {(['Complete', 'In Progress', 'In Review', 'Blocked'] as const).map(s => {
+                const cfg = STATUS_DISPLAY[s];
+                const Icon = cfg.icon;
+                return (
+                  <DropdownMenuItem
+                    key={s}
+                    onClick={async () => {
+                      await supabase.from('tasks').update({ status: s }).eq('id', task.id);
+                    }}
+                    className={`flex items-center gap-2 text-xs ${s === task.status ? 'font-medium' : ''}`}
+                  >
+                    <Icon className={`size-3.5 ${cfg.className}`} />
+                    {s}
+                  </DropdownMenuItem>
+                );
+              })}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+          <div className={`flex items-center gap-1.5 ${statusCfg.className}`}>
+            <StatusIcon className="size-3.5" />
+            <span className="text-xs font-medium">{statusCfg.label}</span>
+          </div>
+        )}
         <Badge variant="secondary" className="text-xs">{task.department}</Badge>
         <Badge variant="outline" className="text-xs">{task.priority}</Badge>
         {task.deadline && (
