@@ -55,6 +55,16 @@ export async function fetchTeam(): Promise<Profile[]> {
   return all.filter(p => !p.is_investor);
 }
 
+export async function fetchAllDocs(): Promise<Doc[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('docs')
+    .select('id, title')
+    .order('title', { ascending: true });
+  if (error) throw error;
+  return (data ?? []) as Doc[];
+}
+
 export async function fetchDocs(parentId?: string): Promise<Doc[]> {
   const supabase = await createClient();
 

@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { fetchProfile, fetchNotifications, fetchUnreadNotificationCount, fetchTeam, fetchDocs } from '@/lib/supabase/data';
+import { fetchProfile, fetchNotifications, fetchUnreadNotificationCount, fetchTeam, fetchAllDocs } from '@/lib/supabase/data';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { DashboardTourWrapper } from '@/components/dashboard/DashboardTourWrapper';
 import { PresenceHeartbeat } from '@/components/PresenceHeartbeat';
@@ -26,7 +26,7 @@ export default async function DashboardLayout({
   ]);
   const [team, allDocs] = await Promise.all([
     fetchTeam().catch(() => []),
-    fetchDocs().catch(() => []),
+    fetchAllDocs().catch(() => []),
   ]);
   const showTour = profile?.onboarded === 1 && profile?.tour_completed === 0;
 
