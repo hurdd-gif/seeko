@@ -56,7 +56,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid password' }, { status: 401 });
   }
 
-  const secret = new TextEncoder().encode(process.env.PAYMENTS_JWT_SECRET ?? 'fallback-secret');
+  const jwtSecret = process.env.PAYMENTS_JWT_SECRET;
+  if (!jwtSecret) {
+    return NextResponse.json({ error: 'Payments not configured' }, { status: 500 });
+  }
+  const secret = new TextEncoder().encode(jwtSecret);
   const token = await new SignJWT({ sub: user.id, scope: 'payments' })
     .setProtectedHeader({ alg: 'HS256' })
     .setExpirationTime('24h')
