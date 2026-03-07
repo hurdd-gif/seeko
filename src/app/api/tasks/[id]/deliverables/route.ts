@@ -6,7 +6,7 @@ import type { TaskDeliverable } from '@/lib/types';
 
 const BUCKET = 'task-deliverables';
 const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25 MB
-const SIGNED_URL_EXPIRY_SEC = 3600; // 1 hour
+const SIGNED_URL_EXPIRY_SEC = 365 * 24 * 3600; // 1 year — deliverables are long-lived; 1 h caused links to expire before admins could review them
 
 async function getSupabaseAndUser() {
   const cookieStore = await cookies();
