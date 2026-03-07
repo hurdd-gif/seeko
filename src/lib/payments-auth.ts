@@ -30,7 +30,12 @@ export async function getPaymentsAuth(tokenHeader?: string | null) {
   let tokenValid = false;
   if (isAdmin && tokenHeader) {
     try {
-      const secret = new TextEncoder().encode(process.env.PAYMENTS_JWT_SECRET ?? 'fallback-secret');
+      const jwtSecret = process.env.PAYMENTS_JWT_SECRET;
+      if (!jwtSecret) {
+        tokenValid = false;
+        return { supabase, user, isAdmin, isInvestor, tokenValid };
+      }
+      const secret = new TextEncoder().encode(jwtSecret);
       const { payload } = await jwtVerify(tokenHeader, secret);
       tokenValid = payload.sub === user.id && payload.scope === 'payments';
     } catch {
