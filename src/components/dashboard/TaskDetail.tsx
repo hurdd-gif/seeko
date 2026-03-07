@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence, LayoutGroup } from 'motion/react';
 import {
   Clock,
   MessageSquare,
@@ -26,6 +26,7 @@ import { toast } from 'sonner';
 import { Dialog, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
 import { HandoffDialog } from './HandoffDialog';
 import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -314,6 +315,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
     return () => { document.body.style.overflow = prev; };
   }, [open, isDesktop]);
 
+  const [activeTab, setActiveTab] = useState<'details' | 'chat'>('details');
   const [comments, setComments] = useState<TaskComment[]>([]);
   const [loading, setLoading] = useState(false);
   const [deliverables, setDeliverables] = useState<TaskDeliverable[]>([]);
@@ -627,7 +629,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
     : ('assignee' in task ? (task as TaskWithAssignee).assignee : null);
   const canHandOff = isAdmin || task.assignee_id === currentUserId || effectiveAssigneeId === currentUserId;
 
-  const panelContent = (
+  const detailsContent = (
     <>
       <div className="flex flex-wrap items-center gap-2 mb-4">
         <div className={`flex items-center gap-1.5 ${statusCfg.className}`}>
@@ -665,104 +667,6 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
       {task.description && (
         <p className="text-sm text-muted-foreground mb-4">{task.description}</p>
       )}
-
-      <Separator />
-
-      <div className="mt-4">
-        <div className="flex items-center gap-2 mb-4">
-          <MessageSquare className="size-4 text-muted-foreground" />
-          <h3 className="text-sm font-medium text-foreground">Comments</h3>
-          <span className="text-xs text-muted-foreground">({comments.length})</span>
-        </div>
-
-        <div className="max-h-[280px] overflow-y-auto space-y-4 mb-4">
-          {loading && comments.length === 0 && (
-            <p className="text-xs text-muted-foreground text-center py-4">Loading comments...</p>
-          )}
-          {!loading && comments.length === 0 && (
-            <p className="text-xs text-muted-foreground text-center py-4">No comments yet. Start the conversation.</p>
-          )}
-
-          <AnimatePresence>
-            {comments.map(comment => (
-              <CommentItem
-                key={comment.id}
-                isHighlighted={highlightCommentId === comment.id}
-                teamNames={teamNames}
-                docTitles={docTitles}
-                comment={comment}
-                isOwn={comment.user_id === currentUserId}
-                onEdit={handleEditComment}
-                onDelete={handleDeleteComment}
-              />
-            ))}
-          </AnimatePresence>
-          <div ref={commentsEndRef} />
-        </div>
-
-        <div className="relative">
-          <AnimatePresence>
-            {autocompleteMode !== null && autocompleteCandidates.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 4 }}
-                transition={{ duration: 0.1 }}
-                className="absolute bottom-full mb-1 left-0 w-full rounded-lg border border-border bg-card shadow-lg z-10 overflow-hidden"
-              >
-                {autocompleteCandidates.map((candidate, i) => (
-                  <button
-                    key={candidate.id}
-                    className={`flex w-full items-center gap-2 px-3 py-2 text-sm transition-colors ${i === autocompleteIndex ? 'bg-secondary text-foreground' : 'text-muted-foreground hover:bg-secondary/50'}`}
-                    onMouseDown={e => { e.preventDefault(); insertAutocomplete(candidate.label); }}
-                    onMouseEnter={() => setAutocompleteIndex(i)}
-                  >
-                    {candidate.icon === 'user' ? (
-                      <Avatar className="size-5">
-                        <AvatarImage src={candidate.avatar ?? undefined} />
-                        <AvatarFallback className="text-[7px] bg-secondary">{getInitials(candidate.label)}</AvatarFallback>
-                      </Avatar>
-                    ) : (
-                      <FileText className="size-4 text-blue-400" />
-                    )}
-                    <span className="truncate">{candidate.label}</span>
-                    {candidate.icon === 'user' && candidate.role && (
-                      <span className="text-xs text-muted-foreground ml-auto">{candidate.role}</span>
-                    )}
-                  </button>
-                ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          <div className="flex items-end gap-2 rounded-lg border border-border bg-muted/30 p-2">
-            <textarea
-              ref={inputRef}
-              value={input}
-              onChange={e => handleInputChange(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Write a comment... @ to mention, # to link doc"
-              rows={1}
-              className="flex-1 resize-none bg-transparent text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none min-h-[36px] max-h-[120px] py-1.5"
-              style={{ height: 'auto', overflow: 'hidden' }}
-              onInput={e => {
-                const el = e.currentTarget;
-                el.style.height = 'auto';
-                el.style.height = Math.min(el.scrollHeight, 120) + 'px';
-                el.style.overflow = el.scrollHeight > 120 ? 'auto' : 'hidden';
-              }}
-            />
-            <Button
-              size="icon"
-              className="size-8 shrink-0"
-              onClick={handleSend}
-              disabled={!input.trim() || sending}
-            >
-              <Send className="size-3.5" />
-            </Button>
-          </div>
-        </div>
-      </div>
 
       {handoffs.length > 0 && (
         <>
@@ -957,6 +861,136 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
     </>
   );
 
+  const chatMessages = (
+    <>
+      {loading && comments.length === 0 && (
+        <p className="text-xs text-muted-foreground text-center py-4">Loading comments...</p>
+      )}
+      {!loading && comments.length === 0 && (
+        <p className="text-xs text-muted-foreground text-center py-4">No comments yet. Start the conversation.</p>
+      )}
+
+      <AnimatePresence>
+        {comments.map(comment => (
+          <CommentItem
+            key={comment.id}
+            isHighlighted={highlightCommentId === comment.id}
+            teamNames={teamNames}
+            docTitles={docTitles}
+            comment={comment}
+            isOwn={comment.user_id === currentUserId}
+            onEdit={handleEditComment}
+            onDelete={handleDeleteComment}
+          />
+        ))}
+      </AnimatePresence>
+      <div ref={commentsEndRef} />
+    </>
+  );
+
+  const chatCompose = (
+    <div className="relative">
+      <AnimatePresence>
+        {autocompleteMode !== null && autocompleteCandidates.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 4 }}
+            transition={{ duration: 0.1 }}
+            className="absolute bottom-full mb-1 left-0 w-full rounded-lg border border-border bg-card shadow-lg z-10 overflow-hidden"
+          >
+            {autocompleteCandidates.map((candidate, i) => (
+              <button
+                key={candidate.id}
+                className={`flex w-full items-center gap-2 px-3 py-2 text-sm transition-colors ${i === autocompleteIndex ? 'bg-secondary text-foreground' : 'text-muted-foreground hover:bg-secondary/50'}`}
+                onMouseDown={e => { e.preventDefault(); insertAutocomplete(candidate.label); }}
+                onMouseEnter={() => setAutocompleteIndex(i)}
+              >
+                {candidate.icon === 'user' ? (
+                  <Avatar className="size-5">
+                    <AvatarImage src={candidate.avatar ?? undefined} />
+                    <AvatarFallback className="text-[7px] bg-secondary">{getInitials(candidate.label)}</AvatarFallback>
+                  </Avatar>
+                ) : (
+                  <FileText className="size-4 text-blue-400" />
+                )}
+                <span className="truncate">{candidate.label}</span>
+                {candidate.icon === 'user' && candidate.role && (
+                  <span className="text-xs text-muted-foreground ml-auto">{candidate.role}</span>
+                )}
+              </button>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <div className="flex items-end gap-2 rounded-lg border border-border bg-muted/30 p-2">
+        <textarea
+          ref={inputRef}
+          value={input}
+          onChange={e => handleInputChange(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="Write a comment... @ to mention, # to link doc"
+          rows={1}
+          className="flex-1 resize-none bg-transparent text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none min-h-[36px] max-h-[120px] py-1.5"
+          style={{ height: 'auto', overflow: 'hidden' }}
+          onInput={e => {
+            const el = e.currentTarget;
+            el.style.height = 'auto';
+            el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+            el.style.overflow = el.scrollHeight > 120 ? 'auto' : 'hidden';
+          }}
+        />
+        <Button
+          size="icon"
+          className="size-8 shrink-0"
+          onClick={handleSend}
+          disabled={!input.trim() || sending}
+        >
+          <Send className="size-3.5" />
+        </Button>
+      </div>
+    </div>
+  );
+
+  const tabBar = (
+    <LayoutGroup>
+      <div className="flex border-b border-border px-4 shrink-0">
+        <button
+          className={cn(
+            'px-4 py-2.5 text-sm font-medium transition-colors relative',
+            activeTab === 'details' ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
+          )}
+          onClick={() => setActiveTab('details')}
+        >
+          Details
+          {activeTab === 'details' && (
+            <motion.div
+              className="absolute bottom-0 left-0 right-0 h-0.5 bg-foreground"
+              layoutId="tab-indicator"
+            />
+          )}
+        </button>
+        <button
+          className={cn(
+            'px-4 py-2.5 text-sm font-medium transition-colors relative',
+            activeTab === 'chat' ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
+          )}
+          onClick={() => setActiveTab('chat')}
+        >
+          Chat
+          <span className="ml-1.5 text-xs text-muted-foreground">({comments.length})</span>
+          {activeTab === 'chat' && (
+            <motion.div
+              className="absolute bottom-0 left-0 right-0 h-0.5 bg-foreground"
+              layoutId="tab-indicator"
+            />
+          )}
+        </button>
+      </div>
+    </LayoutGroup>
+  );
+
   return (
     <>
       <AnimatePresence>
@@ -991,10 +1025,24 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
                   </button>
                 </div>
 
-                {/* Scrollable content */}
-                <div className="flex-1 overflow-y-auto p-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                  {panelContent}
-                </div>
+                {/* Tab bar */}
+                {tabBar}
+
+                {/* Tab content */}
+                {activeTab === 'details' ? (
+                  <div className="flex-1 overflow-y-auto p-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                    {detailsContent}
+                  </div>
+                ) : (
+                  <div className="flex flex-1 flex-col overflow-hidden">
+                    <div className="flex-1 overflow-y-auto p-4 space-y-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                      {chatMessages}
+                    </div>
+                    <div className="shrink-0 border-t border-border p-3">
+                      {chatCompose}
+                    </div>
+                  </div>
+                )}
               </motion.div>
             </div>
           ) : (
@@ -1004,7 +1052,21 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
               <DialogHeader>
                 <DialogTitle className="pr-8">{task.name}</DialogTitle>
               </DialogHeader>
-              {panelContent}
+              {tabBar}
+              {activeTab === 'details' ? (
+                <div className="flex-1 overflow-y-auto p-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                  {detailsContent}
+                </div>
+              ) : (
+                <div className="flex flex-1 flex-col overflow-hidden">
+                  <div className="flex-1 overflow-y-auto p-4 space-y-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                    {chatMessages}
+                  </div>
+                  <div className="shrink-0 border-t border-border p-3">
+                    {chatCompose}
+                  </div>
+                </div>
+              )}
             </Dialog>
           )
         )}
