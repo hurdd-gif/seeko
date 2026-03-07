@@ -52,6 +52,15 @@ const TOUR_STEPS: TourStep[] = [
     ),
     position: 'right',
   },
+  {
+    selectorId: TOUR_STEP_IDS.CMD_K,
+    content: (
+      <p>
+        <strong>Quick Navigation</strong> — Press <kbd className="inline-flex items-center rounded border border-border px-1.5 py-0.5 text-[11px] font-mono bg-muted">⌘K</kbd> anytime to search pages, team members, docs, and actions instantly.
+      </p>
+    ),
+    position: 'bottom',
+  },
 ];
 
 interface DashboardTourWrapperProps {
