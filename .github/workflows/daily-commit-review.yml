@@ -88,6 +88,12 @@ jobs:
 
           If no issues are found, say so — don't invent problems.
 
+          **After the review, for any critical or warning findings that have a clear fix:**
+          - Create a branch named `fix/review-PLACEHOLDER_DATE-<short-description>`
+          - Apply minimal, targeted fixes only — do not refactor or change unrelated code
+          - Open a PR linking back to this issue
+          - If a finding is ambiguous or risky to fix automatically, leave it in the report and skip the PR
+
           ---
           *Automated by daily-commit-review workflow*
           BODY_EOF
