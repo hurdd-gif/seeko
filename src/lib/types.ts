@@ -59,6 +59,8 @@ export type Doc = {
   updated_at?: string;
   restricted_department?: string[];
   granted_user_ids?: string[];
+  type?: 'doc' | 'deck';
+  slides?: { url: string; sort_order: number }[];
 };
 
 export type TaskWithAssignee = Task & {

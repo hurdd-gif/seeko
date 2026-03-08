@@ -243,3 +243,17 @@ create table public.payment_items (
 
 -- profiles.paypal_email text (nullable)
 -- tasks.bounty decimal (nullable)
+
+-- ─── Decks ──────────────────────────────────────────────────────────────────
+
+-- Add type column (doc or deck, default doc so existing rows unaffected)
+ALTER TABLE public.docs ADD COLUMN IF NOT EXISTS type text NOT NULL DEFAULT 'doc';
+
+-- Add slides column (jsonb array of { url, sort_order })
+ALTER TABLE public.docs ADD COLUMN IF NOT EXISTS slides jsonb DEFAULT NULL;
+
+-- Index for filtering by type
+CREATE INDEX IF NOT EXISTS idx_docs_type ON public.docs(type);
+
+-- Storage bucket: deck-slides (public read, create manually in Supabase dashboard)
+-- Path format: {deck_id}/{slide_number}.webp

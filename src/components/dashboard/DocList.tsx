@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { FileText, Lock, Pencil, Trash2, Plus, Search, Clock, ChevronDown, Circle } from 'lucide-react';
+import { FileText, Lock, Pencil, Trash2, Plus, Search, Clock, ChevronDown, Circle, Presentation } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { Doc } from '@/lib/types';
@@ -21,6 +21,8 @@ import {
 import { Stagger, StaggerItem, HoverCard } from '@/components/motion';
 import { EmptyState } from '@/components/ui/empty-state';
 import { DocEditor } from './DocEditor';
+import { DeckEditor } from './DeckEditor';
+import { DeckViewer } from './DeckViewer';
 import { DocDeleteConfirm } from './DocDeleteConfirm';
 import { DocContent } from './DocContent';
 import { useHaptics } from '@/components/HapticsProvider';
@@ -123,8 +125,10 @@ interface DocListProps {
 export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, currentUserId = '', team = [] }: DocListProps) {
   const [docs, setDocs] = useState<Doc[]>(initialDocs);
   const { trigger } = useHaptics();
+  const [viewMode, setViewMode] = useState<'docs' | 'decks'>('docs');
   const [selected, setSelected] = useState<Doc | null>(null);
   const [editingDoc, setEditingDoc] = useState<Doc | 'new' | null>(null);
+  const [editingDeck, setEditingDeck] = useState<Doc | 'new' | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [departmentFilter, setDepartmentFilter] = useState<string>('all');
@@ -139,7 +143,11 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, cu
   };
 
   const sortedDocs = useMemo(() => {
-    const byLock = [...docs].sort((a, b) =>
+    // Filter by type first
+    const byType = docs.filter(d =>
+      viewMode === 'decks' ? d.type === 'deck' : d.type !== 'deck'
+    );
+    const byLock = [...byType].sort((a, b) =>
       isLocked(a) === isLocked(b) ? 0 : isLocked(a) ? 1 : -1
     );
     const q = searchQuery.trim().toLowerCase();
@@ -148,7 +156,7 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, cu
       : byLock;
     if (departmentFilter === 'all') return bySearch;
     return bySearch.filter(d => d.restricted_department?.includes(departmentFilter));
-  }, [docs, searchQuery, departmentFilter, isAdmin, userDepartment, currentUserId]);
+  }, [docs, viewMode, searchQuery, departmentFilter, isAdmin, userDepartment, currentUserId]);
 
   /** Group docs: unlocked by department, locked collected at end */
   const grouped = useMemo(() => {
@@ -195,7 +203,10 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, cu
       return [...prev, saved];
     });
     setEditingDoc(null);
-    toast.success(editingDoc === 'new' ? 'Document created' : 'Document saved');
+    setEditingDeck(null);
+    const isDeck = saved.type === 'deck';
+    const isNew = editingDoc === 'new' || editingDeck === 'new';
+    toast.success(isNew ? (isDeck ? 'Deck created' : 'Document created') : (isDeck ? 'Deck saved' : 'Document saved'));
     trigger('success');
   };
 
@@ -206,9 +217,15 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, cu
     trigger('success');
   };
 
-  /* ── Render: unlocked doc card ─────────────────────────── */
+  /* ── Render: unlocked doc/deck card ───────────────────── */
   const renderDocCard = (doc: Doc) => {
     const recent = isRecentlyUpdated(doc);
+    const isDeck = doc.type === 'deck';
+    const handleEdit = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (isDeck) setEditingDeck(doc);
+      else setEditingDoc(doc);
+    };
     return (
       <StaggerItem key={doc.id}>
         {deletingId === doc.id ? (
@@ -224,17 +241,32 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, cu
               className="group cursor-pointer transition-colors hover:border-foreground/20"
               onClick={() => setSelected(doc)}
             >
-              <CardContent className="flex items-start gap-3.5 p-4">
-                <div className="relative flex size-9 shrink-0 items-center justify-center rounded-md bg-secondary">
-                  <FileText className="size-4 text-foreground" />
-                  {recent && (
-                    <span className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-seeko-accent" />
-                  )}
-                </div>
-                <div className="flex flex-col gap-1 min-w-0 flex-1">
+              <CardContent className={cn("flex items-start gap-3.5 p-4", isDeck && doc.slides?.[0] && "flex-col p-0 pb-3")}>
+                {/* Deck thumbnail — replaces icon when present */}
+                {isDeck && doc.slides?.[0] && (
+                  <div className="relative w-full aspect-[16/9] rounded-t-lg overflow-hidden bg-secondary">
+                    <img src={doc.slides[0].url} alt="" className="w-full h-full object-cover" />
+                    {recent && (
+                      <span className="absolute top-2 right-2 size-2 rounded-full bg-seeko-accent" />
+                    )}
+                  </div>
+                )}
+                {/* Icon row — only for docs or decks without thumbnails */}
+                {(!isDeck || !doc.slides?.[0]) && (
+                  <div className="relative flex size-9 shrink-0 items-center justify-center rounded-md bg-secondary">
+                    {isDeck ? <Presentation className="size-4 text-foreground" /> : <FileText className="size-4 text-foreground" />}
+                    {recent && (
+                      <span className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-seeko-accent" />
+                    )}
+                  </div>
+                )}
+                <div className={cn("flex flex-col gap-1 min-w-0 flex-1", isDeck && doc.slides?.[0] && "px-3")}>
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex flex-wrap items-center gap-2 min-w-0">
                       <p className="text-sm font-medium text-foreground truncate">{doc.title}</p>
+                      {isDeck && doc.slides && (
+                        <span className="text-[10px] text-muted-foreground/50 font-mono">{doc.slides.length} slides</span>
+                      )}
                       {recent && (
                         <Badge variant="outline" className="text-[10px] font-medium text-seeko-accent border-seeko-accent/25 shrink-0">Updated</Badge>
                       )}
@@ -253,7 +285,7 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, cu
                           <button
                             type="button"
                             title="Edit"
-                            onClick={(e) => { e.stopPropagation(); setEditingDoc(doc); }}
+                            onClick={handleEdit}
                             className="flex size-7 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground opacity-0 group-hover:opacity-100"
                           >
                             <Pencil className="size-3.5" />
@@ -275,9 +307,14 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, cu
                       Also granted: {team.filter(p => doc.granted_user_ids?.includes(p.id)).map(p => p.display_name ?? 'Unknown').join(', ')}
                     </p>
                   ) : null}
-                  {doc.content ? (
+                  {!isDeck && doc.content ? (
                     <p className="text-xs text-muted-foreground/80 leading-relaxed line-clamp-2">
                       {doc.content.replace(/<[^>]*>/g, '').slice(0, 200)}
+                    </p>
+                  ) : null}
+                  {isDeck && doc.content ? (
+                    <p className="text-xs text-muted-foreground/80 leading-relaxed line-clamp-1">
+                      {doc.content.replace(/<[^>]*>/g, '').slice(0, 100)}
                     </p>
                   ) : null}
                 </div>
@@ -289,29 +326,68 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, cu
     );
   };
 
+  const docCount = docs.filter(d => d.type !== 'deck').length;
+  const deckCount = docs.filter(d => d.type === 'deck').length;
+
   return (
     <>
-      {/* Admin: New Document button */}
-      {isAdmin && (
-        <div className="flex justify-end mb-3">
-          <Button size="sm" onClick={() => setEditingDoc('new')}>
-            <Plus className="size-3.5 mr-1.5" />
-            New Document
-          </Button>
+      {/* Tab toggle + New button */}
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-1 rounded-lg bg-secondary/50 p-0.5">
+          <button
+            type="button"
+            onClick={() => setViewMode('docs')}
+            className={cn(
+              'rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
+              viewMode === 'docs'
+                ? 'bg-card text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+          >
+            Documents{docCount > 0 && <span className="ml-1 text-muted-foreground/60">{docCount}</span>}
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode('decks')}
+            className={cn(
+              'rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
+              viewMode === 'decks'
+                ? 'bg-card text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+          >
+            Decks{deckCount > 0 && <span className="ml-1 text-muted-foreground/60">{deckCount}</span>}
+          </button>
         </div>
-      )}
+        {isAdmin && (
+          <Button
+            size="sm"
+            onClick={() => viewMode === 'decks' ? setEditingDeck('new') : setEditingDoc('new')}
+          >
+            <Plus className="size-3.5 mr-1.5" />
+            {viewMode === 'decks' ? 'New Deck' : 'New Document'}
+          </Button>
+        )}
+      </div>
 
-      {docs.length === 0 ? (
+      {sortedDocs.length === 0 && docs.filter(d => viewMode === 'decks' ? d.type === 'deck' : d.type !== 'deck').length === 0 ? (
         <EmptyState
           icon="FileText"
-          title="No documents yet"
+          title={viewMode === 'decks' ? 'No decks yet' : 'No documents yet'}
           description={isAdmin
-            ? 'Create your first document to share specs and resources with the team.'
-            : 'Your lead can add team documents. Check back later or ask them to create one.'}
+            ? (viewMode === 'decks'
+              ? 'Upload a PDF to create your first deck.'
+              : 'Create your first document to share specs and resources with the team.')
+            : (viewMode === 'decks'
+              ? 'Decks will appear here when the team uploads them.'
+              : 'Your lead can add team documents. Check back later or ask them to create one.')}
           action={isAdmin ? (
-            <Button size="sm" onClick={() => setEditingDoc('new')}>
+            <Button
+              size="sm"
+              onClick={() => viewMode === 'decks' ? setEditingDeck('new') : setEditingDoc('new')}
+            >
               <Plus className="size-3.5 mr-1.5" />
-              Create your first document
+              {viewMode === 'decks' ? 'Upload a deck' : 'Create your first document'}
             </Button>
           ) : undefined}
         />
@@ -323,7 +399,7 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, cu
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
               <Input
                 type="search"
-                placeholder="Search documents…"
+                placeholder={viewMode === 'decks' ? 'Search decks…' : 'Search documents…'}
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 className="pl-9 h-9 w-full"
@@ -401,13 +477,15 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, cu
             <DialogHeader>
               <div className="flex items-center gap-2">
                 <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-secondary">
-                  <FileText className="size-4 text-foreground" />
+                  {selected.type === 'deck' ? <Presentation className="size-4 text-foreground" /> : <FileText className="size-4 text-foreground" />}
                 </div>
                 <DialogTitle>{selected.title}</DialogTitle>
               </div>
             </DialogHeader>
             <div className="doc-read-body -mx-1 min-w-0 overflow-x-auto pt-1 pr-1">
-              {selected.content ? (
+              {selected.type === 'deck' && selected.slides ? (
+                <DeckViewer slides={selected.slides} title={selected.title} />
+              ) : selected.content ? (
                 <DocContent html={selected.content} />
               ) : (
                 <p className="text-sm text-muted-foreground">No content yet.</p>
@@ -417,7 +495,7 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, cu
         )}
       </Dialog>
 
-      {/* Edit / New dialog */}
+      {/* Edit / New document dialog */}
       <Dialog open={editingDoc !== null} onOpenChange={() => setEditingDoc(null)} resizable>
         {editingDoc !== null && (
           <>
@@ -429,6 +507,24 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, cu
               doc={editingDoc === 'new' ? undefined : editingDoc}
               onSave={handleSave}
               onCancel={() => setEditingDoc(null)}
+              team={team}
+            />
+          </>
+        )}
+      </Dialog>
+
+      {/* Edit / New deck dialog */}
+      <Dialog open={editingDeck !== null} onOpenChange={() => setEditingDeck(null)} resizable>
+        {editingDeck !== null && (
+          <>
+            <DialogClose onClose={() => setEditingDeck(null)} />
+            <DialogHeader>
+              <DialogTitle>{editingDeck === 'new' ? 'New Deck' : 'Edit Deck'}</DialogTitle>
+            </DialogHeader>
+            <DeckEditor
+              doc={editingDeck === 'new' ? undefined : editingDeck}
+              onSave={handleSave}
+              onCancel={() => setEditingDeck(null)}
               team={team}
             />
           </>
