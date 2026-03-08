@@ -1,5 +1,13 @@
--- Update handle_new_user to: delete pending_invites row after applying, and match email case-insensitively.
+-- Fix: ensure tour_completed defaults to 0 (not NULL) for new users.
+-- Also backfill any existing NULL values.
 
+-- 1. Set column default
+alter table public.profiles alter column tour_completed set default 0;
+
+-- 2. Backfill existing NULL rows
+update public.profiles set tour_completed = 0 where tour_completed is null;
+
+-- 3. Update handle_new_user trigger to include tour_completed
 create or replace function public.handle_new_user()
 returns trigger as $$
 declare

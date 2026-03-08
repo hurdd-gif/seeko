@@ -40,7 +40,7 @@ export default async function DashboardLayout({
     return false;
   });
 
-  const showTour = profile?.onboarded === 1 && profile?.tour_completed === 0;
+  const showTour = profile?.onboarded === 1 && (profile?.tour_completed ?? 0) === 0;
 
   return (
     <DashboardTourWrapper showTour={showTour} userId={user.id} isContractor={profile?.is_contractor ?? false}>
