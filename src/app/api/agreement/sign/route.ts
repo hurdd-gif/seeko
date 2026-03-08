@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
       nda_signer_address: address.trim(),
       nda_ip: ip,
       nda_user_agent: userAgent,
-    })
+    } as never)
     .eq('id', user.id);
 
   if (updateError) {

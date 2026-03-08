@@ -1,6 +1,13 @@
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+let resend: Resend | null = null;
+
+function getResend() {
+  if (!resend) {
+    resend = new Resend(process.env.RESEND_API_KEY);
+  }
+  return resend;
+}
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@seeko.gg';
 const FROM_EMAIL = 'SEEKO Studio <noreply@seeko.gg>';
@@ -20,15 +27,16 @@ export async function sendAgreementEmail({
   const fileName = `SEEKO_Agreement_${signerName.replace(/\s+/g, '_')}.pdf`;
 
   // Send to both the signer and admin
+  const r = getResend();
   await Promise.all([
-    resend.emails.send({
+    r.emails.send({
       from: FROM_EMAIL,
       to: recipientEmail,
       subject: 'Your SEEKO Onboarding Agreement — Signed Copy',
       text: `Hi ${signerName},\n\nAttached is your signed copy of the SEEKO Onboarding Agreement.\n\nPlease keep this for your records.\n\n— SEEKO Team`,
       attachments: [{ filename: fileName, content: pdfBase64 }],
     }),
-    resend.emails.send({
+    r.emails.send({
       from: FROM_EMAIL,
       to: ADMIN_EMAIL,
       subject: `NDA Signed: ${signerName}`,
