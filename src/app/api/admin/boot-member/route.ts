@@ -65,17 +65,53 @@ export async function POST(req: NextRequest) {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
-  // Nullify task assignments
+  // Clean up all data referencing this user before deleting profile/auth
+  // Order matters: children first, then profile, then auth user
+
+  // 1. Nullify task assignments
   await service.from('tasks').update({ assignee_id: null }).eq('assignee_id', userId);
 
-  // Delete profile
-  await service.from('profiles').delete().eq('id', userId);
+  // 2. Delete task comment reactions by this user
+  await service.from('task_comment_reactions').delete().eq('user_id', userId);
 
-  // Delete auth user
+  // 3. Delete task comments by this user
+  await service.from('task_comments').delete().eq('user_id', userId);
+
+  // 4. Delete task handoffs involving this user
+  await service.from('task_handoffs').delete().eq('from_user_id', userId);
+  await service.from('task_handoffs').delete().eq('to_user_id', userId);
+
+  // 5. Delete task deliverables uploaded by this user
+  await service.from('task_deliverables').delete().eq('uploaded_by', userId);
+
+  // 6. Delete payment items for payments created by or for this user
+  const { data: userPayments } = await service
+    .from('payments')
+    .select('id')
+    .or(`recipient_id.eq.${userId},created_by.eq.${userId}`);
+  if (userPayments && userPayments.length > 0) {
+    const paymentIds = userPayments.map(p => p.id);
+    await service.from('payment_items').delete().in('payment_id', paymentIds);
+  }
+
+  // 7. Delete payments referencing this user
+  await service.from('payments').delete().or(`recipient_id.eq.${userId},created_by.eq.${userId}`);
+
+  // 8. Notifications (should cascade, but be safe)
+  await service.from('notifications').delete().eq('user_id', userId);
+
+  // 8b. Activity log entries
+  await service.from('activity_log').delete().eq('user_id', userId);
+
+  // 9. Delete profile
+  const { error: profileErr } = await service.from('profiles').delete().eq('id', userId);
+  if (profileErr) {
+    return NextResponse.json({ error: 'Database error deleting user' }, { status: 500 });
+  }
+
+  // 10. Delete auth user
   const { error: deleteErr } = await service.auth.admin.deleteUser(userId);
   if (deleteErr) {
-    // TODO: Replace with proper logging system
-    // Failed to delete auth user during boot member operation
     return NextResponse.json({ error: deleteErr.message }, { status: 500 });
   }
 
