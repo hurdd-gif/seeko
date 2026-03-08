@@ -8,3 +8,12 @@ export const TOUR_STEP_IDS = {
   MAIN: 'tour-main',
   CMD_K: 'tour-command-palette',
 } as const;
+
+/** Mobile-specific IDs — bottom nav items need separate IDs so getElementById finds visible elements. */
+export const TOUR_STEP_IDS_MOBILE = {
+  OVERVIEW: 'tour-overview-m',
+  TASKS: 'tour-tasks-m',
+  TEAM: 'tour-team-m',
+  DOCS: 'tour-docs-m',
+  ACTIVITY: 'tour-activity-m',
+} as const;
