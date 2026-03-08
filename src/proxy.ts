@@ -33,7 +33,7 @@ export async function proxy(request: NextRequest) {
   const isAuthRoute = pathname.startsWith('/login') || pathname.startsWith('/api/auth/callback');
   const isOnboardingRoute = pathname.startsWith('/onboarding');
   const isSetPasswordRoute = pathname.startsWith('/set-password');
-  const isAgreementRoute = pathname.startsWith('/agreement');
+  const isAgreementRoute = pathname.startsWith('/agreement') || pathname.startsWith('/api/agreement');
   const isPublicAsset =
     pathname.startsWith('/_next') || pathname.startsWith('/favicon');
 
@@ -62,8 +62,8 @@ export async function proxy(request: NextRequest) {
       return NextResponse.redirect(url);
     }
 
-    // NDA gate: non-admin users without a signed NDA get redirected
-    if (!isOnboardingRoute && !isAuthRoute && !isAgreementRoute && profile && !profile.nda_accepted_at && !profile.is_admin) {
+    // NDA gate: non-admin users without a signed NDA get redirected (including from onboarding)
+    if (!isAuthRoute && !isAgreementRoute && profile && !profile.nda_accepted_at && !profile.is_admin) {
       const url = request.nextUrl.clone();
       url.pathname = '/agreement';
       return NextResponse.redirect(url);

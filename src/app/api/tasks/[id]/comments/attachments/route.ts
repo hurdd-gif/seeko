@@ -5,6 +5,16 @@ import { cookies } from 'next/headers';
 
 const BUCKET = 'chat-attachments';
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+
+const ALLOWED_MIME_PREFIXES = ['image/', 'video/', 'audio/', 'application/pdf', 'application/zip', 'application/x-zip', 'text/plain', 'application/octet-stream'];
+const BLOCKED_EXTENSIONS = ['.html', '.htm', '.svg', '.js', '.exe', '.bat', '.sh', '.cmd', '.msi', '.php'];
+
+function isAllowedFile(file: File): boolean {
+  const ext = ('.' + (file.name.split('.').pop() ?? '').toLowerCase());
+  if (BLOCKED_EXTENSIONS.includes(ext)) return false;
+  const mime = (file.type || 'application/octet-stream').toLowerCase();
+  return ALLOWED_MIME_PREFIXES.some(prefix => mime.startsWith(prefix));
+}
 // Use 1 year expiry so stored file_url values don't go stale in the DB.
 // The frontend reads file_url directly from task_comment_attachments via Supabase query,
 // so a short expiry causes all attachment links to break after the signed URL expires.
@@ -49,6 +59,9 @@ export async function POST(
   if (!commentId) return NextResponse.json({ error: 'No comment_id provided' }, { status: 400 });
   if (file.size > MAX_FILE_SIZE) {
     return NextResponse.json({ error: 'File too large (max 10 MB)' }, { status: 400 });
+  }
+  if (!isAllowedFile(file)) {
+    return NextResponse.json({ error: 'File type not allowed' }, { status: 400 });
   }
 
   const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');

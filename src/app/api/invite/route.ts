@@ -2,6 +2,7 @@ import type { Department } from '@/lib/types';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getServiceClient } from '@/lib/supabase/service';
+import { sendInviteEmail } from '@/lib/email';
 
 const VALID_DEPARTMENTS: Department[] = ['Coding', 'Visual Art', 'UI/UX', 'Animation', 'Asset Creation'];
 
@@ -102,36 +103,37 @@ export async function POST(request: NextRequest) {
     );
 
   if (insertError) {
+    console.error('[invite] pending_invites upsert error:', insertError);
     return NextResponse.json({ error: insertError.message }, { status: 400 });
   }
 
-  // Check if user exists (getUserByEmail not in all client versions; use listUsers and filter).
-  const { data: listData } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
-  const existingUser = listData?.users?.find((u) => u.email?.toLowerCase() === emailLower) ?? null;
+  // Generate invite link via Supabase (creates auth user if needed, does NOT send email).
+  // Then send the email ourselves via Resend for reliable delivery.
+  const siteOrigin = process.env.NEXT_PUBLIC_SITE_URL || request.nextUrl.origin;
+  const redirectTo = siteOrigin + '/login';
 
-  if (existingUser) {
-    // Existing user: send magic link so they can log in; profile/init will apply invite metadata.
-    const { error: otpError } = await admin.auth.signInWithOtp({
-      email: emailLower,
-      options: { shouldCreateUser: false },
-    });
-    if (otpError) {
-      const hint = otpError.message.toLowerCase().includes('confirmation email')
-        ? ' If SMTP is configured, check Supabase Auth logs and SMTP dashboard (see docs/auth-email-troubleshooting.md).'
-        : '';
-      return NextResponse.json({ error: otpError.message + hint }, { status: 400 });
-    }
-  } else {
-    // New user: use invite email (dedicated invite flow).
-    const { error: inviteError } = await admin.auth.admin.inviteUserByEmail(emailLower, {
-      redirectTo: request.nextUrl.origin + '/login',
-    });
-    if (inviteError) {
-      const hint = inviteError.message.toLowerCase().includes('confirmation email')
-        ? ' If SMTP is configured, check Supabase Auth logs and SMTP dashboard (see docs/auth-email-troubleshooting.md).'
-        : '';
-      return NextResponse.json({ error: inviteError.message + hint }, { status: 400 });
-    }
+  const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
+    type: 'invite',
+    email: emailLower,
+    options: { redirectTo },
+  });
+
+  if (linkError) {
+    console.error('[invite] generateLink error:', linkError);
+    return NextResponse.json({ error: linkError.message }, { status: 400 });
+  }
+
+  const inviteCode = linkData.properties.email_otp;
+  if (!inviteCode) {
+    console.error('[invite] No OTP in generateLink response:', linkData.properties);
+    return NextResponse.json({ error: 'Failed to generate invite code' }, { status: 500 });
+  }
+
+  try {
+    await sendInviteEmail({ recipientEmail: emailLower, inviteCode });
+  } catch (emailErr) {
+    console.error('[invite] Resend email error:', emailErr);
+    return NextResponse.json({ error: 'Failed to send invite email' }, { status: 500 });
   }
 
   return NextResponse.json({ success: true });

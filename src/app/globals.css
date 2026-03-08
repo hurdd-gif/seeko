@@ -72,6 +72,15 @@ html {
   --focus-ring-duration: 200ms;
 }
 
+/* Tour: when Cmd+K step is active, lower palette z-index so tour overlay frames it */
+body.tour-cmd-k-active #command-palette-backdrop,
+body.tour-cmd-k-active #command-palette-container {
+  z-index: 99 !important;
+}
+body.tour-cmd-k-active #command-palette-container * {
+  pointer-events: none !important;
+}
+
 /* Confetti burst: see TourConfetti.tsx CONFETTI/BURST storyboard.
    Duration via --confetti-duration on container. */
 @keyframes confetti-burst {
