@@ -103,6 +103,30 @@ export async function POST(req: NextRequest) {
   // 8b. Activity log entries
   await service.from('activity_log').delete().eq('user_id', userId);
 
+  // 8c. Delete user's storage files (avatars)
+  const { data: avatarFiles } = await service.storage.from('avatars').list(userId);
+  if (avatarFiles && avatarFiles.length > 0) {
+    await service.storage.from('avatars').remove(avatarFiles.map(f => `${userId}/${f.name}`));
+  }
+
+  // 8d. Delete user's storage files (signed agreements)
+  const { data: agreementFiles } = await service.storage.from('agreements').list(userId);
+  if (agreementFiles && agreementFiles.length > 0) {
+    await service.storage.from('agreements').remove(agreementFiles.map(f => `${userId}/${f.name}`));
+  }
+
+  // 8e. Remove user from granted_user_ids in docs
+  const { data: grantedDocs } = await service
+    .from('docs')
+    .select('id, granted_user_ids')
+    .contains('granted_user_ids', [userId]);
+  if (grantedDocs && grantedDocs.length > 0) {
+    for (const doc of grantedDocs) {
+      const updated = (doc.granted_user_ids as string[]).filter((id: string) => id !== userId);
+      await service.from('docs').update({ granted_user_ids: updated } as never).eq('id', doc.id);
+    }
+  }
+
   // 9. Delete profile
   const { error: profileErr } = await service.from('profiles').delete().eq('id', userId);
   if (profileErr) {
