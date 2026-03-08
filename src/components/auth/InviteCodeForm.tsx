@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useHaptics } from '@/components/HapticsProvider';
+import { SegmentedCodeInput } from './SegmentedCodeInput';
 
 export function InviteCodeForm() {
   const router = useRouter();
@@ -58,19 +59,13 @@ export function InviteCodeForm() {
       </div>
 
       <div>
-        <label htmlFor="invite-token" className="block text-xs font-medium text-muted-foreground mb-1.5">
-          Invite code
+        <label className="block text-xs font-medium text-muted-foreground mb-2 text-center">
+          Enter the 8-digit code from your invite email
         </label>
-        <input
-          id="invite-token"
-          type="text"
+        <SegmentedCodeInput
           value={token}
-          onChange={e => setToken(e.target.value.replace(/\D/g, '').slice(0, 8))}
-          required
-          placeholder="8-digit code from your email"
-          inputMode="numeric"
-          maxLength={8}
-          className="w-full px-3 py-2 rounded-lg bg-card border border-border text-foreground text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:border-seeko-accent transition-colors font-mono tracking-widest"
+          onChange={setToken}
+          disabled={loading}
         />
       </div>
 
