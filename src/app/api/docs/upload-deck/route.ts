@@ -34,7 +34,12 @@ export async function POST(req: NextRequest) {
   const admin = await getAdminUser();
   if (!admin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-  const formData = await req.formData();
+  let formData: FormData;
+  try {
+    formData = await req.formData();
+  } catch {
+    return NextResponse.json({ error: 'Invalid multipart form data' }, { status: 400 });
+  }
   const deckId = formData.get('deckId') as string;
   const slideIndex = formData.get('slideIndex') as string;
   const file = formData.get('file') as File | null;

@@ -4,10 +4,10 @@ import { createServerClient } from '@supabase/ssr';
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get('code');
-  // Validate `next` to prevent open redirect: only allow relative paths starting with a
-  // single `/` (e.g. "/dashboard"). Reject protocol-relative (`//`) or absolute URLs.
+  // Validate `next` to prevent open redirect: only allow safe relative paths.
+  // Reject protocol-relative (//), backslash-relative (/\), or absolute URLs.
   const rawNext = searchParams.get('next') ?? '/';
-  const next = /^\/(?!\/)/.test(rawNext) ? rawNext : '/';
+  const next = /^\/(?![/\\])/.test(rawNext) ? rawNext : '/';
 
   if (code) {
     const response = NextResponse.redirect(`${origin}${next}`);

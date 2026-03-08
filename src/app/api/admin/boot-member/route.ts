@@ -41,6 +41,10 @@ export async function POST(req: NextRequest) {
   if (!userId || !password) {
     return NextResponse.json({ error: 'userId and password required' }, { status: 400 });
   }
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!UUID_RE.test(userId)) {
+    return NextResponse.json({ error: 'Invalid userId' }, { status: 400 });
+  }
 
   // Prevent booting yourself
   if (userId === user.id) {
