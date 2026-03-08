@@ -95,8 +95,13 @@ jobs:
           sed -i "s/PLACEHOLDER_DATE/$YESTERDAY/g" /tmp/issue-body.md
           sed -i "s/PLACEHOLDER_COUNT/$COMMIT_COUNT/g" /tmp/issue-body.md
           # Replace commit list placeholder with actual commits
-          ESCAPED_COMMITS=$(echo "$COMMIT_LIST" | sed 's/[&/\]/\\&/g')
-          sed -i "s/PLACEHOLDER_COMMITS/$ESCAPED_COMMITS/g" /tmp/issue-body.md
+          # Write commit list directly instead of sed replacement
+          python3 -c "
+          import sys
+          body = open('/tmp/issue-body.md').read()
+          commits = sys.stdin.read()
+          open('/tmp/issue-body.md', 'w').write(body.replace('PLACEHOLDER_COMMITS', commits))
+          " <<< "$COMMIT_LIST"
 
           gh issue create \
             --title "Daily Commit Review: $YESTERDAY ($COMMIT_COUNT commits)" \
