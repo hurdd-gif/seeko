@@ -13,9 +13,10 @@ interface DeckUploaderProps {
   getDeckId: () => Promise<string>;
   existingSlides?: Slide[];
   onSlidesChange: (slides: Slide[]) => void;
+  onTitleExtracted?: (title: string) => void;
 }
 
-export function DeckUploader({ deckId, getDeckId, existingSlides = [], onSlidesChange }: DeckUploaderProps) {
+export function DeckUploader({ deckId, getDeckId, existingSlides = [], onSlidesChange, onTitleExtracted }: DeckUploaderProps) {
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState({ current: 0, total: 0 });
   const [slides, setSlides] = useState<Slide[]>(existingSlides);
@@ -35,6 +36,15 @@ export function DeckUploader({ deckId, getDeckId, existingSlides = [], onSlidesC
 
       const arrayBuffer = await file.arrayBuffer();
       const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+
+      // Extract title from PDF metadata, fall back to filename without extension
+      if (onTitleExtracted) {
+        const meta = await pdf.getMetadata().catch(() => null);
+        const pdfTitle = (meta?.info as Record<string, string> | undefined)?.Title;
+        const title = pdfTitle?.trim() || file.name.replace(/\.pdf$/i, '');
+        onTitleExtracted(title);
+      }
+
       const totalPages = pdf.numPages;
       setProgress({ current: 0, total: totalPages });
 

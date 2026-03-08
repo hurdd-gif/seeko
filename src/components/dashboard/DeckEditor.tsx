@@ -270,6 +270,9 @@ export function DeckEditor({ doc, onSave, onCancel, team = [] }: DeckEditorProps
         getDeckId={ensureDeckId}
         existingSlides={slides}
         onSlidesChange={(newSlides) => setSlides(newSlides)}
+        onTitleExtracted={(extracted) => {
+          if (!title.trim()) setTitle(extracted);
+        }}
       />
 
       {/* Note about needing to upload PDF before deckId exists */}
