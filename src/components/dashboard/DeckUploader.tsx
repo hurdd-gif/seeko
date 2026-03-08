@@ -10,7 +10,7 @@ interface Slide {
 
 interface DeckUploaderProps {
   deckId: string;
-  getDeckId: () => Promise<string>;
+  getDeckId: (extractedTitle?: string) => Promise<string>;
   existingSlides?: Slide[];
   onSlidesChange: (slides: Slide[]) => void;
   onTitleExtracted?: (title: string) => void;
@@ -27,23 +27,27 @@ export function DeckUploader({ deckId, getDeckId, existingSlides = [], onSlidesC
     setError('');
 
     try {
-      // Ensure we have a real deck ID before uploading
-      const id = deckId || await getDeckId();
-      if (!id) throw new Error('Could not create deck');
-
       const pdfjsLib = await import('pdfjs-dist');
       pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 
       const arrayBuffer = await file.arrayBuffer();
       const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
 
-      // Extract title from PDF metadata, fall back to filename without extension
-      if (onTitleExtracted) {
-        const meta = await pdf.getMetadata().catch(() => null);
-        const pdfTitle = (meta?.info as Record<string, string> | undefined)?.Title;
-        const title = pdfTitle?.trim() || file.name.replace(/\.pdf$/i, '');
-        onTitleExtracted(title);
-      }
+      // Extract title from PDF metadata, fall back to cleaned-up filename
+      let extractedTitle: string | undefined;
+      const meta = await pdf.getMetadata().catch(() => null);
+      const pdfTitle = (meta?.info as Record<string, string> | undefined)?.Title;
+      const raw = pdfTitle?.trim() || file.name.replace(/\.pdf$/i, '');
+      extractedTitle = raw
+        .replace(/[_-]+/g, ' ')
+        .replace(/\b\w/g, c => c.toUpperCase())
+        .trim();
+      if (onTitleExtracted) onTitleExtracted(extractedTitle);
+
+      // Ensure we have a real deck ID before uploading
+      // Pass extractedTitle so the initial record uses it (state hasn't updated yet)
+      const id = deckId || await getDeckId(extractedTitle);
+      if (!id) throw new Error('Could not create deck');
 
       const totalPages = pdf.numPages;
       setProgress({ current: 0, total: totalPages });

@@ -122,14 +122,14 @@ export function DeckEditor({ doc, onSave, onCancel, team = [] }: DeckEditorProps
   };
 
   // For new decks, create the record first to get a real ID for slide uploads
-  const ensureDeckId = async () => {
+  const ensureDeckId = async (extractedTitle?: string) => {
     if (deckId) return deckId;
     try {
       const res = await fetch('/api/docs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title: title.trim() || 'Untitled Deck',
+          title: title.trim() || extractedTitle || 'Untitled Deck',
           type: 'deck',
         }),
       });
