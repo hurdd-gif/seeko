@@ -44,26 +44,23 @@ jobs:
         if: steps.check-commits.outputs.commit_count > 0
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          YESTERDAY: ${{ steps.check-commits.outputs.date }}
+          COMMIT_COUNT: ${{ steps.check-commits.outputs.commit_count }}
+          COMMIT_LIST: ${{ steps.check-commits.outputs.commit_list }}
         run: |
-          YESTERDAY="${{ steps.check-commits.outputs.date }}"
-          COMMIT_COUNT="${{ steps.check-commits.outputs.commit_count }}"
-
-          gh issue create \
-            --title "Daily Commit Review: $YESTERDAY ($COMMIT_COUNT commits)" \
-            --label "code-review,automated" \
-            --body "$(cat <<EOF
+          cat > /tmp/issue-body.md <<'BODY_EOF'
           ## Daily Commit Review
 
-          **Date:** $YESTERDAY
-          **Commits:** $COMMIT_COUNT
+          **Date:** PLACEHOLDER_DATE
+          **Commits:** PLACEHOLDER_COUNT
 
           ### Commits to review
 
-          \`\`\`
-          ${{ steps.check-commits.outputs.commit_list }}
-          \`\`\`
+          ```
+          PLACEHOLDER_COMMITS
+          ```
 
-          @claude Please review all commits from $YESTERDAY. For each commit, run \`git show <hash>\` and analyze for:
+          @claude Please review all commits from PLACEHOLDER_DATE. For each commit, run `git show <hash>` and analyze for:
 
           **Security & Vulnerabilities**
           - SQL injection, XSS, or other injection vectors
@@ -93,5 +90,15 @@ jobs:
 
           ---
           *Automated by daily-commit-review workflow*
-          EOF
-          )"
+          BODY_EOF
+
+          sed -i "s/PLACEHOLDER_DATE/$YESTERDAY/g" /tmp/issue-body.md
+          sed -i "s/PLACEHOLDER_COUNT/$COMMIT_COUNT/g" /tmp/issue-body.md
+          # Replace commit list placeholder with actual commits
+          ESCAPED_COMMITS=$(echo "$COMMIT_LIST" | sed 's/[&/\]/\\&/g')
+          sed -i "s/PLACEHOLDER_COMMITS/$ESCAPED_COMMITS/g" /tmp/issue-body.md
+
+          gh issue create \
+            --title "Daily Commit Review: $YESTERDAY ($COMMIT_COUNT commits)" \
+            --label "code-review,automated" \
+            --body-file /tmp/issue-body.md
