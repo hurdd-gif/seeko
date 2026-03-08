@@ -31,6 +31,7 @@ export async function generateAgreementPdf(input: PdfInput): Promise<Uint8Array>
   const doc = await PDFDocument.create();
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const fontBold = await doc.embedFont(StandardFonts.HelveticaBold);
+  const italicFont = await doc.embedFont(StandardFonts.HelveticaOblique);
 
   const PAGE_W = 612; // US Letter
   const PAGE_H = 792;
@@ -101,9 +102,30 @@ export async function generateAgreementPdf(input: PdfInput): Promise<Uint8Array>
 
   // Signature block
   y -= 20;
-  ensureSpace(80);
+  ensureSpace(120);
   drawText('SIGNATURE', 12, true);
-  y -= 10;
+  y -= 6;
+
+  // Visual signature: signer's name in oblique style
+  ensureSpace(30);
+  page.drawText(input.fullName, {
+    x: MARGIN,
+    y,
+    size: 18,
+    font: italicFont,
+    color: rgb(0.1, 0.1, 0.3),
+  });
+  y -= 22;
+
+  // Signature line
+  page.drawLine({
+    start: { x: MARGIN, y },
+    end: { x: MARGIN + 250, y },
+    thickness: 0.75,
+    color: rgb(0, 0, 0),
+  });
+  y -= 14;
+
   drawText(`Printed Name: ${input.fullName}`, 10);
   drawText(`Date: ${input.signedAt.toISOString().split('T')[0]}`, 10);
   drawText(`Signed electronically via SEEKO Studio`, 9);

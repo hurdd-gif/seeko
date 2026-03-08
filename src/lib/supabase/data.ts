@@ -17,7 +17,7 @@ export async function fetchTasks(assigneeId?: string): Promise<Task[]> {
 
   let query = supabase
     .from('tasks')
-    .select('*')
+    .select('*, assignee:profiles!tasks_assignee_id_fkey(id, display_name, avatar_url)')
     .order('deadline', { ascending: true, nullsFirst: false });
 
   if (assigneeId) {

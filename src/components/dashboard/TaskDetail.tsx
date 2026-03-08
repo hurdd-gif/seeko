@@ -1101,19 +1101,19 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
     <>
       {/* Metadata row */}
       <div className="rounded-lg bg-muted/40 px-3.5 py-3 mb-4">
-        <div className="flex items-center gap-4 flex-wrap">
+        <div className="flex flex-col md:flex-row md:flex-wrap items-start md:items-center gap-2 md:gap-4">
           <div className="flex items-center gap-1.5">
             <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Priority</span>
             <Badge variant="outline" className="text-xs">{task.priority}</Badge>
           </div>
-          <div className="w-px h-4 bg-border" />
+          <div className="hidden md:block w-px h-4 bg-border" />
           <div className="flex items-center gap-1.5">
             <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Dept</span>
             <Badge variant="secondary" className="text-xs">{task.department}</Badge>
           </div>
           {task.deadline && (
             <>
-              <div className="w-px h-4 bg-border" />
+              <div className="hidden md:block w-px h-4 bg-border" />
               <div className="flex items-center gap-1.5 cursor-default" title={formatLocalTime(task.deadline)}>
                 <Clock className="size-3 text-muted-foreground" />
                 <span className="text-xs text-foreground">{new Date(task.deadline + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>

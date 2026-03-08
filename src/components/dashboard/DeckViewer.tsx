@@ -124,8 +124,8 @@ export function DeckViewer({ slides, title }: DeckViewerProps) {
         </div>
 
         {/* #1 Dark bg + shadow for contrast, #2 no dashed border, #5 click zones for inline nav */}
-        <div className="relative group rounded-lg overflow-hidden shadow-lg" style={{ backgroundColor: '#1a1a1a' }}>
-          <img src={sorted[currentSlide].url} alt={`Slide ${currentSlide + 1}`} className="w-full" />
+        <div className="relative group rounded-lg overflow-hidden shadow-lg aspect-[16/9]" style={{ backgroundColor: '#1a1a1a' }}>
+          <img src={sorted[currentSlide].url} alt={`Slide ${currentSlide + 1}`} className="w-full h-full object-contain" />
 
           {/* #5 Left click zone — go prev */}
           {sorted.length > 1 && currentSlide > 0 && (
@@ -173,7 +173,7 @@ export function DeckViewer({ slides, title }: DeckViewerProps) {
         {sorted.length > 1 && (
           <div
             ref={filmstripRef}
-            className="flex gap-2 overflow-x-auto p-1 scrollbar-thin"
+            className="flex gap-1.5 overflow-x-auto p-1 scrollbar-thin"
           >
             {sorted.map((slide, i) => (
               <button
@@ -185,7 +185,7 @@ export function DeckViewer({ slides, title }: DeckViewerProps) {
                     ? 'ring-2 ring-seeko-accent ring-offset-1 ring-offset-background'
                     : 'opacity-40 hover:opacity-70'
                 }`}
-                style={{ width: sorted.length <= 4 ? '6rem' : '5rem' }}
+                style={{ width: sorted.length <= 4 ? '3.5rem' : '3rem' }}
               >
                 <img src={slide.url} alt={`Slide ${i + 1}`} className="w-full h-full object-cover" />
                 <span className="absolute bottom-1 left-1 text-[9px] font-mono text-white/80 bg-black/50 px-1 py-0.5 rounded">

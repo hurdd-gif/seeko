@@ -199,6 +199,11 @@ export function TourProvider({
   const [isCompleted, setIsCompleted] = useState(isTourCompleted);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Sync internal state when the prop changes (e.g. replay tour resets it)
+  useEffect(() => {
+    setIsCompleted(isTourCompleted);
+  }, [isTourCompleted]);
+
   const updateElementPosition = useCallback(() => {
     if (currentStep >= 0 && currentStep < steps.length) {
       const step = steps[currentStep];
