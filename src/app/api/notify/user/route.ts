@@ -33,6 +33,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'userId, kind, and title required' }, { status: 400 });
   }
 
+  // Only allow internal relative paths as notification links (no external URLs)
+  if (link && (typeof link !== 'string' || !link.startsWith('/') || link.startsWith('//'))) {
+    return NextResponse.json({ error: 'link must be a relative path starting with /' }, { status: 400 });
+  }
+
   // Don't notify yourself
   if (userId === user.id) return NextResponse.json({ success: true, skipped: true });
 

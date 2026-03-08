@@ -3,6 +3,22 @@ import { createServerClient } from '@supabase/ssr';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 
+// Rate limiter: 3 attempts per admin per 15 minutes
+const RATE_LIMIT = { max: 3, windowMs: 15 * 60 * 1000 };
+const attempts = new Map<string, { count: number; resetAt: number }>();
+
+function isRateLimited(userId: string): boolean {
+  const now = Date.now();
+  const entry = attempts.get(userId);
+  if (!entry || now > entry.resetAt) {
+    attempts.set(userId, { count: 1, resetAt: now + RATE_LIMIT.windowMs });
+    return false;
+  }
+  if (entry.count >= RATE_LIMIT.max) return true;
+  entry.count++;
+  return false;
+}
+
 export async function POST(req: NextRequest) {
   const cookieStore = await cookies();
   const supabase = createServerClient(
@@ -30,6 +46,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Admin only' }, { status: 403 });
   }
 
+  if (isRateLimited(user.id)) {
+    return NextResponse.json({ error: 'Too many attempts. Try again later.' }, { status: 429 });
+  }
+
   let body: { userId: string; password: string };
   try {
     body = await req.json();
@@ -47,16 +67,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Cannot boot yourself' }, { status: 400 });
   }
 
-  // Verify admin's password by re-authenticating
+  // Verify admin's password using a separate service-client sign-in
+  // to avoid mutating the current session cookies
   const email = adminProfile.email ?? user.email;
   if (!email) {
     return NextResponse.json({ error: 'Could not determine admin email' }, { status: 500 });
   }
 
-  const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
+  const verifier = createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  );
+  const { error: authError } = await verifier.auth.signInWithPassword({ email, password });
   if (authError) {
-    // TODO: Replace with proper logging system
-    // Admin password verification failed for boot member operation
     return NextResponse.json({ error: 'Incorrect password' }, { status: 403 });
   }
 
@@ -102,6 +126,36 @@ export async function POST(req: NextRequest) {
 
   // 8b. Activity log entries
   await service.from('activity_log').delete().eq('user_id', userId);
+
+  // 8c. Delete user's storage files (avatars)
+  const { data: avatarFiles } = await service.storage.from('avatars').list(userId);
+  if (avatarFiles && avatarFiles.length > 0) {
+    await service.storage.from('avatars').remove(avatarFiles.map(f => `${userId}/${f.name}`));
+  }
+
+  // 8d. Delete user's storage files (signed agreements)
+  const { data: agreementFiles } = await service.storage.from('agreements').list(userId);
+  if (agreementFiles && agreementFiles.length > 0) {
+    await service.storage.from('agreements').remove(agreementFiles.map(f => `${userId}/${f.name}`));
+  }
+
+  // 8e. Remove user from granted_user_ids in docs
+  const { data: grantedDocs } = await service
+    .from('docs')
+    .select('id, granted_user_ids')
+    .contains('granted_user_ids', [userId]);
+  if (grantedDocs && grantedDocs.length > 0) {
+    for (const doc of grantedDocs) {
+      const updated = (doc.granted_user_ids as string[]).filter((id: string) => id !== userId);
+      await service.from('docs').update({ granted_user_ids: updated } as never).eq('id', doc.id);
+    }
+  }
+
+  // 8f. Clean up pending invite (get email before profile deletion)
+  const { data: bootedProfile } = await service.from('profiles').select('email').eq('id', userId).single();
+  if (bootedProfile?.email) {
+    await service.from('pending_invites').delete().eq('email', bootedProfile.email.toLowerCase());
+  }
 
   // 9. Delete profile
   const { error: profileErr } = await service.from('profiles').delete().eq('id', userId);

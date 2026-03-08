@@ -90,6 +90,28 @@ function tzAbbrev(tz?: string): string {
  * MemberRow — single team member
  * ───────────────────────────────────────────────────────── */
 
+function NdaBadge({ member }: { member: Profile }) {
+  if (member.is_admin) {
+    return (
+      <Badge variant="outline" className="text-[10px] py-0 px-1.5 shrink-0 border-muted-foreground/40 text-muted-foreground">
+        Exempt
+      </Badge>
+    );
+  }
+  if (member.nda_accepted_at) {
+    return (
+      <Badge variant="outline" className="text-[10px] py-0 px-1.5 shrink-0 border-emerald-500/50 text-emerald-400">
+        NDA ✓
+      </Badge>
+    );
+  }
+  return (
+    <Badge variant="outline" className="text-[10px] py-0 px-1.5 shrink-0 border-amber-500/50 text-amber-400">
+      NDA Pending
+    </Badge>
+  );
+}
+
 function MemberRow({ member, isAdmin }: { member: Profile; isAdmin: boolean }) {
   const online = isOnline(member.last_seen_at);
   const localTime = currentTimeInTz(member.timezone);
@@ -118,6 +140,7 @@ function MemberRow({ member, isAdmin }: { member: Profile; isAdmin: boolean }) {
           {member.is_admin && (
             <Badge variant="outline" className="text-[10px] py-0 px-1.5 shrink-0">Lead</Badge>
           )}
+          {isAdmin && <NdaBadge member={member} />}
           {/* Status — mobile only */}
           <span className={`md:hidden ml-auto text-[11px] shrink-0 ${online ? 'text-seeko-accent' : 'text-muted-foreground/60'}`}>
             {lastSeenLabel(member.last_seen_at, member.must_set_password)}

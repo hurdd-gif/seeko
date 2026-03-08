@@ -47,6 +47,10 @@ export type Profile = {
   last_seen_at?: string;
   timezone?: string;
   paypal_email?: string;
+  // NDA agreement fields
+  nda_accepted_at?: string;
+  nda_signer_name?: string;
+  nda_signer_address?: string;
 };
 
 export type Doc = {

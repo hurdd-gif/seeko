@@ -161,7 +161,7 @@ function TourContent({
   setTourOpen: (v: boolean) => void;
   steps: TourStep[];
 }) {
-  const { setSteps, currentStep } = useTour();
+  const { setSteps, currentStep, isActive } = useTour();
 
   const cmdKStepIndex = useMemo(
     () => steps.findIndex((s) => s.selectorId === TOUR_STEP_IDS.CMD_K),
@@ -178,28 +178,45 @@ function TourContent({
     }
   }, [showTour, steps.length, setTourOpen]);
 
-  // Auto-open the command palette when the tour reaches the Cmd+K step,
-  // then force the tour to re-query element position after it renders.
-  // Close the palette when leaving that step.
+  // When the tour reaches the Cmd+K step:
+  // 1. Add a class to lower the palette z-index so it sits BEHIND the tour overlay
+  // 2. Auto-open the palette so it's visible inside the tour highlight
+  // 3. Suppress keyboard input so the user can't interact with the palette
   useEffect(() => {
     if (cmdKStepIndex === -1) return;
 
     if (currentStep === cmdKStepIndex) {
+      // Lower the palette z-index by adding a body class
+      document.body.classList.add('tour-cmd-k-active');
+
       const openTimer = setTimeout(() => {
         window.dispatchEvent(new CustomEvent('open-command-palette'));
       }, 300);
-      // Force tour overlay to re-find the element after palette has rendered
       const reQueryTimer = setTimeout(() => {
         window.dispatchEvent(new Event('resize'));
       }, 500);
+
       return () => {
         clearTimeout(openTimer);
         clearTimeout(reQueryTimer);
-        // Close the palette when leaving this step
+        document.body.classList.remove('tour-cmd-k-active');
         window.dispatchEvent(new CustomEvent('close-command-palette'));
       };
     }
   }, [currentStep, cmdKStepIndex]);
+
+  // Suppress Cmd+K keyboard shortcut during the entire tour
+  useEffect(() => {
+    if (!isActive) return;
+    const suppress = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+    window.addEventListener('keydown', suppress, true);
+    return () => window.removeEventListener('keydown', suppress, true);
+  }, [isActive]);
 
   return null;
 }

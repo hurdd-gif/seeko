@@ -6,6 +6,17 @@ import type { TaskDeliverable } from '@/lib/types';
 
 const BUCKET = 'task-deliverables';
 const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25 MB
+
+// Allowlisted MIME prefixes for uploads — blocks HTML, SVG, and executable types
+const ALLOWED_MIME_PREFIXES = ['image/', 'video/', 'audio/', 'application/pdf', 'application/zip', 'application/x-zip', 'text/plain', 'application/octet-stream'];
+const BLOCKED_EXTENSIONS = ['.html', '.htm', '.svg', '.js', '.exe', '.bat', '.sh', '.cmd', '.msi', '.php'];
+
+function isAllowedFile(file: File): boolean {
+  const ext = ('.' + (file.name.split('.').pop() ?? '').toLowerCase());
+  if (BLOCKED_EXTENSIONS.includes(ext)) return false;
+  const mime = (file.type || 'application/octet-stream').toLowerCase();
+  return ALLOWED_MIME_PREFIXES.some(prefix => mime.startsWith(prefix));
+}
 const SIGNED_URL_EXPIRY_SEC = 365 * 24 * 3600; // 1 year — deliverables are long-lived; 1 h caused links to expire before admins could review them
 
 async function getSupabaseAndUser() {
@@ -100,6 +111,9 @@ export async function POST(
   if (!file) return NextResponse.json({ error: 'No file provided' }, { status: 400 });
   if (file.size > MAX_FILE_SIZE) {
     return NextResponse.json({ error: 'File too large (max 25 MB)' }, { status: 400 });
+  }
+  if (!isAllowedFile(file)) {
+    return NextResponse.json({ error: 'File type not allowed' }, { status: 400 });
   }
 
   const storagePath = `${taskId}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;

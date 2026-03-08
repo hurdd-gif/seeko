@@ -42,6 +42,10 @@ services:
         sync: false
       - key: NOTION_DOCS_PAGE_ID
         sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: ADMIN_EMAIL
+        sync: false
 ```
 
 Note: `sync: false` means the value is set manually in the Render dashboard, not committed to the repo.
@@ -62,6 +66,8 @@ Note: `sync: false` means the value is set manually in the Render dashboard, not
 | `NOTION_DOCS_PAGE_ID`          | Render + .env.local | Notion Docs parent page ID           |
 | `PAYMENTS_ACCESS_HASH`         | Render dashboard   | bcrypt hash of payments password       |
 | `PAYMENTS_JWT_SECRET`          | Render + .env.local | Secret for signing payment session JWTs |
+| `RESEND_API_KEY`               | Render dashboard   | Resend API key for transactional email   |
+| `ADMIN_EMAIL`                  | Render dashboard   | Admin email for NDA notification copies  |
 
 ---
 

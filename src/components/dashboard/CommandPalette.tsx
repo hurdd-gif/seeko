@@ -146,6 +146,7 @@ export function CommandPalette({ team, docs, isContractor = false }: CommandPale
       {open && (
         <>
           <motion.div
+            id="command-palette-backdrop"
             className="fixed inset-0 z-[103] bg-black/50 backdrop-blur-sm"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -154,6 +155,7 @@ export function CommandPalette({ team, docs, isContractor = false }: CommandPale
             onClick={() => setOpen(false)}
           />
           <motion.div
+            id="command-palette-container"
             className="fixed inset-x-0 top-[18%] z-[104] mx-auto w-full max-w-lg"
             initial={shouldReduce ? undefined : { opacity: 0, scale: 0.95, y: -8 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}

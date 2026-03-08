@@ -12,7 +12,7 @@ import { Select } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Camera, Check, Eye, MousePointer, Monitor, UserX, AlertTriangle, RotateCcw, DollarSign, Vibrate } from 'lucide-react';
+import { Camera, Check, Eye, MousePointer, Monitor, UserX, AlertTriangle, RotateCcw, DollarSign, Vibrate, Lock, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { Profile, UserEvent, Task, Payment } from '@/lib/types';
 import { useHaptics } from '@/components/HapticsProvider';
@@ -113,6 +113,13 @@ export function SettingsPanel({ profile, isAdmin, team, revalidate, completedTas
   const [bootLoading, setBootLoading] = useState(false);
   const [bootError, setBootError] = useState('');
   const avatarInputRef = useRef<HTMLInputElement>(null);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [pwSaving, setPwSaving] = useState(false);
+  const [pwError, setPwError] = useState('');
+  const [pwSuccess, setPwSuccess] = useState(false);
+  const [pwOpen, setPwOpen] = useState(false);
   const [requestDialogOpen, setRequestDialogOpen] = useState(false);
   const [myPayments, setMyPayments] = useState<Payment[]>([]);
   const [loadingPayments, setLoadingPayments] = useState(false);
@@ -187,6 +194,31 @@ export function SettingsPanel({ profile, isAdmin, team, revalidate, completedTas
     trigger('success');
     router.refresh();
     setTimeout(() => setSaved(false), 2000);
+  }
+
+  async function handleChangePassword() {
+    setPwError('');
+    setPwSuccess(false);
+    if (!currentPassword) { setPwError('Current password is required.'); return; }
+    if (newPassword.length < 8) { setPwError('New password must be at least 8 characters.'); return; }
+    if (newPassword !== confirmPassword) { setPwError('Passwords do not match.'); return; }
+
+    setPwSaving(true);
+    const { data: { user: u } } = await supabase.auth.getUser();
+    if (!u?.email) { setPwError('Could not determine your email.'); setPwSaving(false); return; }
+
+    const { error: signInErr } = await supabase.auth.signInWithPassword({ email: u.email, password: currentPassword });
+    if (signInErr) { setPwError('Current password is incorrect.'); setPwSaving(false); trigger('error'); return; }
+
+    const { error: updateErr } = await supabase.auth.updateUser({ password: newPassword });
+    if (updateErr) { setPwError(updateErr.message); setPwSaving(false); trigger('error'); return; }
+
+    setPwSaving(false);
+    setPwSuccess(true);
+    setCurrentPassword(''); setNewPassword(''); setConfirmPassword('');
+    toast.success('Password updated');
+    trigger('success');
+    setTimeout(() => setPwSuccess(false), 3000);
   }
 
   const loadEvents = useCallback(async () => {
@@ -346,6 +378,68 @@ export function SettingsPanel({ profile, isAdmin, team, revalidate, completedTas
               {saved ? <><Check className="size-3.5" /> Saved</> : saving ? 'Saving...' : 'Save Changes'}
             </Button>
           </div>
+
+          <Separator />
+
+          <button
+            type="button"
+            className="flex items-center gap-2 w-full text-left"
+            onClick={() => setPwOpen(v => !v)}
+          >
+            <Lock className="size-4 text-muted-foreground" />
+            <p className="text-sm font-medium text-foreground flex-1">Change Password</p>
+            <ChevronDown className={cn("size-4 text-muted-foreground transition-transform duration-200", pwOpen && "rotate-180")} />
+          </button>
+
+          {pwOpen && (
+            <div className="flex flex-col gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="current-password">Current Password</Label>
+                <Input
+                  id="current-password"
+                  type="password"
+                  value={currentPassword}
+                  onChange={e => { setCurrentPassword(e.target.value); setPwError(''); }}
+                  placeholder="Enter current password"
+                />
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="new-password">New Password</Label>
+                  <Input
+                    id="new-password"
+                    type="password"
+                    value={newPassword}
+                    onChange={e => { setNewPassword(e.target.value); setPwError(''); }}
+                    placeholder="At least 8 characters"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="confirm-password">Confirm New Password</Label>
+                  <Input
+                    id="confirm-password"
+                    type="password"
+                    value={confirmPassword}
+                    onChange={e => { setConfirmPassword(e.target.value); setPwError(''); }}
+                    placeholder="Re-enter new password"
+                    onKeyDown={e => e.key === 'Enter' && handleChangePassword()}
+                  />
+                </div>
+              </div>
+              {pwError && <p className="text-sm text-destructive">{pwError}</p>}
+              {pwSuccess && <p className="text-sm text-seeko-accent">Password updated successfully.</p>}
+              <div className="flex justify-end">
+                <Button
+                  type="button"
+                  onClick={handleChangePassword}
+                  disabled={pwSaving}
+                  className="gap-2 min-w-[7.5rem] min-h-[2.5rem] touch-manipulation"
+                >
+                  {pwSaving ? 'Updating...' : 'Update Password'}
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 

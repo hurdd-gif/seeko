@@ -28,6 +28,11 @@ Every authenticated user gets a profile row automatically on signup. This double
 | is_contractor | boolean        | Contractor; Activity page hidden from sidebar                |
 | is_investor   | boolean        | Grants access to /investor panel; investors see limited view |
 | created_at    | timestamptz    |                                                              |
+| nda_accepted_at   | timestamptz    | When they signed the NDA (null = not signed)                 |
+| nda_signer_name   | text           | Legal full name as typed during signing                      |
+| nda_signer_address| text           | Address as typed during signing                              |
+| nda_ip            | text           | IP address at time of signing                                |
+| nda_user_agent    | text           | Browser user agent at time of signing                        |
 
 ---
 

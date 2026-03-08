@@ -34,6 +34,11 @@ export async function POST(req: NextRequest) {
   const { kind, title, body: notifBody, link } = body;
   if (!kind || !title) return NextResponse.json({ error: 'kind and title required' }, { status: 400 });
 
+  // Only allow internal relative paths as notification links (no external URLs)
+  if (link && (typeof link !== 'string' || !link.startsWith('/') || link.startsWith('//'))) {
+    return NextResponse.json({ error: 'link must be a relative path starting with /' }, { status: 400 });
+  }
+
   const service = createServiceClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
