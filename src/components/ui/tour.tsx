@@ -64,10 +64,13 @@ function TourOverlay({
   elementPosition: { top: number; left: number; width: number; height: number };
 }) {
   const pad = 4;
-  const top = elementPosition.top - pad;
-  const left = elementPosition.left - pad;
-  const w = elementPosition.width + pad * 2;
-  const h = elementPosition.height + pad * 2;
+  const vh = typeof window !== 'undefined' ? window.innerHeight : 9999;
+  const vw = typeof window !== 'undefined' ? window.innerWidth : 9999;
+  // Clamp highlight so it doesn't extend past the viewport (fixes bottom nav clipping on mobile)
+  const top = Math.max(0, elementPosition.top - pad);
+  const left = Math.max(0, elementPosition.left - pad);
+  const w = Math.min(elementPosition.width + pad * 2, vw - left);
+  const h = Math.min(elementPosition.height + pad * 2, vh - top);
 
   return (
     <motion.div
@@ -114,13 +117,19 @@ function TourOverlay({
 }
 
 const PADDING = 16;
-const CONTENT_WIDTH = 300;
+const CONTENT_MAX_WIDTH = 300;
 const CONTENT_HEIGHT = 200;
+
+function getContentWidth() {
+  return Math.min(CONTENT_MAX_WIDTH, window.innerWidth - PADDING * 2);
+}
 
 function getElementPosition(id: string) {
   const element = document.getElementById(id);
   if (!element) return null;
   const rect = element.getBoundingClientRect();
+  // Skip elements that are hidden (zero dimensions = display:none / hidden class)
+  if (rect.width === 0 && rect.height === 0) return null;
   return {
     top: rect.top,
     left: rect.left,
@@ -135,6 +144,7 @@ function calculateContentPosition(
 ) {
   const viewportWidth = window.innerWidth;
   const viewportHeight = window.innerHeight;
+  const contentWidth = getContentWidth();
 
   let left = elementPos.left;
   let top = elementPos.top;
@@ -142,14 +152,14 @@ function calculateContentPosition(
   switch (position) {
     case 'top':
       top = elementPos.top - CONTENT_HEIGHT - PADDING;
-      left = elementPos.left + elementPos.width / 2 - CONTENT_WIDTH / 2;
+      left = elementPos.left + elementPos.width / 2 - contentWidth / 2;
       break;
     case 'bottom':
       top = elementPos.top + elementPos.height + PADDING;
-      left = elementPos.left + elementPos.width / 2 - CONTENT_WIDTH / 2;
+      left = elementPos.left + elementPos.width / 2 - contentWidth / 2;
       break;
     case 'left':
-      left = elementPos.left - CONTENT_WIDTH - PADDING;
+      left = elementPos.left - contentWidth - PADDING;
       top = elementPos.top + elementPos.height / 2 - CONTENT_HEIGHT / 2;
       break;
     case 'right':
@@ -160,8 +170,8 @@ function calculateContentPosition(
 
   return {
     top: Math.max(PADDING, Math.min(top, viewportHeight - CONTENT_HEIGHT - PADDING)),
-    left: Math.max(PADDING, Math.min(left, viewportWidth - CONTENT_WIDTH - PADDING)),
-    width: CONTENT_WIDTH,
+    left: Math.max(PADDING, Math.min(left, viewportWidth - contentWidth - PADDING)),
+    width: contentWidth,
     height: CONTENT_HEIGHT,
   };
 }
@@ -188,6 +198,11 @@ export function TourProvider({
   } | null>(null);
   const [isCompleted, setIsCompleted] = useState(isTourCompleted);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Sync internal state when the prop changes (e.g. replay tour resets it)
+  useEffect(() => {
+    setIsCompleted(isTourCompleted);
+  }, [isTourCompleted]);
 
   const updateElementPosition = useCallback(() => {
     if (currentStep >= 0 && currentStep < steps.length) {
