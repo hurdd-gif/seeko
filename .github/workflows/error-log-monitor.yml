@@ -85,16 +85,15 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
           ERROR_SUMMARY=$(cat /tmp/error_logs.txt | head -50)
-          REPORT_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 
           # Create a GitHub issue with error analysis
           gh issue create \
             --title "Error Log Monitor: $(date -u +%Y-%m-%d) — errors detected" \
             --label "automated-fix,bug" \
-            --body "$(cat <<EOF
+            --body "$(cat <<'ISSUE_EOF'
           ## Error Log Monitor Report
 
-          **Date:** $REPORT_DATE
+          **Date:** $(date -u +%Y-%m-%dT%H:%M:%SZ)
           **Source:** Render.com production logs
 
           ### Errors Detected
@@ -109,7 +108,7 @@ jobs:
 
           ---
           *Automated by error-log-monitor workflow*
-          EOF
+          ISSUE_EOF
           )"
 
       - name: Report healthy
