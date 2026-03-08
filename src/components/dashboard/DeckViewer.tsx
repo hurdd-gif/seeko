@@ -83,7 +83,8 @@ export function DeckViewer({ slides, title }: DeckViewerProps) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-50 bg-black flex flex-col items-center justify-center"
+            style={{ backgroundColor: '#000' }}
+            className="fixed inset-0 z-50 flex flex-col items-center justify-center"
           >
             {/* Top bar */}
             <div className="absolute top-0 inset-x-0 flex items-center justify-between px-4 py-3 bg-gradient-to-b from-black/60 to-transparent z-10">
@@ -98,26 +99,31 @@ export function DeckViewer({ slides, title }: DeckViewerProps) {
               </div>
             </div>
 
-            {/* Slide */}
-            <AnimatePresence mode="wait">
-              <motion.img
-                key={currentSlide}
-                src={sorted[currentSlide].url}
-                alt={`Slide ${currentSlide + 1}`}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.15 }}
-                className="max-h-[85vh] max-w-[95vw] object-contain select-none"
-                draggable={false}
-              />
-            </AnimatePresence>
+            {/* Slide — click to advance */}
+            <div
+              className="flex-1 flex items-center justify-center w-full cursor-pointer"
+              onClick={goNext}
+            >
+              <AnimatePresence mode="wait">
+                <motion.img
+                  key={currentSlide}
+                  src={sorted[currentSlide].url}
+                  alt={`Slide ${currentSlide + 1}`}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.15 }}
+                  className="max-h-[85vh] max-w-[95vw] object-contain select-none"
+                  draggable={false}
+                />
+              </AnimatePresence>
+            </div>
 
             {/* Navigation arrows */}
             {currentSlide > 0 && (
               <button
                 type="button"
-                onClick={goPrev}
+                onClick={(e) => { e.stopPropagation(); goPrev(); }}
                 className="absolute left-4 top-1/2 -translate-y-1/2 size-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
               >
                 <ChevronLeft className="size-5" />
@@ -126,7 +132,7 @@ export function DeckViewer({ slides, title }: DeckViewerProps) {
             {currentSlide < sorted.length - 1 && (
               <button
                 type="button"
-                onClick={goNext}
+                onClick={(e) => { e.stopPropagation(); goNext(); }}
                 className="absolute right-4 top-1/2 -translate-y-1/2 size-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
               >
                 <ChevronRight className="size-5" />
