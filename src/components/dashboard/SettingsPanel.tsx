@@ -12,7 +12,7 @@ import { Select } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Camera, Check, Eye, MousePointer, Monitor, UserX, AlertTriangle, RotateCcw, DollarSign, Vibrate } from 'lucide-react';
+import { Camera, Check, Eye, MousePointer, Monitor, UserX, AlertTriangle, RotateCcw, DollarSign, Vibrate, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 import { Profile, UserEvent, Task, Payment } from '@/lib/types';
 import { useHaptics } from '@/components/HapticsProvider';
@@ -349,6 +349,8 @@ export function SettingsPanel({ profile, isAdmin, team, revalidate, completedTas
         </CardContent>
       </Card>
 
+      <ChangePasswordCard supabase={supabase} trigger={trigger} />
+
       <ReplayTourCard userId={profile.id} />
 
       <HapticsToggleCard />
@@ -677,6 +679,137 @@ function ReplayTourCard({ userId }: { userId: string }) {
           </Button>
         </div>
       </CardHeader>
+    </Card>
+  );
+}
+
+function ChangePasswordCard({ supabase, trigger }: { supabase: ReturnType<typeof createBrowserClient>; trigger: (type: 'success' | 'error') => void }) {
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
+
+  async function handleChangePassword() {
+    setError('');
+    setSuccess(false);
+
+    if (!currentPassword) {
+      setError('Current password is required.');
+      return;
+    }
+    if (newPassword.length < 8) {
+      setError('New password must be at least 8 characters.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+
+    setSaving(true);
+
+    // Verify current password by re-authenticating
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user?.email) {
+      setError('Could not determine your email.');
+      setSaving(false);
+      return;
+    }
+
+    const { error: signInErr } = await supabase.auth.signInWithPassword({
+      email: user.email,
+      password: currentPassword,
+    });
+
+    if (signInErr) {
+      setError('Current password is incorrect.');
+      setSaving(false);
+      trigger('error');
+      return;
+    }
+
+    // Update to new password
+    const { error: updateErr } = await supabase.auth.updateUser({
+      password: newPassword,
+    });
+
+    if (updateErr) {
+      setError(updateErr.message);
+      setSaving(false);
+      trigger('error');
+      return;
+    }
+
+    setSaving(false);
+    setSuccess(true);
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
+    toast.success('Password updated');
+    trigger('success');
+    setTimeout(() => setSuccess(false), 3000);
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center gap-2">
+          <Lock className="size-4 text-muted-foreground" />
+          <div>
+            <CardTitle>Change Password</CardTitle>
+            <CardDescription>Update your account password.</CardDescription>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="current-password">Current Password</Label>
+          <Input
+            id="current-password"
+            type="password"
+            value={currentPassword}
+            onChange={e => { setCurrentPassword(e.target.value); setError(''); }}
+            placeholder="Enter current password"
+          />
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="new-password">New Password</Label>
+            <Input
+              id="new-password"
+              type="password"
+              value={newPassword}
+              onChange={e => { setNewPassword(e.target.value); setError(''); }}
+              placeholder="At least 8 characters"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="confirm-password">Confirm New Password</Label>
+            <Input
+              id="confirm-password"
+              type="password"
+              value={confirmPassword}
+              onChange={e => { setConfirmPassword(e.target.value); setError(''); }}
+              placeholder="Re-enter new password"
+              onKeyDown={e => e.key === 'Enter' && handleChangePassword()}
+            />
+          </div>
+        </div>
+        {error && <p className="text-sm text-destructive">{error}</p>}
+        {success && <p className="text-sm text-seeko-accent">Password updated successfully.</p>}
+        <div className="flex justify-end">
+          <Button
+            type="button"
+            onClick={handleChangePassword}
+            disabled={saving}
+            className="gap-2 min-w-[7.5rem] min-h-[2.5rem] touch-manipulation"
+          >
+            {saving ? 'Updating...' : 'Update Password'}
+          </Button>
+        </div>
+      </CardContent>
     </Card>
   );
 }
