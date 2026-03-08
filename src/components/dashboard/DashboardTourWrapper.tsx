@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { TourProvider, TourAlertDialog, useTour, type TourStep } from '@/components/ui/tour';
-import { TOUR_STEP_IDS } from '@/lib/tour-constants';
+import { TOUR_STEP_IDS, TOUR_STEP_IDS_MOBILE } from '@/lib/tour-constants';
 import { TourConfetti } from '@/components/dashboard/TourConfetti';
 
 function useIsMac() {
@@ -34,53 +34,57 @@ function KeybindKbd({ isMac }: { isMac: boolean }) {
   );
 }
 
-const SIDEBAR_STEPS: TourStep[] = [
-  {
-    selectorId: TOUR_STEP_IDS.OVERVIEW,
-    content: (
-      <p>
-        <strong>Overview</strong> — Your home screen. See open tasks, completed count, team size, and game areas at a glance.
-      </p>
-    ),
-    position: 'right',
-  },
-  {
-    selectorId: TOUR_STEP_IDS.TASKS,
-    content: (
-      <p>
-        <strong>Tasks</strong> — View and manage your assigned tasks. Search, filter by status, and open task details from here.
-      </p>
-    ),
-    position: 'right',
-  },
-  {
-    selectorId: TOUR_STEP_IDS.TEAM,
-    content: (
-      <p>
-        <strong>Team</strong> — See who's in your workspace and how to get in touch.
-      </p>
-    ),
-    position: 'right',
-  },
-  {
-    selectorId: TOUR_STEP_IDS.DOCS,
-    content: (
-      <p>
-        <strong>Docs</strong> — Shared documents and resources for the team.
-      </p>
-    ),
-    position: 'right',
-  },
-  {
-    selectorId: TOUR_STEP_IDS.ACTIVITY,
-    content: (
-      <p>
-        <strong>Activity</strong> — Recent actions and updates from your team.
-      </p>
-    ),
-    position: 'right',
-  },
-];
+function buildNavSteps(isMobile: boolean): TourStep[] {
+  const ids = isMobile ? TOUR_STEP_IDS_MOBILE : TOUR_STEP_IDS;
+  const pos = isMobile ? 'top' as const : 'right' as const;
+  return [
+    {
+      selectorId: ids.OVERVIEW,
+      content: (
+        <p>
+          <strong>Overview</strong> — Your home screen. See open tasks, completed count, team size, and game areas at a glance.
+        </p>
+      ),
+      position: pos,
+    },
+    {
+      selectorId: ids.TASKS,
+      content: (
+        <p>
+          <strong>Tasks</strong> — View and manage your assigned tasks. Search, filter by status, and open task details from here.
+        </p>
+      ),
+      position: pos,
+    },
+    {
+      selectorId: ids.TEAM,
+      content: (
+        <p>
+          <strong>Team</strong> — See who's in your workspace and how to get in touch.
+        </p>
+      ),
+      position: pos,
+    },
+    {
+      selectorId: ids.DOCS,
+      content: (
+        <p>
+          <strong>Docs</strong> — Shared documents and resources for the team.
+        </p>
+      ),
+      position: pos,
+    },
+    {
+      selectorId: ids.ACTIVITY,
+      content: (
+        <p>
+          <strong>Activity</strong> — Recent actions and updates from your team.
+        </p>
+      ),
+      position: pos,
+    },
+  ];
+}
 
 interface DashboardTourWrapperProps {
   children: React.ReactNode;
@@ -101,9 +105,10 @@ export function DashboardTourWrapper({ children, showTour, userId, isContractor 
   );
 
   const tourSteps = useMemo<TourStep[]>(() => {
-    let steps = SIDEBAR_STEPS;
+    let steps = buildNavSteps(isMobile);
     if (isContractor) {
-      steps = steps.filter((s) => s.selectorId !== TOUR_STEP_IDS.ACTIVITY);
+      const activityId = isMobile ? TOUR_STEP_IDS_MOBILE.ACTIVITY : TOUR_STEP_IDS.ACTIVITY;
+      steps = steps.filter((s) => s.selectorId !== activityId);
     }
     if (isMobile) return steps;
     return [

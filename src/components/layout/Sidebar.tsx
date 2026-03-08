@@ -76,7 +76,7 @@ import {
 import dynamic from 'next/dynamic';
 import { Button } from '@/components/ui/button';
 import { Notification } from '@/lib/types';
-import { TOUR_STEP_IDS } from '@/lib/tour-constants';
+import { TOUR_STEP_IDS, TOUR_STEP_IDS_MOBILE } from '@/lib/tour-constants';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import Image from 'next/image';
@@ -466,7 +466,7 @@ export function Sidebar({
                         <>
                           {primaryNav.map(({ href, mobileLabel, icon: Icon, tourKey }) => {
                             const isActive = href === '/' ? pathname === '/' : pathname.startsWith(href);
-                            const tourId = tourKey != null ? TOUR_STEP_IDS[tourKey] : undefined;
+                            const tourId = tourKey != null ? (TOUR_STEP_IDS_MOBILE as Record<string, string>)[tourKey] : undefined;
                             return (
                               <motion.div key={href} className="flex flex-1" whileTap={{ scale: BOTTOM_NAV.tapScale }} transition={BOTTOM_NAV.tapSpring}>
                                 <Link
