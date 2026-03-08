@@ -96,8 +96,8 @@ function collapseNotifications(items: Notification[]): DisplayNotification[] {
       if (!n.read) existing.read = false;
       // Sum dollar amounts if payment
       if (n.kind === 'payment_request') {
-        const existAmount = parseFloat(existing.title.match(/\$([\d,.]+)/)?.[1]?.replace(',', '') ?? '0');
-        const newAmount = parseFloat(n.title.match(/\$([\d,.]+)/)?.[1]?.replace(',', '') ?? '0');
+        const existAmount = parseFloat(existing.title.match(/\$([\d,.]+)/)?.[1]?.replace(/,/g, '') ?? '0');
+        const newAmount = parseFloat(n.title.match(/\$([\d,.]+)/)?.[1]?.replace(/,/g, '') ?? '0');
         const total = existAmount + newAmount;
         existing.title = existing.title.replace(/\$[\d,.]+/, `$${total.toFixed(2)}`);
         existing.body = `${existing.count} payments`;

@@ -7,7 +7,7 @@ export async function GET(req: NextRequest) {
 
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   if (!isAdmin && !isInvestor) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  if (isAdmin && !tokenValid) return NextResponse.json({ error: 'Payments token required' }, { status: 401 });
+  if (!tokenValid) return NextResponse.json({ error: 'Payments token required' }, { status: 401 });
 
   let query = supabase
     .from('payments')
@@ -47,6 +47,12 @@ export async function POST(req: NextRequest) {
 
   if (!body.recipient_id || !body.amount || !body.items?.length) {
     return NextResponse.json({ error: 'recipient_id, amount, and items are required' }, { status: 400 });
+  }
+  if (!Number.isFinite(body.amount) || body.amount <= 0) {
+    return NextResponse.json({ error: 'amount must be a positive number' }, { status: 400 });
+  }
+  if (body.items.some(item => !Number.isFinite(item.amount) || item.amount <= 0)) {
+    return NextResponse.json({ error: 'each item amount must be a positive number' }, { status: 400 });
   }
 
   const status = body.status ?? 'pending';

@@ -24,6 +24,12 @@ export async function POST(req: NextRequest) {
   if (!body.amount || !body.items?.length) {
     return NextResponse.json({ error: 'amount and items are required' }, { status: 400 });
   }
+  if (!Number.isFinite(body.amount) || body.amount <= 0) {
+    return NextResponse.json({ error: 'amount must be a positive number' }, { status: 400 });
+  }
+  if (body.items.some(item => !Number.isFinite(item.amount) || item.amount <= 0)) {
+    return NextResponse.json({ error: 'each item amount must be a positive number' }, { status: 400 });
+  }
 
   // Use service role to bypass RLS for insert
   const service = createServiceClient(

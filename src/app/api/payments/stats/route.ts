@@ -7,7 +7,7 @@ export async function GET(req: NextRequest) {
 
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   if (!isAdmin && !isInvestor) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  if (isAdmin && !tokenValid) return NextResponse.json({ error: 'Payments token required' }, { status: 401 });
+  if (!tokenValid) return NextResponse.json({ error: 'Payments token required' }, { status: 401 });
 
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
