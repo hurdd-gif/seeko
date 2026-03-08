@@ -87,7 +87,7 @@ export function DeckViewer({ slides, title }: DeckViewerProps) {
             className="fixed inset-0 z-50 flex flex-col items-center justify-center"
           >
             {/* Top bar */}
-            <div className="absolute top-0 inset-x-0 flex items-center justify-between px-4 py-3 bg-gradient-to-b from-black/60 to-transparent z-10">
+            <div className="absolute top-0 inset-x-0 flex items-center justify-between px-4 py-3 z-10">
               <span className="text-sm text-white/80 font-medium truncate">{title}</span>
               <div className="flex items-center gap-3">
                 <span className="text-xs text-white/60 font-mono">
