@@ -241,78 +241,82 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, cu
               className="group cursor-pointer transition-colors hover:border-foreground/20"
               onClick={() => setSelected(doc)}
             >
-              <CardContent className={cn("flex items-start gap-3.5 p-4", isDeck && "flex-col")}>
-                {/* Deck thumbnail */}
+              <CardContent className={cn("flex items-start gap-3.5 p-4", isDeck && doc.slides?.[0] && "flex-col p-0 pb-3")}>
+                {/* Deck thumbnail — replaces icon when present */}
                 {isDeck && doc.slides?.[0] && (
-                  <div className="w-full aspect-[16/9] rounded-md overflow-hidden bg-secondary">
+                  <div className="relative w-full aspect-[16/9] rounded-t-lg overflow-hidden bg-secondary">
                     <img src={doc.slides[0].url} alt="" className="w-full h-full object-cover" />
+                    {recent && (
+                      <span className="absolute top-2 right-2 size-2 rounded-full bg-seeko-accent" />
+                    )}
                   </div>
                 )}
-                <div className={cn("flex items-start gap-3.5", isDeck ? "w-full" : "")}>
+                {/* Icon row — only for docs or decks without thumbnails */}
+                {(!isDeck || !doc.slides?.[0]) && (
                   <div className="relative flex size-9 shrink-0 items-center justify-center rounded-md bg-secondary">
                     {isDeck ? <Presentation className="size-4 text-foreground" /> : <FileText className="size-4 text-foreground" />}
                     {recent && (
                       <span className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-seeko-accent" />
                     )}
                   </div>
-                  <div className="flex flex-col gap-1 min-w-0 flex-1">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex flex-wrap items-center gap-2 min-w-0">
-                        <p className="text-sm font-medium text-foreground truncate">{doc.title}</p>
-                        {isDeck && doc.slides && (
-                          <span className="text-[10px] text-muted-foreground/50 font-mono">{doc.slides.length} slides</span>
-                        )}
-                        {recent && (
-                          <Badge variant="outline" className="text-[10px] font-medium text-seeko-accent border-seeko-accent/25 shrink-0">Updated</Badge>
-                        )}
-                        {doc.restricted_department?.map(dept => (
-                          <Badge key={dept} variant="outline" className="text-xs font-normal text-muted-foreground shrink-0">{dept}</Badge>
-                        ))}
-                      </div>
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        {(doc.updated_at || doc.created_at) && (
-                          <span className="text-[11px] text-muted-foreground/50 hidden sm:inline">
-                            {timeAgo(doc.updated_at ?? doc.created_at!)}
-                          </span>
-                        )}
-                        {isAdmin && (
-                          <>
-                            <button
-                              type="button"
-                              title="Edit"
-                              onClick={handleEdit}
-                              className="flex size-7 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground opacity-0 group-hover:opacity-100"
-                            >
-                              <Pencil className="size-3.5" />
-                            </button>
-                            <button
-                              type="button"
-                              title="Delete"
-                              onClick={(e) => { e.stopPropagation(); setDeletingId(doc.id); }}
-                              className="flex size-7 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive opacity-0 group-hover:opacity-100"
-                            >
-                              <Trash2 className="size-3.5" />
-                            </button>
-                          </>
-                        )}
-                      </div>
+                )}
+                <div className={cn("flex flex-col gap-1 min-w-0 flex-1", isDeck && doc.slides?.[0] && "px-3")}>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex flex-wrap items-center gap-2 min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">{doc.title}</p>
+                      {isDeck && doc.slides && (
+                        <span className="text-[10px] text-muted-foreground/50 font-mono">{doc.slides.length} slides</span>
+                      )}
+                      {recent && (
+                        <Badge variant="outline" className="text-[10px] font-medium text-seeko-accent border-seeko-accent/25 shrink-0">Updated</Badge>
+                      )}
+                      {doc.restricted_department?.map(dept => (
+                        <Badge key={dept} variant="outline" className="text-xs font-normal text-muted-foreground shrink-0">{dept}</Badge>
+                      ))}
                     </div>
-                    {isAdmin && doc.granted_user_ids?.length ? (
-                      <p className="text-[11px] text-muted-foreground/70">
-                        Also granted: {team.filter(p => doc.granted_user_ids?.includes(p.id)).map(p => p.display_name ?? 'Unknown').join(', ')}
-                      </p>
-                    ) : null}
-                    {!isDeck && doc.content ? (
-                      <p className="text-xs text-muted-foreground/80 leading-relaxed line-clamp-2">
-                        {doc.content.replace(/<[^>]*>/g, '').slice(0, 200)}
-                      </p>
-                    ) : null}
-                    {isDeck && doc.content ? (
-                      <p className="text-xs text-muted-foreground/80 leading-relaxed line-clamp-1">
-                        {doc.content.replace(/<[^>]*>/g, '').slice(0, 100)}
-                      </p>
-                    ) : null}
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {(doc.updated_at || doc.created_at) && (
+                        <span className="text-[11px] text-muted-foreground/50 hidden sm:inline">
+                          {timeAgo(doc.updated_at ?? doc.created_at!)}
+                        </span>
+                      )}
+                      {isAdmin && (
+                        <>
+                          <button
+                            type="button"
+                            title="Edit"
+                            onClick={handleEdit}
+                            className="flex size-7 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground opacity-0 group-hover:opacity-100"
+                          >
+                            <Pencil className="size-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            title="Delete"
+                            onClick={(e) => { e.stopPropagation(); setDeletingId(doc.id); }}
+                            className="flex size-7 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive opacity-0 group-hover:opacity-100"
+                          >
+                            <Trash2 className="size-3.5" />
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
+                  {isAdmin && doc.granted_user_ids?.length ? (
+                    <p className="text-[11px] text-muted-foreground/70">
+                      Also granted: {team.filter(p => doc.granted_user_ids?.includes(p.id)).map(p => p.display_name ?? 'Unknown').join(', ')}
+                    </p>
+                  ) : null}
+                  {!isDeck && doc.content ? (
+                    <p className="text-xs text-muted-foreground/80 leading-relaxed line-clamp-2">
+                      {doc.content.replace(/<[^>]*>/g, '').slice(0, 200)}
+                    </p>
+                  ) : null}
+                  {isDeck && doc.content ? (
+                    <p className="text-xs text-muted-foreground/80 leading-relaxed line-clamp-1">
+                      {doc.content.replace(/<[^>]*>/g, '').slice(0, 100)}
+                    </p>
+                  ) : null}
                 </div>
               </CardContent>
             </Card>
