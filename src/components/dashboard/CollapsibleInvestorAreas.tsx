@@ -12,10 +12,12 @@ interface CollapsibleInvestorAreasProps {
   areas: Area[];
   tasks: TaskWithAssignee[];
   subtitle: string;
+  defaultOpen?: boolean;
+  isAdmin?: boolean;
 }
 
-export function CollapsibleInvestorAreas({ areas, tasks, subtitle }: CollapsibleInvestorAreasProps) {
-  const [open, setOpen] = useState(false);
+export function CollapsibleInvestorAreas({ areas, tasks, subtitle, defaultOpen = false, isAdmin = false }: CollapsibleInvestorAreasProps) {
+  const [open, setOpen] = useState(defaultOpen);
 
   return (
     <Card>
@@ -55,6 +57,7 @@ export function CollapsibleInvestorAreas({ areas, tasks, subtitle }: Collapsible
                     key={area.id}
                     area={area}
                     tasksInArea={tasks.filter(t => t.area_id === area.id)}
+                    isAdmin={isAdmin}
                   />
                 ))}
               </Stagger>

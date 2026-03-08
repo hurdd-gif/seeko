@@ -3,11 +3,10 @@
  *
  * Read top-to-bottom. Each value is ms after mount.
  *
- *    0ms   hero fades up (title + subtitle)
- *  100ms   game areas card fades up
- *  150ms   area tiles stagger in (50ms delay, then 80ms apart)
- *  300ms   recent tasks + this week section fades up
- *  350ms   task rows stagger in (50ms delay, 60ms apart)
+ *    0ms   hero fades up (title + health summary)
+ *   50ms   KPI strip stat cards stagger in (80ms apart)
+ *  200ms   game areas card fades up (open by default)
+ *  350ms   recent activity card fades up (grouped by day)
  * ───────────────────────────────────────────────────────── */
 
 import { createClient } from '@/lib/supabase/server';
@@ -15,34 +14,24 @@ import { fetchProfile, fetchAreas, fetchActivity, fetchAllTasksWithAssignees } f
 import { Area } from '@/lib/types';
 import type { TaskWithAssignee } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { FadeRise, Stagger, StaggerItem } from '@/components/motion';
+import { FadeRise } from '@/components/motion';
 import { EmptyState } from '@/components/ui/empty-state';
-import { Badge } from '@/components/ui/badge';
-import { InvestorAreaCard } from '@/components/dashboard/InvestorAreaCard';
+import { InvestorKPIStrip } from '@/components/dashboard/InvestorKPIStrip';
 import { CollapsibleInvestorAreas } from '@/components/dashboard/CollapsibleInvestorAreas';
-import {
-  CheckSquare,
-  Map,
-  TrendingUp,
-  AlertCircle,
-} from 'lucide-react';
+import { Map, Activity } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
 const TIMING = {
-  hero:            0,   // title + subtitle
-  areas:         100,   // game areas card
-  areasStagger:  150,   // area tiles start (delay 50ms after areas)
-  areasStaggerDelayMs: 50,
-  grid:          300,   // recent tasks + this week
-  tasksStagger:  350,   // task rows start (delay 50ms after grid)
-  tasksStaggerDelayMs: 50,
-  staggerMs:      60,   // ms between task rows
+  hero:      0,
+  kpi:      50,
+  areas:   200,
+  summary: 350,
 };
 
 const delay = (ms: number) => ms / 1000;
 
-/** Relative time for "Updated X ago" (minutes, hours, days). */
+/** Relative time for "Updated X ago". */
 function timeAgo(dateStr: string): string {
   const ms = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(ms / 60_000);
@@ -53,33 +42,70 @@ function timeAgo(dateStr: string): string {
   return `${Math.floor(hours / 24)}d ago`;
 }
 
-/** Summarise last 7 days activity into high-level bullets for the Updates section. */
-function buildUpdates(
-  activity: Awaited<ReturnType<typeof fetchActivity>>,
-  areas: Area[],
-) {
-  const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
-  const recent = activity.filter(a => new Date(a.created_at).getTime() > cutoff);
+/** Color for activity action type. */
+function actionColor(action: string): string {
+  if (action === 'Completed') return 'var(--color-seeko-accent)';
+  if (action === 'Blocked') return 'var(--color-status-blocked)';
+  if (action === 'Started' || action === 'Moved to review') return 'var(--color-status-progress)';
+  return 'var(--color-muted-foreground)';
+}
 
-  const completed  = recent.filter(a => a.action === 'Completed').length;
-  const started    = recent.filter(a => a.action === 'Started').length;
-  const inReview   = recent.filter(a => a.action === 'Moved to review').length;
-  const blocked    = recent.filter(a => a.action === 'Blocked').length;
-  const comments   = recent.filter(a => a.action === 'Commented on').length;
+/** Group activity entries by day label. */
+function groupByDay(entries: { created_at: string }[]): { label: string; items: typeof entries }[] {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const yesterday = today - 86_400_000;
 
-  const bullets: string[] = [];
-  if (completed > 0) bullets.push(`${completed} task${completed !== 1 ? 's' : ''} completed this week`);
-  if (started > 0)   bullets.push(`${started} task${started !== 1 ? 's' : ''} started`);
-  if (inReview > 0)  bullets.push(`${inReview} task${inReview !== 1 ? 's' : ''} moved to review`);
-  if (blocked > 0)   bullets.push(`${blocked} task${blocked !== 1 ? 's' : ''} currently blocked`);
-  if (comments > 0)  bullets.push(`${comments} comment${comments !== 1 ? 's' : ''} added`);
+  const groups: Record<string, typeof entries> = {};
+  for (const entry of entries) {
+    const entryDate = new Date(entry.created_at);
+    const entryDay = new Date(entryDate.getFullYear(), entryDate.getMonth(), entryDate.getDate()).getTime();
+    let label: string;
+    if (entryDay >= today) label = 'Today';
+    else if (entryDay >= yesterday) label = 'Yesterday';
+    else label = entryDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    if (!groups[label]) groups[label] = [];
+    groups[label].push(entry);
+  }
+  return Object.entries(groups).map(([label, items]) => ({ label, items }));
+}
 
-  const activeAreas = areas.filter(a => a.status === 'Active');
-  if (activeAreas.length > 0) {
-    bullets.push(`${activeAreas.length} area${activeAreas.length !== 1 ? 's' : ''} in active development`);
+/** Build a one-line health summary for the investor. */
+function buildHealthSummary(
+  completedThisWeek: number,
+  blocked: number,
+  overdue: number,
+  areas: { name: string; progress: number }[],
+): string {
+  const parts: string[] = [];
+
+  // Progress signal
+  if (completedThisWeek > 0) {
+    parts.push(`${completedThisWeek} task${completedThisWeek !== 1 ? 's' : ''} completed this week`);
   }
 
-  return bullets;
+  // Area progress
+  const progressing = areas.filter(a => a.progress > 0);
+  if (progressing.length > 0 && progressing.length === areas.length) {
+    parts.push('all areas progressing');
+  } else if (progressing.length > 0) {
+    parts.push(`${progressing.length} of ${areas.length} areas progressing`);
+  }
+
+  // Issues
+  if (blocked > 0 && overdue > 0) {
+    parts.push(`${blocked} blocked and ${overdue} overdue`);
+  } else if (blocked > 0) {
+    parts.push(`${blocked} blocked task${blocked !== 1 ? 's' : ''} need attention`);
+  } else if (overdue > 0) {
+    parts.push(`${overdue} overdue task${overdue !== 1 ? 's' : ''}`);
+  }
+
+  if (parts.length === 0) return 'No activity this week yet.';
+
+  // Capitalize first part
+  const sentence = parts.join(', ') + '.';
+  return sentence.charAt(0).toUpperCase() + sentence.slice(1);
 }
 
 export default async function InvestorPage() {
@@ -94,118 +120,83 @@ export default async function InvestorPage() {
     fetchActivity(30).catch(() => []),
   ]);
 
+  // ── Stat computations ─────────────────────────────────
+  const totalTasks     = tasks.length;
+  const completedTasks = tasks.filter(t => t.status === 'Complete').length;
+  const overallPct     = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
   const blocked        = tasks.filter(t => t.status === 'Blocked').length;
   const overdueCount   = tasks.filter(t => t.deadline && new Date(t.deadline) < new Date()).length;
+  const activeAreas    = areas.filter(a => a.status === 'Active').length;
 
-  const updates = buildUpdates(activity, areas);
+  // Tasks completed this week (from activity log)
+  const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const completedThisWeek = activity.filter(
+    a => a.action === 'Completed' && new Date(a.created_at).getTime() > weekAgo
+  ).length;
+
   const areasSubtitle = areas.length > 0
-    ? areas.map(a => a.name).join(' · ')
+    ? `${completedTasks} of ${totalTasks} tasks complete · ${areas.map(a => a.name).join(' · ')}`
     : 'No active areas';
 
   const firstName = profile?.display_name?.split(' ')[0];
 
-  // Latest activity or task update for "Updated X ago"
-  const latestActivity = activity[0]?.created_at;
-  const latestTaskUpdate = tasks
-    .map(t => t.updated_at)
-    .filter((t): t is string => !!t)
-    .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0];
-  const lastUpdatedRaw = [latestActivity, latestTaskUpdate]
-    .filter((t): t is string => !!t)
-    .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0];
-  const lastUpdated = lastUpdatedRaw ? timeAgo(lastUpdatedRaw) : null;
+  // Health summary
+  const healthSummary = buildHealthSummary(
+    completedThisWeek,
+    blocked,
+    overdueCount,
+    areas.map(a => ({ name: a.name, progress: a.progress })),
+  );
+  const hasIssues = blocked > 0 || overdueCount > 0;
+
+  // Build task-to-area lookup for activity context
+  const taskAreaLookup: Record<string, string> = {};
+  for (const task of tasks) {
+    const area = areas.find(a => a.id === task.area_id);
+    if (area) taskAreaLookup[task.name] = area.name;
+  }
+
+  // Recent activity entries (last 12, grouped by day)
+  const recentActivity = activity.slice(0, 12);
+  const activityGroups = groupByDay(recentActivity);
 
   return (
     <div className="flex flex-col gap-6">
 
-      {/* ── Hero (primary entry point) ───────────────────── */}
-      <FadeRise delay={delay(TIMING.hero)} className="pb-4">
-        <h1
-          className="text-2xl font-semibold tracking-tight text-foreground"
-          style={{ color: 'var(--color-seeko-accent)' }}
-        >
-          Investor Panel
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          {firstName ? `Welcome, ${firstName}. ` : ''}
-          Here's the current state of SEEKO.
-        </p>
-        {lastUpdated && (
-          <p className="text-xs text-muted-foreground/80 mt-1.5" aria-label={`Last updated ${lastUpdated}`}>
-            Updated {lastUpdated}
-          </p>
-        )}
-      </FadeRise>
-
-      {/* ── Blocked tasks callout — early on mobile for visibility ── */}
-      {blocked > 0 && (
-        <FadeRise delay={delay(TIMING.hero + 50)}>
-          <Card className="border-red-900/40 bg-red-950/10">
-            <CardContent className="flex items-center gap-3 py-4">
-              <AlertCircle className="size-4 text-red-400 shrink-0" />
-              <p className="text-sm text-muted-foreground">
-                <span className="font-medium text-foreground">{blocked} task{blocked !== 1 ? 's' : ''} blocked.</span>
-                {' '}The team is actively working to unblock progress.
-              </p>
-            </CardContent>
-          </Card>
-        </FadeRise>
-      )}
-
-      {/* ── Overdue tasks callout ───────────────────────── */}
-      {overdueCount > 0 && (
-        <FadeRise delay={delay(TIMING.hero + (blocked > 0 ? 100 : 50))}>
-          <Card className="border-amber-900/40 bg-amber-950/10">
-            <CardContent className="flex items-center gap-3 py-4">
-              <AlertCircle className="size-4 text-amber-400 shrink-0" />
-              <p className="text-sm text-muted-foreground">
-                <span className="font-medium text-foreground">{overdueCount} task{overdueCount !== 1 ? 's' : ''} past due.</span>
-                {' '}The team is reprioritising and updating deadlines.
-              </p>
-            </CardContent>
-          </Card>
-        </FadeRise>
-      )}
-
-      {/* ── This Week — promoted above areas on mobile ──── */}
-      <FadeRise delay={delay(TIMING.areas)}>
-        <div className="md:hidden">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <TrendingUp className="size-4 text-muted-foreground" />
-                <CardTitle className="text-xl font-semibold text-foreground">This Week</CardTitle>
-              </div>
-              <CardDescription>Summary of the last 7 days.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {updates.length === 0 ? (
-                <EmptyState
-                  icon="TrendingUp"
-                  title="No updates yet"
-                  description="Activity from the past week will be summarised here."
-                />
-              ) : (
-                <ul className="flex flex-col gap-3">
-                  {updates.map((bullet, i) => (
-                    <li key={i} className="flex items-start gap-2.5">
-                      <span
-                        className="mt-1.5 h-1.5 w-1.5 rounded-full shrink-0"
-                        style={{ backgroundColor: 'var(--color-seeko-accent)' }}
-                        aria-hidden
-                      />
-                      <span className="text-sm text-muted-foreground">{bullet}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </CardContent>
-          </Card>
+      {/* ── Hero + Health Summary ─────────────────────────── */}
+      <FadeRise delay={delay(TIMING.hero)} className="pb-2">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1
+              className="text-2xl font-semibold tracking-tight"
+              style={{ color: 'var(--color-seeko-accent)' }}
+            >
+              Investor Panel
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              {firstName ? `Welcome, ${firstName}. ` : ''}Here&apos;s the current state of SEEKO.
+            </p>
+          </div>
+        </div>
+        <div className={`mt-3 rounded-lg px-3.5 py-2.5 text-sm ${hasIssues ? 'bg-red-950/15 border border-red-900/30 text-red-300' : 'bg-muted/50 border border-border/50 text-muted-foreground'}`}>
+          {healthSummary}
         </div>
       </FadeRise>
 
-      {/* ── Game Areas ──────────────────────────────────── */}
-      <FadeRise delay={delay(TIMING.areas + 50)}>
+      {/* ── KPI Strip ────────────────────────────────────── */}
+      <InvestorKPIStrip
+        overallPct={overallPct}
+        completedThisWeek={completedThisWeek}
+        blocked={blocked}
+        overdue={overdueCount}
+        activeAreas={activeAreas}
+        areas={areas.map(a => ({ id: a.id, name: a.name, progress: a.progress }))}
+        isAdmin={profile?.is_admin ?? false}
+        delay={TIMING.kpi}
+      />
+
+      {/* ── Game Areas (open by default) ─────────────────── */}
+      <FadeRise delay={delay(TIMING.areas)}>
         {areas.length === 0 ? (
           <Card>
             <CardHeader>
@@ -224,157 +215,71 @@ export default async function InvestorPage() {
             </CardContent>
           </Card>
         ) : (
-          <>
-            {/* Desktop: always expanded */}
-            <div className="hidden md:block">
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center gap-2">
-                    <Map className="size-4 text-muted-foreground" />
-                    <CardTitle className="text-xl font-semibold text-foreground">Game Areas</CardTitle>
-                  </div>
-                  <CardDescription className="line-clamp-1">{areasSubtitle}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Stagger
-                    className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4"
-                    delayMs={delay(TIMING.areasStaggerDelayMs)}
-                    staggerMs={0.08}
-                  >
-                    {areas.map(area => (
-                      <InvestorAreaCard
-                        key={area.id}
-                        area={area}
-                        tasksInArea={tasks.filter(t => t.area_id === area.id)}
-                      />
-                    ))}
-                  </Stagger>
-                </CardContent>
-              </Card>
-            </div>
-            {/* Mobile: collapsible */}
-            <div className="md:hidden">
-              <CollapsibleInvestorAreas
-                areas={areas}
-                tasks={tasks as TaskWithAssignee[]}
-                subtitle={areasSubtitle}
-              />
-            </div>
-          </>
+          <CollapsibleInvestorAreas
+            areas={areas}
+            tasks={tasks as TaskWithAssignee[]}
+            subtitle={areasSubtitle}
+            defaultOpen
+            isAdmin={profile?.is_admin ?? false}
+          />
         )}
       </FadeRise>
 
-      {/* ── Recent Tasks + Updates (desktop grid) ────────── */}
-      <FadeRise delay={delay(TIMING.grid)}>
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-5">
-
-          {/* Recent Tasks */}
-          <Card className="md:col-span-3">
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <CheckSquare className="size-4 text-muted-foreground" />
-                <CardTitle className="text-xl font-semibold text-foreground">Recent Tasks</CardTitle>
-              </div>
-              <CardDescription>Latest tasks and their current status.</CardDescription>
-            </CardHeader>
-            <CardContent className="px-4 pt-1">
-              {tasks.length === 0 ? (
-                <EmptyState
-                  icon="CheckSquare"
-                  title="No tasks yet"
-                  description="Tasks will appear here as the team adds them."
-                />
-              ) : (
-                <Stagger
-                  className="relative flex flex-col gap-0"
-                  staggerMs={delay(TIMING.staggerMs)}
-                  delayMs={delay(TIMING.tasksStaggerDelayMs)}
-                >
-                  {(tasks as TaskWithAssignee[])
-                    .slice(0, 15)
-                    .map((task) => (
-                      <StaggerItem key={task.id}>
-                        {/* Desktop row */}
-                        <div className="hidden md:flex gap-3 py-4 border-b border-border last:border-0 last:pb-0">
-                          <div className="flex flex-1 min-w-0 flex-col gap-0.5">
-                            <p className="text-sm font-medium text-foreground truncate">{task.name}</p>
-                            <div className="flex items-center gap-2 flex-nowrap overflow-hidden">
-                              <Badge variant="outline" className="text-[11px] py-0 px-1.5 font-normal shrink-0">
-                                {task.status}
-                              </Badge>
-                              {task.assignee?.display_name && (
-                                <span className="text-xs text-muted-foreground truncate">
-                                  {task.assignee.display_name}
-                                </span>
+      {/* ── Recent Activity (grouped by day) ──────────────── */}
+      <FadeRise delay={delay(TIMING.summary)}>
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Activity className="size-4 text-muted-foreground" />
+              <CardTitle className="text-xl font-semibold text-foreground">Recent Activity</CardTitle>
+            </div>
+            <CardDescription>Latest updates from the team.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {recentActivity.length === 0 ? (
+              <EmptyState
+                icon="Activity"
+                title="No activity yet"
+                description="Team updates will appear here."
+              />
+            ) : (
+              <div className="flex flex-col gap-0">
+                {activityGroups.map(group => (
+                  <div key={group.label}>
+                    <p className="text-[11px] font-medium text-muted-foreground/60 uppercase tracking-wider pt-3 pb-1.5 first:pt-0">
+                      {group.label}
+                    </p>
+                    {group.items.map((entry, i) => {
+                      const areaName = taskAreaLookup[(entry as typeof recentActivity[number]).target];
+                      return (
+                        <div key={i} className="flex items-start gap-3 py-2.5 border-b border-border last:border-0">
+                          <span
+                            className="mt-1.5 h-2 w-2 rounded-full shrink-0"
+                            style={{ backgroundColor: actionColor((entry as typeof recentActivity[number]).action) }}
+                            aria-hidden
+                          />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm text-foreground">
+                              {areaName && (
+                                <span className="text-muted-foreground/60 mr-1.5">{areaName} &mdash;</span>
                               )}
-                              {task.deadline && (
-                                <span className="text-xs text-muted-foreground shrink-0">
-                                  Due {new Date(task.deadline).toLocaleDateString()}
-                                </span>
-                              )}
-                            </div>
+                              <span className="font-medium">{(entry as typeof recentActivity[number]).action}</span>
+                              {' '}
+                              <span className="text-muted-foreground">{(entry as typeof recentActivity[number]).target}</span>
+                            </p>
+                            <p className="text-xs text-muted-foreground/70 mt-0.5">
+                              {timeAgo(entry.created_at)}
+                            </p>
                           </div>
                         </div>
-                        {/* Mobile row — stacked layout */}
-                        <div className="flex md:hidden flex-col gap-1.5 py-3.5 border-b border-border last:border-0 last:pb-0">
-                          <p className="text-sm font-medium text-foreground line-clamp-2">{task.name}</p>
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline" className="text-[11px] py-0 px-1.5 font-normal shrink-0">
-                              {task.status}
-                            </Badge>
-                            {task.assignee?.display_name && (
-                              <span className="text-xs text-muted-foreground truncate">
-                                {task.assignee.display_name}
-                              </span>
-                            )}
-                          </div>
-                          {task.deadline && (
-                            <span className="text-[11px] text-muted-foreground">
-                              Due {new Date(task.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                            </span>
-                          )}
-                        </div>
-                      </StaggerItem>
-                    ))}
-                </Stagger>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Updates / Weekly Summary — desktop only (mobile version is above) */}
-          <Card className="hidden md:block md:col-span-2">
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <TrendingUp className="size-4 text-muted-foreground" />
-                <CardTitle className="text-xl font-semibold text-foreground">This Week</CardTitle>
+                      );
+                    })}
+                  </div>
+                ))}
               </div>
-              <CardDescription>Summary of the last 7 days.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {updates.length === 0 ? (
-                <EmptyState
-                  icon="TrendingUp"
-                  title="No updates yet"
-                  description="Activity from the past week will be summarised here."
-                />
-              ) : (
-                <ul className="flex flex-col gap-3">
-                  {updates.map((bullet, i) => (
-                    <li key={i} className="flex items-start gap-2.5">
-                      <span
-                        className="mt-1.5 h-1.5 w-1.5 rounded-full shrink-0"
-                        style={{ backgroundColor: 'var(--color-seeko-accent)' }}
-                        aria-hidden
-                      />
-                      <span className="text-sm text-muted-foreground">{bullet}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </CardContent>
-          </Card>
-
-        </div>
+            )}
+          </CardContent>
+        </Card>
       </FadeRise>
 
     </div>
