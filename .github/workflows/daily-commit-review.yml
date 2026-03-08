@@ -1,0 +1,97 @@
+name: Daily Commit Review
+
+on:
+  schedule:
+    # Every day at 8:00 AM UTC
+    - cron: '0 8 * * *'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for yesterday's commits
+        id: check-commits
+        run: |
+          YESTERDAY=$(date -u -d 'yesterday' +%Y-%m-%d 2>/dev/null || date -u -v-1d +%Y-%m-%d)
+          COMMIT_COUNT=$(git log --since="${YESTERDAY}T00:00:00Z" --until="$(date -u +%Y-%m-%d)T00:00:00Z" --oneline --no-merges | wc -l | tr -d ' ')
+          echo "commit_count=$COMMIT_COUNT" >> "$GITHUB_OUTPUT"
+          echo "date=$YESTERDAY" >> "$GITHUB_OUTPUT"
+
+          if [ "$COMMIT_COUNT" -eq 0 ]; then
+            echo "No commits found for $YESTERDAY. Skipping review."
+          else
+            echo "Found $COMMIT_COUNT commits for $YESTERDAY."
+
+            # Collect commit info for the issue body
+            COMMIT_LIST=$(git log --since="${YESTERDAY}T00:00:00Z" --until="$(date -u +%Y-%m-%d)T00:00:00Z" --oneline --no-merges)
+            {
+              echo "commit_list<<COMMITS_EOF"
+              echo "$COMMIT_LIST"
+              echo "COMMITS_EOF"
+            } >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create review issue
+        if: steps.check-commits.outputs.commit_count > 0
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          YESTERDAY="${{ steps.check-commits.outputs.date }}"
+          COMMIT_COUNT="${{ steps.check-commits.outputs.commit_count }}"
+
+          gh issue create \
+            --title "Daily Commit Review: $YESTERDAY ($COMMIT_COUNT commits)" \
+            --label "code-review,automated" \
+            --body "$(cat <<EOF
+          ## Daily Commit Review
+
+          **Date:** $YESTERDAY
+          **Commits:** $COMMIT_COUNT
+
+          ### Commits to review
+
+          \`\`\`
+          ${{ steps.check-commits.outputs.commit_list }}
+          \`\`\`
+
+          @claude Please review all commits from $YESTERDAY. For each commit, run \`git show <hash>\` and analyze for:
+
+          **Security & Vulnerabilities**
+          - SQL injection, XSS, or other injection vectors
+          - Hardcoded secrets, API keys, or credentials
+          - Improper authentication/authorization checks
+          - Unsafe data handling or missing input validation
+          - Open redirect vulnerabilities
+
+          **Efficiency & Performance**
+          - Unnecessary re-renders or missing memoization (React)
+          - N+1 queries or unoptimized database calls (Supabase)
+          - Large bundle impacts or missing code splitting
+          - Memory leaks or resource cleanup issues
+
+          **Code Quality**
+          - Unclear naming, missing types, or poor abstractions
+          - Dead code or unused imports
+          - Missing error handling
+          - Inconsistent patterns vs. the rest of the codebase
+
+          Produce a summary with:
+          - **Overall risk assessment** (low/medium/high)
+          - **Findings** with severity (critical/warning/info), commit hash, file, and recommended fix
+          - **Highlights** of any well-written code
+
+          If no issues are found, say so — don't invent problems.
+
+          ---
+          *Automated by daily-commit-review workflow*
+          EOF
+          )"
