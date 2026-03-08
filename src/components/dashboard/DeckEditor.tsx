@@ -66,15 +66,37 @@ export function DeckEditor({ doc, onSave, onCancel, team = [] }: DeckEditorProps
         const saved = await res.json();
         trigger('success');
         onSave(saved as Doc);
+      } else if (deckId) {
+        // Deck record was already created by ensureDeckId (for uploads) — PATCH it
+        const body = {
+          title: title.trim(),
+          content: description.trim() || null,
+          restricted_department: departments.length > 0 ? departments : null,
+          granted_user_ids: grantedIds.length > 0 ? grantedIds : null,
+          slides: slides.length > 0 ? slides : null,
+        };
+        const res = await fetch(`/api/docs/${deckId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        if (!res.ok) {
+          const j = await res.json();
+          setError(j.error ?? 'Save failed');
+          trigger('error');
+          return;
+        }
+        const saved = await res.json();
+        trigger('success');
+        onSave(saved as Doc);
       } else {
-        // Creating new deck — POST first to get ID, then upload slides if any
+        // Brand new deck with no slides uploaded yet — POST
         const body = {
           title: title.trim(),
           content: description.trim() || null,
           type: 'deck',
           restricted_department: departments.length > 0 ? departments : null,
           granted_user_ids: grantedIds.length > 0 ? grantedIds : null,
-          slides: slides.length > 0 ? slides : null,
         };
         const res = await fetch('/api/docs', {
           method: 'POST',
@@ -245,14 +267,9 @@ export function DeckEditor({ doc, onSave, onCancel, team = [] }: DeckEditorProps
       {/* PDF Upload */}
       <DeckUploader
         deckId={deckId}
+        getDeckId={ensureDeckId}
         existingSlides={slides}
-        onSlidesChange={async (newSlides) => {
-          setSlides(newSlides);
-          // If we don't have a deckId yet, the uploader will need one
-          if (!deckId && newSlides.length > 0) {
-            await ensureDeckId();
-          }
-        }}
+        onSlidesChange={(newSlides) => setSlides(newSlides)}
       />
 
       {/* Note about needing to upload PDF before deckId exists */}

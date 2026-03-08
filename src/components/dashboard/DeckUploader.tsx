@@ -10,19 +10,26 @@ interface Slide {
 
 interface DeckUploaderProps {
   deckId: string;
+  getDeckId: () => Promise<string>;
   existingSlides?: Slide[];
   onSlidesChange: (slides: Slide[]) => void;
 }
 
-export function DeckUploader({ deckId, existingSlides = [], onSlidesChange }: DeckUploaderProps) {
+export function DeckUploader({ deckId, getDeckId, existingSlides = [], onSlidesChange }: DeckUploaderProps) {
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState({ current: 0, total: 0 });
   const [slides, setSlides] = useState<Slide[]>(existingSlides);
+  const [error, setError] = useState('');
 
   const processPdf = useCallback(async (file: File) => {
     setUploading(true);
+    setError('');
 
     try {
+      // Ensure we have a real deck ID before uploading
+      const id = deckId || await getDeckId();
+      if (!id) throw new Error('Could not create deck');
+
       const pdfjsLib = await import('pdfjs-dist');
       pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 
@@ -40,7 +47,6 @@ export function DeckUploader({ deckId, existingSlides = [], onSlidesChange }: De
         const canvas = document.createElement('canvas');
         canvas.width = viewport.width;
         canvas.height = viewport.height;
-        const ctx = canvas.getContext('2d')!;
 
         await page.render({ canvas, viewport }).promise;
 
@@ -49,12 +55,15 @@ export function DeckUploader({ deckId, existingSlides = [], onSlidesChange }: De
         });
 
         const formData = new FormData();
-        formData.append('deckId', deckId);
+        formData.append('deckId', id);
         formData.append('slideIndex', String(i - 1));
         formData.append('file', blob, `slide-${i}.webp`);
 
         const res = await fetch('/api/docs/upload-deck', { method: 'POST', body: formData });
-        if (!res.ok) throw new Error(`Failed to upload slide ${i}`);
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(body.error || `Failed to upload slide ${i}`);
+        }
 
         const data = await res.json();
         newSlides.push({ url: data.url, sort_order: data.sort_order });
@@ -64,11 +73,13 @@ export function DeckUploader({ deckId, existingSlides = [], onSlidesChange }: De
       setSlides(newSlides);
       onSlidesChange(newSlides);
     } catch (err) {
+      const msg = err instanceof Error ? err.message : 'PDF processing failed';
+      setError(msg);
       console.error('PDF processing error:', err);
     } finally {
       setUploading(false);
     }
-  }, [deckId, onSlidesChange]);
+  }, [deckId, getDeckId, onSlidesChange]);
 
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -118,6 +129,9 @@ export function DeckUploader({ deckId, existingSlides = [], onSlidesChange }: De
           </div>
         </div>
       )}
+
+      {/* Error */}
+      {error && <p className="text-xs text-destructive text-center">{error}</p>}
 
       {/* Slide previews */}
       {slides.length > 0 && !uploading && (
