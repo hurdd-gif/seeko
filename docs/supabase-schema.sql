@@ -257,3 +257,11 @@ CREATE INDEX IF NOT EXISTS idx_docs_type ON public.docs(type);
 
 -- Storage bucket: deck-slides (public read, create manually in Supabase dashboard)
 -- Path format: {deck_id}/{slide_number}.webp
+
+-- ─── NDA Agreement columns ──────────────────────────────────────────────────
+alter table public.profiles
+  add column if not exists nda_accepted_at   timestamptz,
+  add column if not exists nda_signer_name   text,
+  add column if not exists nda_signer_address text,
+  add column if not exists nda_ip            text,
+  add column if not exists nda_user_agent    text;
