@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -143,6 +143,11 @@ export function DeckEditor({ doc, onSave, onCancel, team = [] }: DeckEditorProps
     }
   };
 
+  // Keep a ref to the latest handleSave so the dialog footer never uses a stale closure
+  const handleSaveRef = useRef(handleSave);
+  handleSaveRef.current = handleSave;
+  const stableHandleSave = useCallback(() => handleSaveRef.current(), []);
+
   const setDialogFooter = useDialogFooter();
 
   useEffect(() => {
@@ -162,7 +167,7 @@ export function DeckEditor({ doc, onSave, onCancel, team = [] }: DeckEditorProps
         <Button
           type="button"
           size="sm"
-          onClick={handleSave}
+          onClick={stableHandleSave}
           disabled={saving}
           className="min-w-[7rem] min-h-[2.5rem] touch-manipulation"
         >
