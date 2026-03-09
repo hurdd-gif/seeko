@@ -11,6 +11,7 @@ import {
   CheckCircle2,
   Timer,
   AlertCircle,
+  AlertTriangle,
   Circle,
   Pencil,
   Trash2,
@@ -34,6 +35,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { DURATION_BACKDROP_MS, PANEL_SPRING, PANEL, SLIDEOUT, SLIDEOUT_SPRING } from '@/lib/motion';
+import { formatDeadline, formatDeadlineFull } from '@/lib/format-deadline';
 
 const REACTION_EMOJIS = ['👍', '👎', '🎉', '😂', '❓', '🔥', '❤️'];
 
@@ -1111,15 +1113,19 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
             <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Dept</span>
             <Badge variant="secondary" className="text-xs">{task.department}</Badge>
           </div>
-          {task.deadline && (
-            <>
-              <div className="hidden md:block w-px h-4 bg-border" />
-              <div className="flex items-center gap-1.5 cursor-default" title={formatLocalTime(task.deadline)}>
-                <Clock className="size-3 text-muted-foreground" />
-                <span className="text-xs text-foreground">{new Date(task.deadline + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-              </div>
-            </>
-          )}
+          {task.deadline && (() => {
+            const dl = formatDeadline(task.deadline);
+            const DlIcon = dl.icon;
+            return (
+              <>
+                <div className="hidden md:block w-px h-4 bg-border" />
+                <div className={cn('flex items-center gap-1.5 cursor-default', dl.className)} title={formatDeadlineFull(task.deadline)}>
+                  <DlIcon className="size-3" />
+                  <span className="text-xs font-medium">{dl.label}</span>
+                </div>
+              </>
+            );
+          })()}
         </div>
       </div>
 
