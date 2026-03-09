@@ -16,7 +16,7 @@ import {
   Activity,
   Clock,
   Play,
-  Eye,
+  SendHorizontal,
   Undo2,
 } from 'lucide-react';
 
@@ -64,7 +64,7 @@ const ACTION_CONFIG: Record<string, ActionConfig> = {
   Assigned:             { icon: UserPlus,      className: 'text-blue-400', significant: true },
   Completed:            { icon: CheckCircle2,  className: 'text-emerald-400', significant: true },
   Started:              { icon: Play,          className: 'text-amber-400' },
-  'Moved to review':    { icon: Eye,           className: 'text-blue-400' },
+  'Moved to review':    { icon: SendHorizontal, className: 'text-blue-400' },
   'Returned task':      { icon: Undo2,         className: 'text-orange-400', significant: true },
   'Approved task':      { icon: CheckCircle2,  className: 'text-emerald-400', significant: true },
   Blocked:              { icon: AlertCircle,   className: 'text-red-400', significant: true },
