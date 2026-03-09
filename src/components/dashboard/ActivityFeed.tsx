@@ -162,7 +162,7 @@ export function ActivityFeed({ activity }: { activity: ActivityItem[] }) {
   const groups = groupByDate(filtered);
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-5 overflow-x-hidden">
       {/* Filter pills */}
       <div className="flex flex-wrap items-center gap-1.5">
         {FILTERS.map(f => (

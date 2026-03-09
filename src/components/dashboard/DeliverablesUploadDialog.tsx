@@ -123,17 +123,17 @@ export function DeliverablesUploadDialog({
             ))}
           </ul>
         )}
-        <div className="flex flex-wrap gap-2 pt-2">
-          <Button onClick={handleSubmit} disabled={uploading}>
+        <div className="flex flex-col sm:flex-row gap-2 pt-2">
+          <Button onClick={handleSubmit} disabled={uploading} className="w-full sm:w-auto">
             {uploading ? 'Uploading…' : 'Submit & complete'}
           </Button>
           {onHandoff && (
-            <Button variant="outline" onClick={handleHandoff} disabled={uploading} className="gap-1.5">
+            <Button variant="outline" onClick={handleHandoff} disabled={uploading} className="w-full sm:w-auto gap-1.5">
               <ArrowRightLeft className="size-3.5" />
               {uploading ? 'Uploading…' : 'Submit & hand off'}
             </Button>
           )}
-          <Button variant="outline" onClick={handleSkip} disabled={uploading}>
+          <Button variant="outline" onClick={handleSkip} disabled={uploading} className="w-full sm:w-auto">
             Skip & complete
           </Button>
         </div>
