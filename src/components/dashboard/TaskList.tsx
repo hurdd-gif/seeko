@@ -66,7 +66,7 @@ function FilterPill({
           className={cn(
             'inline-flex items-center gap-1.5 rounded-full border px-4 py-1.5 text-xs font-medium uppercase tracking-wide transition-colors',
             value !== 'All'
-              ? 'border-foreground/20 bg-muted text-foreground'
+              ? 'border-seeko-accent/40 bg-seeko-accent/10 text-seeko-accent'
               : 'border-border text-muted-foreground hover:text-foreground hover:border-foreground/20'
           )}
         >
@@ -101,6 +101,15 @@ function FilterPill({
 /* ------------------------------------------------------------------ */
 /*  Constants                                                          */
 /* ------------------------------------------------------------------ */
+
+const PRIORITY_DOT: Record<string, string> = {
+  'High': 'bg-red-400',
+  'Medium': 'bg-amber-400',
+  'Low': 'bg-zinc-500',
+};
+
+const STATUS_SORT: Record<string, number> = { 'Blocked': 0, 'In Progress': 1, 'In Review': 2, 'Complete': 3 };
+const PRIORITY_SORT: Record<string, number> = { 'High': 0, 'Medium': 1, 'Low': 2 };
 
 const STATUS_ICONS: Record<string, { icon: typeof Circle; className: string }> = {
   'Complete':     { icon: CheckCircle2, className: 'text-[var(--color-status-complete)]' },
@@ -321,6 +330,13 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
         return assignee?.id === filterAssignee;
       })();
       return matchesStatus && matchesPriority && matchesAssignee;
+    }).sort((a, b) => {
+      const sa = STATUS_SORT[getEffectiveStatus(a)] ?? 9;
+      const sb = STATUS_SORT[getEffectiveStatus(b)] ?? 9;
+      if (sa !== sb) return sa - sb;
+      const pa = PRIORITY_SORT[a.priority] ?? 9;
+      const pb = PRIORITY_SORT[b.priority] ?? 9;
+      return pa - pb;
     });
   }, [allTasks, filterStatus, filterPriority, filterAssignee, deleted, getEffectiveStatus, getEffectivePriority]);
 
@@ -380,8 +396,9 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
           tabIndex={0}
           onClick={() => setSelectedTask(task)}
           onKeyDown={e => { if (e.key === 'Enter') setSelectedTask(task); }}
-          className="hidden md:flex items-center gap-4 px-4 py-3 transition-colors hover:bg-muted/50 cursor-pointer"
+          className="hidden md:flex items-center gap-4 px-4 py-3 transition-all duration-150 hover:bg-muted/50 cursor-pointer"
         >
+          <span className={cn('size-2 rounded-full shrink-0', PRIORITY_DOT[task.priority] ?? 'bg-zinc-500')} />
           <span className="min-w-0 flex-1 truncate text-sm text-foreground">
             {task.name}
           </span>
@@ -512,9 +529,10 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
           tabIndex={0}
           onClick={() => setSelectedTask(task)}
           onKeyDown={e => { if (e.key === 'Enter') setSelectedTask(task); }}
-          className="flex md:hidden flex-col gap-2 px-4 py-3 transition-colors active:bg-muted/50 cursor-pointer"
+          className="flex md:hidden flex-col gap-2 px-4 py-3 transition-all duration-150 active:bg-muted/50 active:scale-[0.99] cursor-pointer"
         >
           <div className="flex items-center gap-3">
+            <span className={cn('size-2 rounded-full shrink-0', PRIORITY_DOT[task.priority] ?? 'bg-zinc-500')} />
             <span className="min-w-0 flex-1 text-sm font-medium text-foreground line-clamp-2">
               {task.name}
             </span>
@@ -679,6 +697,23 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Summary bar */}
+        <div className="flex items-center gap-3 px-4 pt-2 text-xs text-muted-foreground">
+          <span>{filtered.length} task{filtered.length !== 1 ? 's' : ''}</span>
+          {(() => {
+            const inProgress = filtered.filter(t => getEffectiveStatus(t) === 'In Progress').length;
+            const blocked = filtered.filter(t => getEffectiveStatus(t) === 'Blocked').length;
+            const inReview = filtered.filter(t => getEffectiveStatus(t) === 'In Review').length;
+            return (
+              <>
+                {inProgress > 0 && <span className="text-amber-400">{inProgress} in progress</span>}
+                {inReview > 0 && <span className="text-blue-400">{inReview} in review</span>}
+                {blocked > 0 && <span className="text-red-400">{blocked} blocked</span>}
+              </>
+            );
+          })()}
+        </div>
 
         {/* Filter pills */}
         <div className="flex flex-wrap items-center gap-2 px-4 py-3">

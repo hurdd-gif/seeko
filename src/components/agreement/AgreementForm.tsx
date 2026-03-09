@@ -329,11 +329,11 @@ export function AgreementForm({
                           <button
                             key={opt.value}
                             type="button"
-                            onClick={() => setEngagementType(opt.value)}
-                            className={`flex-1 rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors ${
+                            disabled
+                            className={`flex-1 rounded-lg border px-3 py-2.5 text-sm font-medium cursor-not-allowed ${
                               engagementType === opt.value
                                 ? 'border-seeko-accent/50 bg-seeko-accent/10 text-seeko-accent'
-                                : 'border-border bg-muted/30 text-muted-foreground hover:bg-muted/50'
+                                : 'border-border bg-muted/30 text-muted-foreground opacity-40'
                             }`}
                           >
                             {opt.label}

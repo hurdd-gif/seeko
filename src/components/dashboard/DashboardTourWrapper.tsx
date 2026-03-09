@@ -91,9 +91,10 @@ interface DashboardTourWrapperProps {
   showTour: boolean;
   userId: string;
   isContractor?: boolean;
+  isAdmin?: boolean;
 }
 
-export function DashboardTourWrapper({ children, showTour, userId, isContractor = false }: DashboardTourWrapperProps) {
+export function DashboardTourWrapper({ children, showTour, userId, isContractor = false, isAdmin = false }: DashboardTourWrapperProps) {
   const [tourOpen, setTourOpen] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const isMac = useIsMac();
@@ -110,7 +111,24 @@ export function DashboardTourWrapper({ children, showTour, userId, isContractor 
       const activityId = isMobile ? TOUR_STEP_IDS_MOBILE.ACTIVITY : TOUR_STEP_IDS.ACTIVITY;
       steps = steps.filter((s) => s.selectorId !== activityId);
     }
-    if (isMobile) return steps;
+    if (isMobile) {
+      // Admins have >5 nav items, so Activity goes into the "More" overflow menu.
+      // Replace the Activity step with a More step pointing to the overflow button.
+      if (isAdmin) {
+        steps = steps
+          .filter((s) => s.selectorId !== TOUR_STEP_IDS_MOBILE.ACTIVITY)
+          .concat({
+            selectorId: TOUR_STEP_IDS_MOBILE.MORE,
+            content: (
+              <p>
+                <strong>More</strong> — Tap here to access Activity, Payments, and other pages.
+              </p>
+            ),
+            position: 'top' as const,
+          });
+      }
+      return steps;
+    }
     return [
       ...steps,
       {
@@ -123,7 +141,7 @@ export function DashboardTourWrapper({ children, showTour, userId, isContractor 
         position: 'bottom' as const,
       },
     ];
-  }, [isMac, isMobile, isContractor]);
+  }, [isMac, isMobile, isContractor, isAdmin]);
 
   const markTourComplete = async () => {
     await supabase.from('profiles').update({ tour_completed: 1 }).eq('id', userId);

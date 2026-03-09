@@ -196,13 +196,19 @@ export function TourProvider({
     width: number;
     height: number;
   } | null>(null);
-  const [isCompleted, setIsCompleted] = useState(isTourCompleted);
+  const [isCompleted, setIsCompletedState] = useState(isTourCompleted);
+  const isCompletedRef = useRef(isTourCompleted);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const setIsCompleted = useCallback((v: boolean) => {
+    isCompletedRef.current = v;
+    setIsCompletedState(v);
+  }, []);
 
   // Sync internal state when the prop changes (e.g. replay tour resets it)
   useEffect(() => {
     setIsCompleted(isTourCompleted);
-  }, [isTourCompleted]);
+  }, [isTourCompleted, setIsCompleted]);
 
   const updateElementPosition = useCallback(() => {
     if (currentStep >= 0 && currentStep < steps.length) {
@@ -273,9 +279,9 @@ export function TourProvider({
   }, []);
 
   const startTour = useCallback(() => {
-    if (isCompleted) return;
+    if (isCompletedRef.current) return;
     setCurrentStep(0);
-  }, [isCompleted]);
+  }, []);
 
   const handleClick = useCallback(
     (e: MouseEvent) => {
