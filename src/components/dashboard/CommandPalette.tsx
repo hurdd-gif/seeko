@@ -36,9 +36,10 @@ interface CommandPaletteProps {
   docs: Pick<Doc, 'id' | 'title'>[];
   decks?: Pick<Doc, 'id' | 'title'>[];
   isContractor?: boolean;
+  isAdmin?: boolean;
 }
 
-export function CommandPalette({ team, docs, decks = [], isContractor = false }: CommandPaletteProps) {
+export function CommandPalette({ team, docs, decks = [], isContractor = false, isAdmin = false }: CommandPaletteProps) {
   const { open, setOpen } = useCommandPalette();
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -46,6 +47,10 @@ export function CommandPalette({ team, docs, decks = [], isContractor = false }:
   const listRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const shouldReduce = useReducedMotion();
+
+  // During the tour, show non-admin view so admin-only pages don't leak
+  const isTourActive = typeof document !== 'undefined' && document.body.classList.contains('tour-cmd-k-active');
+  const showAdmin = isAdmin && !isTourActive;
 
   const go = useCallback((path: string) => {
     setOpen(false);
@@ -59,7 +64,7 @@ export function CommandPalette({ team, docs, decks = [], isContractor = false }:
       { id: 'p-team', label: 'Team', section: 'Pages', icon: Users, action: () => go('/team') },
       { id: 'p-docs', label: 'Docs', section: 'Pages', icon: FileText, action: () => go('/docs') },
       ...(!isContractor ? [{ id: 'p-activity', label: 'Activity', section: 'Pages' as const, icon: Activity, action: () => go('/activity') }] : []),
-      ...(!isContractor ? [{ id: 'p-payments', label: 'Payments', section: 'Pages' as const, icon: DollarSign, action: () => go('/payments') }] : []),
+      ...(showAdmin ? [{ id: 'p-payments', label: 'Payments', section: 'Pages' as const, icon: DollarSign, action: () => go('/payments') }] : []),
       { id: 'p-settings', label: 'Settings', section: 'Pages', icon: Settings, action: () => go('/settings') },
     ];
     const teamItems: CommandItem[] = team.map((m) => ({
@@ -90,7 +95,7 @@ export function CommandPalette({ team, docs, decks = [], isContractor = false }:
       { id: 'a-sidebar', label: 'Toggle Sidebar', section: 'Actions', icon: PanelLeftClose, action: () => { setOpen(false); document.dispatchEvent(new CustomEvent('toggle-sidebar')); } },
     ];
     return [...pages, ...teamItems, ...docItems, ...deckItems, ...actions];
-  }, [team, docs, decks, go, setOpen, isContractor]);
+  }, [team, docs, decks, go, setOpen, isContractor, showAdmin]);
 
   const filtered = useMemo(() => {
     if (!query) return items;

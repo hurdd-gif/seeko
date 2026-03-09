@@ -71,6 +71,7 @@ export default async function DashboardLayout({
         docs={accessibleDocs.filter((d) => d.type !== 'deck').map((d) => ({ id: d.id, title: d.title }))}
         decks={accessibleDocs.filter((d) => d.type === 'deck').map((d) => ({ id: d.id, title: d.title }))}
         isContractor={profile?.is_contractor ?? false}
+        isAdmin={isAdmin}
       />
     </DashboardTourWrapper>
   );
