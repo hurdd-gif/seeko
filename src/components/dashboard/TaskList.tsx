@@ -231,29 +231,39 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
   }, [newName, newDept, newPriority, newDeadline, supabase]);
 
   const handleStatusChange = useCallback(async (taskId: string, newStatus: TaskStatus) => {
+    // Non-admin trying to complete → open deliverable dialog (will submit for review)
     if (newStatus === 'Complete' && !isAdmin) {
       const task = allTasks.find(t => t.id === taskId);
       if (task) setDeliverableTask(task);
       return;
     }
+    // Non-admins cannot set "In Review" directly
+    if (newStatus === 'In Review' && !isAdmin) return;
     setTaskStatuses(prev => ({ ...prev, [taskId]: newStatus }));
     await supabase.from('tasks').update({ status: newStatus }).eq('id', taskId);
   }, [supabase, allTasks, isAdmin]);
 
   const doCompleteTask = useCallback(async (taskId: string) => {
-    setTaskStatuses(prev => ({ ...prev, [taskId]: 'Complete' }));
-    await supabase.from('tasks').update({ status: 'Complete' }).eq('id', taskId);
+    if (isAdmin) {
+      // Admins can mark directly complete
+      setTaskStatuses(prev => ({ ...prev, [taskId]: 'Complete' }));
+      await supabase.from('tasks').update({ status: 'Complete' }).eq('id', taskId);
+    } else {
+      // Non-admins submit for review
+      setTaskStatuses(prev => ({ ...prev, [taskId]: 'In Review' }));
+      await supabase.from('tasks').update({ status: 'In Review' }).eq('id', taskId);
+    }
     setDeliverableTask(null);
-  }, [supabase]);
+  }, [supabase, isAdmin]);
 
   const notifyAdminsTaskCompleted = useCallback((taskId: string, taskName: string, completerName: string) => {
     fetch('/api/notify/admins', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        kind: 'task_completed',
-        title: 'Task completed',
-        body: `${completerName} completed "${taskName}"`,
+        kind: 'task_submitted_review',
+        title: 'Task submitted for review',
+        body: `${completerName} submitted "${taskName}" for review`,
         link: `/tasks?task=${taskId}`,
       }),
     })
@@ -453,6 +463,20 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
             )}
           </div>
 
+          {(() => {
+            const lockedForReview = !isAdmin && status === 'In Review';
+            return lockedForReview ? (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-8 shrink-0 opacity-30 cursor-not-allowed"
+                disabled
+                onClick={e => e.stopPropagation()}
+              >
+                <MoreHorizontal className="size-4" />
+                <span className="sr-only">Task actions (locked during review)</span>
+              </Button>
+            ) : (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -490,29 +514,39 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
               )}
               {!isAdmin && task.assignee_id === currentUserId && (
                 <>
-                  {ALL_STATUSES.filter(s => s !== status && s !== 'Blocked').map(s => {
+                  {ALL_STATUSES.filter(s => s !== status && s !== 'Blocked' && s !== 'In Review').map(s => {
                     const cfg = STATUS_ICONS[s];
                     const Icon = cfg.icon;
+                    const label = s === 'Complete' ? 'Submit for Review' : s;
+                    const locked = status === 'In Review';
                     return (
                       <DropdownMenuItem
                         key={s}
-                        onClick={() => handleStatusChange(task.id, s)}
-                        className="flex items-center gap-2 text-xs"
+                        disabled={locked}
+                        onClick={() => { if (!locked) handleStatusChange(task.id, s); }}
+                        className={cn('flex items-center gap-2 text-xs', locked && 'opacity-40 cursor-not-allowed')}
                       >
-                        <Icon className={cn('size-3.5', cfg.className)} />
-                        <span>{s}</span>
+                        <Icon className={cn('size-3.5', locked ? 'text-muted-foreground' : cfg.className)} />
+                        <span>{label}</span>
                       </DropdownMenuItem>
                     );
                   })}
                   <DropdownMenuSeparator />
                 </>
               )}
-              {(isAdmin || task.assignee_id === currentUserId) && (
-                <DropdownMenuItem onClick={() => setHandoffTask(task)} className="flex items-center gap-2">
-                  <ArrowRightLeft className="size-3.5" />
-                  <span>Hand Off</span>
-                </DropdownMenuItem>
-              )}
+              {(isAdmin || task.assignee_id === currentUserId) && (() => {
+                const locked = !isAdmin && status === 'In Review';
+                return (
+                  <DropdownMenuItem
+                    disabled={locked}
+                    onClick={() => { if (!locked) setHandoffTask(task); }}
+                    className={cn('flex items-center gap-2', locked && 'opacity-40 cursor-not-allowed')}
+                  >
+                    <ArrowRightLeft className="size-3.5" />
+                    <span>Hand Off</span>
+                  </DropdownMenuItem>
+                );
+              })()}
               {isAdmin && (
                 <DropdownMenuItem onClick={() => handleDelete(task.id)} className="flex items-center gap-2 text-destructive">
                   <Trash2 className="size-3.5" />
@@ -521,6 +555,8 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
               )}
             </DropdownMenuContent>
           </DropdownMenu>
+            );
+          })()}
         </div>
 
         {/* Mobile: stacked layout — full-width name, status + assignee on second line */}
@@ -536,55 +572,74 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
             <span className="min-w-0 flex-1 text-sm font-medium text-foreground line-clamp-2">
               {task.name}
             </span>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
+            {(() => {
+              const lockedForReview = !isAdmin && status === 'In Review';
+              return lockedForReview ? (
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="size-8 shrink-0"
+                  className="size-8 shrink-0 opacity-30 cursor-not-allowed"
+                  disabled
                   onClick={e => e.stopPropagation()}
                 >
                   <MoreHorizontal className="size-4" />
                   <span className="sr-only">Task actions</span>
                 </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-44">
-                {isAdmin && (
-                  <>
-                    <DropdownMenuLabel>Assign to</DropdownMenuLabel>
-                    {team.map(member => (
-                      <DropdownMenuItem key={member.id} onClick={() => handleAssign(task.id, member.id)} className="flex items-center gap-2">
-                        <Avatar className="size-5">
-                          <AvatarImage src={member.avatar_url ?? undefined} alt={member.display_name ?? ''} />
-                          <AvatarFallback className="text-[7px] bg-secondary">{getInitials(member.display_name ?? '?')}</AvatarFallback>
-                        </Avatar>
-                        <span className="text-xs truncate">{member.display_name ?? 'Unnamed'}</span>
-                        {assignee?.id === member.id && <CheckCircle2 className="size-3 text-seeko-accent ml-auto" />}
-                      </DropdownMenuItem>
-                    ))}
-                    {assignee && (
-                      <DropdownMenuItem onClick={() => handleAssign(task.id, null)} className="flex items-center gap-2 text-muted-foreground">
-                        <UserPlus className="size-3.5" />
-                        <span className="text-xs">Unassign</span>
+              ) : (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-8 shrink-0"
+                      onClick={e => e.stopPropagation()}
+                    >
+                      <MoreHorizontal className="size-4" />
+                      <span className="sr-only">Task actions</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-44">
+                    {isAdmin && (
+                      <>
+                        <DropdownMenuLabel>Assign to</DropdownMenuLabel>
+                        {team.map(member => (
+                          <DropdownMenuItem key={member.id} onClick={() => handleAssign(task.id, member.id)} className="flex items-center gap-2">
+                            <Avatar className="size-5">
+                              <AvatarImage src={member.avatar_url ?? undefined} alt={member.display_name ?? ''} />
+                              <AvatarFallback className="text-[7px] bg-secondary">{getInitials(member.display_name ?? '?')}</AvatarFallback>
+                            </Avatar>
+                            <span className="text-xs truncate">{member.display_name ?? 'Unnamed'}</span>
+                            {assignee?.id === member.id && <CheckCircle2 className="size-3 text-seeko-accent ml-auto" />}
+                          </DropdownMenuItem>
+                        ))}
+                        {assignee && (
+                          <DropdownMenuItem onClick={() => handleAssign(task.id, null)} className="flex items-center gap-2 text-muted-foreground">
+                            <UserPlus className="size-3.5" />
+                            <span className="text-xs">Unassign</span>
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuSeparator />
+                      </>
+                    )}
+                    {(isAdmin || task.assignee_id === currentUserId) && (
+                      <DropdownMenuItem
+                        onClick={() => setHandoffTask(task)}
+                        className="flex items-center gap-2"
+                      >
+                        <ArrowRightLeft className="size-3.5" />
+                        <span>Hand Off</span>
                       </DropdownMenuItem>
                     )}
-                    <DropdownMenuSeparator />
-                  </>
-                )}
-                {(isAdmin || task.assignee_id === currentUserId) && (
-                  <DropdownMenuItem onClick={() => setHandoffTask(task)} className="flex items-center gap-2">
-                    <ArrowRightLeft className="size-3.5" />
-                    <span>Hand Off</span>
-                  </DropdownMenuItem>
-                )}
-                {isAdmin && (
-                  <DropdownMenuItem onClick={() => handleDelete(task.id)} className="flex items-center gap-2 text-destructive">
-                    <Trash2 className="size-3.5" />
-                    <span>Delete</span>
-                  </DropdownMenuItem>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
+                    {isAdmin && (
+                      <DropdownMenuItem onClick={() => handleDelete(task.id)} className="flex items-center gap-2 text-destructive">
+                        <Trash2 className="size-3.5" />
+                        <span>Delete</span>
+                      </DropdownMenuItem>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              );
+            })()}
           </div>
           <div className="flex items-center gap-2">
             {/* Tappable status pill — opens bottom sheet on mobile */}
@@ -865,30 +920,38 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
                 </button>
               </div>
               <div className="grid grid-cols-2 gap-2 px-4 py-3">
-                {ALL_STATUSES.filter(s => isAdmin || s !== 'Blocked').map(s => {
+                {ALL_STATUSES.filter(s => isAdmin || (s !== 'Blocked' && s !== 'In Review')).map(s => {
                   const cfg = STATUS_ICONS[s];
                   const Icon = cfg.icon;
                   const currentStatus = getEffectiveStatus(statusSheetTask);
                   const isCurrentStatus = s === currentStatus;
                   const style = STATUS_BADGE_STYLE[s] ?? '';
+                  // Non-admin: disable all status changes when task is In Review
+                  const isLockedForReview = !isAdmin && currentStatus === 'In Review';
                   return (
                     <motion.button
                       key={s}
-                      whileTap={{ scale: 0.95 }}
+                      whileTap={isLockedForReview ? undefined : { scale: 0.95 }}
+                      disabled={isLockedForReview}
                       onClick={() => {
+                        if (isLockedForReview) return;
                         handleStatusChange(statusSheetTask.id, s);
                         setStatusSheetTask(null);
                       }}
                       className={cn(
                         'flex items-center gap-3 rounded-xl border px-4 py-3.5 text-left transition-colors',
-                        isCurrentStatus
-                          ? style + ' ring-1 ring-foreground/10'
-                          : 'border-border/50 hover:bg-white/[0.04]'
+                        isLockedForReview
+                          ? 'opacity-40 cursor-not-allowed border-border/30'
+                          : isCurrentStatus
+                            ? style + ' ring-1 ring-foreground/10'
+                            : 'border-border/50 hover:bg-white/[0.04]'
                       )}
                     >
-                      <Icon className={cn('size-5', cfg.className)} />
+                      <Icon className={cn('size-5', isLockedForReview ? 'text-muted-foreground' : cfg.className)} />
                       <div>
-                        <p className={cn('text-sm font-medium', isCurrentStatus ? '' : 'text-foreground')}>{s}</p>
+                        <p className={cn('text-sm font-medium', isCurrentStatus ? '' : 'text-foreground')}>
+                          {!isAdmin && s === 'Complete' ? 'Submit for Review' : s}
+                        </p>
                         {isCurrentStatus && (
                           <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Current</p>
                         )}

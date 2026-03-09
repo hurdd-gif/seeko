@@ -30,6 +30,7 @@ import { Task, TaskWithAssignee, TaskComment, TaskCommentAttachment, TaskComment
 import { toast } from 'sonner';
 import { Dialog, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
 import { HandoffDialog } from './HandoffDialog';
+import { DeliverablesUploadDialog } from './DeliverablesUploadDialog';
 import { Badge } from '@/components/ui/badge';
 import { cn, uuid } from '@/lib/utils';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -689,6 +690,8 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
   const [denyMode, setDenyMode] = useState(false);
   const [denyReason, setDenyReason] = useState('');
   const [extDeciding, setExtDeciding] = useState(false);
+  const [reviewDeciding, setReviewDeciding] = useState(false);
+  const [showDeliverableUpload, setShowDeliverableUpload] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const commentsEndRef = useRef<HTMLDivElement>(null);
 
@@ -824,6 +827,75 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
       setDeletingDeliverableId(null);
     }
   }, [task.id]);
+
+  const handleReviewDecision = useCallback(async (action: 'approve' | 'deny') => {
+    setReviewDeciding(true);
+    try {
+      const newStatus = action === 'approve' ? 'Complete' : 'In Progress';
+      await supabase.from('tasks').update({ status: newStatus }).eq('id', task.id);
+      toast.success(action === 'approve' ? 'Task approved — marked complete' : 'Task sent back to In Progress');
+      // Notify assignee + log activity before closing panel
+      const adminName = team.find(m => m.id === currentUserId)?.display_name ?? 'An admin';
+      await Promise.all([
+        task.assignee_id
+          ? fetch('/api/notify/user', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                userId: task.assignee_id,
+                kind: action === 'approve' ? 'task_review_approved' : 'task_review_denied',
+                title: action === 'approve'
+                  ? `"${task.name}" approved`
+                  : `"${task.name}" needs more work`,
+                body: action === 'approve'
+                  ? `${adminName} approved your task`
+                  : `${adminName} sent your task back to In Progress`,
+                link: `/tasks?task=${task.id}`,
+              }),
+            }).catch(() => {})
+          : Promise.resolve(),
+        supabase.from('activity_log').insert({
+          user_id: currentUserId,
+          action: action === 'approve' ? 'Approved task' : 'Returned task',
+          target: `task: ${task.name}`,
+          task_id: task.id,
+        }),
+      ]);
+      onOpenChange(false);
+    } catch {
+      toast.error('Something went wrong');
+    } finally {
+      setReviewDeciding(false);
+    }
+  }, [task.id, task.name, task.assignee_id, currentUserId, supabase, team, onOpenChange]);
+
+  const submitForReview = useCallback(async (files?: File[]) => {
+    // Upload deliverables if any
+    if (files?.length) {
+      for (const file of files) {
+        const form = new FormData();
+        form.append('file', file);
+        const res = await fetch(`/api/tasks/${task.id}/deliverables`, { method: 'POST', body: form });
+        if (!res.ok) throw new Error((await res.json()).error || 'Upload failed');
+      }
+    }
+    // Set status to In Review
+    await supabase.from('tasks').update({ status: 'In Review' }).eq('id', task.id);
+    toast.success('Submitted for review');
+    // Notify admins
+    const senderName = team.find(m => m.id === currentUserId)?.display_name ?? 'Someone';
+    await fetch('/api/notify/admins', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        kind: 'task_submitted_review',
+        title: 'Task submitted for review',
+        body: `${senderName} submitted "${task.name}" for review`,
+        link: `/tasks?task=${task.id}`,
+      }),
+    }).catch(() => {});
+    setShowDeliverableUpload(false);
+  }, [task.id, task.name, currentUserId, supabase, team]);
 
   const loadHandoffs = useCallback(async () => {
     const res = await supabase
@@ -962,9 +1034,13 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
     const q = autocompleteQuery.toLowerCase();
     if (autocompleteMode === 'slash') {
       return SLASH_COMMANDS
-        .filter(c => isAdmin || c.cmd !== '/blocked')
+        .filter(c => isAdmin || (c.cmd !== '/blocked' && c.cmd !== '/in review'))
         .filter(c => c.label.toLowerCase().includes(q) || c.cmd.toLowerCase().includes('/' + q))
-        .map(c => ({ id: c.cmd, label: c.label, icon: 'slash' as const, cmd: c.cmd, slashIcon: c.icon, slashClassName: c.className }));
+        .map(c => {
+          // Non-admin: "Complete" → "Submit for Review"
+          const label = !isAdmin && c.cmd === '/complete' ? 'Submit for Review' : c.label;
+          return { id: c.cmd, label, icon: 'slash' as const, cmd: c.cmd, slashIcon: c.icon, slashClassName: c.className };
+        });
     }
     if (autocompleteMode === 'mention') {
       return team
@@ -982,15 +1058,13 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
     const cursorPos = inputRef.current?.selectionStart ?? value.length;
     const textBeforeCursor = value.slice(0, cursorPos);
 
-    // Slash commands (admin only) — match `/` at start of input
-    if (isAdmin) {
-      const slashMatch = textBeforeCursor.match(/^\/(.*)$/i);
-      if (slashMatch) {
-        setAutocompleteMode('slash');
-        setAutocompleteQuery(slashMatch[1]);
-        setAutocompleteIndex(0);
-        return;
-      }
+    // Slash commands — match `/` at start of input
+    const slashMatch = textBeforeCursor.match(/^\/(.*)$/i);
+    if (slashMatch) {
+      setAutocompleteMode('slash');
+      setAutocompleteQuery(slashMatch[1]);
+      setAutocompleteIndex(0);
+      return;
     }
 
     const mentionMatch = textBeforeCursor.match(/@(\w*)$/);
@@ -1065,13 +1139,21 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
       '/blocked': 'Blocked',
       '/block': 'Blocked',
     };
-    const newStatus = statusMap[cmd];
+    let newStatus = statusMap[cmd];
     if (!newStatus) return false;
     if (newStatus === 'Blocked' && !isAdmin) return false;
+    // Non-admins cannot set "In Review" directly
+    if (newStatus === 'In Review' && !isAdmin) return false;
+    // Non-admins trying to complete → open deliverable upload dialog
+    if (newStatus === 'Complete' && !isAdmin) {
+      setShowDeliverableUpload(true);
+      setInput('');
+      return true;
+    }
     await supabase.from('tasks').update({ status: newStatus }).eq('id', task.id);
     toast.success(`Status changed to ${newStatus}`);
     return true;
-  }, [isAdmin, task.id, task.assignee_id, currentUserId, supabase]);
+  }, [isAdmin, task.id, task.name, task.assignee_id, currentUserId, supabase, team]);
 
   const handleSend = useCallback(async () => {
     if ((!input.trim() && pendingFiles.length === 0) || sending) return;
@@ -1250,6 +1332,40 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
               </button>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Admin: task in review — approve or deny */}
+      {isAdmin && task.status === 'In Review' && (
+        <div className="rounded-lg border border-blue-500/20 bg-blue-500/[0.06] px-3.5 py-3 mb-4">
+          <div className="flex items-start gap-2">
+            <AlertCircle className="size-4 text-[var(--color-status-review)] mt-0.5 shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm text-foreground">
+                {assignee ? (
+                  <><span className="font-medium">{assignee.display_name}</span> submitted this task for review</>
+                ) : (
+                  <>This task was submitted for review</>
+                )}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 pl-6 mt-2.5">
+            <button
+              onClick={() => handleReviewDecision('approve')}
+              disabled={reviewDeciding}
+              className="rounded-md bg-seeko-accent px-3 py-1.5 text-xs font-medium text-background hover:bg-seeko-accent/90 transition-colors disabled:opacity-50"
+            >
+              {reviewDeciding ? 'Approving…' : 'Approve'}
+            </button>
+            <button
+              onClick={() => handleReviewDecision('deny')}
+              disabled={reviewDeciding}
+              className="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors disabled:opacity-50"
+            >
+              {reviewDeciding ? 'Denying…' : 'Needs more work'}
+            </button>
+          </div>
         </div>
       )}
 
@@ -1654,14 +1770,9 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
         <p className="text-xs text-muted-foreground text-center py-4">Loading comments...</p>
       )}
       {!loading && comments.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-12 gap-3">
-          <div className="rounded-full bg-muted/60 p-3">
-            <MessageSquare className="size-5 text-muted-foreground" />
-          </div>
-          <div className="text-center">
-            <p className="text-sm font-medium text-muted-foreground">No messages yet</p>
-            <p className="text-xs text-muted-foreground/60 mt-0.5">Start the conversation below</p>
-          </div>
+        <div className="flex flex-col items-center justify-center gap-2 py-8">
+          <MessageSquare className="size-4 text-muted-foreground/40" />
+          <p className="text-xs text-muted-foreground/50">No messages yet</p>
         </div>
       )}
 
@@ -1780,7 +1891,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
         </div>
       )}
 
-      <div className="flex items-end gap-2 rounded-lg bg-muted/40 md:bg-muted/20 border border-border/50 md:border-transparent p-2">
+      <div className="flex items-end gap-2 rounded-lg bg-muted/40 md:bg-muted/30 border border-border/50 md:border-white/[0.06] px-3 py-2">
         <textarea
           ref={inputRef}
           value={input}
@@ -1788,7 +1899,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
           onKeyDown={handleKeyDown}
           placeholder="Write a message..."
           rows={1}
-          className="flex-1 resize-none bg-transparent text-[15px] md:text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none min-h-[36px] max-h-[120px] py-1.5"
+          className="flex-1 resize-none bg-transparent text-[15px] md:text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none min-h-[36px] max-h-[120px] py-1"
           style={{ height: 'auto', overflow: 'hidden' }}
           onFocus={() => {
             setTimeout(() => commentsEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 300);
@@ -1827,7 +1938,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
 
   const tabBar = (
     <LayoutGroup>
-      <div className="flex gap-1 px-4 md:px-6 py-1.5 shrink-0 border-b border-border">
+      <div className="flex gap-1 px-4 md:px-6 py-1.5 shrink-0 border-b border-border md:hidden">
         <button
           className={cn(
             'relative rounded-lg px-4 py-1.5 text-sm font-medium transition-colors',
@@ -1888,8 +1999,9 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
                 opacity: 1,
                 scale: 1,
                 y: 0,
-                maxWidth: activeTab === 'chat' ? 820 : 576,
-                maxHeight: activeTab === 'chat' ? '95dvh' : '75vh',
+                maxWidth: isDesktop ? 960 : (activeTab === 'chat' ? 820 : 576),
+                maxHeight: isDesktop ? '90dvh' : (activeTab === 'chat' ? '95dvh' : '75vh'),
+                height: isDesktop ? '78dvh' : 'auto',
               }}
               exit={{ opacity: 0, scale: 0.97, y: 8 }}
               transition={{
@@ -1902,7 +2014,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
                 <div className="h-1 w-10 rounded-full bg-muted-foreground/20" />
               </div>
               {/* Header */}
-              <div className="flex items-start gap-3 px-4 md:px-6 pt-3 md:pt-5 pb-3 shrink-0">
+              <div className="flex items-start gap-3 px-4 md:px-6 pt-3 md:pt-5 pb-3 md:pb-4 shrink-0 border-b border-transparent md:border-white/[0.04]">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2.5">
                     <h2 className="text-xl font-semibold text-foreground truncate">{task.name}</h2>
@@ -1936,21 +2048,16 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
               {/* Tab bar */}
               {tabBar}
 
-              {/* Tab content */}
-              <AnimatePresence mode="wait" initial={false}>
-                {activeTab === 'details' && (
-                  <motion.div key="details" className="flex-1 overflow-y-auto px-4 md:px-6 py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ type: 'spring', stiffness: 500, damping: 35, opacity: { duration: 0.12 } }}>
+              {/* Desktop: side-by-side layout */}
+              {isDesktop ? (
+                <div className="flex flex-1 min-h-0">
+                  {/* Left — Details */}
+                  <div className="w-[34%] shrink-0 overflow-y-auto border-r border-white/[0.06] bg-muted/[0.03] px-6 py-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                     {detailsContent}
-                  </motion.div>
-                )}
-                {activeTab === 'chat' && (
-                  <motion.div
-                    key="chat"
-                    className={cn('flex flex-1 flex-col min-h-0', isDragging && 'ring-2 ring-inset ring-seeko-accent/50')}
-                    initial={{ opacity: 0, y: 6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -6 }}
-                    transition={{ type: 'spring', stiffness: 500, damping: 35, opacity: { duration: 0.12 } }}
+                  </div>
+                  {/* Right — Chat */}
+                  <div
+                    className={cn('flex flex-1 flex-col min-h-0 min-w-0', isDragging && 'ring-2 ring-inset ring-seeko-accent/50')}
                     onDragOver={e => { e.preventDefault(); setIsDragging(true); }}
                     onDragLeave={e => {
                       if (!e.currentTarget.contains(e.relatedTarget as Node)) setIsDragging(false);
@@ -1962,15 +2069,59 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
                       if (files.length > 0) setPendingFiles(prev => [...prev, ...files]);
                     }}
                   >
-                    <div className="flex-1 overflow-y-auto px-3 md:px-6 py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                    {/* Chat header */}
+                    <div className="shrink-0 flex items-center gap-2 px-5 pt-4 pb-2">
+                      <MessageSquare className="size-3.5 text-muted-foreground" />
+                      <span className="text-xs font-medium text-muted-foreground">Chat</span>
+                      {comments.length > 0 && (
+                        <span className="text-[11px] text-muted-foreground/50">{comments.length}</span>
+                      )}
+                    </div>
+                    <div className="flex-1 overflow-y-auto flex flex-col justify-end px-5 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                       {chatMessages}
                     </div>
-                    <div className="shrink-0 border-t border-border px-3 md:px-5 py-3">
+                    <div className="shrink-0 border-t border-white/[0.06] bg-muted/[0.04] px-5 py-3">
                       {chatCompose}
                     </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                  </div>
+                </div>
+              ) : (
+                /* Mobile: tabbed layout */
+                <AnimatePresence mode="wait" initial={false}>
+                  {activeTab === 'details' && (
+                    <motion.div key="details" className="flex-1 overflow-y-auto px-4 py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ type: 'spring', stiffness: 500, damping: 35, opacity: { duration: 0.12 } }}>
+                      {detailsContent}
+                    </motion.div>
+                  )}
+                  {activeTab === 'chat' && (
+                    <motion.div
+                      key="chat"
+                      className={cn('flex flex-1 flex-col min-h-0', isDragging && 'ring-2 ring-inset ring-seeko-accent/50')}
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -6 }}
+                      transition={{ type: 'spring', stiffness: 500, damping: 35, opacity: { duration: 0.12 } }}
+                      onDragOver={e => { e.preventDefault(); setIsDragging(true); }}
+                      onDragLeave={e => {
+                        if (!e.currentTarget.contains(e.relatedTarget as Node)) setIsDragging(false);
+                      }}
+                      onDrop={e => {
+                        e.preventDefault();
+                        setIsDragging(false);
+                        const files = Array.from(e.dataTransfer.files);
+                        if (files.length > 0) setPendingFiles(prev => [...prev, ...files]);
+                      }}
+                    >
+                      <div className="flex-1 overflow-y-auto px-3 py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                        {chatMessages}
+                      </div>
+                      <div className="shrink-0 border-t border-border px-3 py-3">
+                        {chatCompose}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              )}
             </motion.div>
           </motion.div>
         )}
@@ -1987,6 +2138,18 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
             setLocalAssigneeId(toUserId);
             loadHandoffs();
           }}
+        />,
+        document.body
+      )}
+
+      {showDeliverableUpload && createPortal(
+        <DeliverablesUploadDialog
+          open
+          onOpenChange={open => { if (!open) setShowDeliverableUpload(false); }}
+          task={task}
+          onSubmit={async (files) => { await submitForReview(files); }}
+          onSkip={async () => { await submitForReview(); }}
+          className="z-[80]"
         />,
         document.body
       )}
