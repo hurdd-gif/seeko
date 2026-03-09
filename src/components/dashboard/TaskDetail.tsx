@@ -18,6 +18,7 @@ import {
   Check,
   X,
   FileText,
+  Presentation,
   Package,
   Download,
   ArrowRightLeft,
@@ -889,8 +890,8 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
     }
     return docs
       .filter(d => d.title.toLowerCase().includes(q))
-      .slice(0, 5)
-      .map(d => ({ id: d.id, label: d.title, icon: 'doc' as const }));
+      .slice(0, 8)
+      .map(d => ({ id: d.id, label: d.title, icon: (d.type === 'deck' ? 'deck' : 'doc') as 'doc' | 'deck' }));
   }, [autocompleteMode, autocompleteQuery, team, docs]);
 
   function detectAutocomplete(value: string) {
@@ -1477,7 +1478,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 4 }}
             transition={{ duration: 0.1 }}
-            className="absolute bottom-full mb-1 left-0 w-full rounded-lg border border-border bg-card shadow-lg z-10 overflow-hidden"
+            className="absolute bottom-full mb-1 left-0 w-full rounded-lg border border-border bg-card shadow-lg z-10 overflow-y-auto max-h-52"
           >
             {autocompleteCandidates.map((candidate, i) => {
               const SlashIcon = candidate.icon === 'slash' && 'slashIcon' in candidate ? candidate.slashIcon as typeof Circle : null;
@@ -1495,6 +1496,8 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
                       <AvatarImage src={candidate.avatar ?? undefined} />
                       <AvatarFallback className="text-[7px] bg-secondary">{getInitials(candidate.label)}</AvatarFallback>
                     </Avatar>
+                  ) : candidate.icon === 'deck' ? (
+                    <Presentation className="size-4 text-amber-400" />
                   ) : (
                     <FileText className="size-4 text-blue-400" />
                   )}
@@ -1695,7 +1698,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
                 {activeTab === 'chat' && (
                   <motion.div
                     key="chat"
-                    className={cn('flex flex-1 flex-col overflow-hidden', isDragging && 'ring-2 ring-inset ring-seeko-accent/50')}
+                    className={cn('flex flex-1 flex-col min-h-0', isDragging && 'ring-2 ring-inset ring-seeko-accent/50')}
                     initial={{ opacity: 0, y: 6 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -6 }}
