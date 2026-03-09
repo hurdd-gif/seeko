@@ -103,7 +103,7 @@ export function HandoffDialog({
   }, [buttonState, onOpenChange]);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange} className="z-[70]">
       <DialogClose onClose={handleClose} />
       <DialogHeader>
         <DialogTitle className="pr-8 flex items-center gap-2">

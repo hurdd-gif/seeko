@@ -198,6 +198,22 @@ create policy "Authenticated users can insert activity"
   on public.activity_log for insert
   with check (auth.role() = 'authenticated');
 
+-- ─── Deadline Extensions ──────────────────────────────────────────────────────
+
+create table public.deadline_extensions (
+  id                uuid primary key default gen_random_uuid(),
+  task_id           uuid not null references public.tasks(id) on delete cascade,
+  requested_by      uuid not null references public.profiles(id) on delete cascade,
+  extra_hours       integer not null,
+  original_deadline date not null,
+  new_deadline      date not null,
+  status            text not null default 'pending' check (status in ('pending', 'approved', 'denied')),
+  decided_by        uuid references public.profiles(id),
+  decided_at        timestamptz,
+  denial_reason     text,
+  created_at        timestamptz not null default now()
+);
+
 -- ─── Storage: Avatars Bucket ──────────────────────────────────────────────────
 
 -- insert into storage.buckets (id, name, public) values ('avatars', 'avatars', true);

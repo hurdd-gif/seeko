@@ -157,7 +157,10 @@ export type NotificationKind =
   | 'task_handoff'
   | 'payment_request'
   | 'payment_approved'
-  | 'payment_denied';
+  | 'payment_denied'
+  | 'deadline_extension_requested'
+  | 'deadline_extension_approved'
+  | 'deadline_extension_denied';
 
 export type UserEvent = {
   id: string;
@@ -177,5 +180,19 @@ export type Notification = {
   body?: string;
   link?: string;
   read: boolean;
+  created_at: string;
+};
+
+export type DeadlineExtension = {
+  id: string;
+  task_id: string;
+  requested_by: string;
+  extra_hours: number;
+  original_deadline: string;
+  new_deadline: string;
+  status: 'pending' | 'approved' | 'denied';
+  decided_by?: string | null;
+  decided_at?: string | null;
+  denial_reason?: string | null;
   created_at: string;
 };

@@ -23,7 +23,7 @@ import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { createBrowserClient } from '@supabase/ssr';
 import { motion, AnimatePresence, useMotionValue, useTransform, PanInfo } from 'motion/react';
-import { Bell, CheckSquare, AtSign, MessageSquare, CheckCheck, CheckCircle2, Package, ArrowRightLeft, DollarSign, CircleCheck, CircleX, X } from 'lucide-react';
+import { Bell, CheckSquare, AtSign, MessageSquare, CheckCheck, CheckCircle2, Package, ArrowRightLeft, DollarSign, CircleCheck, CircleX, Clock, X } from 'lucide-react';
 import { Notification, NotificationKind } from '@/lib/types';
 import { useIsDesktop } from '@/lib/hooks/useIsDesktop';
 
@@ -43,6 +43,9 @@ const KIND_CONFIG: Record<NotificationKind, { icon: typeof Bell; className: stri
   payment_request:     { icon: DollarSign,    className: 'text-amber-400',    bg: 'bg-amber-500/10' },
   payment_approved:    { icon: CircleCheck,   className: 'text-emerald-500',  bg: 'bg-emerald-500/10' },
   payment_denied:      { icon: CircleX,       className: 'text-red-400',      bg: 'bg-red-500/10' },
+  deadline_extension_requested: { icon: Clock,       className: 'text-amber-400',    bg: 'bg-amber-500/10' },
+  deadline_extension_approved:  { icon: CheckCircle2, className: 'text-emerald-500',  bg: 'bg-emerald-500/10' },
+  deadline_extension_denied:    { icon: CircleX,      className: 'text-red-400',      bg: 'bg-red-500/10' },
 };
 
 /** #6 — Show time-of-day within a date group, "Xd ago" only for Earlier */
