@@ -692,6 +692,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
   const [extDeciding, setExtDeciding] = useState(false);
   const [reviewDeciding, setReviewDeciding] = useState(false);
   const [showDeliverableUpload, setShowDeliverableUpload] = useState(false);
+  const [showPaymentPrompt, setShowPaymentPrompt] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const commentsEndRef = useRef<HTMLDivElement>(null);
 
@@ -861,13 +862,18 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
           task_id: task.id,
         }),
       ]);
-      onOpenChange(false);
+      if (action === 'approve' && isAdmin) {
+        // Show payment prompt instead of closing
+        setShowPaymentPrompt(true);
+      } else {
+        onOpenChange(false);
+      }
     } catch {
       toast.error('Something went wrong');
     } finally {
       setReviewDeciding(false);
     }
-  }, [task.id, task.name, task.assignee_id, currentUserId, supabase, team, onOpenChange]);
+  }, [task.id, task.name, task.assignee_id, currentUserId, isAdmin, supabase, team, onOpenChange]);
 
   const submitForReview = useCallback(async (files?: File[]) => {
     // Upload deliverables if any
@@ -1152,6 +1158,37 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
     }
     await supabase.from('tasks').update({ status: newStatus }).eq('id', task.id);
     toast.success(`Status changed to ${newStatus}`);
+
+    // Send notification to assignee about status change
+    if (task.assignee_id && task.assignee_id !== currentUserId) {
+      const changerName = team.find(m => m.id === currentUserId)?.display_name ?? 'Someone';
+      const kindMap: Record<string, string> = {
+        'Complete': 'task_completed',
+        'In Review': 'task_submitted_review',
+        'In Progress': 'task_review_denied',
+        'Blocked': 'task_review_denied',
+      };
+      fetch('/api/notify/user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: task.assignee_id,
+          kind: kindMap[newStatus] ?? 'task_completed',
+          title: `"${task.name}" → ${newStatus}`,
+          body: `${changerName} changed the status`,
+          link: `/tasks?task=${task.id}`,
+        }),
+      }).catch(() => {});
+    }
+
+    // Log activity
+    supabase.from('activity_log').insert({
+      user_id: currentUserId,
+      action: newStatus === 'Complete' ? 'Completed' : newStatus === 'Blocked' ? 'Blocked' : newStatus === 'In Review' ? 'Moved to review' : 'Started',
+      target: `task: ${task.name}`,
+      task_id: task.id,
+    });
+
     return true;
   }, [isAdmin, task.id, task.name, task.assignee_id, currentUserId, supabase, team]);
 
@@ -2149,8 +2186,62 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
           task={task}
           onSubmit={async (files) => { await submitForReview(files); }}
           onSkip={async () => { await submitForReview(); }}
+          onHandoff={async (files) => {
+            // Upload files first
+            if (files.length) {
+              for (const file of files) {
+                const form = new FormData();
+                form.append('file', file);
+                const res = await fetch(`/api/tasks/${task.id}/deliverables`, { method: 'POST', body: form });
+                if (!res.ok) throw new Error((await res.json()).error || 'Upload failed');
+              }
+            }
+            setShowDeliverableUpload(false);
+            // Open handoff dialog after a brief delay for dialog transition
+            setTimeout(() => setShowHandoff(true), 150);
+          }}
           className="z-[80]"
         />,
+        document.body
+      )}
+
+      {showPaymentPrompt && createPortal(
+        <Dialog open onOpenChange={v => { if (!v) { setShowPaymentPrompt(false); onOpenChange(false); } }} className="z-[80]" contentClassName="max-w-sm">
+          <DialogClose onClose={() => { setShowPaymentPrompt(false); onOpenChange(false); }} />
+          <DialogHeader>
+            <DialogTitle>Create Payment?</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col gap-4">
+            <p className="text-sm text-muted-foreground">
+              <span className="font-medium text-foreground">&ldquo;{task.name}&rdquo;</span> has been approved.
+              {task.bounty && task.bounty > 0 ? (
+                <> The bounty is{' '}
+                  <span className="font-medium text-foreground">
+                    {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(task.bounty)}
+                  </span>.
+                </>
+              ) : null}
+              {task.assignee_id ? (
+                <> Would you like to create a payment for <span className="font-medium text-foreground">{team.find(m => m.id === task.assignee_id)?.display_name ?? 'the assignee'}</span>?</>
+              ) : (
+                <> Would you like to create a payment?</>
+              )}
+            </p>
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={() => { setShowPaymentPrompt(false); onOpenChange(false); }}>
+                Skip
+              </Button>
+              <Button className="flex-1" onClick={() => {
+                setShowPaymentPrompt(false);
+                onOpenChange(false);
+                // Navigate to payments with task context
+                window.location.href = `/payments?create=1&task=${task.id}`;
+              }}>
+                Create Payment
+              </Button>
+            </div>
+          </div>
+        </Dialog>,
         document.body
       )}
     </>
