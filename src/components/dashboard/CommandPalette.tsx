@@ -93,7 +93,7 @@ export function CommandPalette({ team, docs, decks = [], isContractor = false }:
   }, [team, docs, decks, go, setOpen, isContractor]);
 
   const filtered = useMemo(() => {
-    if (!query) return items.slice(0, 12);
+    if (!query) return items;
     const q = query.toLowerCase();
     return items.filter((item) => {
       const haystack = `${item.label} ${item.section} ${item.keywords ?? ''}`.toLowerCase();
