@@ -1141,7 +1141,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
                 ))}
               </select>
             ) : (
-              <Badge variant="outline" className="text-xs">{task.priority}</Badge>
+              <Badge variant="secondary" className="text-xs">{task.priority}</Badge>
             )}
           </div>
           <div className="hidden md:block w-px h-4 bg-border" />
