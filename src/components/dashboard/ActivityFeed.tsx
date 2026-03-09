@@ -6,7 +6,6 @@ import { Stagger, StaggerItem } from '@/components/motion';
 import { Badge } from '@/components/ui/badge';
 import {
   CheckCircle2,
-  Timer,
   AlertCircle,
   UserPlus,
   Plus,
@@ -16,6 +15,9 @@ import {
   RefreshCw,
   Activity,
   Clock,
+  Play,
+  Eye,
+  Undo2,
 } from 'lucide-react';
 
 // ── Types ───────────────────────────────────────────────
@@ -61,8 +63,10 @@ const ACTION_CONFIG: Record<string, ActionConfig> = {
   Created:              { icon: Plus,          className: 'text-seeko-accent' },
   Assigned:             { icon: UserPlus,      className: 'text-blue-400', significant: true },
   Completed:            { icon: CheckCircle2,  className: 'text-emerald-400', significant: true },
-  Started:              { icon: Timer,         className: 'text-amber-400' },
-  'Moved to review':    { icon: AlertCircle,   className: 'text-orange-400' },
+  Started:              { icon: Play,          className: 'text-amber-400' },
+  'Moved to review':    { icon: Eye,           className: 'text-blue-400' },
+  'Returned task':      { icon: Undo2,         className: 'text-orange-400', significant: true },
+  'Approved task':      { icon: CheckCircle2,  className: 'text-emerald-400', significant: true },
   Blocked:              { icon: AlertCircle,   className: 'text-red-400', significant: true },
   Deleted:              { icon: Trash2,        className: 'text-red-400', significant: true },
   'Commented on':       { icon: MessageSquare, className: 'text-purple-400' },
@@ -109,6 +113,8 @@ function actionToSentence(action: string): string {
     'Commented on': 'commented on',
     'Changed priority': 'changed priority',
     'Changed department': 'changed department',
+    'Returned task': 'returned task',
+    'Approved task': 'approved task',
     'Requested extension': 'requested an extension on',
     'Approved extension': 'approved an extension on',
     'Denied extension': 'denied an extension on',
