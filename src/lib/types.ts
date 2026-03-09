@@ -160,7 +160,10 @@ export type NotificationKind =
   | 'payment_denied'
   | 'deadline_extension_requested'
   | 'deadline_extension_approved'
-  | 'deadline_extension_denied';
+  | 'deadline_extension_denied'
+  | 'task_submitted_review'
+  | 'task_review_approved'
+  | 'task_review_denied';
 
 export type UserEvent = {
   id: string;
