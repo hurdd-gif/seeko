@@ -119,6 +119,7 @@ export default async function OverviewPage() {
 
   const profile = user ? await fetchProfile(user.id) : null;
   const isAdmin = profile?.is_admin ?? false;
+  const isContractor = profile?.is_contractor ?? false;
 
   const [tasks, areas, team, docs, activity] = await Promise.all([
     isAdmin
@@ -293,13 +294,15 @@ export default async function OverviewPage() {
                       );
                     })}
                   </Stagger>
-                  <Link
-                    href="/activity"
-                    className="mt-4 flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-white/[0.04] transition-colors"
-                  >
-                    View all activity
-                    <ArrowRight className="size-3" />
-                  </Link>
+                  {!isContractor && (
+                    <Link
+                      href="/activity"
+                      className="mt-4 flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-white/[0.04] transition-colors"
+                    >
+                      View all activity
+                      <ArrowRight className="size-3" />
+                    </Link>
+                  )}
                 </>
               )}
             </CardContent>
