@@ -55,7 +55,7 @@ export function ActivityMoreInfo({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-72 p-3">
         <div className="space-y-2">
-          <p className="text-sm text-muted-foreground">
+          <span className="block text-sm text-muted-foreground">
             <span className="font-medium text-foreground">{name}</span>
             {' '}
             <span>{sentence}</span>
@@ -71,7 +71,7 @@ export function ActivityMoreInfo({
                 </Badge>
               </>
             )}
-          </p>
+          </span>
           <p className="text-[11px] text-muted-foreground/60">
             {exactTime(createdAt)}
           </p>

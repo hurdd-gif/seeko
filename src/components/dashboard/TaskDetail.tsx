@@ -11,6 +11,7 @@ import {
   CheckCircle2,
   Timer,
   AlertCircle,
+  AlertTriangle,
   Circle,
   Pencil,
   Trash2,
@@ -34,6 +35,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { DURATION_BACKDROP_MS, PANEL_SPRING, PANEL, SLIDEOUT, SLIDEOUT_SPRING } from '@/lib/motion';
+import { formatDeadline, formatDeadlineFull } from '@/lib/format-deadline';
 
 const REACTION_EMOJIS = ['👍', '👎', '🎉', '😂', '❓', '🔥', '❤️'];
 
@@ -1099,27 +1101,85 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
 
   const detailsContent = (
     <>
+      {/* Urgent deadline callout — own row when overdue or due soon */}
+      {task.deadline && (() => {
+        const dl = formatDeadline(task.deadline);
+        const DlIcon = dl.icon;
+        if (!dl.urgent) return null;
+        const bgMap: Record<string, string> = {
+          'text-red-400': 'bg-red-500/10 border-red-500/20',
+          'text-orange-400': 'bg-orange-500/10 border-orange-500/20',
+          'text-amber-400': 'bg-amber-500/10 border-amber-500/20',
+        };
+        return (
+          <div className={cn('flex items-center gap-2 rounded-lg border px-3.5 py-2.5 mb-3', bgMap[dl.className] ?? 'bg-muted/40 border-border')} title={formatDeadlineFull(task.deadline)}>
+            <DlIcon className={cn('size-4', dl.className)} />
+            <span className={cn('text-sm font-medium', dl.className)}>
+              {dl.className === 'text-red-400' ? 'Overdue' : 'Due'} — {dl.label}
+            </span>
+          </div>
+        );
+      })()}
+
       {/* Metadata row */}
       <div className="rounded-lg bg-muted/40 px-3.5 py-3 mb-4">
         <div className="flex flex-col md:flex-row md:flex-wrap items-start md:items-center gap-2 md:gap-4">
           <div className="flex items-center gap-1.5">
             <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Priority</span>
-            <Badge variant="outline" className="text-xs">{task.priority}</Badge>
+            {isAdmin ? (
+              <select
+                className="appearance-none rounded-md border border-transparent bg-transparent px-2 py-0.5 text-xs font-medium text-foreground cursor-pointer hover:border-border hover:bg-muted/50 transition-colors leading-normal"
+                defaultValue={task.priority}
+                onChange={async (e) => {
+                  const newPriority = e.target.value;
+                  await supabase.from('tasks').update({ priority: newPriority }).eq('id', task.id);
+                  toast.success(`Priority changed to ${newPriority}`);
+                }}
+              >
+                {['High', 'Medium', 'Low'].map(p => (
+                  <option key={p} value={p}>{p}</option>
+                ))}
+              </select>
+            ) : (
+              <Badge variant="secondary" className="text-xs">{task.priority}</Badge>
+            )}
           </div>
           <div className="hidden md:block w-px h-4 bg-border" />
           <div className="flex items-center gap-1.5">
             <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Dept</span>
-            <Badge variant="secondary" className="text-xs">{task.department}</Badge>
+            {isAdmin ? (
+              <select
+                className="appearance-none rounded-md border border-transparent bg-transparent px-2 py-0.5 text-xs font-medium text-foreground cursor-pointer hover:border-border hover:bg-muted/50 transition-colors leading-normal"
+                defaultValue={task.department}
+                onChange={async (e) => {
+                  const newDept = e.target.value;
+                  await supabase.from('tasks').update({ department: newDept }).eq('id', task.id);
+                  toast.success(`Department changed to ${newDept}`);
+                }}
+              >
+                {['Coding', 'Visual Art', 'UI/UX', 'Animation', 'Asset Creation'].map(d => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
+              </select>
+            ) : (
+              <Badge variant="secondary" className="text-xs">{task.department}</Badge>
+            )}
           </div>
-          {task.deadline && (
-            <>
-              <div className="hidden md:block w-px h-4 bg-border" />
-              <div className="flex items-center gap-1.5 cursor-default" title={formatLocalTime(task.deadline)}>
-                <Clock className="size-3 text-muted-foreground" />
-                <span className="text-xs text-foreground">{new Date(task.deadline + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-              </div>
-            </>
-          )}
+          {/* Normal (non-urgent) deadline stays inline */}
+          {task.deadline && (() => {
+            const dl = formatDeadline(task.deadline);
+            const DlIcon = dl.icon;
+            if (dl.urgent) return null;
+            return (
+              <>
+                <div className="hidden md:block w-px h-4 bg-border" />
+                <div className={cn('flex items-center gap-1.5 cursor-default', dl.className)} title={formatDeadlineFull(task.deadline)}>
+                  <DlIcon className="size-3" />
+                  <span className="text-xs font-medium">{dl.label}</span>
+                </div>
+              </>
+            );
+          })()}
         </div>
       </div>
 

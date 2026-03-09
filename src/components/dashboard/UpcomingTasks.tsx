@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Circle, CheckCircle2, Timer, AlertCircle, AlertTriangle } from 'lucide-react';
+import { Circle, CheckCircle2, Timer, AlertCircle } from 'lucide-react';
 import { Task, Profile, Doc } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { formatDeadline } from '@/lib/format-deadline';
 import { Stagger, StaggerItem } from '@/components/motion';
 import { EmptyState } from '@/components/ui/empty-state';
 import { TaskDetail } from '@/components/dashboard/TaskDetail';
@@ -22,18 +23,6 @@ const PRIORITY_COLOR: Record<string, string> = {
   Low:    'text-muted-foreground/60',
 };
 
-/** Same format as TaskList / TaskDetail: Month, day, year */
-function formatDeadlineDisplay(dateStr: string): string {
-  return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-  });
-}
-
-function isOverdue(dateStr: string): boolean {
-  const deadline = new Date(dateStr + 'T23:59:59');
-  return deadline < new Date();
-}
 
 interface UpcomingTasksProps {
   tasks: Task[];
@@ -41,9 +30,10 @@ interface UpcomingTasksProps {
   docs: Doc[];
   currentUserId: string;
   emptyAction?: React.ReactNode;
+  isAdmin?: boolean;
 }
 
-export function UpcomingTasks({ tasks, team, docs, currentUserId, emptyAction }: UpcomingTasksProps) {
+export function UpcomingTasks({ tasks, team, docs, currentUserId, emptyAction, isAdmin = false }: UpcomingTasksProps) {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
   if (tasks.length === 0) {
@@ -63,7 +53,8 @@ export function UpcomingTasks({ tasks, team, docs, currentUserId, emptyAction }:
         {tasks.map(task => {
           const cfg = STATUS_ICONS[task.status] ?? STATUS_ICONS['In Progress'];
           const Icon = cfg.icon;
-          const overdue = task.deadline ? isOverdue(task.deadline) : false;
+          const dl = task.deadline ? formatDeadline(task.deadline) : null;
+          const DlIcon = dl?.icon;
           return (
             <StaggerItem key={task.id}>
               <button
@@ -85,13 +76,10 @@ export function UpcomingTasks({ tasks, team, docs, currentUserId, emptyAction }:
                   <span className={cn('text-xs', PRIORITY_COLOR[task.priority] ?? 'text-muted-foreground')}>
                     {task.priority}
                   </span>
-                  {task.deadline && (
-                    <span className={cn(
-                      'inline-flex items-center gap-1 text-xs',
-                      overdue ? 'text-red-400 font-medium' : 'text-muted-foreground'
-                    )}>
-                      {overdue && <AlertTriangle className="size-3" />}
-                      {overdue ? 'Overdue' : formatDeadlineDisplay(task.deadline)}
+                  {dl && (
+                    <span className={cn('inline-flex items-center gap-1 text-xs', dl.className)} title={task.deadline}>
+                      {dl.className === 'text-red-400' && DlIcon && <DlIcon className="size-3" />}
+                      {dl.label}
                     </span>
                   )}
                 </div>
@@ -109,6 +97,7 @@ export function UpcomingTasks({ tasks, team, docs, currentUserId, emptyAction }:
           team={team}
           docs={docs}
           currentUserId={currentUserId}
+          isAdmin={isAdmin}
         />
       )}
     </>

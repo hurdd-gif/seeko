@@ -127,25 +127,60 @@ export function DashboardAreaCard({ area, isAdmin }: DashboardAreaCardProps) {
         </HoverCard>
       </StaggerItem>
 
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open} onOpenChange={setOpen} contentClassName="max-w-md">
         <DialogClose onClose={() => setOpen(false)} />
         <DialogHeader>
-          <DialogTitle>Edit {area.name}</DialogTitle>
+          <div className="flex items-center gap-2.5">
+            <DialogTitle>{area.name}</DialogTitle>
+            {phase && (
+              <span className="rounded-md border border-white/[0.08] px-1.5 py-0.5 text-xs text-muted-foreground font-mono">
+                {phase || area.phase}
+              </span>
+            )}
+          </div>
         </DialogHeader>
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="area-progress">Progress (%)</Label>
-            <Input
-              id="area-progress"
-              type="number"
-              min={0}
-              max={100}
-              value={progress}
-              onChange={e => setProgress(Number(e.target.value) || 0)}
+
+        {/* Progress — hero field with live bar */}
+        <div className="mb-5">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Progress</span>
+            <div className="flex items-baseline gap-1">
+              <input
+                type="number"
+                min={0}
+                max={100}
+                value={progress}
+                onChange={e => setProgress(Math.min(100, Math.max(0, Number(e.target.value) || 0)))}
+                className="w-12 bg-transparent text-right text-sm font-mono font-medium text-foreground focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+              />
+              <span className="text-xs text-muted-foreground">%</span>
+            </div>
+          </div>
+          <div className="w-full h-2 rounded-full bg-secondary overflow-hidden">
+            <motion.div
+              animate={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
+              transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+              className="h-full rounded-full"
+              style={{ backgroundColor: 'var(--color-seeko-accent)' }}
             />
           </div>
-          <div className="space-y-2">
-            <Label>Phase</Label>
+        </div>
+
+        {/* Status + Phase — side by side */}
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <div className="space-y-1.5">
+            <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Status</span>
+            <Select
+              value={status}
+              onChange={e => setStatus(e.target.value)}
+            >
+              {STATUSES.map(s => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Phase</span>
             <Select
               value={phase}
               onChange={e => setPhase(e.target.value)}
@@ -156,35 +191,30 @@ export function DashboardAreaCard({ area, isAdmin }: DashboardAreaCardProps) {
               ))}
             </Select>
           </div>
-          <div className="space-y-2">
-            <Label>Status</Label>
-            <Select
-              value={status}
-              onChange={e => setStatus(e.target.value)}
-            >
-              {STATUSES.map(s => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="area-description">Description</Label>
-            <textarea
-              id="area-description"
-              value={description}
-              onChange={e => setDescription(e.target.value)}
-              rows={3}
-              className="flex w-full rounded-lg border-0 bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
-              placeholder="Optional"
-            />
-          </div>
-          {error && (
-            <p className="text-sm text-destructive">{error}</p>
-          )}
-          <Button onClick={handleSave} disabled={saving} className="w-full">
-            {saving ? 'Saving…' : 'Save changes'}
-          </Button>
         </div>
+
+        {/* Description */}
+        <div className="mb-5">
+          <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground mb-1.5 block">Description</span>
+          <textarea
+            value={description}
+            onChange={e => setDescription(e.target.value)}
+            rows={2}
+            className="flex w-full rounded-lg border-0 bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
+            placeholder="Optional"
+          />
+        </div>
+
+        {error && (
+          <p className="text-sm text-destructive mb-3">{error}</p>
+        )}
+        <Button
+          onClick={handleSave}
+          disabled={saving}
+          className="w-full bg-seeko-accent text-background hover:bg-seeko-accent/90 font-medium"
+        >
+          {saving ? 'Saving…' : 'Save changes'}
+        </Button>
       </Dialog>
     </>
   );

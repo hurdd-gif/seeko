@@ -147,6 +147,11 @@ export default async function OverviewPage() {
 
           {/* Inline stat pills */}
           <div className="flex flex-wrap items-center gap-2">
+            {overdue > 0 && (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-red-500/20 bg-red-500/[0.06] px-3 py-1 text-xs font-medium text-red-400">
+                {overdue} overdue
+              </span>
+            )}
             <Link
               href="/tasks"
               className="inline-flex items-center gap-1.5 rounded-full border border-seeko-accent/20 bg-seeko-accent/[0.06] px-3 py-1 text-xs font-medium text-seeko-accent transition-colors hover:bg-seeko-accent/[0.12]"
@@ -155,18 +160,13 @@ export default async function OverviewPage() {
               {openTasks} open
             </Link>
             {inProgress > 0 && (
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1 text-xs font-medium text-amber-400">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1 text-xs text-muted-foreground">
                 {inProgress} in progress
               </span>
             )}
             {blocked > 0 && (
               <span className="inline-flex items-center gap-1.5 rounded-full border border-red-500/20 bg-red-500/[0.06] px-3 py-1 text-xs font-medium text-red-400">
                 {blocked} blocked
-              </span>
-            )}
-            {overdue > 0 && (
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-red-500/20 bg-red-500/[0.06] px-3 py-1 text-xs font-medium text-red-400">
-                {overdue} overdue
               </span>
             )}
             {completed > 0 && (
@@ -201,6 +201,7 @@ export default async function OverviewPage() {
                 team={team}
                 docs={docs}
                 currentUserId={user?.id ?? ''}
+                isAdmin={isAdmin}
                 emptyAction={
                   <Link
                     href="/docs"
