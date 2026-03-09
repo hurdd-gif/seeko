@@ -201,6 +201,7 @@ export default async function OverviewPage() {
                 team={team}
                 docs={docs}
                 currentUserId={user?.id ?? ''}
+                isAdmin={isAdmin}
                 emptyAction={
                   <Link
                     href="/docs"

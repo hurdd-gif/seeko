@@ -30,9 +30,10 @@ interface UpcomingTasksProps {
   docs: Doc[];
   currentUserId: string;
   emptyAction?: React.ReactNode;
+  isAdmin?: boolean;
 }
 
-export function UpcomingTasks({ tasks, team, docs, currentUserId, emptyAction }: UpcomingTasksProps) {
+export function UpcomingTasks({ tasks, team, docs, currentUserId, emptyAction, isAdmin = false }: UpcomingTasksProps) {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
   if (tasks.length === 0) {
@@ -96,6 +97,7 @@ export function UpcomingTasks({ tasks, team, docs, currentUserId, emptyAction }:
           team={team}
           docs={docs}
           currentUserId={currentUserId}
+          isAdmin={isAdmin}
         />
       )}
     </>
