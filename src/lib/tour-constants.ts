@@ -16,4 +16,5 @@ export const TOUR_STEP_IDS_MOBILE = {
   TEAM: 'tour-team-m',
   DOCS: 'tour-docs-m',
   ACTIVITY: 'tour-activity-m',
+  MORE: 'tour-more-m',
 } as const;

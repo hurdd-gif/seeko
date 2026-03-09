@@ -494,6 +494,7 @@ export function Sidebar({
                           {hasOverflow && (
                             <motion.div className="flex flex-1" whileTap={{ scale: BOTTOM_NAV.tapScale }} transition={BOTTOM_NAV.tapSpring}>
                               <button
+                                id={TOUR_STEP_IDS_MOBILE.MORE}
                                 onClick={() => { trigger('selection'); setMoreOpen(prev => !prev); }}
                                 className={[
                                   'flex flex-1 flex-col items-center justify-center gap-1 text-[10px] font-medium transition-colors relative',

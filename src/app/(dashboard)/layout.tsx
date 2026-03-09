@@ -43,7 +43,7 @@ export default async function DashboardLayout({
   const showTour = profile?.onboarded === 1 && (profile?.tour_completed ?? 0) === 0;
 
   return (
-    <DashboardTourWrapper showTour={showTour} userId={user.id} isContractor={profile?.is_contractor ?? false}>
+    <DashboardTourWrapper showTour={showTour} userId={user.id} isContractor={profile?.is_contractor ?? false} isAdmin={isAdmin}>
       <div className="flex h-dvh flex-col overflow-hidden bg-background md:min-h-screen md:h-auto md:overflow-visible md:flex-row">
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden md:flex-row md:overflow-visible">
           <div id="dashboard-mobile-header-slot" className="md:hidden shrink-0" aria-hidden="true" />
