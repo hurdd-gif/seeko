@@ -675,6 +675,20 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
   const [replyTo, setReplyTo] = useState<TaskComment | null>(null);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);
+  const [showExtForm, setShowExtForm] = useState(false);
+  const [extUnit, setExtUnit] = useState<'hours' | 'days'>('days');
+  const [extAmount, setExtAmount] = useState(1);
+  const [extSubmitting, setExtSubmitting] = useState(false);
+  const [pendingExt, setPendingExt] = useState<{
+    id: string;
+    extra_hours: number;
+    new_deadline: string;
+    status: string;
+    profiles?: { display_name?: string };
+  } | null>(null);
+  const [denyMode, setDenyMode] = useState(false);
+  const [denyReason, setDenyReason] = useState('');
+  const [extDeciding, setExtDeciding] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const commentsEndRef = useRef<HTMLDivElement>(null);
 
@@ -724,6 +738,76 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
   useEffect(() => {
     if (open && isAdmin) loadDeliverables();
   }, [open, isAdmin, loadDeliverables]);
+
+  // Fetch pending deadline extension when panel opens
+  useEffect(() => {
+    if (!open || !task.id) return;
+    const fetchExt = async () => {
+      const res = await supabase
+        .from('deadline_extensions')
+        .select('id, extra_hours, new_deadline, status, profiles!requested_by(display_name)')
+        .eq('task_id', task.id)
+        .eq('status', 'pending')
+        .limit(1)
+        .maybeSingle();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      setPendingExt(res.data as any ?? null);
+    };
+    fetchExt();
+  }, [open, task.id, supabase]);
+
+  const handleExtensionRequest = async () => {
+    setExtSubmitting(true);
+    const totalHours = extUnit === 'days' ? extAmount * 24 : extAmount;
+    try {
+      const res = await fetch('/api/deadline-extensions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ taskId: task.id, extraHours: totalHours }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error ?? 'Failed to request extension');
+        return;
+      }
+      toast.success('Extension requested');
+      setPendingExt(data.extension);
+      setShowExtForm(false);
+    } catch {
+      toast.error('Network error');
+    } finally {
+      setExtSubmitting(false);
+    }
+  };
+
+  const handleExtensionDecision = async (action: 'approve' | 'deny') => {
+    if (!pendingExt) return;
+    setExtDeciding(true);
+    try {
+      const res = await fetch(`/api/deadline-extensions/${pendingExt.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action,
+          reason: action === 'deny' ? denyReason.trim() || undefined : undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error ?? `Failed to ${action} extension`);
+        return;
+      }
+      toast.success(action === 'approve' ? 'Extension approved \u2014 deadline updated' : 'Extension denied');
+      setPendingExt(null);
+      setDenyMode(false);
+      setDenyReason('');
+      if (action === 'approve') onOpenChange(false);
+    } catch {
+      toast.error('Network error');
+    } finally {
+      setExtDeciding(false);
+    }
+  };
 
   const handleDeleteDeliverable = useCallback(async (deliverableId: string) => {
     setDeletingDeliverableId(deliverableId);
@@ -1102,109 +1186,273 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
 
   const detailsContent = (
     <>
-      {/* Urgent deadline callout — own row when overdue or due soon */}
-      {task.deadline && (() => {
-        const dl = formatDeadline(task.deadline);
-        const DlIcon = dl.icon;
-        if (!dl.urgent) return null;
-        const bgMap: Record<string, string> = {
-          'text-red-400': 'bg-red-500/10 border-red-500/20',
-          'text-orange-400': 'bg-orange-500/10 border-orange-500/20',
-          'text-amber-400': 'bg-amber-500/10 border-amber-500/20',
-        };
-        return (
-          <div className={cn('flex items-center gap-2 rounded-lg border px-3.5 py-2.5 mb-3', bgMap[dl.className] ?? 'bg-muted/40 border-border')} title={formatDeadlineFull(task.deadline)}>
-            <DlIcon className={cn('size-4', dl.className)} />
-            <span className={cn('text-sm font-medium', dl.className)}>
-              {dl.className === 'text-red-400' ? 'Overdue' : 'Due'} — {dl.label}
-            </span>
+      {/* Admin: pending extension banner */}
+      {isAdmin && pendingExt && (
+        <div className="rounded-lg border border-amber-500/20 bg-amber-500/[0.06] px-3.5 py-3 mb-4 space-y-2.5">
+          <div className="flex items-start gap-2">
+            <Clock className="size-4 text-amber-400 mt-0.5 shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm text-foreground">
+                <span className="font-medium">
+                  {(pendingExt as Record<string, unknown> & { profiles?: { display_name?: string } }).profiles?.display_name ?? 'Someone'}
+                </span>{' '}
+                requested{' '}
+                <span className="font-medium">
+                  {pendingExt.extra_hours >= 24
+                    ? `${Math.round(pendingExt.extra_hours / 24)} more day${Math.round(pendingExt.extra_hours / 24) !== 1 ? 's' : ''}`
+                    : `${pendingExt.extra_hours} more hour${pendingExt.extra_hours !== 1 ? 's' : ''}`}
+                </span>
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {new Date(task.deadline + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} → {new Date(pendingExt.new_deadline + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              </p>
+            </div>
           </div>
-        );
-      })()}
+          {denyMode ? (
+            <div className="space-y-2 pl-6">
+              <textarea
+                value={denyReason}
+                onChange={e => setDenyReason(e.target.value)}
+                placeholder="Reason (optional)"
+                rows={2}
+                className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+              />
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleExtensionDecision('deny')}
+                  disabled={extDeciding}
+                  className="rounded-md bg-red-500/10 border border-red-500/20 px-3 py-1.5 text-xs font-medium text-red-400 hover:bg-red-500/20 transition-colors disabled:opacity-50"
+                >
+                  {extDeciding ? 'Denying\u2026' : 'Confirm deny'}
+                </button>
+                <button
+                  onClick={() => { setDenyMode(false); setDenyReason(''); }}
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 pl-6">
+              <button
+                onClick={() => handleExtensionDecision('approve')}
+                disabled={extDeciding}
+                className="rounded-md bg-seeko-accent px-3 py-1.5 text-xs font-medium text-background hover:bg-seeko-accent/90 transition-colors disabled:opacity-50"
+              >
+                {extDeciding ? 'Approving\u2026' : 'Approve'}
+              </button>
+              <button
+                onClick={() => setDenyMode(true)}
+                className="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+              >
+                Deny
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
-      {/* Metadata row */}
-      <div className="rounded-lg bg-muted/40 px-3.5 py-3 mb-4">
-        <div className="flex flex-col md:flex-row md:flex-wrap items-start md:items-center gap-2 md:gap-4">
-          <div className="flex items-center gap-1.5">
-            <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Priority</span>
-            {isAdmin ? (
-              <select
-                className="appearance-none rounded-md border border-transparent bg-transparent px-2 py-0.5 text-xs font-medium text-foreground cursor-pointer hover:border-border hover:bg-muted/50 transition-colors leading-normal"
-                defaultValue={task.priority}
-                onChange={async (e) => {
-                  const newPriority = e.target.value;
-                  await supabase.from('tasks').update({ priority: newPriority }).eq('id', task.id);
-                  toast.success(`Priority changed to ${newPriority}`);
-                }}
-              >
-                {['High', 'Medium', 'Low'].map(p => (
-                  <option key={p} value={p}>{p}</option>
-                ))}
-              </select>
-            ) : (
-              <Badge variant="secondary" className="text-xs">{task.priority}</Badge>
-            )}
+      {/* ── Deadline + metadata — one cohesive zone ────────── */}
+      <div className="mb-4 space-y-2">
+        {/* Urgent deadline banner */}
+        {task.deadline && (() => {
+          const dl = formatDeadline(task.deadline);
+          const DlIcon = dl.icon;
+          if (!dl.urgent) return null;
+          const bgMap: Record<string, string> = {
+            'text-red-400': 'bg-red-500/10 border-red-500/20',
+            'text-orange-400': 'bg-orange-500/10 border-orange-500/20',
+            'text-amber-400': 'bg-amber-500/10 border-amber-500/20',
+          };
+          return (
+            <div className={cn('flex items-center gap-2 rounded-lg border px-3.5 py-2.5', bgMap[dl.className] ?? 'bg-muted/40 border-border')} title={formatDeadlineFull(task.deadline)}>
+              <DlIcon className={cn('size-4', dl.className)} />
+              <span className={cn('text-sm font-medium', dl.className)}>
+                {dl.className === 'text-red-400' ? 'Overdue' : 'Due'} — {dl.label}
+              </span>
+              {/* Request more time — inline with deadline */}
+              {!isAdmin && task.assignee_id === currentUserId && !pendingExt && !showExtForm && (
+                <button
+                  onClick={() => setShowExtForm(true)}
+                  className="ml-auto text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Request more time
+                </button>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* Extension: pending status */}
+        {task.deadline && !isAdmin && task.assignee_id === currentUserId && pendingExt && (
+          <div className="flex items-center gap-2 text-xs text-amber-400">
+            <Clock className="size-3 shrink-0" />
+            <span>Extension requested — waiting for approval</span>
           </div>
-          <div className="hidden md:block w-px h-4 bg-border" />
-          <div className="flex items-center gap-1.5">
-            <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Dept</span>
-            {isAdmin ? (
-              <select
-                className="appearance-none rounded-md border border-transparent bg-transparent px-2 py-0.5 text-xs font-medium text-foreground cursor-pointer hover:border-border hover:bg-muted/50 transition-colors leading-normal"
-                defaultValue={task.department}
-                onChange={async (e) => {
-                  const newDept = e.target.value;
-                  await supabase.from('tasks').update({ department: newDept }).eq('id', task.id);
-                  toast.success(`Department changed to ${newDept}`);
-                }}
+        )}
+
+        {/* Extension: request form — tightly coupled under deadline */}
+        {task.deadline && !isAdmin && task.assignee_id === currentUserId && showExtForm && !pendingExt && (
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center gap-1.5">
+              {[
+                { label: '+1d', hours: 24 },
+                { label: '+2d', hours: 48 },
+                { label: '+3d', hours: 72 },
+                { label: '+1w', hours: 168 },
+              ].map(preset => {
+                const isActive = extUnit === 'days'
+                  ? extAmount === preset.hours / 24
+                  : extAmount === preset.hours;
+                return (
+                  <button
+                    key={preset.label}
+                    type="button"
+                    onClick={() => { setExtUnit('days'); setExtAmount(preset.hours / 24); }}
+                    className={cn(
+                      'rounded-full px-3 py-1 text-xs font-medium transition-colors',
+                      isActive
+                        ? 'bg-foreground/10 text-foreground'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-white/[0.04]'
+                    )}
+                  >
+                    {preset.label}
+                  </button>
+                );
+              })}
+              <button
+                type="button"
+                onClick={() => { setExtUnit('hours'); setExtAmount(12); }}
+                className={cn(
+                  'rounded-full px-3 py-1 text-xs font-medium transition-colors',
+                  extUnit === 'hours'
+                    ? 'bg-foreground/10 text-foreground'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-white/[0.04]'
+                )}
               >
-                {['Coding', 'Visual Art', 'UI/UX', 'Animation', 'Asset Creation'].map(d => (
-                  <option key={d} value={d}>{d}</option>
-                ))}
-              </select>
-            ) : (
-              <Badge variant="secondary" className="text-xs">{task.department}</Badge>
+                Custom
+              </button>
+            </div>
+            {extUnit === 'hours' && (
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min={1}
+                  max={720}
+                  value={extAmount}
+                  onChange={e => setExtAmount(Math.max(1, Number(e.target.value) || 1))}
+                  className="w-14 rounded-md bg-muted/60 px-2 py-1 text-sm text-foreground text-center focus:outline-none focus:ring-1 focus:ring-ring [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                />
+                <span className="text-xs text-muted-foreground">hours</span>
+              </div>
             )}
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-muted-foreground">
+                New deadline:{' '}
+                <span className="text-foreground font-medium">
+                  {new Date(
+                    new Date(task.deadline + 'T00:00:00').getTime() +
+                    (extUnit === 'days' ? extAmount * 24 : extAmount) * 3600000
+                  ).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                </span>
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowExtForm(false)}
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleExtensionRequest}
+                  disabled={extSubmitting}
+                  className="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted/50 transition-colors disabled:opacity-50"
+                >
+                  {extSubmitting ? 'Requesting\u2026' : 'Submit'}
+                </button>
+              </div>
+            </div>
           </div>
-          {/* Normal (non-urgent) deadline stays inline */}
-          {task.deadline && (() => {
-            const dl = formatDeadline(task.deadline);
-            const DlIcon = dl.icon;
-            if (dl.urgent) return null;
-            return (
-              <>
-                <div className="hidden md:block w-px h-4 bg-border" />
-                <div className={cn('flex items-center gap-1.5 cursor-default', dl.className)} title={formatDeadlineFull(task.deadline)}>
-                  <DlIcon className="size-3" />
-                  <span className="text-xs font-medium">{dl.label}</span>
-                </div>
-              </>
-            );
-          })()}
+        )}
+
+        {/* Non-urgent deadline — show "Request more time" link for assignees */}
+        {task.deadline && (() => {
+          const dl = formatDeadline(task.deadline);
+          const DlIcon = dl.icon;
+          if (dl.urgent) return null;
+          return (
+            <div className="flex items-center gap-1.5">
+              <DlIcon className={cn('size-3', dl.className)} />
+              <span className={cn('text-xs font-medium', dl.className)} title={formatDeadlineFull(task.deadline)}>{dl.label}</span>
+              {!isAdmin && task.assignee_id === currentUserId && !pendingExt && !showExtForm && (
+                <button
+                  onClick={() => setShowExtForm(true)}
+                  className="ml-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Request more time
+                </button>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* Metadata — compact inline badges, no container */}
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+          {isAdmin ? (
+            <select
+              className="appearance-none rounded-md border border-transparent bg-transparent px-2 py-0.5 text-xs font-medium text-foreground cursor-pointer hover:border-border hover:bg-muted/50 transition-colors leading-normal"
+              defaultValue={task.priority}
+              onChange={async (e) => {
+                const newPriority = e.target.value;
+                await supabase.from('tasks').update({ priority: newPriority }).eq('id', task.id);
+                toast.success(`Priority changed to ${newPriority}`);
+              }}
+            >
+              {['High', 'Medium', 'Low'].map(p => (
+                <option key={p} value={p}>{p}</option>
+              ))}
+            </select>
+          ) : (
+            <span className="text-xs font-medium text-foreground">{task.priority}</span>
+          )}
+          <span className="inline-block w-px h-3 bg-border" />
+          {isAdmin ? (
+            <select
+              className="appearance-none rounded-md border border-transparent bg-transparent px-2 py-0.5 text-xs font-medium text-foreground cursor-pointer hover:border-border hover:bg-muted/50 transition-colors leading-normal"
+              defaultValue={task.department}
+              onChange={async (e) => {
+                const newDept = e.target.value;
+                await supabase.from('tasks').update({ department: newDept }).eq('id', task.id);
+                toast.success(`Department changed to ${newDept}`);
+              }}
+            >
+              {['Coding', 'Visual Art', 'UI/UX', 'Animation', 'Asset Creation'].map(d => (
+                <option key={d} value={d}>{d}</option>
+              ))}
+            </select>
+          ) : (
+            <span className="text-xs font-medium text-foreground">{task.department}</span>
+          )}
+          {/* Hand off — demoted to inline text link */}
+          {canHandOff && (
+            <>
+              <span className="inline-block w-px h-3 bg-border" />
+              <button
+                onClick={() => setShowHandoff(true)}
+                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <ArrowRightLeft className="size-3" />
+                Hand off
+              </button>
+            </>
+          )}
         </div>
       </div>
 
-      {/* Actions */}
-      {canHandOff && (
-        <button
-          onClick={() => setShowHandoff(true)}
-          className="flex w-full items-center justify-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors mb-4"
-        >
-          <ArrowRightLeft className="size-3.5" />
-          Hand Off Task
-        </button>
-      )}
-
-      {/* Description */}
-      {task.description ? (
-        <div className="mb-4">
-          <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">Description</span>
-          <p className="text-sm text-muted-foreground mt-1 leading-relaxed">{task.description}</p>
-        </div>
-      ) : (
-        <div className="mb-4 py-4 text-center">
-          <p className="text-xs text-muted-foreground/40">No description added</p>
-        </div>
+      {/* Description — no label, separated by spacing alone */}
+      {task.description && (
+        <p className="text-sm text-muted-foreground mb-4 leading-relaxed">{task.description}</p>
       )}
 
       {handoffs.length > 0 && (
@@ -1728,7 +1976,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
         )}
       </AnimatePresence>
 
-      {showHandoff && (
+      {showHandoff && createPortal(
         <HandoffDialog
           task={task}
           team={team}
@@ -1739,7 +1987,8 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
             setLocalAssigneeId(toUserId);
             loadHandoffs();
           }}
-        />
+        />,
+        document.body
       )}
     </>
   );

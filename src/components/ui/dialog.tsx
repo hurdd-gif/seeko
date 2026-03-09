@@ -31,9 +31,11 @@ interface DialogProps {
   resizable?: boolean
   /** Optional class name for the panel (e.g. max-w-4xl for a larger dialog). */
   contentClassName?: string
+  /** Optional class name for the outer fixed wrapper (e.g. z-[70] to override stacking). */
+  className?: string
 }
 
-function Dialog({ open, onOpenChange, children, resizable = false, contentClassName }: DialogProps) {
+function Dialog({ open, onOpenChange, children, resizable = false, contentClassName, className }: DialogProps) {
   const [footer, setFooter] = React.useState<React.ReactNode>(null)
   const [size, setSize] = React.useState({ w: DEFAULT_MAX_W, h: 600 });
   const [maximized, setMaximized] = React.useState(false)
@@ -137,7 +139,7 @@ function Dialog({ open, onOpenChange, children, resizable = false, contentClassN
   return (
     <AnimatePresence>
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
+        <div className={cn("fixed inset-0 z-50 flex items-center justify-center", className)}>
           <motion.div
             className="fixed inset-0 bg-black/50 backdrop-blur-sm"
             initial={{ opacity: 0 }}
