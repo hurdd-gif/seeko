@@ -18,6 +18,7 @@ import {
   Check,
   X,
   FileText,
+  Presentation,
   Package,
   Download,
   ArrowRightLeft,
@@ -889,8 +890,8 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
     }
     return docs
       .filter(d => d.title.toLowerCase().includes(q))
-      .slice(0, 5)
-      .map(d => ({ id: d.id, label: d.title, icon: 'doc' as const }));
+      .slice(0, 8)
+      .map(d => ({ id: d.id, label: d.title, icon: (d.type === 'deck' ? 'deck' : 'doc') as 'doc' | 'deck' }));
   }, [autocompleteMode, autocompleteQuery, team, docs]);
 
   function detectAutocomplete(value: string) {
@@ -1495,6 +1496,8 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
                       <AvatarImage src={candidate.avatar ?? undefined} />
                       <AvatarFallback className="text-[7px] bg-secondary">{getInitials(candidate.label)}</AvatarFallback>
                     </Avatar>
+                  ) : candidate.icon === 'deck' ? (
+                    <Presentation className="size-4 text-amber-400" />
                   ) : (
                     <FileText className="size-4 text-blue-400" />
                   )}
