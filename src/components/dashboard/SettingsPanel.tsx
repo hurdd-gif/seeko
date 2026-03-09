@@ -16,7 +16,7 @@ import { Camera, Check, Eye, MousePointer, Monitor, UserX, AlertTriangle, Rotate
 import { toast } from 'sonner';
 import { Profile, UserEvent, Task, Payment } from '@/lib/types';
 import { useHaptics } from '@/components/HapticsProvider';
-import { useTour } from '@/components/ui/tour';
+import { useTourMaybe } from '@/components/ui/tour';
 import { PaymentRequestDialog } from '@/components/dashboard/PaymentRequestDialog';
 import { formatCurrency } from '@/lib/format';
 import { cn } from '@/lib/utils';
@@ -732,7 +732,9 @@ export function SettingsPanel({ profile, isAdmin, team, revalidate, completedTas
 }
 
 function ReplayTourCard({ userId }: { userId: string }) {
-  const { setIsTourCompleted, startTour, isTourCompleted } = useTour();
+  const tour = useTourMaybe();
+  if (!tour) return null;
+  const { setIsTourCompleted, startTour } = tour;
   const [replaying, setReplaying] = useState(false);
 
   const supabase = createBrowserClient(
