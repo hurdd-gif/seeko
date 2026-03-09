@@ -4,6 +4,8 @@ export interface DeadlineDisplay {
   label: string;
   className: string;
   icon: LucideIcon;
+  /** true when overdue or due within 6 days — used to promote deadline to its own row */
+  urgent: boolean;
 }
 
 /**
@@ -30,22 +32,22 @@ export function formatDeadline(dateStr: string): DeadlineDisplay {
     else if (absDays < 7) label = `${absDays} days ago`;
     else if (absDays < 14) label = '1 week ago';
     else label = `${Math.floor(absDays / 7)} weeks ago`;
-    return { label, className: 'text-red-400', icon: AlertTriangle };
+    return { label, className: 'text-red-400', icon: AlertTriangle, urgent: true };
   }
 
   // Due today
   if (diffDays === 0) {
-    return { label: 'Today', className: 'text-orange-400', icon: Clock };
+    return { label: 'Today', className: 'text-orange-400', icon: Clock, urgent: true };
   }
 
   // Due tomorrow
   if (diffDays === 1) {
-    return { label: 'Tomorrow', className: 'text-amber-400', icon: Clock };
+    return { label: 'Tomorrow', className: 'text-amber-400', icon: Clock, urgent: true };
   }
 
   // Due this week (2-6 days)
   if (diffDays <= 6) {
-    return { label: `in ${diffDays} days`, className: 'text-amber-400', icon: Clock };
+    return { label: `in ${diffDays} days`, className: 'text-amber-400', icon: Clock, urgent: true };
   }
 
   // Normal (7+ days)
@@ -53,7 +55,7 @@ export function formatDeadline(dateStr: string): DeadlineDisplay {
     month: 'short',
     day: 'numeric',
   });
-  return { label: formatted, className: 'text-muted-foreground', icon: Clock };
+  return { label: formatted, className: 'text-muted-foreground', icon: Clock, urgent: false };
 }
 
 /** Full absolute date for tooltips */
