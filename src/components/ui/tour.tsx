@@ -427,6 +427,11 @@ export function useTour() {
   return context;
 }
 
+/** Safe variant — returns null when outside a TourProvider instead of throwing. */
+export function useTourMaybe() {
+  return useContext(TourContext);
+}
+
 export function TourAlertDialog({
   isOpen,
   setIsOpen,

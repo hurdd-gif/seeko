@@ -12,15 +12,18 @@ import { Select } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { motion, AnimatePresence } from 'motion/react';
 import { Camera, Check, Eye, MousePointer, Monitor, UserX, AlertTriangle, RotateCcw, DollarSign, Vibrate, Lock, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { Profile, UserEvent, Task, Payment } from '@/lib/types';
 import { useHaptics } from '@/components/HapticsProvider';
-import { useTour } from '@/components/ui/tour';
+import { useTourMaybe } from '@/components/ui/tour';
 import { PaymentRequestDialog } from '@/components/dashboard/PaymentRequestDialog';
 import { formatCurrency } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { Switch } from '@/components/ui/switch';
+
+const COLLAPSE_SPRING = { type: 'spring' as const, stiffness: 360, damping: 39, mass: 2.4 };
 
 const COMMON_TIMEZONES = [
   'America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles',
@@ -391,55 +394,65 @@ export function SettingsPanel({ profile, isAdmin, team, revalidate, completedTas
             <ChevronDown className={cn("size-4 text-muted-foreground transition-transform duration-200", pwOpen && "rotate-180")} />
           </button>
 
-          {pwOpen && (
-            <div className="flex flex-col gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="current-password">Current Password</Label>
-                <Input
-                  id="current-password"
-                  type="password"
-                  value={currentPassword}
-                  onChange={e => { setCurrentPassword(e.target.value); setPwError(''); }}
-                  placeholder="Enter current password"
-                />
-              </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="new-password">New Password</Label>
-                  <Input
-                    id="new-password"
-                    type="password"
-                    value={newPassword}
-                    onChange={e => { setNewPassword(e.target.value); setPwError(''); }}
-                    placeholder="At least 8 characters"
-                  />
+          <AnimatePresence>
+            {pwOpen && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={COLLAPSE_SPRING}
+                className="overflow-hidden"
+              >
+                <div className="flex flex-col gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="current-password">Current Password</Label>
+                    <Input
+                      id="current-password"
+                      type="password"
+                      value={currentPassword}
+                      onChange={e => { setCurrentPassword(e.target.value); setPwError(''); }}
+                      placeholder="Enter current password"
+                    />
+                  </div>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="new-password">New Password</Label>
+                      <Input
+                        id="new-password"
+                        type="password"
+                        value={newPassword}
+                        onChange={e => { setNewPassword(e.target.value); setPwError(''); }}
+                        placeholder="At least 8 characters"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="confirm-password">Confirm New Password</Label>
+                      <Input
+                        id="confirm-password"
+                        type="password"
+                        value={confirmPassword}
+                        onChange={e => { setConfirmPassword(e.target.value); setPwError(''); }}
+                        placeholder="Re-enter new password"
+                        onKeyDown={e => e.key === 'Enter' && handleChangePassword()}
+                      />
+                    </div>
+                  </div>
+                  {pwError && <p className="text-sm text-destructive">{pwError}</p>}
+                  {pwSuccess && <p className="text-sm text-seeko-accent">Password updated successfully.</p>}
+                  <div className="flex justify-end">
+                    <Button
+                      type="button"
+                      onClick={handleChangePassword}
+                      disabled={pwSaving}
+                      className="gap-2 min-w-[7.5rem] min-h-[2.5rem] touch-manipulation"
+                    >
+                      {pwSaving ? 'Updating...' : 'Update Password'}
+                    </Button>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="confirm-password">Confirm New Password</Label>
-                  <Input
-                    id="confirm-password"
-                    type="password"
-                    value={confirmPassword}
-                    onChange={e => { setConfirmPassword(e.target.value); setPwError(''); }}
-                    placeholder="Re-enter new password"
-                    onKeyDown={e => e.key === 'Enter' && handleChangePassword()}
-                  />
-                </div>
-              </div>
-              {pwError && <p className="text-sm text-destructive">{pwError}</p>}
-              {pwSuccess && <p className="text-sm text-seeko-accent">Password updated successfully.</p>}
-              <div className="flex justify-end">
-                <Button
-                  type="button"
-                  onClick={handleChangePassword}
-                  disabled={pwSaving}
-                  className="gap-2 min-w-[7.5rem] min-h-[2.5rem] touch-manipulation"
-                >
-                  {pwSaving ? 'Updating...' : 'Update Password'}
-                </Button>
-              </div>
-            </div>
-          )}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </CardContent>
       </Card>
 
@@ -732,7 +745,9 @@ export function SettingsPanel({ profile, isAdmin, team, revalidate, completedTas
 }
 
 function ReplayTourCard({ userId }: { userId: string }) {
-  const { setIsTourCompleted, startTour, isTourCompleted } = useTour();
+  const tour = useTourMaybe();
+  if (!tour) return null;
+  const { setIsTourCompleted, startTour } = tour;
   const [replaying, setReplaying] = useState(false);
 
   const supabase = createBrowserClient(
