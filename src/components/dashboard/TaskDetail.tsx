@@ -1128,7 +1128,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
             <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Priority</span>
             {isAdmin ? (
               <select
-                className="appearance-none rounded-md border border-border bg-transparent px-2 py-0.5 text-xs font-medium text-foreground cursor-pointer hover:bg-muted/50 transition-colors leading-normal"
+                className="appearance-none rounded-md border border-transparent bg-transparent px-2 py-0.5 text-xs font-medium text-foreground cursor-pointer hover:border-border hover:bg-muted/50 transition-colors leading-normal"
                 defaultValue={task.priority}
                 onChange={async (e) => {
                   const newPriority = e.target.value;
@@ -1149,7 +1149,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
             <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Dept</span>
             {isAdmin ? (
               <select
-                className="appearance-none rounded-md border border-border bg-secondary px-2 py-0.5 text-xs font-medium text-secondary-foreground cursor-pointer hover:bg-muted/50 transition-colors leading-normal"
+                className="appearance-none rounded-md border border-transparent bg-transparent px-2 py-0.5 text-xs font-medium text-foreground cursor-pointer hover:border-border hover:bg-muted/50 transition-colors leading-normal"
                 defaultValue={task.department}
                 onChange={async (e) => {
                   const newDept = e.target.value;
