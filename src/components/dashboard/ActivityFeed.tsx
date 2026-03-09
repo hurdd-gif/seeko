@@ -162,7 +162,7 @@ export function ActivityFeed({ activity }: { activity: ActivityItem[] }) {
   const groups = groupByDate(filtered);
 
   return (
-    <div className="flex flex-col gap-5 overflow-x-hidden">
+    <div className="flex flex-col gap-5">
       {/* Filter pills */}
       <div className="flex flex-wrap items-center gap-1.5">
         {FILTERS.map(f => (
@@ -207,7 +207,7 @@ export function ActivityFeed({ activity }: { activity: ActivityItem[] }) {
                     <StaggerItem key={item.id}>
                       <Link
                         href={href}
-                        className={`group flex items-start gap-3 rounded-lg px-3 py-2.5 -mx-3 transition-colors hover:bg-white/[0.04] ${cfg.significant ? 'bg-white/[0.02]' : ''}`}
+                        className={`group flex items-start gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-white/[0.04] ${cfg.significant ? 'bg-white/[0.02]' : ''}`}
                       >
                         <div
                           className="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted mt-0.5"
