@@ -634,20 +634,10 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
             {isAdmin ? 'All Tasks' : 'My Tasks'}
           </h2>
           {isAdmin && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="size-8">
-                  <MoreVertical className="size-4" />
-                  <span className="sr-only">Task options</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setShowAddForm(true)} className="flex items-center gap-2">
-                  <Plus className="size-3.5" />
-                  Add Task
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <Button variant="ghost" size="icon" className="size-8" onClick={() => setShowAddForm(true)}>
+              <Plus className="size-4" />
+              <span className="sr-only">Add Task</span>
+            </Button>
           )}
         </div>
 
