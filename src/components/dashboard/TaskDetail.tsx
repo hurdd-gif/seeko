@@ -2149,6 +2149,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
           task={task}
           onSubmit={async (files) => { await submitForReview(files); }}
           onSkip={async () => { await submitForReview(); }}
+          className="z-[80]"
         />,
         document.body
       )}

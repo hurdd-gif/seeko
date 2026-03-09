@@ -15,6 +15,7 @@ interface DeliverablesUploadDialogProps {
   onSubmit: (files: File[]) => Promise<void>;
   onSkip: () => void;
   onHandoff?: (files: File[]) => Promise<void>;
+  className?: string;
 }
 
 export function DeliverablesUploadDialog({
@@ -24,6 +25,7 @@ export function DeliverablesUploadDialog({
   onSubmit,
   onSkip,
   onHandoff,
+  className,
 }: DeliverablesUploadDialogProps) {
   const [files, setFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -72,7 +74,7 @@ export function DeliverablesUploadDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange} className={className}>
       <DialogClose onClose={() => onOpenChange(false)} />
       <DialogHeader>
         <DialogTitle className="pr-8 flex items-center gap-2">
