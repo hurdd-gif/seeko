@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Toaster } from "sonner";
-import { Outfit, JetBrains_Mono } from "next/font/google";
+import { Outfit, JetBrains_Mono, Caveat } from "next/font/google";
 import { HapticsProvider } from "@/components/HapticsProvider";
 import { DevAgentation } from "@/components/dev/agentation";
 import { DialRoot } from "dialkit";
@@ -14,6 +14,11 @@ const outfit = Outfit({
 
 const jetbrainsMono = JetBrains_Mono({
   variable: "--font-jetbrains-mono",
+  subsets: ["latin"],
+});
+
+const caveat = Caveat({
+  variable: "--font-caveat",
   subsets: ["latin"],
 });
 
@@ -46,7 +51,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
       </head>
       <body
-        className={`${outfit.variable} ${jetbrainsMono.variable} antialiased bg-background text-foreground`}
+        className={`${outfit.variable} ${jetbrainsMono.variable} ${caveat.variable} antialiased bg-background text-foreground`}
       >
         <HapticsProvider>
           {children}

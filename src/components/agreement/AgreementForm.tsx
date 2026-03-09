@@ -8,15 +8,18 @@
  *    scroll  Bar fills proportionally as user reads
  *    bottom  "Continue to sign" button fades in
  *
- *  Phase 2: SIGN (form fields focus)
+ *  Phase 2: SIGN (form fields + live signature)
  *    +0ms   Agreement collapses, sign form slides up
  *  200ms   Fields stagger in (name, address, engagement)
  *  400ms   Submit button appears
+ *  type    Each glyph SVG path draws in via pathLength animation (pen stroke)
+ *          Ghost paths (0.08 opacity) show form, stroke draws over
  *
- *  Phase 3: SUCCESS (confirmation)
- *    +0ms   Button → checkmark morph
- *  300ms   "Agreement signed" text fades in
- *  1200ms  Redirect
+ *  Phase 3: SIGNED (inline animation + popup)
+ *    +0ms   Signature box glows accent, all chars replay with stagger
+ *  ~800ms  Underline draws across beneath signature
+ *  ~1.2s   Confirmation dialog pops up (checkmark + "Agreement Signed")
+ *  ~3.7s   Auto-redirect
  * ───────────────────────────────────────────────────────── */
 
 import { useState, useRef, useCallback, useEffect } from 'react';
@@ -29,6 +32,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Loader2, ArrowRight, FileText, Check, ArrowDown } from 'lucide-react';
 import { AddressAutocomplete } from '@/components/agreement/AddressAutocomplete';
+import { SignatureDrawing } from '@/components/agreement/SignatureDrawing';
 import { useHaptics } from '@/components/HapticsProvider';
 import { AGREEMENT_SECTIONS, AGREEMENT_TITLE } from '@/lib/agreement-text';
 
@@ -68,6 +72,14 @@ export function AgreementForm({
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+
+  // Signature animation: plays inline, then pops up confirmation dialog
+  const [signed, setSigned] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
+
+  // Signature animation timing
+  const [sigKey, setSigKey] = useState(0);
+  const SIG = { charDelay: 0.08, charDuration: 0.18, initialDelay: 0.3, fontSize: 27 };
 
   const handleScroll = useCallback(() => {
     const el = scrollRef.current;
@@ -119,13 +131,21 @@ export function AgreementForm({
       }
 
       trigger('success');
-      setPhase('success');
+      setSigKey(k => k + 1);
+      setSigned(true);
 
-      // Brief success moment before redirect
+      // After signature animation completes, show confirmation dialog
+      const sigAnimDuration = (SIG.initialDelay + fullName.trim().length * SIG.charDelay + 0.6) * 1000;
+      setTimeout(() => {
+        setShowConfirmation(true);
+        trigger('success');
+      }, sigAnimDuration);
+
+      // Redirect after confirmation has been visible
       setTimeout(() => {
         router.push(data.redirect || (onboarded === 0 ? '/onboarding' : '/'));
         router.refresh();
-      }, 1500);
+      }, sigAnimDuration + 2500);
     } catch {
       setError('Failed to sign agreement. Please try again.');
       setSaving(false);
@@ -134,42 +154,55 @@ export function AgreementForm({
   }
 
   return (
-    <AnimatePresence mode="wait">
-      {phase === 'success' ? (
-        <motion.div
-          key="success"
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={SPRING}
-          className="flex flex-col items-center gap-4 py-12"
-        >
+    <>
+      {/* ── Confirmation dialog overlay ── */}
+      <AnimatePresence>
+        {showConfirmation && (
           <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ ...SPRING_SNAPPY, delay: 0.1 }}
-            className="flex size-16 items-center justify-center rounded-full bg-seeko-accent/15 ring-1 ring-seeko-accent/30"
+            key="confirmation-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
           >
-            <Check className="size-8 text-seeko-accent" strokeWidth={2.5} />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              transition={SPRING}
+              className="mx-4 w-full max-w-sm rounded-2xl border border-border bg-card p-8 shadow-2xl"
+            >
+              <div className="flex flex-col items-center gap-4">
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ ...SPRING_SNAPPY, delay: 0.15 }}
+                >
+                  <div className="flex size-14 items-center justify-center rounded-full bg-seeko-accent/15 ring-1 ring-seeko-accent/30">
+                    <Check className="size-7 text-seeko-accent" strokeWidth={2.5} />
+                  </div>
+                </motion.div>
+                <div className="text-center">
+                  <p className="text-lg font-semibold text-foreground">Agreement Signed</p>
+                  <p className="mt-1.5 text-sm text-muted-foreground leading-relaxed">
+                    A signed copy has been sent to your email. Redirecting you now...
+                  </p>
+                </div>
+              </div>
+            </motion.div>
           </motion.div>
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ ...SPRING, delay: 0.25 }}
-            className="text-center"
-          >
-            <p className="text-lg font-semibold text-foreground">Agreement Signed</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              A copy has been sent to your email. Redirecting...
-            </p>
-          </motion.div>
-        </motion.div>
-      ) : (
+        )}
+      </AnimatePresence>
+
+      {/* ── Main form ── */}
+      <AnimatePresence mode="wait">
         <motion.div
           key="form"
           exit={{ opacity: 0, y: -12 }}
           transition={SPRING}
         >
-          <Card>
+          <Card className="overflow-visible">
             <CardContent className="pt-6">
               {/* Read-only info */}
               <div className="grid grid-cols-2 gap-4 mb-6">
@@ -377,17 +410,46 @@ export function AgreementForm({
                       />
                     </motion.div>
 
-                    {/* Signature preview */}
+                    {/* Signature preview — SVG path drawing animation */}
                     {fullName.trim() && (
                       <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
                         transition={SPRING}
-                        className="overflow-hidden"
                       >
-                        <div className="rounded-lg border border-border bg-muted/20 px-4 py-3 text-center">
-                          <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">Digital Signature</p>
-                          <p className="text-lg font-serif italic text-foreground">{fullName.trim()}</p>
+                        <div className="rounded-lg border border-border bg-muted/20 px-6 py-5 text-center">
+                          <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-3">Digital Signature</p>
+                          <SignatureDrawing
+                            text={fullName.trim()}
+                            fontSize={SIG.fontSize}
+                            signed={signed}
+                            sigKey={sigKey}
+                            charDelay={SIG.charDelay}
+                            charDuration={SIG.charDuration}
+                            initialDelay={SIG.initialDelay}
+                            className="mx-auto max-w-sm"
+                          />
+                          {/* Underline — grows with name while typing, plays draw animation on signed */}
+                          {signed ? (
+                            <motion.div
+                              key={`underline-${sigKey}`}
+                              initial={{ scaleX: 0 }}
+                              animate={{ scaleX: 1 }}
+                              transition={{
+                                duration: 0.6,
+                                delay: SIG.initialDelay + fullName.trim().length * SIG.charDelay + 0.1,
+                                ease: [0.22, 0.03, 0.26, 1],
+                              }}
+                              className="mx-auto mt-2 h-px bg-foreground/30 origin-left"
+                              style={{ width: Math.min(fullName.trim().length * 14 + 32, 240) }}
+                            />
+                          ) : (
+                            <motion.div
+                              className="mx-auto mt-2 h-px bg-foreground/20"
+                              animate={{ width: Math.min(fullName.trim().length * 14 + 32, 240) }}
+                              transition={{ duration: 0.3, ease: [0.22, 0.03, 0.26, 1] }}
+                            />
+                          )}
                         </div>
                       </motion.div>
                     )}
@@ -406,7 +468,7 @@ export function AgreementForm({
                     >
                       <Button
                         type="submit"
-                        disabled={saving || !canSubmit}
+                        disabled={saving || signed || !canSubmit}
                         className="w-full gap-2"
                       >
                         <AnimatePresence mode="wait">
@@ -439,7 +501,7 @@ export function AgreementForm({
             </CardContent>
           </Card>
         </motion.div>
-      )}
-    </AnimatePresence>
+      </AnimatePresence>
+    </>
   );
 }

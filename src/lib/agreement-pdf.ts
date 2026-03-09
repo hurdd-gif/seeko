@@ -106,25 +106,25 @@ export async function generateAgreementPdf(input: PdfInput): Promise<Uint8Array>
   drawText('SIGNATURE', 12, true);
   y -= 6;
 
-  // Visual signature: signer's name in oblique style
-  ensureSpace(30);
+  // Signature line first, then name sitting on top of it
+  ensureSpace(40);
+  const lineY = y - 28;
+  page.drawLine({
+    start: { x: MARGIN, y: lineY },
+    end: { x: MARGIN + 250, y: lineY },
+    thickness: 0.75,
+    color: rgb(0, 0, 0),
+  });
+
+  // Name baseline sits just above the line
   page.drawText(input.fullName, {
     x: MARGIN,
-    y,
+    y: lineY + 4,
     size: 18,
     font: italicFont,
     color: rgb(0.1, 0.1, 0.3),
   });
-  y -= 22;
-
-  // Signature line
-  page.drawLine({
-    start: { x: MARGIN, y },
-    end: { x: MARGIN + 250, y },
-    thickness: 0.75,
-    color: rgb(0, 0, 0),
-  });
-  y -= 14;
+  y = lineY - 14;
 
   drawText(`Printed Name: ${input.fullName}`, 10);
   drawText(`Date: ${input.signedAt.toISOString().split('T')[0]}`, 10);

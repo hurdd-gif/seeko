@@ -48,6 +48,7 @@
   /* Fonts */
   --font-sans: var(--font-outfit);
   --font-mono: var(--font-jetbrains-mono);
+  --font-handwriting: var(--font-caveat);
 
   /* Border radius */
   --radius: 0.5rem;

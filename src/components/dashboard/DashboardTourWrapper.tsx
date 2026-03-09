@@ -121,7 +121,7 @@ export function DashboardTourWrapper({ children, showTour, userId, isContractor 
             selectorId: TOUR_STEP_IDS_MOBILE.MORE,
             content: (
               <p>
-                <strong>More</strong> — Tap here to access Activity, Payments, and other pages.
+                <strong>More</strong> — Tap here to access Activity and other pages.
               </p>
             ),
             position: 'top' as const,
