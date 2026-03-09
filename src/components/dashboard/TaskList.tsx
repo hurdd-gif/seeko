@@ -241,20 +241,67 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
     if (newStatus === 'In Review' && !isAdmin) return;
     setTaskStatuses(prev => ({ ...prev, [taskId]: newStatus }));
     await supabase.from('tasks').update({ status: newStatus }).eq('id', taskId);
-  }, [supabase, allTasks, isAdmin]);
+
+    // Notify assignee about status change
+    const task = allTasks.find(t => t.id === taskId);
+    if (task?.assignee_id && task.assignee_id !== currentUserId) {
+      const changerName = team.find(m => m.id === currentUserId)?.display_name ?? 'Someone';
+      const kindMap: Record<string, string> = {
+        'Complete': 'task_completed',
+        'In Review': 'task_submitted_review',
+        'In Progress': 'task_review_denied',
+        'Blocked': 'task_review_denied',
+      };
+      fetch('/api/notify/user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: task.assignee_id,
+          kind: kindMap[newStatus] ?? 'task_completed',
+          title: `"${task.name}" → ${newStatus}`,
+          body: `${changerName} changed the status`,
+          link: `/tasks?task=${taskId}`,
+        }),
+      }).catch(() => {});
+    }
+
+    // Log activity
+    if (task) {
+      const actionMap: Record<string, string> = {
+        'Complete': 'Completed',
+        'Blocked': 'Blocked',
+        'In Review': 'Moved to review',
+        'In Progress': 'Started',
+      };
+      supabase.from('activity_log').insert({
+        user_id: currentUserId,
+        action: actionMap[newStatus] ?? newStatus,
+        target: `task: ${task.name}`,
+        task_id: taskId,
+      });
+    }
+  }, [supabase, allTasks, isAdmin, currentUserId, team]);
 
   const doCompleteTask = useCallback(async (taskId: string) => {
+    const task = allTasks.find(t => t.id === taskId);
     if (isAdmin) {
-      // Admins can mark directly complete
       setTaskStatuses(prev => ({ ...prev, [taskId]: 'Complete' }));
       await supabase.from('tasks').update({ status: 'Complete' }).eq('id', taskId);
     } else {
-      // Non-admins submit for review
       setTaskStatuses(prev => ({ ...prev, [taskId]: 'In Review' }));
       await supabase.from('tasks').update({ status: 'In Review' }).eq('id', taskId);
     }
+    // Log activity
+    if (task) {
+      supabase.from('activity_log').insert({
+        user_id: currentUserId,
+        action: isAdmin ? 'Completed' : 'Moved to review',
+        target: `task: ${task.name}`,
+        task_id: taskId,
+      });
+    }
     setDeliverableTask(null);
-  }, [supabase, isAdmin]);
+  }, [supabase, isAdmin, allTasks, currentUserId]);
 
   const notifyAdminsTaskCompleted = useCallback((taskId: string, taskName: string, completerName: string) => {
     fetch('/api/notify/admins', {
@@ -406,7 +453,7 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
           tabIndex={0}
           onClick={() => setSelectedTask(task)}
           onKeyDown={e => { if (e.key === 'Enter') setSelectedTask(task); }}
-          className="hidden md:flex items-center gap-4 px-4 py-3 transition-all duration-150 hover:bg-muted/50 cursor-pointer"
+          className="group hidden md:flex items-center gap-4 px-4 py-3 transition-all duration-150 hover:bg-muted/50 cursor-pointer"
         >
           <span className={cn('size-2 rounded-full shrink-0', PRIORITY_DOT[task.priority] ?? 'bg-zinc-500')} />
           <span className="min-w-0 flex-1 truncate text-sm text-foreground">
@@ -469,7 +516,7 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
               <Button
                 variant="ghost"
                 size="icon"
-                className="size-8 shrink-0 opacity-30 cursor-not-allowed"
+                className="size-8 shrink-0 opacity-0 group-hover:opacity-30 transition-opacity cursor-not-allowed"
                 disabled
                 onClick={e => e.stopPropagation()}
               >
@@ -482,7 +529,7 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
               <Button
                 variant="ghost"
                 size="icon"
-                className="size-8 shrink-0"
+                className="size-8 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white/[0.06]"
                 onClick={e => e.stopPropagation()}
               >
                 <MoreHorizontal className="size-4" />

@@ -12,6 +12,7 @@
  * ───────────────────────────────────────────────────────── */
 
 import * as React from "react"
+import { createPortal } from "react-dom"
 import { motion, AnimatePresence } from "motion/react"
 import { Check } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -29,12 +30,16 @@ const DropdownMenuContext = React.createContext<{
   activeIndex: number
   setActiveIndex: (i: number) => void
   itemCount: React.MutableRefObject<number>
+  triggerRef: React.RefObject<HTMLElement | null>
+  portalRef: React.MutableRefObject<HTMLDivElement | null>
 }>({
   open: false,
   setOpen: () => {},
   activeIndex: -1,
   setActiveIndex: () => {},
   itemCount: { current: 0 },
+  triggerRef: { current: null },
+  portalRef: { current: null },
 })
 
 function useDropdown() {
@@ -47,12 +52,16 @@ const DropdownMenu = ({ children }: { children: React.ReactNode }) => {
   const [open, setOpen] = React.useState(false)
   const [activeIndex, setActiveIndex] = React.useState(-1)
   const itemCount = React.useRef(0)
-  const ref = React.useRef<HTMLDivElement>(null)
+  const triggerRef = React.useRef<HTMLElement | null>(null)
+  const portalRef = React.useRef<HTMLDivElement | null>(null)
 
   React.useEffect(() => {
     if (!open) { setActiveIndex(-1); return }
     function handleClickOutside(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+      const target = e.target as Node
+      if (triggerRef.current?.contains(target)) return
+      if (portalRef.current?.contains(target)) return
+      setOpen(false)
     }
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === 'Escape') { setOpen(false); return }
@@ -74,8 +83,8 @@ const DropdownMenu = ({ children }: { children: React.ReactNode }) => {
   }, [open])
 
   return (
-    <DropdownMenuContext.Provider value={{ open, setOpen, activeIndex, setActiveIndex, itemCount }}>
-      <div ref={ref} className="relative">{children}</div>
+    <DropdownMenuContext.Provider value={{ open, setOpen, activeIndex, setActiveIndex, itemCount, triggerRef, portalRef }}>
+      <div className="relative">{children}</div>
     </DropdownMenuContext.Provider>
   )
 }
@@ -86,7 +95,13 @@ const DropdownMenuTrigger = React.forwardRef<
   HTMLButtonElement,
   React.ButtonHTMLAttributes<HTMLButtonElement> & { asChild?: boolean }
 >(({ children, asChild, ...props }, ref) => {
-  const { open, setOpen } = useDropdown()
+  const { open, setOpen, triggerRef } = useDropdown()
+  const setRefs = React.useCallback((node: HTMLElement | null) => {
+    triggerRef.current = node
+    if (typeof ref === 'function') ref(node as HTMLButtonElement | null)
+    else if (ref) (ref as React.MutableRefObject<HTMLButtonElement | null>).current = node as HTMLButtonElement | null
+  }, [ref, triggerRef])
+
   if (asChild && React.isValidElement(children)) {
     const childProps = children.props as Record<string, unknown>
     return React.cloneElement(children as React.ReactElement<Record<string, unknown>>, {
@@ -94,11 +109,11 @@ const DropdownMenuTrigger = React.forwardRef<
         if (typeof childProps.onClick === 'function') (childProps.onClick as (e: React.MouseEvent) => void)(e)
         setOpen(!open)
       },
-      ref,
+      ref: setRefs,
     })
   }
   return (
-    <button ref={ref} onClick={(e) => { e.stopPropagation(); setOpen(!open) }} {...props}>
+    <button ref={setRefs} onClick={(e) => { e.stopPropagation(); setOpen(!open) }} {...props}>
       {children}
     </button>
   )
@@ -118,35 +133,68 @@ function DropdownMenuContent({
   side?: "top" | "bottom"
   children: React.ReactNode
 }) {
-  const { open, itemCount } = useDropdown()
+  const { open, itemCount, triggerRef, portalRef } = useDropdown()
   const contentRef = React.useRef<HTMLDivElement>(null)
+  const [pos, setPos] = React.useState<{ top: number; left: number } | null>(null)
+
+  // Position the portal content relative to the trigger
+  React.useEffect(() => {
+    if (!open || !triggerRef.current) return
+    function update() {
+      const rect = triggerRef.current!.getBoundingClientRect()
+      const top = side === "top" ? rect.top + window.scrollY : rect.bottom + window.scrollY + 4
+      let left: number
+      if (align === "end") {
+        left = rect.right + window.scrollX
+      } else {
+        left = rect.left + window.scrollX
+      }
+      setPos({ top, left })
+    }
+    update()
+    // Reposition on scroll/resize
+    window.addEventListener("scroll", update, true)
+    window.addEventListener("resize", update)
+    return () => {
+      window.removeEventListener("scroll", update, true)
+      window.removeEventListener("resize", update)
+    }
+  }, [open, align, side, triggerRef])
 
   // Count items on mount for keyboard nav
   React.useEffect(() => {
     if (open && contentRef.current) {
       itemCount.current = contentRef.current.querySelectorAll('[role="menuitem"]').length
     }
-  }, [open, children])
+  }, [open, children, itemCount])
 
   const originX = align === "end" ? "right" : "left"
   const originY = side === "top" ? "bottom" : "top"
 
-  return (
+  if (typeof document === 'undefined') return null
+
+  return createPortal(
     <AnimatePresence>
-      {open && (
+      {open && pos && (
         <motion.div
-          ref={contentRef}
+          ref={(node) => {
+            (contentRef as React.MutableRefObject<HTMLDivElement | null>).current = node
+            portalRef.current = node
+          }}
           role="menu"
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.97 }}
           transition={DROPDOWN.enter}
-          style={{ transformOrigin: `${originX} ${originY}` }}
+          style={{
+            transformOrigin: `${originX} ${originY}`,
+            position: 'absolute',
+            top: pos.top,
+            ...(align === "end" ? { right: document.documentElement.clientWidth - pos.left } : { left: pos.left }),
+          }}
           className={cn(
-            "absolute z-50 min-w-[8rem] rounded-xl border border-white/[0.08] p-1.5 shadow-xl",
+            "z-50 min-w-[8rem] rounded-xl border border-white/[0.08] p-1.5 shadow-xl",
             "bg-popover/80 backdrop-blur-xl backdrop-saturate-150",
-            side === "top" ? "bottom-full mb-1" : "mt-1",
-            align === "end" ? "right-0" : "left-0",
             className
           )}
           onClick={(e) => e.stopPropagation()}
@@ -154,7 +202,8 @@ function DropdownMenuContent({
           {children}
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   )
 }
 

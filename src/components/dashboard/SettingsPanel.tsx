@@ -13,12 +13,14 @@ import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { motion, AnimatePresence } from 'motion/react';
-import { Camera, Check, Eye, MousePointer, Monitor, UserX, AlertTriangle, RotateCcw, DollarSign, Vibrate, Lock, ChevronDown } from 'lucide-react';
+import { Camera, Check, Eye, MousePointer, Monitor, UserX, AlertTriangle, RotateCcw, DollarSign, Vibrate, Lock, ChevronDown, LogOut } from 'lucide-react';
 import { toast } from 'sonner';
 import { Profile, UserEvent, Task, Payment } from '@/lib/types';
 import { useHaptics } from '@/components/HapticsProvider';
 import { useTourMaybe } from '@/components/ui/tour';
 import { PaymentRequestDialog } from '@/components/dashboard/PaymentRequestDialog';
+import { Dialog, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
+import { EmptyState } from '@/components/ui/empty-state';
 import { formatCurrency } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { Switch } from '@/components/ui/switch';
@@ -126,6 +128,12 @@ export function SettingsPanel({ profile, isAdmin, team, revalidate, completedTas
   const [requestDialogOpen, setRequestDialogOpen] = useState(false);
   const [myPayments, setMyPayments] = useState<Payment[]>([]);
   const [loadingPayments, setLoadingPayments] = useState(false);
+  const [paypalEmail, setPaypalEmail] = useState(profile.paypal_email ?? '');
+  const [isTouchDevice, setIsTouchDevice] = useState(false);
+
+  useEffect(() => {
+    setIsTouchDevice('ontouchstart' in window || navigator.maxTouchPoints > 0);
+  }, []);
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -178,6 +186,7 @@ export function SettingsPanel({ profile, isAdmin, team, revalidate, completedTas
           ? `${avatarUrl.split('?')[0]}?v=${Date.now()}`
           : null,
         timezone,
+        paypal_email: paypalEmail.trim() || null,
       })
       .eq('id', profile.id);
 
@@ -295,248 +304,295 @@ export function SettingsPanel({ profile, isAdmin, team, revalidate, completedTas
 
 
   return (
-    <div className="flex flex-col gap-6 max-w-3xl mx-auto w-full">
+    <div className="flex flex-col gap-8 max-w-3xl mx-auto w-full">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">Settings</h1>
         <p className="text-sm text-muted-foreground">Manage your profile and preferences.</p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Profile</CardTitle>
-          <CardDescription>Update your display name, photo, and timezone.</CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-6">
-          <div className="flex items-center gap-4">
-            <div className="relative group">
-              <Avatar className="size-16 border-2 border-border">
-                {avatarUrl ? (
-                  <AvatarImage src={avatarUrl} alt={displayName} />
-                ) : (
-                  <AvatarFallback className="text-lg bg-secondary text-foreground">
-                    {getInitials(displayName)}
-                  </AvatarFallback>
-                )}
-              </Avatar>
-              <label className="absolute inset-0 flex cursor-pointer items-center justify-center rounded-full bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
-                <Camera className="size-4 text-white" />
-                <input
-                  ref={avatarInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleAvatarChange}
-                  disabled={uploading}
-                />
-              </label>
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-medium text-foreground">{profile.display_name}</p>
-              {profile.email && <p className="text-xs text-muted-foreground">{profile.email}</p>}
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {uploading ? 'Uploading...' : 'Hover photo to change'}
-              </p>
-            </div>
-          </div>
+      {/* ── Account ────────────────────────────────────── */}
+      <section className="flex flex-col gap-4">
+        <h2 className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Account</h2>
 
-          <Separator />
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="display-name">Display Name</Label>
-              <Input
-                id="display-name"
-                value={displayName}
-                onChange={e => setDisplayName(e.target.value)}
-                placeholder="Your name"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="timezone">Timezone</Label>
-              <Select
-                id="timezone"
-                value={timezone}
-                onChange={e => setTimezone(e.target.value)}
-                searchable
-              >
-                {COMMON_TIMEZONES.map(tz => (
-                  <option key={tz} value={tz}>{formatTzLabel(tz)}</option>
-                ))}
-                {!COMMON_TIMEZONES.includes(timezone) && (
-                  <option value={timezone}>{formatTzLabel(timezone)}</option>
-                )}
-              </Select>
-            </div>
-          </div>
-
-          {error && <p className="text-sm text-destructive">{error}</p>}
-
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            <Button
-              type="button"
-              onClick={handleSave}
-              disabled={saving}
-              className="gap-2 min-w-[7.5rem] min-h-[2.5rem] touch-manipulation"
-            >
-              {saved ? <><Check className="size-3.5" /> Saved</> : saving ? 'Saving...' : 'Save Changes'}
-            </Button>
-          </div>
-
-          <Separator />
-
-          <button
-            type="button"
-            className="flex items-center gap-2 w-full text-left"
-            onClick={() => setPwOpen(v => !v)}
-          >
-            <Lock className="size-4 text-muted-foreground" />
-            <p className="text-sm font-medium text-foreground flex-1">Change Password</p>
-            <ChevronDown className={cn("size-4 text-muted-foreground transition-transform duration-200", pwOpen && "rotate-180")} />
-          </button>
-
-          <AnimatePresence>
-            {pwOpen && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={COLLAPSE_SPRING}
-                className="overflow-hidden"
-              >
-                <div className="flex flex-col gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="current-password">Current Password</Label>
-                    <Input
-                      id="current-password"
-                      type="password"
-                      value={currentPassword}
-                      onChange={e => { setCurrentPassword(e.target.value); setPwError(''); }}
-                      placeholder="Enter current password"
-                    />
-                  </div>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label htmlFor="new-password">New Password</Label>
-                      <Input
-                        id="new-password"
-                        type="password"
-                        value={newPassword}
-                        onChange={e => { setNewPassword(e.target.value); setPwError(''); }}
-                        placeholder="At least 8 characters"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="confirm-password">Confirm New Password</Label>
-                      <Input
-                        id="confirm-password"
-                        type="password"
-                        value={confirmPassword}
-                        onChange={e => { setConfirmPassword(e.target.value); setPwError(''); }}
-                        placeholder="Re-enter new password"
-                        onKeyDown={e => e.key === 'Enter' && handleChangePassword()}
-                      />
-                    </div>
-                  </div>
-                  {pwError && <p className="text-sm text-destructive">{pwError}</p>}
-                  {pwSuccess && <p className="text-sm text-seeko-accent">Password updated successfully.</p>}
-                  <div className="flex justify-end">
-                    <Button
-                      type="button"
-                      onClick={handleChangePassword}
-                      disabled={pwSaving}
-                      className="gap-2 min-w-[7.5rem] min-h-[2.5rem] touch-manipulation"
-                    >
-                      {pwSaving ? 'Updating...' : 'Update Password'}
-                    </Button>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </CardContent>
-      </Card>
-
-      <ReplayTourCard userId={profile.id} />
-
-      <HapticsToggleCard />
-
-      {!profile.is_investor && (
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <DollarSign className="size-4 text-muted-foreground" />
-                <div>
-                  <CardTitle>Payments</CardTitle>
-                  <CardDescription>Request payment and view your history.</CardDescription>
-                </div>
+            <CardTitle>Profile</CardTitle>
+            <CardDescription>Update your display name, photo, and timezone.</CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-6">
+            <div className="flex items-center gap-4">
+              <div className="relative group">
+                <Avatar className="size-16 border-2 border-border">
+                  {avatarUrl ? (
+                    <AvatarImage src={avatarUrl} alt={displayName} />
+                  ) : (
+                    <AvatarFallback className="text-lg bg-secondary text-foreground">
+                      {getInitials(displayName)}
+                    </AvatarFallback>
+                  )}
+                </Avatar>
+                <label className={cn(
+                  "absolute inset-0 flex cursor-pointer items-center justify-center rounded-full bg-black/50 transition-opacity",
+                  isTouchDevice ? "opacity-0 active:opacity-100" : "opacity-0 group-hover:opacity-100"
+                )}>
+                  <Camera className="size-4 text-white" />
+                  <input
+                    ref={avatarInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleAvatarChange}
+                    disabled={uploading}
+                  />
+                </label>
               </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-foreground">{profile.display_name}</p>
+                {profile.email && <p className="text-xs text-muted-foreground">{profile.email}</p>}
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {uploading ? 'Uploading...' : isTouchDevice ? 'Tap photo to change' : 'Hover photo to change'}
+                </p>
+              </div>
+            </div>
+
+            <Separator />
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="display-name">Display Name</Label>
+                <Input
+                  id="display-name"
+                  value={displayName}
+                  onChange={e => setDisplayName(e.target.value)}
+                  placeholder="Your name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="timezone">Timezone</Label>
+                <Select
+                  id="timezone"
+                  value={timezone}
+                  onChange={e => setTimezone(e.target.value)}
+                  searchable
+                >
+                  {COMMON_TIMEZONES.map(tz => (
+                    <option key={tz} value={tz}>{formatTzLabel(tz)}</option>
+                  ))}
+                  {!COMMON_TIMEZONES.includes(timezone) && (
+                    <option value={timezone}>{formatTzLabel(timezone)}</option>
+                  )}
+                </Select>
+              </div>
+            </div>
+
+            {error && <p className="text-sm text-destructive">{error}</p>}
+
+            <div className="flex flex-wrap items-center justify-end gap-2">
               <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setRequestDialogOpen(true)}
-                className="gap-1.5 shrink-0"
+                type="button"
+                onClick={handleSave}
+                disabled={saving}
+                className="gap-2 min-w-[7.5rem] min-h-[2.5rem] touch-manipulation"
               >
-                <DollarSign className="size-3.5" />
-                Request Payment
+                {saved ? <><Check className="size-3.5" /> Saved</> : saving ? 'Saving...' : 'Save Changes'}
               </Button>
             </div>
-          </CardHeader>
-          <CardContent>
-            {profile.paypal_email && (
-              <div className="flex items-center gap-2 mb-4 text-xs text-muted-foreground">
-                <span>PayPal:</span>
-                <span className="font-mono">{profile.paypal_email}</span>
-              </div>
-            )}
-            {loadingPayments ? (
-              <p className="text-xs text-muted-foreground text-center py-4">Loading...</p>
-            ) : myPayments.length === 0 ? (
-              <p className="text-xs text-muted-foreground text-center py-4">No payment requests yet.</p>
-            ) : (
-              <div className="flex flex-col divide-y divide-border">
-                {myPayments.slice(0, 10).map(payment => (
-                  <div key={payment.id} className="flex items-center justify-between py-3">
-                    <div className="min-w-0">
-                      <p className="text-sm text-foreground truncate">
-                        {payment.description || `${payment.items?.length ?? 0} items`}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(payment.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                      </p>
+
+            <Separator />
+
+            <button
+              type="button"
+              className="flex items-center gap-2 w-full text-left"
+              onClick={() => setPwOpen(v => !v)}
+            >
+              <Lock className="size-4 text-muted-foreground" />
+              <p className="text-sm font-medium text-foreground flex-1">Change Password</p>
+              <ChevronDown className={cn("size-4 text-muted-foreground transition-transform duration-200", pwOpen && "rotate-180")} />
+            </button>
+
+            <AnimatePresence>
+              {pwOpen && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={COLLAPSE_SPRING}
+                  className="overflow-hidden"
+                >
+                  <div className="flex flex-col gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="current-password">Current Password</Label>
+                      <Input
+                        id="current-password"
+                        type="password"
+                        value={currentPassword}
+                        onChange={e => { setCurrentPassword(e.target.value); setPwError(''); }}
+                        placeholder="Enter current password"
+                      />
                     </div>
-                    <div className="flex items-center gap-3 shrink-0">
-                      <span className="text-sm font-medium font-mono text-foreground">
-                        {formatCurrency(Number(payment.amount))}
-                      </span>
-                      <Badge
-                        variant={
-                          payment.status === 'cancelled' ? 'destructive'
-                          : payment.status === 'pending' ? 'outline'
-                          : 'default'
-                        }
-                        className={cn(
-                          "text-[10px] py-0 px-1.5",
-                          payment.status === 'paid' && "bg-emerald-500/15 text-emerald-400 border-emerald-500/20"
-                        )}
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="new-password">New Password</Label>
+                        <Input
+                          id="new-password"
+                          type="password"
+                          value={newPassword}
+                          onChange={e => { setNewPassword(e.target.value); setPwError(''); }}
+                          placeholder="At least 8 characters"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="confirm-password">Confirm New Password</Label>
+                        <Input
+                          id="confirm-password"
+                          type="password"
+                          value={confirmPassword}
+                          onChange={e => { setConfirmPassword(e.target.value); setPwError(''); }}
+                          placeholder="Re-enter new password"
+                          onKeyDown={e => e.key === 'Enter' && handleChangePassword()}
+                        />
+                      </div>
+                    </div>
+                    {pwError && <p className="text-sm text-destructive">{pwError}</p>}
+                    {pwSuccess && <p className="text-sm text-seeko-accent">Password updated successfully.</p>}
+                    <div className="flex justify-end">
+                      <Button
+                        type="button"
+                        onClick={handleChangePassword}
+                        disabled={pwSaving}
+                        className="gap-2 min-w-[7.5rem] min-h-[2.5rem] touch-manipulation"
                       >
-                        {payment.status === 'paid' ? 'Approved'
-                          : payment.status === 'cancelled' ? 'Denied'
-                          : 'Pending'}
-                      </Badge>
+                        {pwSaving ? 'Updating...' : 'Update Password'}
+                      </Button>
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Sign out — mobile only */}
+            <div className="md:hidden">
+              <Separator />
+              <form action="/auth/signout" method="post" className="pt-4">
+                <button
+                  type="submit"
+                  className="flex items-center gap-2 text-sm text-destructive hover:text-destructive/80 transition-colors"
+                >
+                  <LogOut className="size-4" />
+                  Sign out
+                </button>
+              </form>
+            </div>
           </CardContent>
         </Card>
+
+        <ReplayTourCard userId={profile.id} />
+
+        <HapticsToggleCard />
+      </section>
+
+      {/* ── Payments ───────────────────────────────────── */}
+      {!profile.is_investor && (
+        <section className="flex flex-col gap-4">
+          <h2 className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Payments</h2>
+
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Payment History</CardTitle>
+                  <CardDescription>Request payment and view your history.</CardDescription>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setRequestDialogOpen(true)}
+                  className="gap-1.5 shrink-0"
+                >
+                  Request Payment
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4">
+              {/* PayPal email — editable */}
+              <div className="space-y-2">
+                <Label htmlFor="paypal-email">PayPal Email</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="paypal-email"
+                    type="email"
+                    value={paypalEmail}
+                    onChange={e => setPaypalEmail(e.target.value)}
+                    placeholder="your@paypal.email"
+                    className="flex-1"
+                  />
+                </div>
+                {!paypalEmail.trim() && (
+                  <p className="text-xs text-amber-400">Set your PayPal email to receive payments.</p>
+                )}
+              </div>
+
+              <Separator />
+
+              {loadingPayments ? (
+                <p className="text-xs text-muted-foreground text-center py-4">Loading...</p>
+              ) : myPayments.length === 0 ? (
+                <EmptyState
+                  icon="DollarSign"
+                  title="No payment requests yet"
+                  description="Submit a request after completing tasks with bounties."
+                  action={
+                    <Button variant="outline" size="sm" onClick={() => setRequestDialogOpen(true)}>
+                      Request Payment
+                    </Button>
+                  }
+                  className="py-8"
+                />
+              ) : (
+                <div className="flex flex-col divide-y divide-border">
+                  {myPayments.slice(0, 10).map(payment => (
+                    <div key={payment.id} className="flex items-center justify-between py-3">
+                      <div className="min-w-0">
+                        <p className="text-sm text-foreground truncate">
+                          {payment.description || `${payment.items?.length ?? 0} items`}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(payment.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0">
+                        <span className="text-sm font-medium font-mono text-foreground">
+                          {formatCurrency(Number(payment.amount))}
+                        </span>
+                        <Badge
+                          variant={
+                            payment.status === 'cancelled' ? 'destructive'
+                            : payment.status === 'pending' ? 'outline'
+                            : 'default'
+                          }
+                          className={cn(
+                            "text-[10px] py-0 px-1.5",
+                            payment.status === 'paid' && "bg-emerald-500/15 text-emerald-400 border-emerald-500/20"
+                          )}
+                        >
+                          {payment.status === 'paid' ? 'Approved'
+                            : payment.status === 'cancelled' ? 'Denied'
+                            : 'Pending'}
+                        </Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </section>
       )}
 
       <PaymentRequestDialog
         open={requestDialogOpen}
         onOpenChange={setRequestDialogOpen}
-        paypalEmail={profile.paypal_email ?? ''}
+        paypalEmail={paypalEmail}
         completedTasks={(completedTasks ?? []) as Task[]}
         onSubmitted={() => {
           setRequestDialogOpen(false);
@@ -544,202 +600,199 @@ export function SettingsPanel({ profile, isAdmin, team, revalidate, completedTas
         }}
       />
 
+      {/* ── Admin ──────────────────────────────────────── */}
       {isAdmin && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Monitor className="size-4 text-muted-foreground" />
-              <div className="flex-1">
-                <CardTitle>User Activity</CardTitle>
-                <CardDescription>Track what non-admin users view and interact with.</CardDescription>
-              </div>
-              <Select
-                value={selectedUser}
-                onChange={e => setSelectedUser(e.target.value)}
-                className="w-44"
-              >
-                <option value="all">All users</option>
-                {team.map(m => (
-                  <option key={m.id} value={m.id}>{m.display_name ?? 'Unknown'}{m.is_admin ? ' (admin)' : ''}</option>
-                ))}
-              </Select>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {loadingEvents ? (
-              <p className="text-xs text-muted-foreground text-center py-6">Loading activity...</p>
-            ) : events.length === 0 ? (
-              <p className="text-xs text-muted-foreground text-center py-6">No activity recorded yet.</p>
-            ) : (
-              <div className="max-h-[420px] overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                <div className="flex flex-col">
-                  {events.map((event, i) => {
-                    const cfg = EVENT_ICONS[event.event_type] ?? EVENT_ICONS.click;
-                    const Icon = cfg.icon;
-                    const userName = event.profiles?.display_name ?? 'Unknown';
-                    const meta = event.metadata as Record<string, string> | undefined;
+        <section className="flex flex-col gap-4">
+          <h2 className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Admin</h2>
 
-                    return (
-                      <div key={event.id}>
-                        <div className="flex items-start gap-3 py-2.5">
-                          <div className={`mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-secondary ${cfg.className}`}>
-                            <Icon className="size-3" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium text-foreground">{userName}</span>
-                              <Badge variant="outline" className="text-[10px] py-0 px-1.5">
-                                {cfg.label}
-                              </Badge>
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Monitor className="size-4 text-muted-foreground" />
+                <div className="flex-1">
+                  <CardTitle>User Activity</CardTitle>
+                  <CardDescription>Track what non-admin users view and interact with.</CardDescription>
+                </div>
+                <Select
+                  value={selectedUser}
+                  onChange={e => setSelectedUser(e.target.value)}
+                  className="w-44"
+                >
+                  <option value="all">All users</option>
+                  {team.map(m => (
+                    <option key={m.id} value={m.id}>{m.display_name ?? 'Unknown'}{m.is_admin ? ' (admin)' : ''}</option>
+                  ))}
+                </Select>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {loadingEvents ? (
+                <p className="text-xs text-muted-foreground text-center py-6">Loading activity...</p>
+              ) : events.length === 0 ? (
+                <EmptyState
+                  icon="Activity"
+                  title="No activity recorded"
+                  description="User interactions will appear here as team members use the app."
+                  className="py-6"
+                />
+              ) : (
+                <div className="max-h-[420px] overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                  <div className="flex flex-col">
+                    {events.map((event, i) => {
+                      const cfg = EVENT_ICONS[event.event_type] ?? EVENT_ICONS.click;
+                      const Icon = cfg.icon;
+                      const userName = event.profiles?.display_name ?? 'Unknown';
+                      const meta = event.metadata as Record<string, string> | undefined;
+
+                      return (
+                        <div key={event.id}>
+                          <div className="flex items-start gap-3 py-2.5">
+                            <div className={`mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-secondary ${cfg.className}`}>
+                              <Icon className="size-3" />
                             </div>
-                            <p className="text-xs text-muted-foreground mt-0.5">
-                              {event.event_type === 'page_view' ? (
-                                <>Viewed <span className="font-medium text-foreground/70">{friendlyPage(event.page)}</span></>
-                              ) : event.event_type === 'navigate' ? (
-                                <>
-                                  Went to <span className="font-medium text-foreground/70">{meta?.href ? friendlyPage(meta.href) : event.target}</span>
-                                  <span className="text-muted-foreground/50"> from {friendlyPage(event.page)}</span>
-                                </>
-                              ) : (
-                                <>
-                                  {cfg.label === 'clicked' ? 'Pressed' : cfg.label.charAt(0).toUpperCase() + cfg.label.slice(1)}{' '}
-                                  <span className="font-medium text-foreground/70">&quot;{event.target}&quot;</span>
-                                  <span className="text-muted-foreground/50"> on {friendlyPage(event.page)}</span>
-                                </>
-                              )}
-                            </p>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-medium text-foreground">{userName}</span>
+                                <Badge variant="outline" className="text-[10px] py-0 px-1.5">
+                                  {cfg.label}
+                                </Badge>
+                              </div>
+                              <p className="text-xs text-muted-foreground mt-0.5">
+                                {event.event_type === 'page_view' ? (
+                                  <>Viewed <span className="font-medium text-foreground/70">{friendlyPage(event.page)}</span></>
+                                ) : event.event_type === 'navigate' ? (
+                                  <>
+                                    Went to <span className="font-medium text-foreground/70">{meta?.href ? friendlyPage(meta.href) : event.target}</span>
+                                    <span className="text-muted-foreground/50"> from {friendlyPage(event.page)}</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    {cfg.label === 'clicked' ? 'Pressed' : cfg.label.charAt(0).toUpperCase() + cfg.label.slice(1)}{' '}
+                                    <span className="font-medium text-foreground/70">&quot;{event.target}&quot;</span>
+                                    <span className="text-muted-foreground/50"> on {friendlyPage(event.page)}</span>
+                                  </>
+                                )}
+                              </p>
+                            </div>
+                            <span className="text-[11px] text-muted-foreground/60 shrink-0 whitespace-nowrap">
+                              {timeAgo(event.created_at)}
+                            </span>
                           </div>
-                          <span className="text-[11px] text-muted-foreground/60 shrink-0 whitespace-nowrap">
-                            {timeAgo(event.created_at)}
-                          </span>
+                          {i < events.length - 1 && <Separator />}
                         </div>
-                        {i < events.length - 1 && <Separator />}
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <UserX className="size-4 text-muted-foreground" />
+                <div>
+                  <CardTitle>Team Management</CardTitle>
+                  <CardDescription>Remove members from the team. This action is permanent.</CardDescription>
                 </div>
               </div>
-            )}
-          </CardContent>
-        </Card>
+            </CardHeader>
+            <CardContent>
+              {team.filter(m => m.id !== profile.id).length === 0 ? (
+                <EmptyState
+                  icon="Users"
+                  title="No other team members"
+                  description="Invite team members from the Team page."
+                  className="py-4"
+                />
+              ) : (
+                <div className="flex flex-col divide-y divide-border">
+                  {team.filter(m => m.id !== profile.id).map(member => (
+                    <div key={member.id} className="flex items-center justify-between py-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <Avatar className="size-8 shrink-0">
+                          {member.avatar_url && <AvatarImage src={member.avatar_url} alt={member.display_name ?? ''} />}
+                          <AvatarFallback className="text-xs bg-secondary text-foreground">
+                            {getInitials(member.display_name ?? '?')}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-foreground truncate">
+                            {member.display_name ?? 'Unknown'}
+                            {member.is_admin && <span className="ml-1.5 text-[10px] text-muted-foreground font-normal">(admin)</span>}
+                          </p>
+                          {member.email && <p className="text-xs text-muted-foreground truncate">{member.email}</p>}
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                        onClick={() => { setBootTarget(member); setBootPassword(''); setBootError(''); }}
+                      >
+                        <UserX className="size-3.5 mr-1.5" />
+                        Remove
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </section>
       )}
 
-      {/* Boot member dialog */}
-      {bootTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
-          <div className="w-full max-w-sm rounded-xl border border-border bg-card p-6 shadow-xl">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-destructive/10">
-                <AlertTriangle className="size-5 text-destructive" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-foreground">Remove member</p>
-                <p className="text-xs text-muted-foreground">
-                  This will permanently remove <span className="font-medium text-foreground">{bootTarget.display_name ?? bootTarget.email}</span> from the team.
-                </p>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="boot-password">Confirm with your password</Label>
-                <Input
-                  id="boot-password"
-                  type="password"
-                  placeholder="Your password"
-                  value={bootPassword}
-                  onChange={e => { setBootPassword(e.target.value); setBootError(''); }}
-                  onKeyDown={e => e.key === 'Enter' && handleBoot()}
-                  autoFocus
-                />
-              </div>
-              {bootError && <p className="text-xs text-destructive">{bootError}</p>}
-            </div>
-
-            <div className="flex gap-2 mt-5">
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={() => { setBootTarget(null); setBootPassword(''); setBootError(''); }}
-                disabled={bootLoading}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                className="flex-1"
-                onClick={handleBoot}
-                disabled={bootLoading || !bootPassword}
-              >
-                {bootLoading ? 'Removing…' : 'Remove member'}
-              </Button>
-            </div>
+      {/* Boot member dialog — uses Dialog component */}
+      <Dialog open={!!bootTarget} onOpenChange={open => { if (!open) { setBootTarget(null); setBootPassword(''); setBootError(''); } }} contentClassName="max-w-sm">
+        <DialogClose onClose={() => { setBootTarget(null); setBootPassword(''); setBootError(''); }} />
+        <div className="flex items-center gap-3 mb-4">
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-destructive/10">
+            <AlertTriangle className="size-5 text-destructive" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-foreground">Remove member</p>
+            <p className="text-xs text-muted-foreground">
+              This will permanently remove <span className="font-medium text-foreground">{bootTarget?.display_name ?? bootTarget?.email}</span> from the team.
+            </p>
           </div>
         </div>
-      )}
 
-      {/* Team Management — admin only */}
-      {isAdmin && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <UserX className="size-4 text-muted-foreground" />
-              <div>
-                <CardTitle>Team Management</CardTitle>
-                <CardDescription>Remove members from the team. This action is permanent.</CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {team.filter(m => m.id !== profile.id).length === 0 ? (
-              <p className="text-xs text-muted-foreground text-center py-4">No other team members.</p>
-            ) : (
-              <div className="flex flex-col divide-y divide-border">
-                {team.filter(m => m.id !== profile.id).map(member => (
-                  <div key={member.id} className="flex items-center justify-between py-3">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <Avatar className="size-8 shrink-0">
-                        {member.avatar_url && <AvatarImage src={member.avatar_url} alt={member.display_name ?? ''} />}
-                        <AvatarFallback className="text-xs bg-secondary text-foreground">
-                          {getInitials(member.display_name ?? '?')}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-foreground truncate">
-                          {member.display_name ?? 'Unknown'}
-                          {member.is_admin && <span className="ml-1.5 text-[10px] text-muted-foreground font-normal">(admin)</span>}
-                        </p>
-                        {member.email && <p className="text-xs text-muted-foreground truncate">{member.email}</p>}
-                      </div>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                      onClick={() => { setBootTarget(member); setBootPassword(''); setBootError(''); }}
-                    >
-                      <UserX className="size-3.5 mr-1.5" />
-                      Remove
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="boot-password">Confirm with your password</Label>
+            <Input
+              id="boot-password"
+              type="password"
+              placeholder="Your password"
+              value={bootPassword}
+              onChange={e => { setBootPassword(e.target.value); setBootError(''); }}
+              onKeyDown={e => e.key === 'Enter' && handleBoot()}
+              autoFocus
+            />
+          </div>
+          {bootError && <p className="text-xs text-destructive">{bootError}</p>}
+        </div>
 
-      {/* Sign out — mobile only (desktop uses sidebar) */}
-      <div className="md:hidden mb-12">
-        <form action="/auth/signout" method="post">
-          <button
-            type="submit"
-            className="w-full rounded-lg border border-destructive/40 py-2.5 text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors"
+        <div className="flex gap-2 mt-5">
+          <Button
+            variant="outline"
+            className="flex-1"
+            onClick={() => { setBootTarget(null); setBootPassword(''); setBootError(''); }}
+            disabled={bootLoading}
           >
-            Sign out
-          </button>
-        </form>
-      </div>
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
+            className="flex-1"
+            onClick={handleBoot}
+            disabled={bootLoading || !bootPassword}
+          >
+            {bootLoading ? 'Removing…' : 'Remove member'}
+          </Button>
+        </div>
+      </Dialog>
     </div>
   );
 }
