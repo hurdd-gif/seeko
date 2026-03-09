@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
-import { Circle, CheckCircle2, Timer, AlertCircle } from 'lucide-react';
+import React, { useState } from 'react';
+import { Circle, CheckCircle2, Timer, AlertCircle, AlertTriangle } from 'lucide-react';
 import { Task, Profile, Doc } from '@/lib/types';
-import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 import { Stagger, StaggerItem } from '@/components/motion';
 import { EmptyState } from '@/components/ui/empty-state';
 import { TaskDetail } from '@/components/dashboard/TaskDetail';
@@ -15,11 +15,11 @@ const STATUS_ICONS: Record<string, { icon: typeof Circle; className: string; bg:
   'Blocked':      { icon: Circle,        className: 'text-[var(--color-status-blocked)]', bg: 'bg-red-500/10' },
 };
 
-const PRIORITY_VARIANT: Record<string, 'destructive' | 'default' | 'outline'> = {
-  High: 'destructive',
-  Urgent: 'destructive',
-  Medium: 'default',
-  Low: 'outline',
+const PRIORITY_COLOR: Record<string, string> = {
+  High:   'text-red-400',
+  Urgent: 'text-red-400',
+  Medium: 'text-muted-foreground',
+  Low:    'text-muted-foreground/60',
 };
 
 /** Same format as TaskList / TaskDetail: Month, day, year */
@@ -30,14 +30,20 @@ function formatDeadlineDisplay(dateStr: string): string {
   });
 }
 
+function isOverdue(dateStr: string): boolean {
+  const deadline = new Date(dateStr + 'T23:59:59');
+  return deadline < new Date();
+}
+
 interface UpcomingTasksProps {
   tasks: Task[];
   team: Profile[];
   docs: Doc[];
   currentUserId: string;
+  emptyAction?: React.ReactNode;
 }
 
-export function UpcomingTasks({ tasks, team, docs, currentUserId }: UpcomingTasksProps) {
+export function UpcomingTasks({ tasks, team, docs, currentUserId, emptyAction }: UpcomingTasksProps) {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
   if (tasks.length === 0) {
@@ -46,16 +52,18 @@ export function UpcomingTasks({ tasks, team, docs, currentUserId }: UpcomingTask
         icon="CheckCircle2"
         title="No upcoming tasks"
         description="You're all caught up."
+        action={emptyAction}
       />
     );
   }
 
   return (
     <>
-      <Stagger className="flex flex-col gap-3" staggerMs={0.06} delayMs={0.05}>
+      <Stagger className="flex flex-col divide-y divide-border/30" staggerMs={0.06} delayMs={0.05}>
         {tasks.map(task => {
           const cfg = STATUS_ICONS[task.status] ?? STATUS_ICONS['In Progress'];
           const Icon = cfg.icon;
+          const overdue = task.deadline ? isOverdue(task.deadline) : false;
           return (
             <StaggerItem key={task.id}>
               <button
@@ -63,8 +71,8 @@ export function UpcomingTasks({ tasks, team, docs, currentUserId }: UpcomingTask
                 className="flex w-full cursor-pointer items-center justify-between rounded-lg p-3 text-left transition-colors hover:bg-white/[0.04]"
               >
                 <div className="flex items-center gap-3 min-w-0 flex-1">
-                  <div className={`flex size-9 shrink-0 items-center justify-center rounded-lg ${cfg.bg}`} title={task.status}>
-                    <Icon className={`size-4 ${cfg.className}`} />
+                  <div className={`flex size-8 shrink-0 items-center justify-center rounded-lg ${cfg.bg}`} title={task.status}>
+                    <Icon className={`size-3.5 ${cfg.className}`} />
                   </div>
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium text-foreground">{task.name}</p>
@@ -73,15 +81,18 @@ export function UpcomingTasks({ tasks, team, docs, currentUserId }: UpcomingTask
                     </p>
                   </div>
                 </div>
-                <div className="flex shrink-0 items-center gap-2 ml-2">
-                  <Badge
-                    variant={PRIORITY_VARIANT[task.priority] ?? 'outline'}
-                    className="text-xs"
-                  >
+                <div className="flex shrink-0 items-center gap-3 ml-2">
+                  <span className={cn('text-xs', PRIORITY_COLOR[task.priority] ?? 'text-muted-foreground')}>
                     {task.priority}
-                  </Badge>
+                  </span>
                   {task.deadline && (
-                    <p className="text-xs text-muted-foreground">Due {formatDeadlineDisplay(task.deadline)}</p>
+                    <span className={cn(
+                      'inline-flex items-center gap-1 text-xs',
+                      overdue ? 'text-red-400 font-medium' : 'text-muted-foreground'
+                    )}>
+                      {overdue && <AlertTriangle className="size-3" />}
+                      {overdue ? 'Overdue' : formatDeadlineDisplay(task.deadline)}
+                    </span>
                   )}
                 </div>
               </button>
