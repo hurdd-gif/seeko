@@ -133,7 +133,7 @@ export default async function OverviewPage() {
   const firstName = profile?.display_name?.split(' ')[0];
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-5 overflow-hidden">
 
       {/* ── Hero — greeting + inline stats ──────────────── */}
       <FadeRise delay={delay(TIMING.hero)} y={SECTION_Y}>
