@@ -155,7 +155,7 @@ export default async function OverviewPage() {
               {openTasks} open
             </Link>
             {inProgress > 0 && (
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1 text-xs font-medium text-amber-400">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1 text-xs text-muted-foreground">
                 {inProgress} in progress
               </span>
             )}
