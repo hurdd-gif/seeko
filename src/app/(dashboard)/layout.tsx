@@ -68,7 +68,8 @@ export default async function DashboardLayout({
       <ActivityTracker userId={user.id} />
       <CommandPalette
         team={team.map((m) => ({ id: m.id, display_name: m.display_name }))}
-        docs={accessibleDocs.map((d) => ({ id: d.id, title: d.title }))}
+        docs={accessibleDocs.filter((d) => d.type !== 'deck').map((d) => ({ id: d.id, title: d.title }))}
+        decks={accessibleDocs.filter((d) => d.type === 'deck').map((d) => ({ id: d.id, title: d.title }))}
         isContractor={profile?.is_contractor ?? false}
       />
     </DashboardTourWrapper>

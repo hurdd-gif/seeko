@@ -13,7 +13,7 @@ import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { useRouter } from 'next/navigation';
 import {
-  LayoutDashboard, Users, FileText, Activity, Settings, Search, PanelLeftClose, DollarSign,
+  LayoutDashboard, Users, FileText, Activity, Settings, Search, PanelLeftClose, DollarSign, Presentation,
 } from 'lucide-react';
 import { useCommandPalette } from '@/lib/hooks/useCommandPalette';
 import type { Profile, Doc } from '@/lib/types';
@@ -25,7 +25,7 @@ const ROW_STAGGER = 0.025;
 type CommandItem = {
   id: string;
   label: string;
-  section: 'Pages' | 'Team' | 'Docs' | 'Actions';
+  section: 'Pages' | 'Team' | 'Docs' | 'Decks' | 'Actions';
   icon: React.ElementType;
   action: () => void;
   keywords?: string;
@@ -34,10 +34,11 @@ type CommandItem = {
 interface CommandPaletteProps {
   team: Pick<Profile, 'id' | 'display_name'>[];
   docs: Pick<Doc, 'id' | 'title'>[];
+  decks?: Pick<Doc, 'id' | 'title'>[];
   isContractor?: boolean;
 }
 
-export function CommandPalette({ team, docs, isContractor = false }: CommandPaletteProps) {
+export function CommandPalette({ team, docs, decks = [], isContractor = false }: CommandPaletteProps) {
   const { open, setOpen } = useCommandPalette();
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -77,11 +78,19 @@ export function CommandPalette({ team, docs, isContractor = false }: CommandPale
       action: () => go(`/docs?doc=${d.id}`),
       keywords: d.title,
     }));
+    const deckItems: CommandItem[] = decks.map((d) => ({
+      id: `dk-${d.id}`,
+      label: d.title,
+      section: 'Decks',
+      icon: Presentation,
+      action: () => go(`/docs?doc=${d.id}`),
+      keywords: d.title,
+    }));
     const actions: CommandItem[] = [
       { id: 'a-sidebar', label: 'Toggle Sidebar', section: 'Actions', icon: PanelLeftClose, action: () => { setOpen(false); document.dispatchEvent(new CustomEvent('toggle-sidebar')); } },
     ];
-    return [...pages, ...teamItems, ...docItems, ...actions];
-  }, [team, docs, go, setOpen, isContractor]);
+    return [...pages, ...teamItems, ...docItems, ...deckItems, ...actions];
+  }, [team, docs, decks, go, setOpen, isContractor]);
 
   const filtered = useMemo(() => {
     if (!query) return items.slice(0, 12);
