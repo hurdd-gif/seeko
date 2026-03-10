@@ -60,15 +60,15 @@ export function SigningPageClient({ token, initialData }: SigningPageClientProps
   // Verification phase
   if (!verified || !sections) {
     return (
-      <div className="flex min-h-dvh items-center justify-center bg-background px-4">
+      <div className="flex min-h-dvh items-end sm:items-center justify-center bg-background px-4 pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)]">
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           transition={SPRING}
-          className="w-full max-w-md"
+          className="w-full max-w-md mb-8 sm:mb-0"
         >
           {/* Card */}
-          <div className="rounded-2xl border border-border bg-card p-8">
+          <div className="rounded-2xl border border-border bg-card p-6 sm:p-8">
             {/* Header: logo + document info */}
             <div className="flex items-start gap-4 mb-6">
               <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-muted ring-1 ring-border">
@@ -122,7 +122,7 @@ export function SigningPageClient({ token, initialData }: SigningPageClientProps
 
   // Signing phase — reuse AgreementForm
   return (
-    <div className="min-h-dvh bg-background">
+    <div className="min-h-dvh bg-background pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
       <div className="mx-auto max-w-2xl px-4 py-8">
         <div className="flex items-center justify-center mb-8">
           <Logo />
@@ -145,7 +145,7 @@ export function SigningPageClient({ token, initialData }: SigningPageClientProps
 
 function StatusPage({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }) {
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-background px-4">
+    <div className="flex min-h-dvh items-center justify-center bg-background px-4 pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)]">
       <div className="flex max-w-md flex-col items-center gap-6 text-center">
         <Logo />
         <motion.div
