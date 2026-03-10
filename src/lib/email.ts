@@ -2,6 +2,16 @@ import { Resend } from 'resend';
 
 let resend: Resend | null = null;
 
+/** Escape HTML special characters to prevent injection in email templates */
+function esc(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;');
+}
+
 function getResend() {
   if (!resend) {
     resend = new Resend(process.env.RESEND_API_KEY);
@@ -123,7 +133,7 @@ function buildAgreementHtml(
               <div style="width:24px;height:24px;border-radius:6px;background:#f3f3f3;text-align:center;line-height:24px;font-size:11px;font-family:'Courier New',monospace;color:#999;">${s.number}</div>
             </td>
             <td style="padding-left:12px;">
-              <p style="margin:0 0 6px;font-size:15px;font-weight:600;color:#111;">${s.title}</p>
+              <p style="margin:0 0 6px;font-size:15px;font-weight:600;color:#111;">${esc(s.title)}</p>
               <div style="font-size:14px;color:#555;line-height:1.65;">${s.content}</div>
             </td>
           </tr>
@@ -136,7 +146,7 @@ function buildAgreementHtml(
     ${divider()}
     <!-- Intro -->
     <tr><td style="padding:32px 0 16px;">
-      <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#111;">${title}</h1>
+      <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#111;">${esc(title)}</h1>
       <p style="margin:0;font-size:14px;color:#999;">Signed copy for your records</p>
     </td></tr>
     <!-- Signer info -->
@@ -145,11 +155,11 @@ function buildAgreementHtml(
         <tr>
           <td style="padding:16px 20px;">
             <p style="margin:0 0 2px;font-size:11px;font-weight:600;color:#999;letter-spacing:1px;text-transform:uppercase;">Signed by</p>
-            <p style="margin:0;font-size:15px;font-weight:600;color:#111;">${signerName}</p>
+            <p style="margin:0;font-size:15px;font-weight:600;color:#111;">${esc(signerName)}</p>
           </td>
           <td style="padding:16px 20px;text-align:right;">
             <p style="margin:0 0 2px;font-size:11px;font-weight:600;color:#999;letter-spacing:1px;text-transform:uppercase;">Date</p>
-            <p style="margin:0;font-size:15px;color:#111;">${signedDate}</p>
+            <p style="margin:0;font-size:15px;color:#111;">${esc(signedDate)}</p>
           </td>
         </tr>
       </table>
@@ -162,7 +172,7 @@ function buildAgreementHtml(
     <tr><td style="padding:8px 0 32px;">
       <div style="border-top:1px solid #e5e5e5;padding-top:24px;">
         <p style="margin:0 0 4px;font-size:11px;font-weight:600;color:#999;letter-spacing:1.5px;text-transform:uppercase;">Digital Signature</p>
-        <p style="margin:0 0 8px;font-size:28px;font-family:'Caveat','Segoe Script','Brush Script MT',cursive;color:#111;">${signerName}</p>
+        <p style="margin:0 0 8px;font-size:28px;font-family:'Caveat','Segoe Script','Brush Script MT',cursive;color:#111;">${esc(signerName)}</p>
         <div style="width:180px;height:1px;background:#ccc;margin-bottom:16px;"></div>
         <p style="margin:0;font-size:13px;color:#999;">Signed electronically via SEEKO Studio</p>
       </div>
@@ -237,7 +247,7 @@ export async function sendExternalInviteEmail({
         <tr>
           <td width="28" valign="top" style="padding-top:2px;font-size:24px;color:#ccc;font-family:Georgia,serif;">&ldquo;</td>
           <td style="padding:0 0 0 4px;">
-            <p style="margin:0 0 6px;font-size:15px;color:#333;line-height:1.5;font-style:italic;">${personalNote}</p>
+            <p style="margin:0 0 6px;font-size:15px;color:#333;line-height:1.5;font-style:italic;">${esc(personalNote)}</p>
             <p style="margin:0;font-size:12px;color:#aaa;">&mdash; the sender</p>
           </td>
         </tr>
@@ -253,7 +263,7 @@ export async function sendExternalInviteEmail({
       ${brandHeader()}
       ${divider()}
       <tr><td style="padding:32px 0;">
-        <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#111;">${templateName}</h1>
+        <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#111;">${esc(templateName)}</h1>
         <p style="margin:0 0 24px;font-size:15px;color:#666;line-height:1.6;">You've been invited to review and sign this document. Click below to get started.</p>
         ${noteBlock}
         <table cellpadding="0" cellspacing="0" width="100%">
