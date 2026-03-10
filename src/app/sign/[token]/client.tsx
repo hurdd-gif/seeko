@@ -60,12 +60,12 @@ export function SigningPageClient({ token, initialData }: SigningPageClientProps
   // Verification phase
   if (!verified || !sections) {
     return (
-      <div className="flex min-h-dvh items-end sm:items-center justify-center bg-background px-4 pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)]">
+      <div className="flex min-h-dvh items-center justify-center bg-background px-4 pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)]">
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           transition={SPRING}
-          className="w-full max-w-md mb-8 sm:mb-0"
+          className="w-full max-w-md"
         >
           {/* Card */}
           <div className="rounded-2xl border border-border bg-card p-6 sm:p-8">
