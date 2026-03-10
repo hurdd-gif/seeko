@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Mail, Loader2, RotateCw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface VerificationFormProps {
   token: string;
@@ -190,15 +191,15 @@ export function VerificationForm({ token, maskedEmail, onVerified }: Verificatio
             <p className="text-sm text-muted-foreground">
               We&apos;ll send a code to <span className="font-mono text-xs text-foreground/60">{maskedEmail}</span>
             </p>
-            <button
+            <Button
               type="button"
               onClick={handleSendCode}
               disabled={sending}
-              className="w-full py-2.5 px-4 rounded-xl bg-foreground text-background font-semibold text-sm hover:bg-foreground/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+              className="w-full gap-2"
             >
               {sending ? <Loader2 className="size-4 animate-spin" /> : <Mail className="size-4" />}
               {sending ? 'Sending...' : 'Send Code'}
-            </button>
+            </Button>
           </motion.div>
         ) : (
           /* ── Enter code phase ────────────────────────── */
@@ -214,13 +215,14 @@ export function VerificationForm({ token, maskedEmail, onVerified }: Verificatio
             </p>
 
             {/* Hero digit inputs */}
-            <div className="flex gap-2.5" onPaste={handlePaste}>
+            <div className="flex gap-1.5 sm:gap-2.5" onPaste={handlePaste}>
               {digits.map((digit, i) => (
                 <motion.input
                   key={i}
                   ref={(el) => { inputRefs.current[i] = el; }}
                   type="text"
                   inputMode="numeric"
+                  autoComplete="one-time-code"
                   maxLength={1}
                   value={digit}
                   onChange={(e) => handleDigitChange(i, e.target.value)}
@@ -229,7 +231,7 @@ export function VerificationForm({ token, maskedEmail, onVerified }: Verificatio
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ ...SPRING, delay: i * 0.04 }}
-                  className="size-14 rounded-xl border border-border bg-muted text-center text-2xl font-semibold text-foreground font-mono
+                  className="size-12 sm:size-14 rounded-xl border border-border bg-muted text-center text-xl sm:text-2xl font-semibold text-foreground font-mono
                     focus:outline-none focus:ring-2 focus:ring-foreground/20 focus:border-foreground/40
                     disabled:opacity-50 transition-colors"
                 />
@@ -253,7 +255,7 @@ export function VerificationForm({ token, maskedEmail, onVerified }: Verificatio
               type="button"
               onClick={handleResendCode}
               disabled={resendCooldown > 0 || sending}
-              className="text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40 disabled:cursor-default flex items-center gap-1"
+              className="min-h-[44px] px-4 text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40 disabled:cursor-default flex items-center gap-1.5"
             >
               <RotateCw className="size-3" />
               {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Didn\u2019t receive it? Resend"}

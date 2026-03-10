@@ -49,6 +49,8 @@ export default function RootLayout({
         <meta name="theme-color" media="(prefers-color-scheme: light)" content="#1a1a1a" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="SEEKO Studio" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
       </head>
       <body
         className={`${outfit.variable} ${jetbrainsMono.variable} ${caveat.variable} antialiased bg-background text-foreground`}

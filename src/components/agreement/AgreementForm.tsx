@@ -188,14 +188,14 @@ export function AgreementForm({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm"
           >
             <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              initial={{ opacity: 0, y: 40 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 40 }}
               transition={SPRING}
-              className="mx-4 w-full max-w-sm rounded-2xl border border-border bg-card p-8 shadow-2xl"
+              className="mx-0 sm:mx-4 w-full max-w-sm rounded-t-2xl sm:rounded-2xl border border-border bg-card p-8 pb-[max(2rem,env(safe-area-inset-bottom))] sm:pb-8 shadow-2xl"
             >
               <div className="flex flex-col items-center gap-4">
                 <motion.div
@@ -286,7 +286,7 @@ export function AgreementForm({
                     <div
                       ref={scrollRef}
                       onScroll={handleScroll}
-                      className="h-[28rem] overflow-y-auto rounded-lg border border-border bg-muted/30 p-5 prose prose-sm prose-invert max-w-none
+                      className="max-h-[min(28rem,55dvh)] overflow-y-auto rounded-lg border border-border bg-muted/30 p-4 sm:p-5 prose prose-sm prose-invert max-w-none
                         [scrollbar-width:thin]
                         [&_h3]:text-base [&_h3]:font-semibold [&_h3]:text-foreground [&_h3]:mt-6 [&_h3]:mb-2
                         [&_p]:text-sm [&_p]:text-muted-foreground [&_p]:leading-relaxed [&_p]:mb-3

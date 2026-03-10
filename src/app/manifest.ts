@@ -16,8 +16,9 @@ export default function manifest(): MetadataRoute.Manifest {
     background_color: '#1a1a1a',
     theme_color: '#1a1a1a',
     icons: [
-      { src: '/seeko-s.png', sizes: 'any', type: 'image/png', purpose: 'any' },
-      { src: '/seeko-logo-white.png', sizes: 'any', type: 'image/png', purpose: 'any' },
+      { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+      { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+      { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
     ],
   };
 }
