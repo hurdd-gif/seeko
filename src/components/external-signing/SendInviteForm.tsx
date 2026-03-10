@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Send, Upload, FileText, Loader2, X, Eye, ChevronDown, ChevronUp, AlertCircle, Calendar } from 'lucide-react';
 import { EXTERNAL_TEMPLATES } from '@/lib/external-agreement-templates';
@@ -112,6 +112,16 @@ export function SendInviteForm({ onInviteSent }: SendInviteFormProps) {
       setSending(false);
     }
   }
+
+  // Hide mobile bottom nav when confirm dialog is open
+  useEffect(() => {
+    if (showConfirm) {
+      document.documentElement.setAttribute('data-modal-open', '');
+    } else {
+      document.documentElement.removeAttribute('data-modal-open');
+    }
+    return () => document.documentElement.removeAttribute('data-modal-open');
+  }, [showConfirm]);
 
   const canSubmit = email && (templateMode === 'preset' ? templateId : customSections);
   const selectedTemplate = EXTERNAL_TEMPLATES.find((t) => t.id === templateId);
@@ -362,7 +372,7 @@ export function SendInviteForm({ onInviteSent }: SendInviteFormProps) {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm"
+              className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm"
               onClick={() => setShowConfirm(false)}
             >
               <motion.div
