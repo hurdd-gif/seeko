@@ -21,3 +21,7 @@ services:
         sync: false
       - key: ADMIN_EMAIL
         sync: false
+      - key: NEXT_PUBLIC_APP_URL
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false

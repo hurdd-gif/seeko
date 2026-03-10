@@ -34,7 +34,6 @@ import { Loader2, ArrowRight, FileText, Check, ArrowDown } from 'lucide-react';
 import { AddressAutocomplete } from '@/components/agreement/AddressAutocomplete';
 import { SignatureDrawing } from '@/components/agreement/SignatureDrawing';
 import { useHaptics } from '@/components/HapticsProvider';
-import { AGREEMENT_SECTIONS, AGREEMENT_TITLE } from '@/lib/agreement-text';
 
 const SPRING = { type: 'spring' as const, stiffness: 300, damping: 25 };
 const SPRING_SNAPPY = { type: 'spring' as const, stiffness: 400, damping: 30 };
@@ -42,19 +41,38 @@ const SPRING_SNAPPY = { type: 'spring' as const, stiffness: 400, damping: 30 };
 interface AgreementFormProps {
   userId: string;
   userEmail: string;
-  department: string;
-  role: string;
-  isContractor: boolean;
-  onboarded: number;
+  sections: { number: number; title: string; content: string }[];
+  title: string;
+  // Onboarding-specific (optional)
+  department?: string;
+  role?: string;
+  isContractor?: boolean;
+  onboarded?: number;
+  showEngagementType?: boolean;
+  // API endpoint configuration
+  signEndpoint: string;
+  // Extra payload to include in sign request (e.g., { token } for external signing)
+  signPayloadExtra?: Record<string, string>;
+  // Redirect after signing (undefined = use response redirect, null = no redirect/show static success)
+  successRedirect?: string | null;
+  // Optional personal note to display
+  personalNote?: string;
 }
 
 export function AgreementForm({
   userId,
   userEmail,
+  sections,
+  title,
   department,
   role,
-  isContractor,
+  isContractor = false,
   onboarded,
+  showEngagementType = true,
+  signEndpoint,
+  signPayloadExtra,
+  successRedirect,
+  personalNote,
 }: AgreementFormProps) {
   const router = useRouter();
   const { trigger } = useHaptics();
@@ -111,13 +129,14 @@ export function AgreementForm({
     setSaving(true);
 
     try {
-      const res = await fetch('/api/agreement/sign', {
+      const res = await fetch(signEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           full_name: fullName.trim(),
           address: address.trim(),
-          engagement_type: engagementType,
+          ...(showEngagementType ? { engagement_type: engagementType } : {}),
+          ...signPayloadExtra,
         }),
       });
 
@@ -142,8 +161,12 @@ export function AgreementForm({
       }, sigAnimDuration);
 
       // Redirect after confirmation has been visible
+      if (successRedirect === null) {
+        // No redirect — external signing shows static success
+        return;
+      }
       setTimeout(() => {
-        router.push(data.redirect || (onboarded === 0 ? '/onboarding' : '/'));
+        router.push(data.redirect || successRedirect || (onboarded === 0 ? '/onboarding' : '/'));
         router.refresh();
       }, sigAnimDuration + 2500);
     } catch {
@@ -186,7 +209,9 @@ export function AgreementForm({
                 <div className="text-center">
                   <p className="text-lg font-semibold text-foreground">Agreement Signed</p>
                   <p className="mt-1.5 text-sm text-muted-foreground leading-relaxed">
-                    A signed copy has been sent to your email. Redirecting you now...
+                    {successRedirect === null
+                      ? 'A signed copy has been sent to your email. You may close this page.'
+                      : 'A signed copy has been sent to your email. Redirecting you now...'}
                   </p>
                 </div>
               </div>
@@ -204,19 +229,29 @@ export function AgreementForm({
         >
           <Card className="overflow-visible">
             <CardContent className="pt-6">
+              {/* Personal note from sender */}
+              {personalNote && (
+                <div className="mb-4 rounded-lg border border-seeko-accent/20 bg-seeko-accent/5 px-4 py-3">
+                  <p className="text-xs font-medium text-seeko-accent mb-1">Note from sender</p>
+                  <p className="text-sm text-muted-foreground">{personalNote}</p>
+                </div>
+              )}
+
               {/* Read-only info */}
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Email</Label>
-                  <p className="text-sm font-mono text-foreground truncate">{userEmail}</p>
+              {(userEmail || department) && (
+                <div className="grid grid-cols-2 gap-4 mb-6">
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Email</Label>
+                    <p className="text-sm font-mono text-foreground truncate">{userEmail}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Department / Role</Label>
+                    <p className="text-sm text-foreground truncate">
+                      {department || 'Unassigned'}{role ? ` — ${role}` : ''}
+                    </p>
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Department / Role</Label>
-                  <p className="text-sm text-foreground truncate">
-                    {department || 'Unassigned'}{role ? ` — ${role}` : ''}
-                  </p>
-                </div>
-              </div>
+              )}
 
               <AnimatePresence mode="wait">
                 {phase === 'read' ? (
@@ -230,7 +265,7 @@ export function AgreementForm({
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2 text-sm font-medium text-foreground">
                         <FileText className="size-4 text-muted-foreground" />
-                        {AGREEMENT_TITLE}
+                        {title}
                       </div>
                       <span className="text-xs text-muted-foreground tabular-nums">
                         {Math.round(scrollProgress * 100)}%
@@ -256,7 +291,7 @@ export function AgreementForm({
                         [&_p]:text-sm [&_p]:text-muted-foreground [&_p]:leading-relaxed [&_p]:mb-3
                         [&_ul]:text-sm [&_ul]:text-muted-foreground [&_ul]:ml-4 [&_ul]:mb-3 [&_li]:mb-1"
                     >
-                      {AGREEMENT_SECTIONS.map((section) => (
+                      {sections.map((section) => (
                         <div key={section.number}>
                           <h3>
                             <span className="inline-flex size-6 items-center justify-center rounded bg-muted text-xs font-mono text-muted-foreground mr-2 align-middle">
@@ -269,7 +304,7 @@ export function AgreementForm({
                       ))}
                       <div className="mt-8 pt-4 border-t border-border">
                         <p className="text-xs text-muted-foreground italic">
-                          End of agreement — {AGREEMENT_SECTIONS.length} sections. Please continue below to sign.
+                          End of agreement — {sections.length} sections. Please continue below to sign.
                         </p>
                       </div>
                     </div>
@@ -330,8 +365,8 @@ export function AgreementForm({
                     >
                       <FileText className="size-4 text-seeko-accent shrink-0" />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-foreground">{AGREEMENT_TITLE}</p>
-                        <p className="text-xs text-muted-foreground">{AGREEMENT_SECTIONS.length} sections — read in full</p>
+                        <p className="text-sm font-medium text-foreground">{title}</p>
+                        <p className="text-xs text-muted-foreground">{sections.length} sections — read in full</p>
                       </div>
                       <Check className="size-4 text-seeko-accent shrink-0" />
                     </button>
@@ -347,33 +382,35 @@ export function AgreementForm({
                     </div>
 
                     {/* Engagement type */}
-                    <motion.fieldset
-                      initial={{ opacity: 0, y: 12 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ ...SPRING, delay: 0.2 }}
-                      className="space-y-2"
-                    >
-                      <Label>Engagement Type</Label>
-                      <div className="flex gap-3">
-                        {[
-                          { value: 'team_member' as const, label: 'Team Member' },
-                          { value: 'contractor' as const, label: 'Independent Contractor' },
-                        ].map((opt) => (
-                          <button
-                            key={opt.value}
-                            type="button"
-                            disabled
-                            className={`flex-1 rounded-lg border px-3 py-2.5 text-sm font-medium cursor-not-allowed ${
-                              engagementType === opt.value
-                                ? 'border-seeko-accent/50 bg-seeko-accent/10 text-seeko-accent'
-                                : 'border-border bg-muted/30 text-muted-foreground opacity-40'
-                            }`}
-                          >
-                            {opt.label}
-                          </button>
-                        ))}
-                      </div>
-                    </motion.fieldset>
+                    {showEngagementType && (
+                      <motion.fieldset
+                        initial={{ opacity: 0, y: 12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ ...SPRING, delay: 0.2 }}
+                        className="space-y-2"
+                      >
+                        <Label>Engagement Type</Label>
+                        <div className="flex gap-3">
+                          {[
+                            { value: 'team_member' as const, label: 'Team Member' },
+                            { value: 'contractor' as const, label: 'Independent Contractor' },
+                          ].map((opt) => (
+                            <button
+                              key={opt.value}
+                              type="button"
+                              disabled
+                              className={`flex-1 rounded-lg border px-3 py-2.5 text-sm font-medium cursor-not-allowed ${
+                                engagementType === opt.value
+                                  ? 'border-seeko-accent/50 bg-seeko-accent/10 text-seeko-accent'
+                                  : 'border-border bg-muted/30 text-muted-foreground opacity-40'
+                              }`}
+                            >
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
+                      </motion.fieldset>
+                    )}
 
                     {/* Legal name */}
                     <motion.div

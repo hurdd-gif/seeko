@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getServiceClient } from '@/lib/supabase/service';
 import { generateAgreementPdf } from '@/lib/agreement-pdf';
+import { AGREEMENT_SECTIONS, AGREEMENT_TITLE } from '@/lib/agreement-text';
 import { sendAgreementEmail } from '@/lib/email';
 
 export async function POST(req: NextRequest) {
@@ -73,13 +74,17 @@ export async function POST(req: NextRequest) {
 
   // 6. Generate PDF
   const pdfBytes = await generateAgreementPdf({
-    fullName: full_name.trim(),
-    address: address.trim(),
-    email: user.email ?? '',
-    department: profile?.department ?? '',
-    role: profile?.role ?? '',
-    engagementType: engagement_type as 'team_member' | 'contractor',
-    signedAt: now,
+    title: AGREEMENT_TITLE,
+    sections: AGREEMENT_SECTIONS,
+    signer: {
+      fullName: full_name.trim(),
+      address: address.trim(),
+      email: user.email ?? '',
+      signedAt: now,
+      department: profile?.department ?? '',
+      role: profile?.role ?? '',
+      engagementType: engagement_type as 'team_member' | 'contractor',
+    },
   });
 
   // 7. Upload PDF to Supabase Storage
@@ -101,6 +106,8 @@ export async function POST(req: NextRequest) {
       recipientEmail: user.email ?? '',
       signerName: full_name.trim(),
       pdfBytes,
+      title: AGREEMENT_TITLE,
+      sections: AGREEMENT_SECTIONS,
     });
   } catch (emailErr) {
     console.error('Failed to send agreement email:', emailErr);

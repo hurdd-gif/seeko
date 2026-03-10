@@ -3,17 +3,19 @@
 /* ─────────────────────────────────────────────────────────
  * ANIMATION STORYBOARD — Segmented Code Input
  *
- *    0ms   8 cells render, empty
- *   user types → digit fills cell, scale-bounce 0.95→1.05→1
+ *    0ms   8 cells render with stagger (40ms each)
+ *   user types → digit fills cell, scale-bounce
  *   auto-advance to next cell on entry
  *   on paste → all cells fill with stagger (40ms each)
- *   on complete → subtle glow pulse on all cells
+ *   on complete → cells glow with accent ring
  * ───────────────────────────────────────────────────────── */
 
 import { useState, useRef, useCallback, useEffect, type KeyboardEvent, type ClipboardEvent } from 'react';
+import { motion } from 'motion/react';
 import { cn } from '@/lib/utils';
 
 const CELL_COUNT = 8;
+const SPRING = { type: 'spring' as const, stiffness: 300, damping: 25 };
 
 interface SegmentedCodeInputProps {
   value: string;
@@ -25,7 +27,6 @@ export function SegmentedCodeInput({ value, onChange, disabled }: SegmentedCodeI
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const [focusedIndex, setFocusedIndex] = useState(-1);
   const digits = Array.from({ length: CELL_COUNT }, (_, i) => value[i] ?? '');
-  const [animatingCells, setAnimatingCells] = useState<Set<number>>(new Set());
 
   const focusCell = useCallback((index: number) => {
     if (index >= 0 && index < CELL_COUNT) {
@@ -33,29 +34,16 @@ export function SegmentedCodeInput({ value, onChange, disabled }: SegmentedCodeI
     }
   }, []);
 
-  const updateDigit = useCallback((index: number, digit: string) => {
-    const newDigits = [...digits];
-    newDigits[index] = digit;
-    const newValue = newDigits.join('').replace(/\D/g, '').slice(0, CELL_COUNT);
-    onChange(newValue);
-
-    setAnimatingCells(prev => new Set(prev).add(index));
-    setTimeout(() => {
-      setAnimatingCells(prev => {
-        const next = new Set(prev);
-        next.delete(index);
-        return next;
-      });
-    }, 300);
-  }, [digits, onChange]);
-
   const handleKeyDown = useCallback((index: number, e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Backspace') {
       e.preventDefault();
+      const newDigits = [...digits];
       if (digits[index]) {
-        updateDigit(index, '');
+        newDigits[index] = '';
+        onChange(newDigits.join(''));
       } else if (index > 0) {
-        updateDigit(index - 1, '');
+        newDigits[index - 1] = '';
+        onChange(newDigits.join(''));
         focusCell(index - 1);
       }
     } else if (e.key === 'ArrowLeft' && index > 0) {
@@ -66,37 +54,22 @@ export function SegmentedCodeInput({ value, onChange, disabled }: SegmentedCodeI
       focusCell(index + 1);
     } else if (/^\d$/.test(e.key)) {
       e.preventDefault();
-      updateDigit(index, e.key);
+      const newDigits = [...digits];
+      newDigits[index] = e.key;
+      onChange(newDigits.join('').replace(/\D/g, '').slice(0, CELL_COUNT));
       if (index < CELL_COUNT - 1) {
         focusCell(index + 1);
       }
     }
-  }, [digits, updateDigit, focusCell]);
+  }, [digits, onChange, focusCell]);
 
   const handlePaste = useCallback((e: ClipboardEvent<HTMLInputElement>) => {
     e.preventDefault();
     const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, CELL_COUNT);
     if (!pasted) return;
-
     onChange(pasted);
-
-    // Stagger animation for pasted cells
-    pasted.split('').forEach((_, i) => {
-      setTimeout(() => {
-        setAnimatingCells(prev => new Set(prev).add(i));
-        setTimeout(() => {
-          setAnimatingCells(prev => {
-            const next = new Set(prev);
-            next.delete(i);
-            return next;
-          });
-        }, 300);
-      }, i * 40);
-    });
-
-    // Focus the cell after last pasted digit
     const nextIndex = Math.min(pasted.length, CELL_COUNT - 1);
-    setTimeout(() => focusCell(nextIndex), pasted.length * 40);
+    setTimeout(() => focusCell(nextIndex), 50);
   }, [onChange, focusCell]);
 
   // Auto-focus first cell on mount
@@ -108,26 +81,19 @@ export function SegmentedCodeInput({ value, onChange, disabled }: SegmentedCodeI
   const isComplete = value.replace(/\D/g, '').length === CELL_COUNT;
 
   return (
-    <div className="flex items-center justify-center gap-1">
+    <div className="flex items-center justify-center gap-1.5">
       {digits.map((digit, i) => (
         <div key={i} className="flex items-center">
           {i === 4 && (
-            <div className="w-2 flex items-center justify-center text-muted-foreground/30 text-sm font-light">
-              -
+            <div className="w-3 flex items-center justify-center text-muted-foreground/30 text-lg font-light select-none">
+              &ndash;
             </div>
           )}
-          <div
-            className={cn(
-              'relative w-8 h-10 md:w-10 md:h-12 rounded-lg border-2 transition-all duration-200',
-              isComplete
-                ? 'border-seeko-accent shadow-[0_0_8px_rgba(110,231,183,0.15)]'
-                : focusedIndex === i
-                  ? 'border-seeko-accent shadow-[0_0_0_2px_rgba(110,231,183,0.15)]'
-                  : digit
-                    ? 'border-[rgba(240,240,240,0.15)]'
-                    : 'border-border',
-              animatingCells.has(i) && 'scale-105',
-            )}
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ ...SPRING, delay: i * 0.04 }}
+            className="relative"
           >
             <input
               ref={el => { inputRefs.current[i] = el; }}
@@ -141,10 +107,21 @@ export function SegmentedCodeInput({ value, onChange, disabled }: SegmentedCodeI
               onPaste={handlePaste}
               onFocus={() => setFocusedIndex(i)}
               onBlur={() => setFocusedIndex(-1)}
-              className="absolute inset-0 w-full h-full bg-transparent text-center text-base md:text-lg font-mono font-semibold text-foreground focus:outline-none caret-transparent"
+              className={cn(
+                'size-11 md:size-12 rounded-xl border text-center text-lg font-semibold font-mono transition-all duration-150',
+                'bg-muted text-foreground focus:outline-none caret-transparent',
+                'disabled:opacity-50',
+                isComplete
+                  ? 'border-seeko-accent/50 ring-1 ring-seeko-accent/20'
+                  : focusedIndex === i
+                    ? 'border-foreground/40 ring-2 ring-foreground/10'
+                    : digit
+                      ? 'border-border/80'
+                      : 'border-border',
+              )}
               aria-label={`Digit ${i + 1}`}
             />
-          </div>
+          </motion.div>
         </div>
       ))}
     </div>

@@ -160,7 +160,8 @@ export function SettingsPanel({ profile, isAdmin, team, revalidate, completedTas
     }
 
     const { data } = supabase.storage.from('avatars').getPublicUrl(path);
-    setAvatarUrl(data.publicUrl);
+    // Append cache-busting param so browser/CDN serves the fresh upload
+    setAvatarUrl(`${data.publicUrl}?v=${Date.now()}`);
     if (avatarInputRef.current) avatarInputRef.current.value = '';
     setUploading(false);
   }

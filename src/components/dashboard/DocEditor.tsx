@@ -162,6 +162,9 @@ export function DocEditor({ doc, onSave, onCancel, team = [] }: DocEditorProps) 
   const [error, setError] = useState('');
   const [addUserValue, setAddUserValue] = useState('');
   const desktopContentRef = useRef<string>(doc?.content ?? '');
+  const userEditedContentRef = useRef(false);
+  const editorContainerRef = useRef<HTMLDivElement>(null);
+  const handleSaveRef = useRef<() => void>(() => {});
 
   const toggleDepartment = (dept: string) => {
     setDepartments(prev =>
@@ -187,6 +190,7 @@ export function DocEditor({ doc, onSave, onCancel, team = [] }: DocEditorProps) 
         class: 'prose prose-invert max-w-none min-h-[200px] focus:outline-none text-foreground/80 prose-headings:text-foreground prose-strong:text-foreground',
       },
     },
+    onUpdate: () => { userEditedContentRef.current = true; },
   });
 
   const insertImage = useCallback((url: string) => {
@@ -321,13 +325,26 @@ export function DocEditor({ doc, onSave, onCancel, team = [] }: DocEditorProps) 
     setSaving(true);
     setError('');
     try {
-      const content = isDesktop ? desktopContentRef.current : (editor?.getHTML() ?? '');
-      const body = {
+      const body: Record<string, unknown> = {
         title: title.trim(),
-        content,
         restricted_department: departments.length > 0 ? departments : null,
         granted_user_ids: grantedIds.length > 0 ? grantedIds : null,
       };
+      // Only send content for new docs, or when user actually edited content.
+      // For desktop: read from desktopContentRef only if user interacted with editor.
+      // For mobile: the tiptap onUpdate only fires on real user edits.
+      if (!doc) {
+        // New doc — always send content
+        body.content = isDesktop ? desktopContentRef.current : (editor?.getHTML() ?? '');
+      } else if (userEditedContentRef.current) {
+        // Existing doc — only send if user actually edited
+        const content = isDesktop ? desktopContentRef.current : (editor?.getHTML() ?? '');
+        // Extra guard: don't send empty/default content for existing docs
+        const isEmpty = !content || content === '<p></p>' || content === '<p><br></p>';
+        if (!isEmpty) {
+          body.content = content;
+        }
+      }
       const res = doc
         ? await fetch(`/api/docs/${doc.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
         : await fetch('/api/docs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
@@ -349,6 +366,8 @@ export function DocEditor({ doc, onSave, onCancel, team = [] }: DocEditorProps) 
     }
   };
 
+  handleSaveRef.current = handleSave;
+
   const setDialogFooter = useDialogFooter();
 
   useEffect(() => {
@@ -368,7 +387,7 @@ export function DocEditor({ doc, onSave, onCancel, team = [] }: DocEditorProps) 
         <Button
           type="button"
           size="sm"
-          onClick={handleSave}
+          onClick={() => handleSaveRef.current()}
           disabled={saving}
           className="min-w-[7rem] min-h-[2.5rem] touch-manipulation"
         >
@@ -490,6 +509,11 @@ export function DocEditor({ doc, onSave, onCancel, team = [] }: DocEditorProps) 
       {/* Editor — desktop uses Pages CMS editor with bubble menu + slash commands;
          mobile keeps the original toolbar editor */}
       {isDesktop ? (
+        <div
+          ref={editorContainerRef}
+          onKeyDownCapture={() => { userEditedContentRef.current = true; }}
+          onPointerDownCapture={() => { userEditedContentRef.current = true; }}
+        >
         <DesktopEditor
           value={doc?.content ?? ''}
           onChange={(html) => { desktopContentRef.current = html; }}
@@ -507,6 +531,7 @@ export function DocEditor({ doc, onSave, onCancel, team = [] }: DocEditorProps) 
           className="min-h-[300px]"
           editorClassName="min-h-[300px] doc-content"
         />
+        </div>
       ) : (
         <>
           {/* Mobile toolbar */}
