@@ -293,6 +293,10 @@ body.tour-cmd-k-active #command-palette-container * {
 }
 
 /* Sonner toast overrides */
+[data-sonner-toaster][data-y-position="top"] {
+  top: env(safe-area-inset-top, 0px) !important;
+}
+
 [data-sonner-toaster] [data-sonner-toast] {
   --normal-bg: rgba(34, 34, 34, 0.85);
   --normal-border: var(--color-border);
