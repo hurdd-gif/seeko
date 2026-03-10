@@ -33,10 +33,12 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { TaskDetail } from '@/components/dashboard/TaskDetail';
 import { DeliverablesUploadDialog } from '@/components/dashboard/DeliverablesUploadDialog';
 import { HandoffDialog } from '@/components/dashboard/HandoffDialog';
 import { Stagger, StaggerItem } from '@/components/motion';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
 
 /* ------------------------------------------------------------------ */
 /*  FilterPill                                                         */
@@ -162,6 +164,7 @@ interface TaskListProps {
 
 export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs = [], currentUserId = '' }: TaskListProps) {
   const searchParams = useSearchParams();
+  const isMobile = useMediaQuery('(max-width: 639px)');
 
   /* --- filter state --- */
   const [filterAssignee, setFilterAssignee] = useState('All');
@@ -743,52 +746,97 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
           )}
         </div>
 
-        {/* Add-task inline form */}
-        <AnimatePresence>
-          {showAddForm && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.15 }}
-              className="overflow-hidden border-b border-border"
-            >
-              <div className="px-4 py-3">
-                <div className="flex flex-col gap-3">
-                  <Input
-                    placeholder="Task name..."
-                    value={newName}
-                    onChange={e => setNewName(e.target.value)}
-                    autoFocus
-                    onKeyDown={e => { if (e.key === 'Enter' && newName.trim()) handleAddTask(); }}
-                  />
-                  <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-                    <Select value={newDept} onChange={e => setNewDept(e.target.value as Department)}>
-                      {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
-                    </Select>
-                    <Select value={newPriority} onChange={e => setNewPriority(e.target.value as Priority)}>
-                      {PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
-                    </Select>
+        {/* Add-task inline form (desktop only) */}
+        {!isMobile && (
+          <AnimatePresence>
+            {showAddForm && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.15 }}
+                className="overflow-hidden border-b border-border"
+              >
+                <div className="px-4 py-3">
+                  <div className="flex flex-col gap-3">
                     <Input
-                      type="date"
-                      value={newDeadline}
-                      onChange={e => setNewDeadline(e.target.value)}
-                      className="w-auto"
+                      placeholder="Task name..."
+                      value={newName}
+                      onChange={e => setNewName(e.target.value)}
+                      autoFocus
+                      onKeyDown={e => { if (e.key === 'Enter' && newName.trim()) handleAddTask(); }}
                     />
-                    <div className="flex justify-end gap-2 sm:ml-auto">
-                      <Button variant="ghost" size="sm" onClick={() => setShowAddForm(false)}>
-                        Cancel
-                      </Button>
-                      <Button size="sm" onClick={handleAddTask} disabled={adding || !newName.trim()}>
-                        {adding ? 'Adding...' : 'Add'}
-                      </Button>
+                    <div className="flex flex-row flex-wrap items-center gap-2">
+                      <Select value={newDept} onChange={e => setNewDept(e.target.value as Department)}>
+                        {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
+                      </Select>
+                      <Select value={newPriority} onChange={e => setNewPriority(e.target.value as Priority)}>
+                        {PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
+                      </Select>
+                      <Input
+                        type="date"
+                        value={newDeadline}
+                        onChange={e => setNewDeadline(e.target.value)}
+                        className="w-auto"
+                      />
+                      <div className="flex justify-end gap-2 ml-auto">
+                        <Button variant="ghost" size="sm" onClick={() => setShowAddForm(false)}>
+                          Cancel
+                        </Button>
+                        <Button size="sm" onClick={handleAddTask} disabled={adding || !newName.trim()}>
+                          {adding ? 'Adding...' : 'Add'}
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        )}
+
+        {/* Add-task drawer (mobile only) */}
+        {isMobile && (
+          <Dialog open={showAddForm} onOpenChange={setShowAddForm}>
+            <DialogHeader>
+              <DialogTitle>New Task</DialogTitle>
+            </DialogHeader>
+            <div className="flex flex-col gap-4">
+              <Input
+                placeholder="Task name..."
+                value={newName}
+                onChange={e => setNewName(e.target.value)}
+                autoFocus
+                onKeyDown={e => { if (e.key === 'Enter' && newName.trim()) handleAddTask(); }}
+              />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-muted-foreground mb-1.5">Department</label>
+                  <Select value={newDept} onChange={e => setNewDept(e.target.value as Department)}>
+                    {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
+                  </Select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-muted-foreground mb-1.5">Priority</label>
+                  <Select value={newPriority} onChange={e => setNewPriority(e.target.value as Priority)}>
+                    {PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
+                  </Select>
+                </div>
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1.5">Deadline</label>
+                <Input
+                  type="date"
+                  value={newDeadline}
+                  onChange={e => setNewDeadline(e.target.value)}
+                />
+              </div>
+              <Button onClick={handleAddTask} disabled={adding || !newName.trim()} className="w-full">
+                {adding ? 'Adding...' : 'Add Task'}
+              </Button>
+            </div>
+          </Dialog>
+        )}
 
         {/* Summary bar */}
         <div className="flex items-center gap-3 px-4 pt-2 text-xs text-muted-foreground">
