@@ -310,3 +310,62 @@ export async function sendVerificationCodeEmail({
     `),
   });
 }
+
+/* ── Bug Report Email ────────────────────────────────────── */
+
+interface SendBugReportEmailParams {
+  description: string;
+  pageUrl: string;
+  screenshotUrl?: string;
+  userAgent: string;
+  screenSize: string;
+  isPwa: boolean;
+  reporterName: string;
+  reporterEmail: string;
+}
+
+export async function sendBugReportEmail(params: SendBugReportEmailParams) {
+  const r = getResend();
+
+  const screenshotRow = params.screenshotUrl
+    ? `<tr><td style="padding:16px 0 0;">
+        <p style="margin:0 0 8px;font-size:13px;font-weight:600;color:#111;">Screenshot</p>
+        <img src="${esc(params.screenshotUrl)}" alt="Bug screenshot" style="max-width:100%;border-radius:8px;border:1px solid #e5e5e5;" />
+      </td></tr>`
+    : '';
+
+  const html = shell(`
+    ${brandHeader()}
+    <tr><td style="padding:0 0 24px;">
+      <p style="margin:0 0 4px;font-size:20px;font-weight:700;color:#111;">Bug Report</p>
+      <p style="margin:0;font-size:14px;color:#666;">From ${esc(params.reporterName)} (${esc(params.reporterEmail)})</p>
+    </td></tr>
+    ${divider()}
+    <tr><td style="padding:16px 0 0;">
+      <p style="margin:0 0 8px;font-size:13px;font-weight:600;color:#111;">Description</p>
+      <p style="margin:0;font-size:14px;color:#333;line-height:1.6;white-space:pre-wrap;">${esc(params.description)}</p>
+    </td></tr>
+    ${screenshotRow}
+    ${divider()}
+    <tr><td style="padding:16px 0 0;">
+      <p style="margin:0 0 8px;font-size:13px;font-weight:600;color:#111;">Context</p>
+      <table cellpadding="0" cellspacing="0" style="font-size:13px;color:#666;line-height:1.8;">
+        <tr><td style="padding-right:12px;font-weight:600;color:#444;">Page</td><td>${esc(params.pageUrl)}</td></tr>
+        <tr><td style="padding-right:12px;font-weight:600;color:#444;">Screen</td><td>${esc(params.screenSize)}</td></tr>
+        <tr><td style="padding-right:12px;font-weight:600;color:#444;">PWA</td><td>${params.isPwa ? 'Yes' : 'No'}</td></tr>
+        <tr><td style="padding-right:12px;font-weight:600;color:#444;">Browser</td><td style="word-break:break-all;">${esc(params.userAgent)}</td></tr>
+      </table>
+    </td></tr>
+    ${footer('This bug report was submitted from the SEEKO Studio dashboard.')}
+  `);
+
+  const subject = `[Bug Report] ${params.description.slice(0, 50)}${params.description.length > 50 ? '…' : ''}`;
+
+  await r.emails.send({
+    from: FROM_EMAIL,
+    to: ADMIN_EMAIL,
+    replyTo: params.reporterEmail,
+    subject,
+    html,
+  });
+}
