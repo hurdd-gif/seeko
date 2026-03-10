@@ -119,7 +119,7 @@ body.tour-cmd-k-active #command-palette-container * {
 .doc-read-body .doc-content-body,
 .doc-read-body .doc-content article {
   color: var(--color-foreground);
-  line-height: 1.65;
+  line-height: 1.7;
   max-width: none;
   font-size: 0.9375rem;
 }
@@ -130,8 +130,8 @@ body.tour-cmd-k-active #command-palette-container * {
 }
 .doc-content p,
 .doc-read-body .doc-content p {
-  margin-bottom: 0.75rem;
-  color: rgba(240, 240, 240, 0.9);
+  margin-bottom: 0.875rem;
+  color: rgba(240, 240, 240, 0.85);
 }
 .doc-content p:last-child,
 .doc-read-body .doc-content p:last-child {
@@ -139,27 +139,31 @@ body.tour-cmd-k-active #command-palette-container * {
 }
 .doc-content h1,
 .doc-read-body .doc-content h1 {
-  font-size: 1.875rem;
+  font-size: 1.75rem;
   font-weight: 700;
-  margin-top: 1.5rem;
+  margin-top: 2rem;
   margin-bottom: 0.75rem;
-  line-height: 1.2;
+  line-height: 1.25;
   color: var(--color-foreground);
+}
+.doc-content h1:first-child,
+.doc-read-body .doc-content h1:first-child {
+  margin-top: 0;
 }
 .doc-content h2,
 .doc-read-body .doc-content h2 {
-  font-size: 1.5rem;
+  font-size: 1.375rem;
   font-weight: 600;
-  margin-top: 1.25rem;
+  margin-top: 1.75rem;
   margin-bottom: 0.5rem;
   line-height: 1.3;
   color: var(--color-foreground);
 }
 .doc-content h3,
 .doc-read-body .doc-content h3 {
-  font-size: 1.25rem;
+  font-size: 1.125rem;
   font-weight: 600;
-  margin-top: 1rem;
+  margin-top: 1.5rem;
   margin-bottom: 0.5rem;
   color: var(--color-foreground);
 }
@@ -200,8 +204,8 @@ body.tour-cmd-k-active #command-palette-container * {
 }
 .doc-content hr,
 .doc-read-body .doc-content hr {
-  margin-top: 1rem;
-  margin-bottom: 1rem;
+  margin-top: 1.5rem;
+  margin-bottom: 1.5rem;
   border-color: var(--color-border);
 }
 
@@ -210,10 +214,14 @@ body.tour-cmd-k-active #command-palette-container * {
 .doc-read-body .doc-content table,
 .ProseMirror table {
   width: auto;
-  border-collapse: collapse;
-  margin-top: 0.75rem;
-  margin-bottom: 0.75rem;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin-top: 1rem;
+  margin-bottom: 1rem;
   font-size: 0.875rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  overflow: hidden;
 }
 .doc-content th,
 .doc-read-body .doc-content th,
@@ -222,18 +230,35 @@ body.tour-cmd-k-active #command-palette-container * {
   color: var(--color-foreground);
   font-weight: 600;
   text-align: left;
-  padding: 0.5rem 0.75rem;
-  border: 1px solid var(--color-border);
+  padding: 0.625rem 1rem;
+  border-bottom: 1px solid var(--color-border);
+  border-right: 1px solid var(--color-border);
   min-width: 120px;
+}
+.doc-content th:last-child,
+.doc-read-body .doc-content th:last-child,
+.ProseMirror th:last-child {
+  border-right: none;
 }
 .doc-content td,
 .doc-read-body .doc-content td,
 .ProseMirror td {
-  padding: 0.4rem 0.75rem;
-  border: 1px solid var(--color-border);
+  padding: 0.625rem 1rem;
+  border-bottom: 1px solid var(--color-border);
+  border-right: 1px solid var(--color-border);
   color: rgba(240, 240, 240, 0.85);
   vertical-align: top;
   min-width: 120px;
+}
+.doc-content td:last-child,
+.doc-read-body .doc-content td:last-child,
+.ProseMirror td:last-child {
+  border-right: none;
+}
+.doc-content tr:last-child td,
+.doc-read-body .doc-content tr:last-child td,
+.ProseMirror tr:last-child td {
+  border-bottom: none;
 }
 .ProseMirror .selectedCell {
   background: var(--color-muted);
