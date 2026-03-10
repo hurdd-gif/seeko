@@ -22,6 +22,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'PDF file required' }, { status: 400 });
   }
 
+  const MAX_PDF_SIZE = 10 * 1024 * 1024; // 10 MB
+  if (file.size > MAX_PDF_SIZE) {
+    return NextResponse.json({ error: 'PDF must be under 10 MB' }, { status: 413 });
+  }
+
   // 3. Parse PDF text
   const { PDFParse } = await import('pdf-parse');
   const buffer = Buffer.from(await file.arrayBuffer());

@@ -4,6 +4,8 @@ import { cookies } from 'next/headers';
 import bcrypt from 'bcryptjs';
 import { SignJWT } from 'jose';
 
+const PAYMENTS_COOKIE = 'payments-token';
+
 async function getSupabaseAndUser() {
   const cookieStore = await cookies();
   const supabase = createServerClient(
@@ -67,5 +69,16 @@ export async function POST(req: NextRequest) {
     .setIssuedAt()
     .sign(secret);
 
-  return NextResponse.json({ token });
+  const isProduction = process.env.NODE_ENV === 'production';
+
+  const response = NextResponse.json({ success: true });
+  response.cookies.set(PAYMENTS_COOKIE, token, {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: 'strict',
+    path: '/api/payments',
+    maxAge: 24 * 60 * 60, // 24 hours
+  });
+
+  return response;
 }

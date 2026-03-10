@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
   }
 
   // 4. Capture IP and user agent
-  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+  const ip = req.headers.get('x-forwarded-for')?.split(',').pop()?.trim()
     || req.headers.get('x-real-ip')
     || 'unknown';
   const userAgent = req.headers.get('user-agent') || 'unknown';

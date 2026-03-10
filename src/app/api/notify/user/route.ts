@@ -3,6 +3,23 @@ import { createServerClient } from '@supabase/ssr';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 import type { NotificationKind } from '@/lib/types';
+import { isValidNotificationKind } from '@/lib/notification-kinds';
+
+// Rate limiter: 30 notifications per user per minute
+const RATE_LIMIT = { max: 30, windowMs: 60 * 1000 };
+const userHits = new Map<string, { count: number; resetAt: number }>();
+
+function isRateLimited(userId: string): boolean {
+  const now = Date.now();
+  const entry = userHits.get(userId);
+  if (!entry || now > entry.resetAt) {
+    userHits.set(userId, { count: 1, resetAt: now + RATE_LIMIT.windowMs });
+    return false;
+  }
+  if (entry.count >= RATE_LIMIT.max) return true;
+  entry.count++;
+  return false;
+}
 
 /** POST: Notify a specific user. Body: { userId, kind, title, body?, link? } */
 export async function POST(req: NextRequest) {
@@ -21,6 +38,10 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+  if (isRateLimited(user.id)) {
+    return NextResponse.json({ error: 'Too many notifications. Try again later.' }, { status: 429 });
+  }
+
   let body: { userId: string; kind: NotificationKind; title: string; body?: string; link?: string };
   try {
     body = await req.json();
@@ -31,6 +52,10 @@ export async function POST(req: NextRequest) {
   const { userId, kind, title, body: notifBody, link } = body;
   if (!userId || !kind || !title) {
     return NextResponse.json({ error: 'userId, kind, and title required' }, { status: 400 });
+  }
+
+  if (!isValidNotificationKind(kind)) {
+    return NextResponse.json({ error: 'Invalid notification kind' }, { status: 400 });
   }
 
   // Only allow internal relative paths as notification links (no external URLs)
@@ -56,8 +81,6 @@ export async function POST(req: NextRequest) {
   });
 
   if (error) {
-    // TODO: Replace with proper logging system
-    // Failed to insert notification for user
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 

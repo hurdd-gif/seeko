@@ -3,6 +3,23 @@ import { createServerClient } from '@supabase/ssr';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 import type { NotificationKind } from '@/lib/types';
+import { isValidNotificationKind } from '@/lib/notification-kinds';
+
+// Rate limiter: 20 notifications per user per minute
+const RATE_LIMIT = { max: 20, windowMs: 60 * 1000 };
+const userHits = new Map<string, { count: number; resetAt: number }>();
+
+function isRateLimited(userId: string): boolean {
+  const now = Date.now();
+  const entry = userHits.get(userId);
+  if (!entry || now > entry.resetAt) {
+    userHits.set(userId, { count: 1, resetAt: now + RATE_LIMIT.windowMs });
+    return false;
+  }
+  if (entry.count >= RATE_LIMIT.max) return true;
+  entry.count++;
+  return false;
+}
 
 async function getAuthenticatedUser() {
   const cookieStore = await cookies();
@@ -25,6 +42,10 @@ export async function POST(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+  if (isRateLimited(user.id)) {
+    return NextResponse.json({ error: 'Too many notifications. Try again later.' }, { status: 429 });
+  }
+
   let body: { kind: NotificationKind; title: string; body?: string; link?: string };
   try {
     body = await req.json();
@@ -33,6 +54,10 @@ export async function POST(req: NextRequest) {
   }
   const { kind, title, body: notifBody, link } = body;
   if (!kind || !title) return NextResponse.json({ error: 'kind and title required' }, { status: 400 });
+
+  if (!isValidNotificationKind(kind)) {
+    return NextResponse.json({ error: 'Invalid notification kind' }, { status: 400 });
+  }
 
   // Only allow internal relative paths as notification links (no external URLs)
   if (link && (typeof link !== 'string' || !link.startsWith('/') || link.startsWith('//'))) {

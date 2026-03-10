@@ -59,7 +59,7 @@ interface PaymentsAdminProps {
 }
 
 export function PaymentsAdmin({ team }: PaymentsAdminProps) {
-  const [token, setToken] = useState<string | null>(null);
+  const [authenticated, setAuthenticated] = useState(false);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [stats, setStats] = useState<{
     pendingTotal: number;
@@ -72,23 +72,17 @@ export function PaymentsAdmin({ team }: PaymentsAdminProps) {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [selectedRecipient, setSelectedRecipient] = useState<TeamMember | null>(null);
 
-  useEffect(() => {
-    const stored = sessionStorage.getItem('payments-token');
-    if (stored) setToken(stored);
-  }, []);
-
-  const fetchData = useCallback(async (t: string) => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const headers = { 'x-payments-token': t };
+      // Token is sent automatically via httpOnly cookie
       const [paymentsRes, statsRes] = await Promise.all([
-        fetch('/api/payments', { headers }),
-        fetch('/api/payments/stats', { headers }),
+        fetch('/api/payments'),
+        fetch('/api/payments/stats'),
       ]);
 
       if (paymentsRes.status === 401 || statsRes.status === 401) {
-        sessionStorage.removeItem('payments-token');
-        setToken(null);
+        setAuthenticated(false);
         return;
       }
 
@@ -107,17 +101,17 @@ export function PaymentsAdmin({ team }: PaymentsAdminProps) {
   }, []);
 
   useEffect(() => {
-    if (token) fetchData(token);
-  }, [token, fetchData]);
+    if (authenticated) fetchData();
+  }, [authenticated, fetchData]);
 
-  if (!token) {
+  if (!authenticated) {
     return (
       <div className="flex flex-col gap-6">
         <FadeRise delay={0}>
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">Payments</h1>
           <p className="text-sm text-muted-foreground">Track and manage team payments.</p>
         </FadeRise>
-        <PaymentsPasswordGate onAuthenticated={setToken} />
+        <PaymentsPasswordGate onAuthenticated={() => setAuthenticated(true)} />
       </div>
     );
   }
@@ -160,7 +154,7 @@ export function PaymentsAdmin({ team }: PaymentsAdminProps) {
   const handlePaymentCreated = () => {
     setCreateDialogOpen(false);
     setSelectedRecipient(null);
-    if (token) fetchData(token);
+    fetchData();
   };
 
   const statCards = [
@@ -306,8 +300,7 @@ export function PaymentsAdmin({ team }: PaymentsAdminProps) {
                     >
                       <PendingRequestRow
                         payment={payment}
-                        token={token!}
-                        onAction={() => fetchData(token!)}
+                        onAction={() => fetchData()}
                       />
                     </motion.div>
                   ))}
@@ -460,7 +453,7 @@ export function PaymentsAdmin({ team }: PaymentsAdminProps) {
         onOpenChange={setCreateDialogOpen}
         team={team}
         recipient={selectedRecipient}
-        token={token}
+        token={null}
         onCreated={handlePaymentCreated}
       />
     </div>
@@ -537,7 +530,7 @@ function PaidPaymentRow({ payment }: { payment: Payment }) {
 }
 
 /* ── Pending Request Row (expandable with Accept/Deny) ── */
-function PendingRequestRow({ payment, token, onAction }: { payment: Payment; token: string; onAction: () => void }) {
+function PendingRequestRow({ payment, onAction }: { payment: Payment; onAction: () => void }) {
   const [expanded, setExpanded] = useState(false);
   const [acting, setActing] = useState(false);
 
@@ -546,7 +539,7 @@ function PendingRequestRow({ payment, token, onAction }: { payment: Payment; tok
     try {
       const res = await fetch(`/api/payments/${payment.id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', 'x-payments-token': token },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status }),
       });
       if (res.ok) {

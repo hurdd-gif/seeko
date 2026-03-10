@@ -4,10 +4,30 @@ import bcrypt from 'bcryptjs';
 import { sendVerificationCodeEmail } from '@/lib/email';
 import type { ExternalSigningInvite } from '@/lib/types';
 
+// Rate limiter: max 3 send-code requests per token per hour
+const RATE_LIMIT = { max: 3, windowMs: 60 * 60 * 1000 };
+const tokenHits = new Map<string, { count: number; resetAt: number }>();
+
+function isRateLimited(token: string): boolean {
+  const now = Date.now();
+  const entry = tokenHits.get(token);
+  if (!entry || now > entry.resetAt) {
+    tokenHits.set(token, { count: 1, resetAt: now + RATE_LIMIT.windowMs });
+    return false;
+  }
+  if (entry.count >= RATE_LIMIT.max) return true;
+  entry.count++;
+  return false;
+}
+
 export async function POST(request: NextRequest) {
   const { token } = await request.json();
 
   if (!token) return NextResponse.json({ error: 'Token required' }, { status: 400 });
+
+  if (isRateLimited(token)) {
+    return NextResponse.json({ error: 'Too many code requests. Try again later.' }, { status: 429 });
+  }
 
   const service = getServiceClient();
 
