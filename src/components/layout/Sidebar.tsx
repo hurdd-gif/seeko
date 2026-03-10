@@ -70,6 +70,7 @@ import {
   ChevronRight,
   TrendingUp,
   DollarSign,
+  FileSignature,
   MoreHorizontal,
   X,
 } from 'lucide-react';
@@ -168,6 +169,7 @@ export function Sidebar({
       ),
     ...(isAdmin ? [
       { href: '/payments', label: 'Payments', mobileLabel: 'Pay' as const, icon: DollarSign, tourKey: undefined as undefined },
+      { href: '/admin/external-signing', label: 'External Signing', mobileLabel: 'Sign' as const, icon: FileSignature, tourKey: undefined as undefined },
       NAV_INVESTOR,
     ] : []),
   ];

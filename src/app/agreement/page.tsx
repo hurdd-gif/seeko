@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { AgreementForm } from '@/components/agreement/AgreementForm';
 import { FadeScale, FadeRise } from '@/components/motion';
+import { AGREEMENT_SECTIONS, AGREEMENT_TITLE } from '@/lib/agreement-text';
 
 export default async function AgreementPage() {
   const supabase = await createClient();
@@ -43,10 +44,14 @@ export default async function AgreementPage() {
           <AgreementForm
             userId={user.id}
             userEmail={user.email ?? ''}
+            sections={AGREEMENT_SECTIONS}
+            title={AGREEMENT_TITLE}
             department={profile?.department ?? ''}
             role={profile?.role ?? ''}
             isContractor={profile?.is_contractor ?? false}
             onboarded={profile?.onboarded ?? 0}
+            showEngagementType={true}
+            signEndpoint="/api/agreement/sign"
           />
         </FadeRise>
       </div>

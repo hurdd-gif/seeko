@@ -199,3 +199,31 @@ export type DeadlineExtension = {
   denial_reason?: string | null;
   created_at: string;
 };
+
+export type ExternalAgreementSection = {
+  number: number;
+  title: string;
+  content: string; // HTML string
+};
+
+export type ExternalSigningInvite = {
+  id: string;
+  token: string;
+  recipient_email: string;
+  template_type: 'preset' | 'custom';
+  template_id?: string;
+  custom_sections?: ExternalAgreementSection[];
+  custom_title?: string;
+  personal_note?: string;
+  expires_at: string;
+  verification_attempts: number;
+  verified_at?: string;
+  status: 'pending' | 'verified' | 'signed' | 'expired' | 'revoked';
+  signer_name?: string;
+  signer_address?: string;
+  signer_ip?: string;
+  signer_user_agent?: string;
+  signed_at?: string;
+  created_by: string;
+  created_at: string;
+};

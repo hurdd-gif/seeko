@@ -79,8 +79,8 @@ export const AGREEMENT_SECTIONS: AgreementSection[] = [
   {
     number: 12,
     title: 'General Provisions',
-    content: `<p>This agreement constitutes the entire understanding between the parties regarding the subject matter herein. It may only be modified in writing signed by both parties.</p>
-<p>If any provision is found to be unenforceable, the remaining provisions shall continue in full force and effect. This agreement shall be governed by applicable law.</p>
+    content: `<p>This agreement shall be governed by the laws of the Commonwealth of Virginia. This agreement constitutes the entire understanding between the parties regarding the subject matter herein. It may only be modified in writing signed by both parties.</p>
+<p>If any provision is found to be unenforceable, the remaining provisions shall continue in full force and effect.</p>
 <p>The Recipient acknowledges that they have read, understood, and agree to be bound by all terms and conditions of this agreement.</p>`,
   },
 ];

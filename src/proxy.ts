@@ -36,8 +36,9 @@ export async function proxy(request: NextRequest) {
   const isAgreementRoute = pathname.startsWith('/agreement') || pathname.startsWith('/api/agreement');
   const isPublicAsset =
     pathname.startsWith('/_next') || pathname.startsWith('/favicon');
+  const isExternalSigningRoute = pathname.startsWith('/sign') || pathname.startsWith('/api/external-signing');
 
-  if (!user && !isAuthRoute && !isPublicAsset) {
+  if (!user && !isAuthRoute && !isPublicAsset && !isExternalSigningRoute) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
     return NextResponse.redirect(url);
@@ -49,7 +50,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (user && !isSetPasswordRoute && !isAgreementRoute && !isPublicAsset) {
+  if (user && !isSetPasswordRoute && !isAgreementRoute && !isPublicAsset && !isExternalSigningRoute) {
     const { data: profile } = await supabase
       .from('profiles')
       .select('onboarded, must_set_password, nda_accepted_at, is_admin')
