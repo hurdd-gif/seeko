@@ -149,7 +149,7 @@ function Dialog({ open, onOpenChange, children, resizable = false, contentClassN
   return (
     <AnimatePresence>
       {open && (
-        <div className={cn("fixed inset-0 z-50 flex items-end sm:items-center justify-center", className)}>
+        <div className={cn("fixed inset-0 z-[60] flex items-end sm:items-center justify-center", className)}>
           <motion.div
             className="fixed inset-0 bg-black/50 backdrop-blur-sm"
             initial={{ opacity: 0 }}
