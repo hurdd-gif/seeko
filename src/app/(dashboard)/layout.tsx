@@ -46,7 +46,7 @@ export default async function DashboardLayout({
     <DashboardTourWrapper showTour={showTour} userId={user.id} isContractor={profile?.is_contractor ?? false} isAdmin={isAdmin}>
       <div className="flex h-dvh flex-col overflow-hidden bg-background md:min-h-screen md:h-auto md:overflow-visible md:flex-row">
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden md:flex-row md:overflow-visible">
-          <div id="dashboard-mobile-header-slot" className="md:hidden shrink-0" aria-hidden="true" />
+          <div id="dashboard-mobile-header-slot" className="md:hidden shrink-0 pt-[env(safe-area-inset-top)]" aria-hidden="true" />
           <Sidebar
           email={user.email ?? ''}
           displayName={profile?.display_name ?? undefined}
@@ -57,7 +57,7 @@ export default async function DashboardLayout({
           unreadCount={unreadCount}
           notifications={notifications}
         />
-        <main className="flex-1 min-w-0 overflow-x-hidden pt-[env(safe-area-inset-top)] md:pt-0 md:overflow-auto" id="tour-main">
+        <main className="flex-1 min-w-0 overflow-x-hidden md:overflow-auto" id="tour-main">
           <div className="max-w-5xl mx-auto px-5 md:px-6 py-4 md:py-8 pb-24 md:pb-8">
             <PageTransition>{children}</PageTransition>
           </div>
