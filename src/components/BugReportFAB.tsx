@@ -98,45 +98,46 @@ export function BugReportFAB({ displayName, email }: BugReportFABProps) {
 
       <Dialog open={open} onOpenChange={handleClose}>
         <DialogHeader>
-          <DialogTitle>Report a Bug</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <Bug className="size-4 text-muted-foreground" />
+            Report a Bug
+          </DialogTitle>
         </DialogHeader>
-        <div className="flex flex-col gap-4">
+        <p className="text-sm text-muted-foreground -mt-2 mb-1">Help us improve by describing what went wrong.</p>
+        <div className="flex flex-col gap-5">
           <div>
-            <label className="block text-xs font-medium text-muted-foreground mb-1.5">
-              What went wrong?
-            </label>
             <textarea
               value={description}
               onChange={e => setDescription(e.target.value)}
-              placeholder="Describe the issue..."
-              rows={4}
+              placeholder="What happened? What did you expect?"
+              rows={3}
               autoFocus
-              className="w-full rounded-lg border border-border bg-muted/50 px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+              autoComplete="off"
+              autoCorrect="off"
+              className="w-full rounded-lg border border-border bg-muted/50 px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/40 resize-none focus:outline-none focus:ring-2 focus:ring-ring [&::-webkit-resizer]:hidden"
             />
           </div>
 
-          <div>
-            <label className="block text-xs font-medium text-muted-foreground mb-1.5">
-              Screenshot (optional)
-            </label>
+          {/* Screenshot + Page info grouped */}
+          <div className="flex items-center gap-3">
             {preview ? (
-              <div className="relative rounded-lg overflow-hidden border border-border">
-                <img src={preview} alt="Screenshot preview" className="w-full max-h-40 object-cover" />
+              <div className="relative size-16 rounded-lg overflow-hidden border border-border shrink-0">
+                <img src={preview} alt="Screenshot" className="size-full object-cover" />
                 <button
                   onClick={clearScreenshot}
-                  className="absolute top-2 right-2 rounded-full bg-black/60 p-1 text-white hover:bg-black/80 transition-colors"
+                  className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 hover:opacity-100 transition-opacity"
                 >
-                  <X className="size-3.5" />
+                  <X className="size-4 text-white" />
                 </button>
               </div>
             ) : (
               <button
                 type="button"
                 onClick={() => fileRef.current?.click()}
-                className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-border py-6 text-sm text-muted-foreground hover:text-foreground hover:border-foreground/20 transition-colors"
+                className="flex items-center gap-1.5 rounded-lg border border-dashed border-border px-3 py-2 text-xs text-muted-foreground hover:text-foreground hover:border-foreground/20 transition-colors shrink-0"
               >
-                <ImagePlus className="size-4" />
-                Add screenshot
+                <ImagePlus className="size-3.5" />
+                Screenshot
               </button>
             )}
             <input
@@ -146,17 +147,15 @@ export function BugReportFAB({ displayName, email }: BugReportFABProps) {
               className="hidden"
               onChange={handleFileChange}
             />
-          </div>
-
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <span>Page:</span>
-            <code className="rounded bg-muted px-1.5 py-0.5 text-[11px]">{pathname}</code>
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground/60 min-w-0">
+              <code className="truncate rounded bg-muted px-1.5 py-0.5 text-[11px]">{pathname}</code>
+            </div>
           </div>
 
           <Button
             onClick={handleSubmit}
             disabled={sending || !description.trim()}
-            className="w-full"
+            className="w-full bg-seeko-accent text-background hover:bg-seeko-accent/90 font-semibold"
           >
             {sending ? (
               <>
