@@ -34,7 +34,7 @@ export async function fetchAreas(): Promise<Area[]> {
 
   const { data, error } = await supabase
     .from('areas')
-    .select('*')
+    .select('id, name, status, progress, description, phase, created_at')
     .order('name', { ascending: true });
 
   if (error) throw error;
@@ -46,7 +46,7 @@ export async function fetchTeam(): Promise<Profile[]> {
 
   const { data, error } = await supabase
     .from('profiles')
-    .select('*')
+    .select('id, display_name, department, role, avatar_url, is_admin, is_contractor, is_investor, onboarded, tour_completed, last_seen_at, timezone, created_at')
     .order('display_name', { ascending: true });
 
   if (error) throw error;
@@ -60,7 +60,7 @@ export async function fetchDocs(parentId?: string): Promise<Doc[]> {
 
   let query = supabase
     .from('docs')
-    .select('*')
+    .select('id, title, content, parent_id, sort_order, restricted_department, granted_user_ids, type, slides, created_at, updated_at')
     .order('sort_order', { ascending: true });
 
   if (parentId) {
@@ -78,7 +78,7 @@ export async function fetchAllDocs(): Promise<Doc[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from('docs')
-    .select('*')
+    .select('id, title, content, parent_id, sort_order, restricted_department, granted_user_ids, type, slides, created_at, updated_at')
     .order('sort_order', { ascending: true });
   if (error) throw error;
   return (data ?? []) as Doc[];
@@ -102,7 +102,7 @@ export async function fetchProfile(userId: string): Promise<Profile | null> {
 
   const { data, error } = await supabase
     .from('profiles')
-    .select('*')
+    .select('id, display_name, department, role, avatar_url, is_admin, is_contractor, is_investor, onboarded, tour_completed, must_set_password, last_seen_at, timezone, created_at')
     .eq('id', userId)
     .single();
 
@@ -156,7 +156,7 @@ export async function fetchNotifications(userId: string, limit = 20): Promise<im
 
   const { data, error } = await supabase
     .from('notifications')
-    .select('*')
+    .select('id, user_id, kind, title, body, link, read, created_at')
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
     .limit(limit);
@@ -170,7 +170,7 @@ export async function fetchUnreadNotificationCount(userId: string): Promise<numb
 
   const { count, error } = await supabase
     .from('notifications')
-    .select('*', { count: 'exact', head: true })
+    .select('id', { count: 'exact', head: true })
     .eq('user_id', userId)
     .eq('read', false);
 
@@ -182,7 +182,7 @@ export async function fetchTeamWithPaypalEmails(): Promise<(Profile & { paypal_e
   const supabase = await createClient();
   const { data, error } = await supabase
     .from('profiles')
-    .select('*')
+    .select('id, display_name, department, role, avatar_url, is_admin, is_contractor, is_investor, onboarded, tour_completed, paypal_email, created_at')
     .order('display_name', { ascending: true });
 
   if (error) throw error;

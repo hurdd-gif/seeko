@@ -1,4 +1,7 @@
+import { getServiceClient } from '@/lib/supabase/service';
+import { getTemplateById } from '@/lib/external-agreement-templates';
 import { SigningPageClient } from './client';
+import type { ExternalSigningInvite } from '@/lib/types';
 
 interface Props {
   params: Promise<{ token: string }>;
@@ -7,13 +10,15 @@ interface Props {
 export default async function ExternalSignPage({ params }: Props) {
   const { token } = await params;
 
-  // Fetch initial status server-side
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-  const res = await fetch(`${baseUrl}/api/external-signing/${token}`, {
-    cache: 'no-store',
-  });
+  const service = getServiceClient();
 
-  if (!res.ok) {
+  const { data: invite } = await service
+    .from('external_signing_invites')
+    .select('id, recipient_email, status, expires_at, template_type, template_id, custom_title, custom_sections, personal_note')
+    .eq('token', token)
+    .single() as { data: ExternalSigningInvite | null };
+
+  if (!invite) {
     return (
       <div className="flex min-h-dvh items-center justify-center bg-background px-4">
         <div className="text-center">
@@ -24,6 +29,47 @@ export default async function ExternalSignPage({ params }: Props) {
     );
   }
 
-  const data = await res.json();
-  return <SigningPageClient token={token} initialData={data} />;
+  // Check expiration
+  if (new Date(invite.expires_at) < new Date() && invite.status === 'pending') {
+    await (service
+      .from('external_signing_invites') as any)
+      .update({ status: 'expired' })
+      .eq('id', invite.id);
+
+    return <SigningPageClient token={token} initialData={{ status: 'expired' }} />;
+  }
+
+  if (['revoked', 'expired', 'signed'].includes(invite.status)) {
+    return <SigningPageClient token={token} initialData={{ status: invite.status }} />;
+  }
+
+  // Mask email: j***@example.com
+  const [local, domain] = invite.recipient_email.split('@');
+  const maskedEmail = `${local[0]}${'*'.repeat(Math.max(local.length - 1, 2))}@${domain}`;
+
+  // Resolve template name + sections
+  let templateName = invite.custom_title || 'Document';
+  let sections = null;
+  if (invite.template_type === 'preset' && invite.template_id) {
+    const template = getTemplateById(invite.template_id);
+    templateName = template?.name || 'Document';
+    if (invite.status === 'verified' && template) {
+      sections = template.sections;
+    }
+  } else if (invite.status === 'verified') {
+    sections = invite.custom_sections || null;
+  }
+
+  return (
+    <SigningPageClient
+      token={token}
+      initialData={{
+        status: invite.status,
+        maskedEmail,
+        templateName,
+        personalNote: invite.personal_note ?? undefined,
+        ...(sections ? { sections } : {}),
+      }}
+    />
+  );
 }

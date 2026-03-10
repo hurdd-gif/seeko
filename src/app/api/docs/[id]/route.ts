@@ -64,7 +64,10 @@ export async function PATCH(
     .select()
     .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error('Doc operation error:', error);
+    return NextResponse.json({ error: 'Operation failed' }, { status: 500 });
+  }
   return NextResponse.json(data);
 }
 
@@ -83,6 +86,9 @@ export async function DELETE(
   );
 
   const { error } = await service.from('docs').delete().eq('id', id);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error('Doc operation error:', error);
+    return NextResponse.json({ error: 'Operation failed' }, { status: 500 });
+  }
   return NextResponse.json({ success: true });
 }

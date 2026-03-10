@@ -11,6 +11,10 @@ const userHits = new Map<string, { count: number; resetAt: number }>();
 
 function isRateLimited(userId: string): boolean {
   const now = Date.now();
+  // Prune expired entries to prevent memory growth
+  if (userHits.size > 100) {
+    for (const [key, entry] of userHits) { if (now > entry.resetAt) userHits.delete(key); }
+  }
   const entry = userHits.get(userId);
   if (!entry || now > entry.resetAt) {
     userHits.set(userId, { count: 1, resetAt: now + RATE_LIMIT.windowMs });
@@ -81,7 +85,8 @@ export async function POST(req: NextRequest) {
   });
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('Notification insert error:', error);
+    return NextResponse.json({ error: 'Failed to send notification' }, { status: 500 });
   }
 
   return NextResponse.json({ success: true });

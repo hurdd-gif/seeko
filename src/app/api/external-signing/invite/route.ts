@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getServiceClient } from '@/lib/supabase/service';
-import { randomBytes } from 'crypto';
+import { randomBytes, randomInt } from 'crypto';
 import bcrypt from 'bcryptjs';
 import { getTemplateById } from '@/lib/external-agreement-templates';
 import { sendExternalInviteEmail } from '@/lib/email';
@@ -19,8 +19,14 @@ export async function POST(request: NextRequest) {
   const body = await request.json();
   const { recipient_email, template_type, template_id, custom_sections, custom_title, personal_note, expires_at } = body;
 
-  if (!recipient_email || typeof recipient_email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient_email)) {
+  if (!recipient_email || typeof recipient_email !== 'string' || recipient_email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient_email)) {
     return NextResponse.json({ error: 'Valid email required' }, { status: 400 });
+  }
+  if (personal_note && typeof personal_note === 'string' && personal_note.length > 1000) {
+    return NextResponse.json({ error: 'Personal note must be under 1000 characters' }, { status: 400 });
+  }
+  if (custom_title && typeof custom_title === 'string' && custom_title.length > 200) {
+    return NextResponse.json({ error: 'Title must be under 200 characters' }, { status: 400 });
   }
   if (!template_type || !['preset', 'custom'].includes(template_type)) {
     return NextResponse.json({ error: 'template_type must be "preset" or "custom"' }, { status: 400 });
@@ -30,6 +36,22 @@ export async function POST(request: NextRequest) {
   }
   if (template_type === 'custom' && (!custom_sections || !Array.isArray(custom_sections) || custom_sections.length === 0)) {
     return NextResponse.json({ error: 'custom_sections required for custom template' }, { status: 400 });
+  }
+  if (template_type === 'custom' && custom_sections) {
+    if (custom_sections.length > 20) {
+      return NextResponse.json({ error: 'Maximum 20 sections allowed' }, { status: 400 });
+    }
+    for (const section of custom_sections) {
+      if (!section || typeof section !== 'object') {
+        return NextResponse.json({ error: 'Each section must be an object' }, { status: 400 });
+      }
+      if (typeof section.title === 'string' && section.title.length > 200) {
+        return NextResponse.json({ error: 'Section title must be under 200 characters' }, { status: 400 });
+      }
+      if (typeof section.content === 'string' && section.content.length > 10000) {
+        return NextResponse.json({ error: 'Section content must be under 10000 characters' }, { status: 400 });
+      }
+    }
   }
   if (!expires_at) return NextResponse.json({ error: 'expires_at required' }, { status: 400 });
   const expiresDate = new Date(expires_at);
@@ -41,7 +63,7 @@ export async function POST(request: NextRequest) {
 
   // 3. Generate token and verification code
   const token = randomBytes(32).toString('base64url');
-  const verificationCode = String(Math.floor(100000 + Math.random() * 900000));
+  const verificationCode = String(randomInt(100000, 1000000));
   const hashedCode = await bcrypt.hash(verificationCode, 10);
 
   // 4. Get template name for email

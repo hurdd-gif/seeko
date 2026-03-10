@@ -26,6 +26,19 @@ export async function PATCH(
     return NextResponse.json({ error: 'Status must be "paid" or "cancelled"' }, { status: 400 });
   }
 
+  // Idempotency: only allow transitions from 'pending'
+  const { data: current } = await supabase
+    .from('payments')
+    .select('id, status')
+    .eq('id', id)
+    .single();
+
+  if (!current) return NextResponse.json({ error: 'Payment not found' }, { status: 404 });
+
+  if (current.status !== 'pending') {
+    return NextResponse.json({ error: `Payment is already ${current.status}` }, { status: 409 });
+  }
+
   const update: Record<string, unknown> = { status: body.status };
   if (body.status === 'paid') {
     update.paid_at = new Date().toISOString();
@@ -35,11 +48,15 @@ export async function PATCH(
     .from('payments')
     .update(update)
     .eq('id', id)
+    .eq('status', 'pending') // Optimistic concurrency: only update if still pending
     .select()
     .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  if (!data) return NextResponse.json({ error: 'Payment not found' }, { status: 404 });
+  if (error) {
+    console.error('Payment update error:', error);
+    return NextResponse.json({ error: 'Failed to update payment' }, { status: 500 });
+  }
+  if (!data) return NextResponse.json({ error: 'Payment was already processed' }, { status: 409 });
 
   // Notify the recipient about approval/denial (use service role to bypass RLS)
   if (data.recipient_id && data.recipient_id !== user.id) {
@@ -83,7 +100,10 @@ export async function DELETE(
   await supabase.from('payment_items').delete().eq('payment_id', id);
 
   const { error } = await supabase.from('payments').delete().eq('id', id);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error('Payment delete error:', error);
+    return NextResponse.json({ error: 'Failed to delete payment' }, { status: 500 });
+  }
 
   return NextResponse.json({ ok: true });
 }

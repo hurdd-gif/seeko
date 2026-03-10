@@ -83,7 +83,7 @@ export async function proxy(request: NextRequest) {
     'Content-Security-Policy',
     [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+      "script-src 'self' 'unsafe-inline'",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       `connect-src 'self' ${supabaseUrl} https://*.supabase.co wss://*.supabase.co`,
       "img-src 'self' data: blob: https://*.supabase.co",

@@ -6,6 +6,25 @@ import { cookies } from 'next/headers';
 const BUCKET = 'chat-attachments';
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
+// Rate limiter: max 20 attachment uploads per user per hour
+const UPLOAD_RATE = { max: 20, windowMs: 60 * 60 * 1000 };
+const uploadHits = new Map<string, { count: number; resetAt: number }>();
+
+function isUploadRateLimited(userId: string): boolean {
+  const now = Date.now();
+  if (uploadHits.size > 100) {
+    for (const [key, entry] of uploadHits) { if (now > entry.resetAt) uploadHits.delete(key); }
+  }
+  const entry = uploadHits.get(userId);
+  if (!entry || now > entry.resetAt) {
+    uploadHits.set(userId, { count: 1, resetAt: now + UPLOAD_RATE.windowMs });
+    return false;
+  }
+  if (entry.count >= UPLOAD_RATE.max) return true;
+  entry.count++;
+  return false;
+}
+
 const ALLOWED_MIME_PREFIXES = ['image/', 'video/', 'audio/', 'application/pdf', 'application/zip', 'application/x-zip', 'text/plain', 'application/octet-stream'];
 const BLOCKED_EXTENSIONS = ['.html', '.htm', '.svg', '.js', '.exe', '.bat', '.sh', '.cmd', '.msi', '.php'];
 
@@ -41,10 +60,24 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { user } = await getSupabaseAndUser();
+  const { supabase, user } = await getSupabaseAndUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { id: taskId } = await params;
+
+  // Verify task exists and user has access (assignee or admin)
+  const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single();
+  const { data: task } = await supabase.from('tasks').select('id, assignee_id').eq('id', taskId).single();
+  if (!task) return NextResponse.json({ error: 'Task not found' }, { status: 404 });
+  const isAdmin = profile?.is_admin ?? false;
+  const isAssignee = task.assignee_id === user.id;
+  if (!isAdmin && !isAssignee) {
+    return NextResponse.json({ error: 'You do not have access to this task' }, { status: 403 });
+  }
+
+  if (isUploadRateLimited(user.id)) {
+    return NextResponse.json({ error: 'Too many uploads. Try again later.' }, { status: 429 });
+  }
 
   let formData: FormData;
   try {
@@ -78,7 +111,10 @@ export async function POST(
     upsert: false,
   });
 
-  if (uploadError) return NextResponse.json({ error: uploadError.message }, { status: 500 });
+  if (uploadError) {
+    console.error('Attachment upload error:', uploadError);
+    return NextResponse.json({ error: 'Failed to upload file' }, { status: 500 });
+  }
 
   const { data: signedUrlData } = await service.storage.from(BUCKET).createSignedUrl(storagePath, SIGNED_URL_EXPIRY_SEC);
   const fileUrl = signedUrlData?.signedUrl ?? '';
@@ -96,7 +132,10 @@ export async function POST(
     .select()
     .single();
 
-  if (insertError) return NextResponse.json({ error: insertError.message }, { status: 500 });
+  if (insertError) {
+    console.error('Attachment insert error:', insertError);
+    return NextResponse.json({ error: 'Failed to save attachment record' }, { status: 500 });
+  }
 
   return NextResponse.json(inserted, { status: 201 });
 }

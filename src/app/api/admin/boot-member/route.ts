@@ -9,6 +9,10 @@ const attempts = new Map<string, { count: number; resetAt: number }>();
 
 function isRateLimited(userId: string): boolean {
   const now = Date.now();
+  // Prune expired entries to prevent memory growth
+  if (attempts.size > 50) {
+    for (const [key, entry] of attempts) { if (now > entry.resetAt) attempts.delete(key); }
+  }
   const entry = attempts.get(userId);
   if (!entry || now > entry.resetAt) {
     attempts.set(userId, { count: 1, resetAt: now + RATE_LIMIT.windowMs });
@@ -166,7 +170,8 @@ export async function POST(req: NextRequest) {
   // 10. Delete auth user
   const { error: deleteErr } = await service.auth.admin.deleteUser(userId);
   if (deleteErr) {
-    return NextResponse.json({ error: deleteErr.message }, { status: 500 });
+    console.error('Auth user delete error:', deleteErr);
+    return NextResponse.json({ error: 'Failed to remove user account' }, { status: 500 });
   }
 
   // TODO: Replace with proper logging system

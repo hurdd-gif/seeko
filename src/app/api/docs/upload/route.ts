@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
   if (file.size > MAX_SIZE) return NextResponse.json({ error: 'File too large (max 5 MB)' }, { status: 400 });
 
   const ext = file.name.split('.').pop() ?? 'png';
-  const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+  const path = `${Date.now()}-${crypto.randomUUID().slice(0, 8)}.${ext}`;
   const buffer = Buffer.from(await file.arrayBuffer());
 
   const service = createServiceClient(
@@ -61,7 +61,10 @@ export async function POST(req: NextRequest) {
     upsert: false,
   });
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error('Doc image upload error:', error);
+    return NextResponse.json({ error: 'Failed to upload image' }, { status: 500 });
+  }
 
   const { data: { publicUrl } } = service.storage.from(BUCKET).getPublicUrl(path);
   return NextResponse.json({ url: publicUrl }, { status: 201 });
