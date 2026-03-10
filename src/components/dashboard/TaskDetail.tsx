@@ -1407,7 +1407,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
       )}
 
       {/* ── Deadline + metadata — one cohesive zone ────────── */}
-      <div className="mb-4 space-y-2">
+      <div className="mb-5 space-y-3">
         {/* Urgent deadline banner */}
         {task.deadline && (() => {
           const dl = formatDeadline(task.deadline);
@@ -1605,12 +1605,12 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
 
       {/* Description — no label, separated by spacing alone */}
       {task.description && (
-        <p className="text-sm text-muted-foreground mb-4 leading-relaxed">{task.description}</p>
+        <p className="text-sm text-muted-foreground mb-5 leading-relaxed">{task.description}</p>
       )}
 
       {handoffs.length > 0 && (
         <>
-          <Separator className="my-4" />
+          <Separator className="my-5" />
           <div className="mt-4">
             <button
               type="button"
@@ -1721,8 +1721,8 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
 
       {isAdmin && (
         <>
-          <Separator className="my-4" />
-          <div className="mt-4">
+          <Separator className="my-5" />
+          <div className="mt-1">
             <div className="flex items-center gap-2 mb-3">
               <Package className="size-4 text-muted-foreground" />
               <h3 className="text-sm font-medium text-foreground">Deliverables</h3>
@@ -1975,7 +1975,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
 
   const tabBar = (
     <LayoutGroup>
-      <div className="flex gap-1 px-4 md:px-6 py-1.5 shrink-0 border-b border-border md:hidden">
+      <div className="flex gap-1 px-5 md:px-6 py-2 shrink-0 border-b border-border md:hidden">
         <button
           className={cn(
             'relative rounded-lg px-4 py-1.5 text-sm font-medium transition-colors',
@@ -2051,7 +2051,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
                 <div className="h-1 w-10 rounded-full bg-muted-foreground/20" />
               </div>
               {/* Header */}
-              <div className="flex items-start gap-3 px-4 md:px-6 pt-3 md:pt-5 pb-3 md:pb-4 shrink-0 border-b border-transparent md:border-white/[0.04]">
+              <div className="flex items-start gap-3 px-4 md:px-6 pt-4 md:pt-5 pb-4 md:pb-4 shrink-0 border-b border-transparent md:border-white/[0.04]">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2.5">
                     <h2 className="text-xl font-semibold text-foreground truncate">{task.name}</h2>
@@ -2126,7 +2126,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
                 /* Mobile: tabbed layout */
                 <AnimatePresence mode="wait" initial={false}>
                   {activeTab === 'details' && (
-                    <motion.div key="details" className="flex-1 overflow-y-auto px-4 py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ type: 'spring', stiffness: 500, damping: 35, opacity: { duration: 0.12 } }}>
+                    <motion.div key="details" className="flex-1 overflow-y-auto px-5 py-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ type: 'spring', stiffness: 500, damping: 35, opacity: { duration: 0.12 } }}>
                       {detailsContent}
                     </motion.div>
                   )}
