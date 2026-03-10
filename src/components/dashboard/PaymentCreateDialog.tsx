@@ -53,11 +53,15 @@ export function PaymentCreateDialog({
 
   useEffect(() => {
     if (open) {
+      document.documentElement.setAttribute('data-modal-open', '');
       setItems([{ id: uuid(), label: '', amount: '' }]);
       setSaving(false);
       setSuccess(false);
       setCopied(false);
+    } else {
+      document.documentElement.removeAttribute('data-modal-open');
     }
+    return () => { document.documentElement.removeAttribute('data-modal-open'); };
   }, [open]);
 
   const total = items.reduce((sum, i) => sum + (parseFloat(i.amount) || 0), 0);
