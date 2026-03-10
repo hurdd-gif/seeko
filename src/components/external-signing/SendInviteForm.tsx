@@ -113,16 +113,6 @@ export function SendInviteForm({ onInviteSent }: SendInviteFormProps) {
     }
   }
 
-  // Hide mobile bottom nav when confirm dialog is open
-  useEffect(() => {
-    if (showConfirm) {
-      document.documentElement.setAttribute('data-modal-open', '');
-    } else {
-      document.documentElement.removeAttribute('data-modal-open');
-    }
-    return () => document.documentElement.removeAttribute('data-modal-open');
-  }, [showConfirm]);
-
   const canSubmit = email && (templateMode === 'preset' ? templateId : customSections);
   const selectedTemplate = EXTERNAL_TEMPLATES.find((t) => t.id === templateId);
 
@@ -366,14 +356,44 @@ export function SendInviteForm({ onInviteSent }: SendInviteFormProps) {
         </form>
 
         {/* Confirmation Dialog */}
+        <ConfirmDialog
+          show={showConfirm}
+          onClose={() => setShowConfirm(false)}
+          onConfirm={handleConfirmedSend}
+          email={email}
+          templateMode={templateMode}
+          templateName={selectedTemplate?.name || templateId}
+          customTitle={customTitle}
+          expiration={expiration}
+          customDate={customDate}
+        />
+      </CardContent>
+    </Card>
+  );
+}
+
+function ConfirmDialog({ show, onClose, onConfirm, email, templateMode, templateName, customTitle: title, expiration, customDate }: {
+  show: boolean; onClose: () => void; onConfirm: () => void;
+  email: string; templateMode: string; templateName: string; customTitle: string; expiration: string; customDate: string;
+}) {
+  useEffect(() => {
+    if (show) {
+      document.documentElement.setAttribute('data-modal-open', '');
+    } else {
+      document.documentElement.removeAttribute('data-modal-open');
+    }
+    return () => { document.documentElement.removeAttribute('data-modal-open'); };
+  }, [show]);
+
+  return (
         <AnimatePresence>
-          {showConfirm && (
+          {show && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm"
-              onClick={() => setShowConfirm(false)}
+              onClick={onClose}
             >
               <motion.div
                 initial={{ opacity: 0, y: 40 }}
@@ -399,8 +419,8 @@ export function SendInviteForm({ onInviteSent }: SendInviteFormProps) {
                       <span className="text-muted-foreground">Document</span>
                       <span className="text-foreground text-xs">
                         {templateMode === 'preset'
-                          ? selectedTemplate?.name || templateId
-                          : customTitle || 'Custom PDF'}
+                          ? templateName
+                          : title || 'Custom PDF'}
                       </span>
                     </div>
                     <div className="flex justify-between">
@@ -416,13 +436,13 @@ export function SendInviteForm({ onInviteSent }: SendInviteFormProps) {
                   <div className="flex gap-2">
                     <Button
                       variant="outline"
-                      onClick={() => setShowConfirm(false)}
+                      onClick={onClose}
                       className="flex-1"
                     >
                       Cancel
                     </Button>
                     <Button
-                      onClick={handleConfirmedSend}
+                      onClick={onConfirm}
                       className="flex-1 gap-2 bg-seeko-accent text-background hover:bg-seeko-accent/90"
                     >
                       <Send className="size-4" />
@@ -434,7 +454,5 @@ export function SendInviteForm({ onInviteSent }: SendInviteFormProps) {
             </motion.div>
           )}
         </AnimatePresence>
-      </CardContent>
-    </Card>
   );
 }
