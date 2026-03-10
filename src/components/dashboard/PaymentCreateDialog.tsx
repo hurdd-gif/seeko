@@ -146,8 +146,8 @@ export function PaymentCreateDialog({
   const nonInvestorTeam = team.filter(m => !m.is_investor);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
-      <div className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-xl">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 sm:px-4">
+      <div className="w-full max-w-md rounded-t-2xl sm:rounded-xl border border-border bg-card p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:pb-6 shadow-xl max-h-[90dvh] overflow-y-auto">
         {success ? (
           <div className="flex flex-col items-center gap-4 py-8">
             <div className="flex size-14 items-center justify-center rounded-full bg-emerald-500/10">

@@ -23,7 +23,7 @@ export default async function AgreementPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4 py-12">
+    <div className="flex min-h-dvh items-center justify-center bg-background px-4 py-12 pt-[max(3rem,env(safe-area-inset-top))] pb-[max(3rem,env(safe-area-inset-bottom))]">
       <div className="w-full max-w-2xl space-y-8">
         <div className="text-center">
           <FadeScale className="mx-auto flex size-16 items-center justify-center">

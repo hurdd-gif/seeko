@@ -139,7 +139,7 @@ function Dialog({ open, onOpenChange, children, resizable = false, contentClassN
   return (
     <AnimatePresence>
       {open && (
-        <div className={cn("fixed inset-0 z-50 flex items-center justify-center", className)}>
+        <div className={cn("fixed inset-0 z-50 flex items-end sm:items-center justify-center", className)}>
           <motion.div
             className="fixed inset-0 bg-black/50 backdrop-blur-sm"
             initial={{ opacity: 0 }}
@@ -151,7 +151,7 @@ function Dialog({ open, onOpenChange, children, resizable = false, contentClassN
           <motion.div
             ref={panelRef}
             className={cn(
-              "relative z-50 flex flex-col rounded-xl border border-white/[0.08] bg-popover/80 backdrop-blur-xl backdrop-saturate-150 shadow-xl mx-4",
+              "relative z-50 flex flex-col rounded-t-2xl sm:rounded-xl border border-white/[0.08] bg-popover/80 backdrop-blur-xl backdrop-saturate-150 shadow-xl mx-0 sm:mx-4 pb-[env(safe-area-inset-bottom)] sm:pb-0",
               !resizable && "w-full max-w-[900px] max-h-[90vh] sm:max-h-[88vh]",
               !resizable && footer != null && "h-[90vh] sm:h-[88vh]",
               contentClassName

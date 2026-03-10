@@ -17,7 +17,7 @@ export default async function OnboardingPage() {
   if (profile?.onboarded === 1) redirect('/');
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+    <div className="flex min-h-dvh items-center justify-center bg-background px-4 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
       <div className="w-full max-w-md space-y-8">
         <div className="text-center">
           <FadeScale className="mx-auto flex size-16 items-center justify-center">
