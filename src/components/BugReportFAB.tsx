@@ -111,7 +111,6 @@ export function BugReportFAB({ displayName, email }: BugReportFABProps) {
               onChange={e => setDescription(e.target.value)}
               placeholder="What happened? What did you expect?"
               rows={3}
-              autoFocus
               autoComplete="off"
               autoCorrect="off"
               className="w-full rounded-lg border border-border bg-muted/50 px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/40 resize-none focus:outline-none focus:ring-2 focus:ring-ring [&::-webkit-resizer]:hidden"
