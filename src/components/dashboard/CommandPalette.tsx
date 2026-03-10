@@ -124,9 +124,13 @@ export function CommandPalette({ team, docs, decks = [], isContractor = false, i
 
   useEffect(() => {
     if (open) {
+      document.documentElement.setAttribute('data-modal-open', '');
       setQuery('');
       setTimeout(() => inputRef.current?.focus(), 50);
+    } else {
+      document.documentElement.removeAttribute('data-modal-open');
     }
+    return () => { document.documentElement.removeAttribute('data-modal-open'); };
   }, [open]);
 
   useEffect(() => {

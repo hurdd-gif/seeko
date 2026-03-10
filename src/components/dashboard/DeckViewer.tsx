@@ -68,6 +68,15 @@ export function DeckViewer({ slides, title }: DeckViewerProps) {
     setShowEndCard(false);
   }, []);
 
+  useEffect(() => {
+    if (fullscreen) {
+      document.documentElement.setAttribute('data-modal-open', '');
+    } else {
+      document.documentElement.removeAttribute('data-modal-open');
+    }
+    return () => { document.documentElement.removeAttribute('data-modal-open'); };
+  }, [fullscreen]);
+
   // Keyboard navigation in fullscreen
   useEffect(() => {
     if (!fullscreen) return;

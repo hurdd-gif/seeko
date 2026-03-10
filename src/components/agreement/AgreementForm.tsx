@@ -96,6 +96,15 @@ export function AgreementForm({
   const [signed, setSigned] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
 
+  useEffect(() => {
+    if (showConfirmation) {
+      document.documentElement.setAttribute('data-modal-open', '');
+    } else {
+      document.documentElement.removeAttribute('data-modal-open');
+    }
+    return () => { document.documentElement.removeAttribute('data-modal-open'); };
+  }, [showConfirmation]);
+
   // Signature animation timing
   const [sigKey, setSigKey] = useState(0);
   const SIG = { charDelay: 0.08, charDuration: 0.18, initialDelay: 0.3, fontSize: 27 };

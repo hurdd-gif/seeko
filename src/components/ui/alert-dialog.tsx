@@ -14,16 +14,19 @@ interface AlertDialogProps {
 function AlertDialog({ open, onOpenChange, children }: AlertDialogProps) {
   React.useEffect(() => {
     if (open) {
+      document.documentElement.setAttribute('data-modal-open', '');
       document.body.style.overflow = 'hidden';
       const handler = (e: KeyboardEvent) => {
         if (e.key === 'Escape') onOpenChange(false);
       }
       document.addEventListener('keydown', handler);
       return () => {
+        document.documentElement.removeAttribute('data-modal-open');
         document.body.style.overflow = '';
         document.removeEventListener('keydown', handler);
       };
     }
+    document.documentElement.removeAttribute('data-modal-open');
     document.body.style.overflow = '';
   }, [open, onOpenChange]);
 
