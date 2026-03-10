@@ -203,11 +203,15 @@ export function NotificationBell({ userId, initialCount, initialNotifications, c
 
   useEffect(() => { setMounted(true); }, []);
 
-  // #1 — Lock body scroll when mobile sheet is open
+  // #1 — Lock body scroll + hide bottom nav when mobile sheet is open
   useEffect(() => {
     if (!isDesktop && open) {
+      document.documentElement.setAttribute('data-modal-open', '');
       document.body.style.overflow = 'hidden';
-      return () => { document.body.style.overflow = ''; };
+      return () => {
+        document.documentElement.removeAttribute('data-modal-open');
+        document.body.style.overflow = '';
+      };
     }
   }, [isDesktop, open]);
 
@@ -477,6 +481,7 @@ export function NotificationBell({ userId, initialCount, initialNotifications, c
             style={{
               backgroundColor: '#1a1a1a',
               maxHeight: '85dvh',
+              paddingTop: 'env(safe-area-inset-top)',
               paddingBottom: 'env(safe-area-inset-bottom)',
             }}
           >

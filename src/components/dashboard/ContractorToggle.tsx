@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
 import { X } from 'lucide-react';
@@ -8,6 +8,15 @@ import { X } from 'lucide-react';
 export function ContractorToggle({ userId, isContractor }: { userId: string; isContractor: boolean }) {
   const [confirming, setConfirming] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (confirming) {
+      document.documentElement.setAttribute('data-modal-open', '');
+    } else {
+      document.documentElement.removeAttribute('data-modal-open');
+    }
+    return () => { document.documentElement.removeAttribute('data-modal-open'); };
+  }, [confirming]);
 
   const next = !isContractor;
   const actionLabel = isContractor ? 'Make Member' : 'Make Contractor';

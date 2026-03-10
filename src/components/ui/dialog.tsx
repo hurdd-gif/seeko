@@ -44,6 +44,16 @@ function Dialog({ open, onOpenChange, children, resizable = false, contentClassN
   const sizeBeforeMax = React.useRef(size)
   const panelRef = React.useRef<HTMLDivElement>(null)
 
+  // Hide mobile bottom nav when dialog is open
+  React.useEffect(() => {
+    if (open) {
+      document.documentElement.setAttribute('data-modal-open', '')
+    } else {
+      document.documentElement.removeAttribute('data-modal-open')
+    }
+    return () => { document.documentElement.removeAttribute('data-modal-open') }
+  }, [open])
+
   React.useEffect(() => {
     if (!open) return
 
