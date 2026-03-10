@@ -197,7 +197,7 @@ export function AgreementForm({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
-            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm"
+            className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
           >
             <motion.div
               initial={{ opacity: 0, y: 40 }}
@@ -464,7 +464,7 @@ export function AgreementForm({
                         animate={{ opacity: 1 }}
                         transition={SPRING}
                       >
-                        <div className="rounded-lg border border-border bg-muted/20 px-6 py-5 text-center">
+                        <div className="rounded-lg border border-border bg-muted/20 px-4 sm:px-6 py-5 text-center">
                           <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-3">Digital Signature</p>
                           <SignatureDrawing
                             text={fullName.trim()}
