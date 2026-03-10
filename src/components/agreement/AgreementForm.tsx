@@ -34,6 +34,7 @@ import { Loader2, ArrowRight, FileText, Check, ArrowDown } from 'lucide-react';
 import { AddressAutocomplete } from '@/components/agreement/AddressAutocomplete';
 import { SignatureDrawing } from '@/components/agreement/SignatureDrawing';
 import { useHaptics } from '@/components/HapticsProvider';
+import DOMPurify from 'dompurify';
 
 const SPRING = { type: 'spring' as const, stiffness: 300, damping: 25 };
 const SPRING_SNAPPY = { type: 'spring' as const, stiffness: 400, damping: 30 };
@@ -299,7 +300,7 @@ export function AgreementForm({
                             </span>
                             {section.title}
                           </h3>
-                          <div dangerouslySetInnerHTML={{ __html: section.content }} />
+                          <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(section.content) }} />
                         </div>
                       ))}
                       <div className="mt-8 pt-4 border-t border-border">

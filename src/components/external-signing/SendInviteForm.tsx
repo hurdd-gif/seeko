@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { DatePicker } from '@/components/ui/date-picker';
 import { toast } from 'sonner';
+import DOMPurify from 'dompurify';
 
 const SPRING = { type: 'spring' as const, stiffness: 300, damping: 25 };
 
@@ -257,7 +258,7 @@ export function SendInviteForm({ onInviteSent }: SendInviteFormProps) {
                         {customSections.map((s) => (
                           <div key={s.number} className="mb-3">
                             <h4 className="text-sm font-semibold text-foreground">{s.number}. {s.title}</h4>
-                            <div className="mt-1 text-xs text-muted-foreground prose prose-sm prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: s.content }} />
+                            <div className="mt-1 text-xs text-muted-foreground prose prose-sm prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(s.content) }} />
                           </div>
                         ))}
                       </div>

@@ -77,6 +77,26 @@ export async function proxy(request: NextRequest) {
     }
   }
 
+  // Security headers
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
+  supabaseResponse.headers.set(
+    'Content-Security-Policy',
+    [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      `connect-src 'self' ${supabaseUrl} https://*.supabase.co wss://*.supabase.co`,
+      "img-src 'self' data: blob: https://*.supabase.co",
+      "font-src 'self' https://fonts.gstatic.com data:",
+      "frame-ancestors 'none'",
+      "base-uri 'self'",
+      "form-action 'self'",
+    ].join('; ')
+  );
+  supabaseResponse.headers.set('X-Content-Type-Options', 'nosniff');
+  supabaseResponse.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  supabaseResponse.headers.set('X-Frame-Options', 'DENY');
+
   return supabaseResponse;
 }
 

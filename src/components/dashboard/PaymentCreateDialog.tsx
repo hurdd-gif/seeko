@@ -25,7 +25,7 @@ interface PaymentCreateDialogProps {
   onOpenChange: (open: boolean) => void;
   team: TeamMember[];
   recipient: TeamMember | null;
-  token: string | null;
+  token: string | null; // deprecated — token now sent via httpOnly cookie
   onCreated: () => void;
 }
 
@@ -112,7 +112,6 @@ export function PaymentCreateDialog({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-payments-token': token,
         },
         body: JSON.stringify({
           recipient_id: recipient.id,

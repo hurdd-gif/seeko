@@ -3,11 +3,44 @@ import { createClient } from '@/lib/supabase/server';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { formatCurrency } from '@/lib/format';
 
+// Rate limiter: 5 payment requests per user per hour
+const RATE_LIMIT = { max: 5, windowMs: 60 * 60 * 1000 };
+const userHits = new Map<string, { count: number; resetAt: number }>();
+
+function isRateLimited(userId: string): boolean {
+  const now = Date.now();
+  const entry = userHits.get(userId);
+  if (!entry || now > entry.resetAt) {
+    userHits.set(userId, { count: 1, resetAt: now + RATE_LIMIT.windowMs });
+    return false;
+  }
+  if (entry.count >= RATE_LIMIT.max) return true;
+  entry.count++;
+  return false;
+}
+
+const MAX_PAYMENT_AMOUNT = 50000; // $50,000 ceiling
+
 export async function POST(req: NextRequest) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  // Investors cannot request payments
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('is_investor, display_name')
+    .eq('id', user.id)
+    .single();
+
+  if (profile?.is_investor) {
+    return NextResponse.json({ error: 'Investors cannot request payments' }, { status: 403 });
+  }
+
+  if (isRateLimited(user.id)) {
+    return NextResponse.json({ error: 'Too many payment requests. Try again later.' }, { status: 429 });
+  }
 
   let body: {
     amount: number;
@@ -23,6 +56,10 @@ export async function POST(req: NextRequest) {
 
   if (!body.amount || !body.items?.length) {
     return NextResponse.json({ error: 'amount and items are required' }, { status: 400 });
+  }
+
+  if (!Number.isFinite(body.amount) || body.amount <= 0 || body.amount > MAX_PAYMENT_AMOUNT) {
+    return NextResponse.json({ error: `Amount must be between $0.01 and $${MAX_PAYMENT_AMOUNT.toLocaleString()}` }, { status: 400 });
   }
 
   // Use service role to bypass RLS for insert
@@ -61,12 +98,6 @@ export async function POST(req: NextRequest) {
 
   // Notify admins about the payment request
   try {
-    const { data: profile } = await service
-      .from('profiles')
-      .select('display_name')
-      .eq('id', user.id)
-      .single();
-
     const { data: admins } = await service
       .from('profiles')
       .select('id')

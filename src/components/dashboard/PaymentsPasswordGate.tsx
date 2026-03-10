@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 const SPRING = { type: 'spring' as const, stiffness: 500, damping: 30 };
 
 interface PaymentsPasswordGateProps {
-  onAuthenticated: (token: string) => void;
+  onAuthenticated: () => void;
 }
 
 export function PaymentsPasswordGate({ onAuthenticated }: PaymentsPasswordGateProps) {
@@ -37,8 +37,8 @@ export function PaymentsPasswordGate({ onAuthenticated }: PaymentsPasswordGatePr
         return;
       }
 
-      sessionStorage.setItem('payments-token', data.token);
-      onAuthenticated(data.token);
+      // Token is now stored as httpOnly cookie by the server
+      onAuthenticated();
     } catch {
       setError('Network error');
     } finally {

@@ -2,6 +2,8 @@ import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { jwtVerify } from 'jose';
 
+const PAYMENTS_COOKIE = 'payments-token';
+
 export async function getPaymentsAuth(tokenHeader?: string | null) {
   const cookieStore = await cookies();
   const supabase = createServerClient(
@@ -27,8 +29,11 @@ export async function getPaymentsAuth(tokenHeader?: string | null) {
   const isAdmin = profile?.is_admin ?? false;
   const isInvestor = profile?.is_investor ?? false;
 
+  // Read token from httpOnly cookie first, fall back to header for backwards compat
+  const tokenValue = cookieStore.get(PAYMENTS_COOKIE)?.value || tokenHeader;
+
   let tokenValid = false;
-  if (isAdmin && tokenHeader) {
+  if (isAdmin && tokenValue) {
     try {
       const jwtSecret = process.env.PAYMENTS_JWT_SECRET;
       if (!jwtSecret) {
@@ -36,7 +41,7 @@ export async function getPaymentsAuth(tokenHeader?: string | null) {
         return { supabase, user, isAdmin, isInvestor, tokenValid };
       }
       const secret = new TextEncoder().encode(jwtSecret);
-      const { payload } = await jwtVerify(tokenHeader, secret);
+      const { payload } = await jwtVerify(tokenValue, secret);
       tokenValid = payload.sub === user.id && payload.scope === 'payments';
     } catch {
       tokenValid = false;
