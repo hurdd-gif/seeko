@@ -108,39 +108,40 @@ export function DeckViewer({ slides, title }: DeckViewerProps) {
   return (
     <>
       {/* ── Inline view: main slide + filmstrip ───────────── */}
-      <div className="flex flex-col gap-3">
-        <div className="flex items-center justify-between">
-          <p className="text-xs text-muted-foreground">
-            {currentSlide + 1} of {sorted.length} slide{sorted.length !== 1 ? 's' : ''}
-          </p>
-          <button
-            type="button"
-            onClick={() => { setCurrentSlide(0); setDirection(0); setFullscreen(true); }}
-            className="flex items-center gap-1.5 text-xs text-seeko-accent hover:text-seeko-accent/80 transition-colors"
-          >
-            <Maximize2 className="size-3" />
-            Present
-          </button>
-        </div>
-
-        {/* #1 Dark bg + shadow for contrast, #2 no dashed border, #5 click zones for inline nav */}
-        <div className="relative group rounded-lg overflow-hidden shadow-lg aspect-[16/9]" style={{ backgroundColor: '#1a1a1a' }}>
+      <div className="flex flex-col gap-4">
+        {/* Main slide area */}
+        <div className="relative group rounded-xl overflow-hidden shadow-lg aspect-[16/9] border border-border/50" style={{ backgroundColor: '#111' }}>
           <img src={sorted[currentSlide].url} alt={`Slide ${currentSlide + 1}`} className="w-full h-full object-contain" />
 
-          {/* #5 Left click zone — go prev */}
+          {/* Overlay bar — slide counter + present button */}
+          <div className="absolute top-0 inset-x-0 flex items-center justify-between px-3 py-2 bg-gradient-to-b from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+            <span className="text-[11px] font-medium text-white/70 tabular-nums">
+              {currentSlide + 1} / {sorted.length}
+            </span>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setCurrentSlide(0); setDirection(0); setFullscreen(true); }}
+              className="flex items-center gap-1.5 text-[11px] font-medium text-white/70 hover:text-white transition-colors"
+            >
+              <Maximize2 className="size-3" />
+              Present
+            </button>
+          </div>
+
+          {/* Left click zone — go prev */}
           {sorted.length > 1 && currentSlide > 0 && (
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); goPrev(); }}
-              className="absolute left-0 top-0 bottom-0 w-1/3 cursor-pointer flex items-center justify-start pl-2 opacity-0 group-hover:opacity-100 transition-opacity"
+              className="absolute left-0 top-0 bottom-0 w-1/3 cursor-pointer flex items-center justify-start pl-3 opacity-0 group-hover:opacity-100 transition-opacity"
             >
-              <span className="flex items-center justify-center size-7 rounded-full bg-black/40 text-white/80">
+              <span className="flex items-center justify-center size-8 rounded-full bg-black/50 backdrop-blur-sm text-white/90 shadow-lg">
                 <ChevronLeft className="size-4" />
               </span>
             </button>
           )}
 
-          {/* #5 Right click zone — go next or open fullscreen on last */}
+          {/* Right click zone — go next or open fullscreen on last */}
           <button
             type="button"
             onClick={(e) => {
@@ -148,17 +149,11 @@ export function DeckViewer({ slides, title }: DeckViewerProps) {
               if (currentSlide < sorted.length - 1) goNext();
               else { setFullscreen(true); }
             }}
-            className="absolute right-0 top-0 bottom-0 w-1/3 cursor-pointer flex items-center justify-end pr-2 opacity-0 group-hover:opacity-100 transition-opacity"
+            className="absolute right-0 top-0 bottom-0 w-1/3 cursor-pointer flex items-center justify-end pr-3 opacity-0 group-hover:opacity-100 transition-opacity"
           >
-            {currentSlide < sorted.length - 1 ? (
-              <span className="flex items-center justify-center size-7 rounded-full bg-black/40 text-white/80">
-                <ChevronRight className="size-4" />
-              </span>
-            ) : (
-              <span className="flex items-center justify-center size-7 rounded-full bg-black/40 text-white/80">
-                <Maximize2 className="size-3.5" />
-              </span>
-            )}
+            <span className="flex items-center justify-center size-8 rounded-full bg-black/50 backdrop-blur-sm text-white/90 shadow-lg">
+              {currentSlide < sorted.length - 1 ? <ChevronRight className="size-4" /> : <Maximize2 className="size-3.5" />}
+            </span>
           </button>
 
           {/* Center click — open fullscreen */}
@@ -169,26 +164,26 @@ export function DeckViewer({ slides, title }: DeckViewerProps) {
           />
         </div>
 
-        {/* #4 Wider filmstrip thumbnails */}
+        {/* Filmstrip thumbnails */}
         {sorted.length > 1 && (
           <div
             ref={filmstripRef}
-            className="flex gap-1.5 overflow-x-auto p-1 scrollbar-thin"
+            className="flex gap-2 overflow-x-auto py-1 px-0.5 scrollbar-thin"
           >
             {sorted.map((slide, i) => (
               <button
                 key={i}
                 type="button"
                 onClick={() => goTo(i)}
-                className={`relative shrink-0 aspect-[16/9] rounded-md overflow-hidden transition-all ${
+                className={`relative shrink-0 rounded-lg overflow-hidden transition-all border ${
                   i === currentSlide
-                    ? 'ring-2 ring-seeko-accent ring-offset-1 ring-offset-background'
-                    : 'opacity-40 hover:opacity-70'
+                    ? 'border-seeko-accent/60 ring-1 ring-seeko-accent/30 shadow-md'
+                    : 'border-border/40 opacity-50 hover:opacity-80 hover:border-border'
                 }`}
-                style={{ width: sorted.length <= 4 ? '3.5rem' : '3rem' }}
+                style={{ width: sorted.length <= 6 ? '5.5rem' : '4.5rem', aspectRatio: '16/9' }}
               >
                 <img src={slide.url} alt={`Slide ${i + 1}`} className="w-full h-full object-cover" />
-                <span className="absolute bottom-1 left-1 text-[9px] font-mono text-white/80 bg-black/50 px-1 py-0.5 rounded">
+                <span className="absolute bottom-0.5 left-1 text-[9px] font-mono font-medium text-white/90 bg-black/60 backdrop-blur-sm px-1 rounded">
                   {i + 1}
                 </span>
               </button>
