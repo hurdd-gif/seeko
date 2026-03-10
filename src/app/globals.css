@@ -294,7 +294,7 @@ body.tour-cmd-k-active #command-palette-container * {
 
 /* Sonner toast overrides */
 [data-sonner-toaster][data-y-position="top"] {
-  top: env(safe-area-inset-top, 0px) !important;
+  top: calc(1rem + env(safe-area-inset-top, 0px)) !important;
 }
 
 [data-sonner-toaster] [data-sonner-toast] {

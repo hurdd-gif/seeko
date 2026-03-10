@@ -7,6 +7,7 @@ import { PresenceHeartbeat } from '@/components/PresenceHeartbeat';
 import { ActivityTracker } from '@/components/ActivityTracker';
 import { PageTransition } from '@/components/layout/PageTransition';
 import { CommandPalette } from '@/components/dashboard/CommandPalette';
+import { BugReportFAB } from '@/components/BugReportFAB';
 
 export default async function DashboardLayout({
   children,
@@ -72,6 +73,10 @@ export default async function DashboardLayout({
         decks={accessibleDocs.filter((d) => d.type === 'deck').map((d) => ({ id: d.id, title: d.title }))}
         isContractor={profile?.is_contractor ?? false}
         isAdmin={isAdmin}
+      />
+      <BugReportFAB
+        displayName={profile?.display_name ?? 'Unknown'}
+        email={user.email ?? ''}
       />
     </DashboardTourWrapper>
   );

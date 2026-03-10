@@ -769,7 +769,6 @@ export function SettingsPanel({ profile, isAdmin, team, revalidate, completedTas
               value={bootPassword}
               onChange={e => { setBootPassword(e.target.value); setBootError(''); }}
               onKeyDown={e => e.key === 'Enter' && handleBoot()}
-              autoFocus
             />
           </div>
           {bootError && <p className="text-xs text-destructive">{bootError}</p>}

@@ -806,7 +806,6 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
                 placeholder="Task name..."
                 value={newName}
                 onChange={e => setNewName(e.target.value)}
-                autoFocus
                 onKeyDown={e => { if (e.key === 'Enter' && newName.trim()) handleAddTask(); }}
               />
               <div className="grid grid-cols-2 gap-3">
