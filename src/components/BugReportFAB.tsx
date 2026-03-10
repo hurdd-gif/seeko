@@ -90,7 +90,7 @@ export function BugReportFAB({ displayName, email }: BugReportFABProps) {
         animate={{ opacity: 1, scale: 1 }}
         transition={{ ...SPRING, delay: 1 }}
         onClick={() => setOpen(true)}
-        className="fixed bottom-20 right-4 md:bottom-6 md:right-6 z-40 flex size-11 items-center justify-center rounded-full bg-muted border border-border shadow-lg text-muted-foreground hover:text-foreground hover:border-foreground/20 transition-colors"
+        className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4 md:bottom-6 md:right-6 z-40 flex size-11 items-center justify-center rounded-full bg-muted border border-border shadow-lg text-muted-foreground hover:text-foreground hover:border-foreground/20 transition-colors"
         title="Report a bug"
       >
         <Bug className="size-4.5" />
@@ -121,13 +121,13 @@ export function BugReportFAB({ displayName, email }: BugReportFABProps) {
           {/* Screenshot + Page info grouped */}
           <div className="flex items-center gap-3">
             {preview ? (
-              <div className="relative size-16 rounded-lg overflow-hidden border border-border shrink-0">
+              <div className="relative size-16 rounded-lg overflow-hidden border border-border shrink-0 group">
                 <img src={preview} alt="Screenshot" className="size-full object-cover" />
                 <button
                   onClick={clearScreenshot}
-                  className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 hover:opacity-100 transition-opacity"
+                  className="absolute top-0.5 right-0.5 flex items-center justify-center rounded-full bg-black/70 p-0.5 text-white"
                 >
-                  <X className="size-4 text-white" />
+                  <X className="size-3" />
                 </button>
               </div>
             ) : (
