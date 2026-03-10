@@ -9,7 +9,7 @@ export default async function SetPasswordPage() {
   if (!user) redirect('/login');
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+    <div className="min-h-dvh flex items-center justify-center bg-background px-4 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
       <div className="w-full max-w-sm space-y-8">
         <div className="text-center">
           <FadeScale className="mx-auto flex size-16 items-center justify-center">

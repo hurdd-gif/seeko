@@ -20,7 +20,7 @@ export default async function ExternalSignPage({ params }: Props) {
 
   if (!invite) {
     return (
-      <div className="flex min-h-dvh items-center justify-center bg-background px-4">
+      <div className="flex min-h-dvh items-center justify-center bg-background px-4 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
         <div className="text-center">
           <h1 className="text-xl font-semibold text-foreground">Link not found</h1>
           <p className="mt-2 text-sm text-muted-foreground">This signing link is invalid or has been removed.</p>
