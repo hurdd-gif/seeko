@@ -40,16 +40,7 @@ export function AddressAutocomplete({
 
     setLoading(true);
     try {
-      const params = new URLSearchParams({
-        q: query,
-        format: 'json',
-        addressdetails: '1',
-        limit: '5',
-      });
-      const res = await fetch(
-        `https://nominatim.openstreetmap.org/search?${params}`,
-        { headers: { 'Accept-Language': 'en' } }
-      );
+      const res = await fetch(`/api/geocode?q=${encodeURIComponent(query)}`);
       if (res.ok) {
         const data: NominatimResult[] = await res.json();
         setSuggestions(data);

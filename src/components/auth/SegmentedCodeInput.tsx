@@ -81,11 +81,11 @@ export function SegmentedCodeInput({ value, onChange, disabled }: SegmentedCodeI
   const isComplete = value.replace(/\D/g, '').length === CELL_COUNT;
 
   return (
-    <div className="flex items-center justify-center gap-1.5">
+    <div className="flex items-center justify-center gap-1 sm:gap-1.5 w-full max-w-sm mx-auto">
       {digits.map((digit, i) => (
         <div key={i} className="flex items-center">
           {i === 4 && (
-            <div className="w-3 flex items-center justify-center text-muted-foreground/30 text-lg font-light select-none">
+            <div className="w-2 sm:w-3 flex items-center justify-center text-muted-foreground/30 text-base sm:text-lg font-light select-none">
               &ndash;
             </div>
           )}
@@ -108,7 +108,7 @@ export function SegmentedCodeInput({ value, onChange, disabled }: SegmentedCodeI
               onFocus={() => setFocusedIndex(i)}
               onBlur={() => setFocusedIndex(-1)}
               className={cn(
-                'size-11 md:size-12 rounded-xl border text-center text-lg font-semibold font-mono transition-all duration-150',
+                'size-9 sm:size-11 md:size-12 rounded-lg sm:rounded-xl border text-center text-base sm:text-lg font-semibold font-mono transition-all duration-150',
                 'bg-muted text-foreground focus:outline-none caret-transparent',
                 'disabled:opacity-50',
                 isComplete
