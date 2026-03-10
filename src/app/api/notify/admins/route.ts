@@ -11,6 +11,10 @@ const userHits = new Map<string, { count: number; resetAt: number }>();
 
 function isRateLimited(userId: string): boolean {
   const now = Date.now();
+  // Prune expired entries to prevent memory growth
+  if (userHits.size > 100) {
+    for (const [key, entry] of userHits) { if (now > entry.resetAt) userHits.delete(key); }
+  }
   const entry = userHits.get(userId);
   if (!entry || now > entry.resetAt) {
     userHits.set(userId, { count: 1, resetAt: now + RATE_LIMIT.windowMs });
@@ -76,7 +80,7 @@ export async function POST(req: NextRequest) {
 
   if (adminError) {
     console.error('[notify/admins] profiles query failed:', adminError);
-    return NextResponse.json({ error: adminError.message }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to fetch admin list' }, { status: 500 });
   }
   if (!admins?.length) return NextResponse.json({ success: true, count: 0 });
 
@@ -92,7 +96,7 @@ export async function POST(req: NextRequest) {
   const { error: insertError } = await service.from('notifications').insert(rows);
   if (insertError) {
     console.error('[notify/admins] notifications insert failed:', insertError);
-    return NextResponse.json({ error: insertError.message }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to send notifications' }, { status: 500 });
   }
   return NextResponse.json({ success: true, count: rows.length });
 }

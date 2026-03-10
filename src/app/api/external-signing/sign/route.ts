@@ -5,11 +5,35 @@ import { generateAgreementPdf } from '@/lib/agreement-pdf';
 import { sendAgreementEmail } from '@/lib/email';
 import type { ExternalSigningInvite } from '@/lib/types';
 
+// Rate limiter: max 5 sign attempts per IP per hour (PDF generation is expensive)
+const RATE_LIMIT = { max: 5, windowMs: 60 * 60 * 1000 };
+const ipHits = new Map<string, { count: number; resetAt: number }>();
+
+function isSignRateLimited(ip: string): boolean {
+  const now = Date.now();
+  if (ipHits.size > 100) {
+    for (const [key, entry] of ipHits) { if (now > entry.resetAt) ipHits.delete(key); }
+  }
+  const entry = ipHits.get(ip);
+  if (!entry || now > entry.resetAt) {
+    ipHits.set(ip, { count: 1, resetAt: now + RATE_LIMIT.windowMs });
+    return false;
+  }
+  if (entry.count >= RATE_LIMIT.max) return true;
+  entry.count++;
+  return false;
+}
+
 export async function POST(request: NextRequest) {
   const body = await request.json();
   const { token, full_name, address } = body;
 
   if (!token) return NextResponse.json({ error: 'Token required' }, { status: 400 });
+
+  const clientIp = request.headers.get('x-forwarded-for')?.split(',').pop()?.trim() || 'unknown';
+  if (isSignRateLimited(clientIp)) {
+    return NextResponse.json({ error: 'Too many sign attempts. Try again later.' }, { status: 429 });
+  }
   if (!full_name || typeof full_name !== 'string' || !full_name.trim()) {
     return NextResponse.json({ error: 'Full name required' }, { status: 400 });
   }
@@ -21,11 +45,15 @@ export async function POST(request: NextRequest) {
 
   const { data: invite } = await service
     .from('external_signing_invites')
-    .select('*')
+    .select('id, token, status, expires_at, recipient_email, template_type, template_id, custom_sections, custom_title, personal_note')
     .eq('token', token)
     .single() as { data: ExternalSigningInvite | null };
 
   if (!invite) return NextResponse.json({ error: 'Invite not found' }, { status: 404 });
+
+  if (invite.status === 'signed') {
+    return NextResponse.json({ error: 'This agreement has already been signed' }, { status: 409 });
+  }
 
   if (invite.status !== 'verified') {
     return NextResponse.json({ error: 'Invite must be verified before signing' }, { status: 400 });
@@ -69,7 +97,7 @@ export async function POST(request: NextRequest) {
   // Upload to storage
   const { error: uploadError } = await service.storage
     .from('agreements')
-    .upload(`external/${invite.id}/agreement.pdf`, pdfBytes, {
+    .upload(`external/${invite.id}/${crypto.randomUUID()}.pdf`, pdfBytes, {
       contentType: 'application/pdf',
       upsert: true,
     });

@@ -19,7 +19,10 @@ export async function GET(req: NextRequest) {
   }
 
   const { data, error } = await query;
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error('Payments list error:', error);
+    return NextResponse.json({ error: 'Failed to fetch payments' }, { status: 500 });
+  }
 
   return NextResponse.json(data ?? []);
 }
@@ -65,7 +68,10 @@ export async function POST(req: NextRequest) {
     .select()
     .single();
 
-  if (paymentError) return NextResponse.json({ error: paymentError.message }, { status: 500 });
+  if (paymentError) {
+    console.error('Payment create error:', paymentError);
+    return NextResponse.json({ error: 'Failed to create payment' }, { status: 500 });
+  }
 
   const items = body.items.map(item => ({
     payment_id: payment.id,
@@ -78,7 +84,10 @@ export async function POST(req: NextRequest) {
     .from('payment_items')
     .insert(items);
 
-  if (itemsError) return NextResponse.json({ error: itemsError.message }, { status: 500 });
+  if (itemsError) {
+    console.error('Payment items insert error:', itemsError);
+    return NextResponse.json({ error: 'Failed to save payment items' }, { status: 500 });
+  }
 
   return NextResponse.json(payment, { status: 201 });
 }

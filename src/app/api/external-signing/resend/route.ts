@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
   const service = getServiceClient();
   const { data: invite } = await service
     .from('external_signing_invites')
-    .select('*')
+    .select('id, token, status, expires_at, recipient_email, template_type, template_id, custom_title, personal_note')
     .eq('id', invite_id)
     .single() as { data: ExternalSigningInvite | null };
 
@@ -29,7 +29,8 @@ export async function POST(request: NextRequest) {
   if (invite.status === 'revoked') return NextResponse.json({ error: 'Invite is revoked' }, { status: 400 });
 
   // Generate new verification code
-  const code = String(Math.floor(100000 + Math.random() * 900000));
+  const { randomInt } = await import('crypto');
+  const code = String(randomInt(100000, 1000000));
   const hashedCode = await bcrypt.hash(code, 10);
 
   await (service

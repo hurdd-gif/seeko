@@ -15,14 +15,18 @@ export async function POST(request: NextRequest) {
 
   const { data: invite } = await service
     .from('external_signing_invites')
-    .select('*')
+    .select('id, token, status, expires_at, verification_code, verification_attempts, template_type, template_id, custom_sections, custom_title, personal_note')
     .eq('token', token)
     .single() as { data: (ExternalSigningInvite & { verification_code: string }) | null };
 
   if (!invite) return NextResponse.json({ error: 'Invite not found' }, { status: 404 });
 
+  if (invite.status === 'verified' || invite.status === 'signed') {
+    return NextResponse.json({ error: 'Invite has already been verified' }, { status: 409 });
+  }
+
   if (invite.status !== 'pending') {
-    return NextResponse.json({ error: `Invite is ${invite.status}` }, { status: 400 });
+    return NextResponse.json({ error: 'Invite is no longer available' }, { status: 400 });
   }
 
   if (new Date(invite.expires_at) < new Date()) {

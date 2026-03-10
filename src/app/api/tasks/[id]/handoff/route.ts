@@ -60,6 +60,17 @@ export async function POST(
     return NextResponse.json({ error: 'Only the assignee or an admin can hand off this task' }, { status: 403 });
   }
 
+  // Validate target user exists
+  const { data: targetProfile } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('id', toUserId)
+    .single();
+
+  if (!targetProfile) {
+    return NextResponse.json({ error: 'Target user not found' }, { status: 404 });
+  }
+
   // Record the handoff
   const { error: insertError } = await supabase
     .from('task_handoffs')
@@ -70,7 +81,10 @@ export async function POST(
       note: note?.trim() || null,
     });
 
-  if (insertError) return NextResponse.json({ error: insertError.message }, { status: 500 });
+  if (insertError) {
+    console.error('Handoff insert error:', insertError);
+    return NextResponse.json({ error: 'Failed to record handoff' }, { status: 500 });
+  }
 
   // Reassign the task
   const { error: updateError } = await supabase
@@ -78,7 +92,10 @@ export async function POST(
     .update({ assignee_id: toUserId })
     .eq('id', taskId);
 
-  if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 });
+  if (updateError) {
+    console.error('Task reassign error:', updateError);
+    return NextResponse.json({ error: 'Failed to reassign task' }, { status: 500 });
+  }
 
   // Notify the new assignee
   const handoffNote = note?.trim();

@@ -52,7 +52,8 @@ export async function DELETE(
 
   const { error: storageError } = await service.storage.from(BUCKET).remove([row.storage_path as string]);
   if (storageError) {
-    return NextResponse.json({ error: storageError.message }, { status: 500 });
+    console.error('Deliverable storage delete error:', storageError);
+    return NextResponse.json({ error: 'Failed to delete file from storage' }, { status: 500 });
   }
 
   const { error: deleteError } = await service
@@ -61,7 +62,10 @@ export async function DELETE(
     .eq('id', deliverableId)
     .eq('task_id', taskId);
 
-  if (deleteError) return NextResponse.json({ error: deleteError.message }, { status: 500 });
+  if (deleteError) {
+    console.error('Deliverable record delete error:', deleteError);
+    return NextResponse.json({ error: 'Failed to delete deliverable record' }, { status: 500 });
+  }
 
   return new NextResponse(null, { status: 204 });
 }

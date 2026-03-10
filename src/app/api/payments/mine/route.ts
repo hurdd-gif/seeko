@@ -9,11 +9,14 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from('payments')
-    .select('*, items:payment_items(*)')
+    .select('id, amount, currency, description, status, paid_at, created_at, items:payment_items(id, label, amount, task_id)')
     .eq('recipient_id', user.id)
     .order('created_at', { ascending: false });
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error('Payments query error:', error);
+    return NextResponse.json({ error: 'Failed to fetch payments' }, { status: 500 });
+  }
 
   return NextResponse.json(data ?? []);
 }

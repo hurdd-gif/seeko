@@ -63,7 +63,8 @@ export async function POST(req: NextRequest) {
     });
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('Deck slide upload error:', error);
+    return NextResponse.json({ error: 'Failed to upload slide' }, { status: 500 });
   }
 
   const { data: urlData } = service.storage

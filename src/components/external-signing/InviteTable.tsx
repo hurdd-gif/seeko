@@ -29,7 +29,7 @@ export function InviteTable({ refreshKey }: InviteTableProps) {
     const supabase = createClient();
     const { data } = await supabase
       .from('external_signing_invites')
-      .select('*')
+      .select('id, token, recipient_email, recipient_name, status, template_type, template_id, custom_title, personal_note, expires_at, signed_at, created_at, verification_attempts, created_by')
       .order('created_at', { ascending: false });
     setInvites((data as ExternalSigningInvite[]) || []);
     setLoading(false);

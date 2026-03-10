@@ -76,7 +76,7 @@ export async function PATCH(
   const newStatus = action === 'approve' ? 'approved' : 'denied';
 
   // Update the extension request
-  const { error: updateError } = await service
+  const { error: updateError, count: updatedCount } = await service
     .from('deadline_extensions')
     .update({
       status: newStatus,
@@ -84,7 +84,8 @@ export async function PATCH(
       decided_at: new Date().toISOString(),
       ...(action === 'deny' && reason ? { denial_reason: reason } : {}),
     })
-    .eq('id', id);
+    .eq('id', id)
+    .eq('status', 'pending'); // Optimistic concurrency: only update if still pending
 
   if (updateError) {
     console.error('[deadline-extensions] update failed:', updateError);

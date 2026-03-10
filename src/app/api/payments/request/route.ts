@@ -9,6 +9,10 @@ const userHits = new Map<string, { count: number; resetAt: number }>();
 
 function isRateLimited(userId: string): boolean {
   const now = Date.now();
+  // Prune expired entries to prevent memory growth
+  if (userHits.size > 100) {
+    for (const [key, entry] of userHits) { if (now > entry.resetAt) userHits.delete(key); }
+  }
   const entry = userHits.get(userId);
   if (!entry || now > entry.resetAt) {
     userHits.set(userId, { count: 1, resetAt: now + RATE_LIMIT.windowMs });
@@ -81,7 +85,10 @@ export async function POST(req: NextRequest) {
     .select()
     .single();
 
-  if (paymentError) return NextResponse.json({ error: paymentError.message }, { status: 500 });
+  if (paymentError) {
+    console.error('Payment request create error:', paymentError);
+    return NextResponse.json({ error: 'Failed to create payment request' }, { status: 500 });
+  }
 
   const items = body.items.map(item => ({
     payment_id: payment.id,
@@ -94,7 +101,10 @@ export async function POST(req: NextRequest) {
     .from('payment_items')
     .insert(items);
 
-  if (itemsError) return NextResponse.json({ error: itemsError.message }, { status: 500 });
+  if (itemsError) {
+    console.error('Payment request items error:', itemsError);
+    return NextResponse.json({ error: 'Failed to save payment items' }, { status: 500 });
+  }
 
   // Notify admins about the payment request
   try {

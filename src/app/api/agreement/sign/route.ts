@@ -69,7 +69,8 @@ export async function POST(req: NextRequest) {
     .eq('id', user.id);
 
   if (updateError) {
-    return NextResponse.json({ error: updateError.message }, { status: 500 });
+    console.error('NDA update error:', updateError);
+    return NextResponse.json({ error: 'Failed to record agreement' }, { status: 500 });
   }
 
   // 6. Generate PDF
@@ -88,7 +89,7 @@ export async function POST(req: NextRequest) {
   });
 
   // 7. Upload PDF to Supabase Storage
-  const storagePath = `${user.id}/agreement.pdf`;
+  const storagePath = `${user.id}/${crypto.randomUUID()}.pdf`;
   const { error: uploadError } = await service.storage
     .from('agreements')
     .upload(storagePath, pdfBytes, {

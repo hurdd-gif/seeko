@@ -10,6 +10,10 @@ const tokenHits = new Map<string, { count: number; resetAt: number }>();
 
 function isRateLimited(token: string): boolean {
   const now = Date.now();
+  // Prune expired entries to prevent memory growth
+  if (tokenHits.size > 100) {
+    for (const [key, entry] of tokenHits) { if (now > entry.resetAt) tokenHits.delete(key); }
+  }
   const entry = tokenHits.get(token);
   if (!entry || now > entry.resetAt) {
     tokenHits.set(token, { count: 1, resetAt: now + RATE_LIMIT.windowMs });
@@ -40,7 +44,7 @@ export async function POST(request: NextRequest) {
   if (!invite) return NextResponse.json({ error: 'Invite not found' }, { status: 404 });
 
   if (invite.status !== 'pending') {
-    return NextResponse.json({ error: `Invite is ${invite.status}` }, { status: 400 });
+    return NextResponse.json({ error: 'Invite is no longer available' }, { status: 400 });
   }
 
   if (new Date(invite.expires_at) < new Date()) {
@@ -49,7 +53,8 @@ export async function POST(request: NextRequest) {
   }
 
   // Generate new code, reset attempts
-  const code = String(Math.floor(100000 + Math.random() * 900000));
+  const { randomInt } = await import('crypto');
+  const code = String(randomInt(100000, 1000000));
   const hashedCode = await bcrypt.hash(code, 10);
 
   await (service

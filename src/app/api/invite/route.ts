@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
 
   if (insertError) {
     console.error('[invite] pending_invites upsert error:', insertError);
-    return NextResponse.json({ error: insertError.message }, { status: 400 });
+    return NextResponse.json({ error: 'Failed to create invite record' }, { status: 400 });
   }
 
   // Generate invite link via Supabase (creates auth user if needed, does NOT send email).
@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
 
   if (linkError) {
     console.error('[invite] generateLink error:', linkError);
-    return NextResponse.json({ error: linkError.message }, { status: 400 });
+    return NextResponse.json({ error: 'Failed to generate invite link' }, { status: 400 });
   }
 
   const inviteCode = linkData.properties.email_otp;

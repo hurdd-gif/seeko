@@ -7,6 +7,25 @@ import type { TaskDeliverable } from '@/lib/types';
 const BUCKET = 'task-deliverables';
 const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25 MB
 
+// Rate limiter: max 10 uploads per user per hour
+const UPLOAD_RATE = { max: 10, windowMs: 60 * 60 * 1000 };
+const uploadHits = new Map<string, { count: number; resetAt: number }>();
+
+function isUploadRateLimited(userId: string): boolean {
+  const now = Date.now();
+  if (uploadHits.size > 100) {
+    for (const [key, entry] of uploadHits) { if (now > entry.resetAt) uploadHits.delete(key); }
+  }
+  const entry = uploadHits.get(userId);
+  if (!entry || now > entry.resetAt) {
+    uploadHits.set(userId, { count: 1, resetAt: now + UPLOAD_RATE.windowMs });
+    return false;
+  }
+  if (entry.count >= UPLOAD_RATE.max) return true;
+  entry.count++;
+  return false;
+}
+
 // Allowlisted MIME prefixes for uploads — blocks HTML, SVG, and executable types
 const ALLOWED_MIME_PREFIXES = ['image/', 'video/', 'audio/', 'application/pdf', 'application/zip', 'application/x-zip', 'text/plain', 'application/octet-stream'];
 const BLOCKED_EXTENSIONS = ['.html', '.htm', '.svg', '.js', '.exe', '.bat', '.sh', '.cmd', '.msi', '.php'];
@@ -60,7 +79,10 @@ export async function GET(
     .eq('task_id', taskId)
     .order('created_at', { ascending: true });
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error('Deliverables query error:', error);
+    return NextResponse.json({ error: 'Failed to fetch deliverables' }, { status: 500 });
+  }
 
   const service = createServiceClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -101,6 +123,10 @@ export async function POST(
     return NextResponse.json({ error: 'Only the assignee or an admin can upload deliverables for this task' }, { status: 403 });
   }
 
+  if (isUploadRateLimited(user.id)) {
+    return NextResponse.json({ error: 'Too many uploads. Try again later.' }, { status: 429 });
+  }
+
   let formData: FormData;
   try {
     formData = await req.formData();
@@ -129,7 +155,10 @@ export async function POST(
     upsert: false,
   });
 
-  if (uploadError) return NextResponse.json({ error: uploadError.message }, { status: 500 });
+  if (uploadError) {
+    console.error('Deliverable upload error:', uploadError);
+    return NextResponse.json({ error: 'Failed to upload deliverable' }, { status: 500 });
+  }
 
   const { data: inserted, error: insertError } = await service
     .from('task_deliverables')
@@ -142,7 +171,10 @@ export async function POST(
     .select('id, task_id, file_name, storage_path, uploaded_by, created_at')
     .single();
 
-  if (insertError) return NextResponse.json({ error: insertError.message }, { status: 500 });
+  if (insertError) {
+    console.error('Deliverable insert error:', insertError);
+    return NextResponse.json({ error: 'Failed to save deliverable record' }, { status: 500 });
+  }
 
   const uploaderName = profile?.display_name ?? 'Someone';
   const taskName = task.name ?? 'Task';

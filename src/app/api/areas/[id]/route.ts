@@ -49,6 +49,9 @@ export async function PATCH(
     .select()
     .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  if (error) {
+    console.error('Area update error:', error);
+    return NextResponse.json({ error: 'Failed to update area' }, { status: 400 });
+  }
   return NextResponse.json(data);
 }
