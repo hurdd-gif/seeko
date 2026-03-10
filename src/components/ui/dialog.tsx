@@ -167,14 +167,24 @@ function Dialog({ open, onOpenChange, children, resizable = false, contentClassN
               contentClassName
             )}
             style={panelStyle}
-            initial={{ opacity: 0, scale: 0.95, y: 8 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 8 }}
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 40 }}
             transition={{ type: "spring", stiffness: 400, damping: 30 }}
+            drag="y"
+            dragConstraints={{ top: 0, bottom: 0 }}
+            dragElastic={{ top: 0, bottom: 0.6 }}
+            onDragEnd={(_e, info) => {
+              if (info.offset.y > 100 || info.velocity.y > 300) onOpenChange(false)
+            }}
           >
+            {/* Mobile drag handle */}
+            <div className="sm:hidden flex justify-center pt-2 pb-1 shrink-0 cursor-grab active:cursor-grabbing">
+              <div className="w-9 h-1 rounded-full bg-white/20" />
+            </div>
             <DialogFooterContext.Provider value={{ setFooter }}>
               <div className="flex min-h-0 flex-1 flex-col">
-                <div className="flex-1 min-h-0 overflow-y-auto p-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                <div className="flex-1 min-h-0 overflow-y-auto p-6 pt-2 sm:pt-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                   {children}
                 </div>
                 {footer != null ? (

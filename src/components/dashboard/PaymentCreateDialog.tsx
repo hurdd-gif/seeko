@@ -284,8 +284,7 @@ export function PaymentCreateDialog({
               <div className="flex items-center justify-between pt-2 border-t border-border">
                 <span className="text-sm font-medium text-muted-foreground">Total</span>
                 <span
-                  className="text-lg font-semibold"
-                  style={{ color: total > 0 ? 'var(--color-seeko-accent)' : undefined }}
+                  className={`text-lg font-semibold ${total > 0 ? 'text-seeko-accent' : ''}`}
                 >
                   {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(total)}
                 </span>
