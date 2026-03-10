@@ -66,6 +66,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: `Amount must be between $0.01 and $${MAX_PAYMENT_AMOUNT.toLocaleString()}` }, { status: 400 });
   }
 
+  // Validate individual line items
+  for (const item of body.items) {
+    if (!item.label?.trim()) {
+      return NextResponse.json({ error: 'Each item must have a label' }, { status: 400 });
+    }
+    if (!Number.isFinite(item.amount) || item.amount <= 0) {
+      return NextResponse.json({ error: 'Each item must have a positive amount' }, { status: 400 });
+    }
+  }
+
   // Use service role to bypass RLS for insert
   const service = createServiceClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

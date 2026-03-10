@@ -76,7 +76,7 @@ export async function PATCH(
   const newStatus = action === 'approve' ? 'approved' : 'denied';
 
   // Update the extension request
-  const { error: updateError, count: updatedCount } = await service
+  const { data: updated, error: updateError } = await service
     .from('deadline_extensions')
     .update({
       status: newStatus,
@@ -85,11 +85,17 @@ export async function PATCH(
       ...(action === 'deny' && reason ? { denial_reason: reason } : {}),
     })
     .eq('id', id)
-    .eq('status', 'pending'); // Optimistic concurrency: only update if still pending
+    .eq('status', 'pending') // Optimistic concurrency: only update if still pending
+    .select('id');
 
   if (updateError) {
     console.error('[deadline-extensions] update failed:', updateError);
     return NextResponse.json({ error: 'Failed to update extension request' }, { status: 500 });
+  }
+
+  // If no rows updated, another admin already decided this request
+  if (!updated || updated.length === 0) {
+    return NextResponse.json({ error: 'Extension request is no longer pending' }, { status: 409 });
   }
 
   // If approved, update the task deadline
