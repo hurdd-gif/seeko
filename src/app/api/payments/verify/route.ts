@@ -6,6 +6,25 @@ import { SignJWT } from 'jose';
 
 const PAYMENTS_COOKIE = 'payments-token';
 
+// Rate limiter: 5 attempts per user per 15 minutes
+const RATE_LIMIT = { max: 5, windowMs: 15 * 60 * 1000 };
+const attempts = new Map<string, { count: number; resetAt: number }>();
+
+function isRateLimited(userId: string): boolean {
+  const now = Date.now();
+  if (attempts.size > 100) {
+    for (const [key, entry] of attempts) { if (now > entry.resetAt) attempts.delete(key); }
+  }
+  const entry = attempts.get(userId);
+  if (!entry || now > entry.resetAt) {
+    attempts.set(userId, { count: 1, resetAt: now + RATE_LIMIT.windowMs });
+    return false;
+  }
+  if (entry.count >= RATE_LIMIT.max) return true;
+  entry.count++;
+  return false;
+}
+
 async function getSupabaseAndUser() {
   const cookieStore = await cookies();
   const supabase = createServerClient(
@@ -34,6 +53,10 @@ export async function POST(req: NextRequest) {
 
   if (!profile?.is_admin) {
     return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+  }
+
+  if (isRateLimited(user.id)) {
+    return NextResponse.json({ error: 'Too many attempts. Try again later.' }, { status: 429 });
   }
 
   let body: { password: string };

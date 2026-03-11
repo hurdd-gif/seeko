@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
   // Verify caller is admin
   const { data: adminProfile } = await supabase
     .from('profiles')
-    .select('is_admin, email')
+    .select('is_admin')
     .eq('id', user.id)
     .single();
 
@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
 
   // Verify admin's password using a separate service-client sign-in
   // to avoid mutating the current session cookies
-  const email = adminProfile.email ?? user.email;
+  const email = user.email;
   if (!email) {
     return NextResponse.json({ error: 'Could not determine admin email' }, { status: 500 });
   }
@@ -155,10 +155,10 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // 8f. Clean up pending invite (get email before profile deletion)
-  const { data: bootedProfile } = await service.from('profiles').select('email').eq('id', userId).single();
-  if (bootedProfile?.email) {
-    await service.from('pending_invites').delete().eq('email', bootedProfile.email.toLowerCase());
+  // 8f. Clean up pending invite (get email from auth.users — profiles has no email column)
+  const { data: bootedAuthUser } = await service.auth.admin.getUserById(userId);
+  if (bootedAuthUser?.user?.email) {
+    await service.from('pending_invites').delete().eq('email', bootedAuthUser.user.email.toLowerCase());
   }
 
   // 9. Delete profile

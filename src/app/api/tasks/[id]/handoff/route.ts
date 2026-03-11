@@ -72,14 +72,16 @@ export async function POST(
   }
 
   // Record the handoff
-  const { error: insertError } = await supabase
+  const { data: handoffData, error: insertError } = await supabase
     .from('task_handoffs')
     .insert({
       task_id: taskId,
       from_user_id: user.id,
       to_user_id: toUserId,
       note: note?.trim() || null,
-    });
+    })
+    .select('id')
+    .single();
 
   if (insertError) {
     console.error('Handoff insert error:', insertError);
@@ -94,6 +96,10 @@ export async function POST(
 
   if (updateError) {
     console.error('Task reassign error:', updateError);
+    // Roll back the handoff record so it doesn't become orphaned
+    if (handoffData?.id) {
+      await supabase.from('task_handoffs').delete().eq('id', handoffData.id);
+    }
     return NextResponse.json({ error: 'Failed to reassign task' }, { status: 500 });
   }
 
