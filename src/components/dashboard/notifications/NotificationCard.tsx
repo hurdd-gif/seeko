@@ -53,16 +53,16 @@ export function NotificationCard({
       onDragEnd={handleDragEnd}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      className="px-3 py-1"
+      className="relative"
     >
       <motion.div style={{ opacity: cardOpacity }}>
         <button
           onClick={() => onTap(notification)}
           className={[
-            'relative flex w-full items-start gap-3 rounded-xl p-3 text-left transition-colors',
-            'bg-muted hover:brightness-110 active:brightness-125',
-            'border border-border/50',
-            notification.read ? 'opacity-50' : '',
+            'relative flex w-full items-start gap-3 px-5 py-3 text-left transition-colors',
+            'hover:bg-white/[0.03] active:bg-white/[0.05]',
+            'border-b border-white/[0.04]',
+            notification.read ? 'opacity-45' : '',
           ].join(' ')}
         >
           {/* Icon */}
@@ -96,7 +96,7 @@ export function NotificationCard({
               onDismiss(notification.ids);
             }}
             className={[
-              'absolute top-2.5 right-2.5 flex size-6 items-center justify-center rounded-full',
+              'absolute top-3 right-4 flex size-6 items-center justify-center rounded-full',
               'bg-white/[0.08] text-muted-foreground hover:bg-white/[0.15] hover:text-foreground transition-colors',
               hovered ? 'cursor-pointer' : 'pointer-events-none',
             ].join(' ')}
