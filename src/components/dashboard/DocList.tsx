@@ -614,28 +614,30 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, cu
       ))}
 
       {/* Read dialog */}
-      <Dialog open={!!selected} onOpenChange={() => setSelected(null)} resizable>
+      <Dialog
+        open={!!selected}
+        onOpenChange={() => setSelected(null)}
+        resizable
+        actions={isAdmin && selected ? (
+          <button
+            type="button"
+            title="Share externally"
+            onClick={() => setShareDoc(selected)}
+            className="flex size-8 items-center justify-center rounded-md opacity-60 transition-opacity hover:opacity-100 hover:bg-white/[0.06] focus:outline-none"
+          >
+            <Share2 className="size-3.5" />
+          </button>
+        ) : undefined}
+      >
         {selected && (
           <>
             <DialogClose onClose={() => setSelected(null)} />
             <DialogHeader>
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-secondary">
-                    {selected.type === 'deck' ? <Presentation className="size-4 text-foreground" /> : <FileText className="size-4 text-foreground" />}
-                  </div>
-                  <DialogTitle>{selected.title}</DialogTitle>
+              <div className="flex items-center gap-2 pr-20">
+                <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-secondary">
+                  {selected.type === 'deck' ? <Presentation className="size-4 text-foreground" /> : <FileText className="size-4 text-foreground" />}
                 </div>
-                {isAdmin && (
-                  <button
-                    type="button"
-                    title="Share externally"
-                    onClick={() => setShareDoc(selected)}
-                    className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-                  >
-                    <Share2 className="size-4" />
-                  </button>
-                )}
+                <DialogTitle>{selected.title}</DialogTitle>
               </div>
             </DialogHeader>
             <div className="doc-read-body min-w-0 overflow-x-auto px-2 pt-4 pb-8 max-w-3xl mx-auto">
@@ -644,7 +646,24 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, cu
               ) : selected.content ? (
                 <DocContent html={selected.content} />
               ) : (
-                <p className="text-sm text-muted-foreground">No content yet.</p>
+                <div className="flex flex-col items-center gap-3 py-16 text-center">
+                  <div className="flex size-12 items-center justify-center rounded-xl bg-secondary">
+                    <FileText className="size-5 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-foreground">No content yet</p>
+                    <p className="text-xs text-muted-foreground mt-1">Edit this document to add content.</p>
+                  </div>
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      onClick={() => { setSelected(null); setEditingDoc(selected); }}
+                      className="mt-2 text-xs font-medium text-seeko-accent hover:text-seeko-accent/80 transition-colors"
+                    >
+                      Edit document
+                    </button>
+                  )}
+                </div>
               )}
             </div>
           </>

@@ -36,9 +36,11 @@ interface DialogProps {
   contentClassName?: string
   /** Optional class name for the outer fixed wrapper (e.g. z-[70] to override stacking). */
   className?: string
+  /** Extra action buttons rendered in the top-right toolbar (before expand/close) */
+  actions?: React.ReactNode
 }
 
-function Dialog({ open, onOpenChange, children, resizable = false, contentClassName, className }: DialogProps) {
+function Dialog({ open, onOpenChange, children, resizable = false, contentClassName, className, actions }: DialogProps) {
   const [footer, setFooter] = React.useState<React.ReactNode>(null)
   const [size, setSize] = React.useState({ w: DEFAULT_MAX_W, h: 600 });
   const [maximized, setMaximized] = React.useState(false)
@@ -193,9 +195,35 @@ function Dialog({ open, onOpenChange, children, resizable = false, contentClassN
             <div className="sm:hidden flex justify-center pt-2 pb-1 shrink-0 cursor-grab active:cursor-grabbing">
               <div className="w-9 h-1 rounded-full bg-white/20" />
             </div>
+            {/* Action toolbar — consolidated top-right button row */}
+            <div className="absolute right-3 top-3 sm:top-4 flex items-center gap-0.5 z-10">
+              {actions}
+              {resizable && (
+                <button
+                  type="button"
+                  onClick={toggleMaximize}
+                  title={maximized ? 'Restore size' : 'Expand'}
+                  className="flex size-8 items-center justify-center rounded-md opacity-60 transition-opacity hover:opacity-100 hover:bg-white/[0.06] focus:outline-none"
+                >
+                  {maximized
+                    ? <Minimize2 className="size-3.5" />
+                    : <Maximize2 className="size-3.5" />
+                  }
+                  <span className="sr-only">{maximized ? 'Restore' : 'Expand'}</span>
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => onOpenChange(false)}
+                className="flex size-8 items-center justify-center rounded-md opacity-60 transition-opacity hover:opacity-100 hover:bg-white/[0.06] focus:outline-none"
+              >
+                <X className="size-3.5" />
+                <span className="sr-only">Close</span>
+              </button>
+            </div>
             <DialogFooterContext.Provider value={{ setFooter }}>
               <div className="flex min-h-0 flex-1 flex-col">
-                <div className="flex-1 min-h-0 overflow-y-auto p-6 pt-2 sm:pt-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                <div className="flex-1 min-h-0 overflow-y-auto p-6 pt-2 sm:pt-6 [scrollbar-width:thin] [scrollbar-color:theme(colors.white/0.08)_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-white/10">
                   {children}
                 </div>
                 {footer != null ? (
@@ -205,21 +233,6 @@ function Dialog({ open, onOpenChange, children, resizable = false, contentClassN
                 ) : null}
               </div>
             </DialogFooterContext.Provider>
-            {/* Expand/maximize button — always shown on resizable dialogs */}
-            {resizable && (
-              <button
-                type="button"
-                onClick={toggleMaximize}
-                title={maximized ? 'Restore size' : 'Expand'}
-                className="absolute right-10 top-4 rounded-sm opacity-50 transition-opacity hover:opacity-100 focus:outline-none"
-              >
-                {maximized
-                  ? <Minimize2 className="size-3.5" />
-                  : <Maximize2 className="size-3.5" />
-                }
-                <span className="sr-only">{maximized ? 'Restore' : 'Expand'}</span>
-              </button>
-            )}
             {resizable && (
               <div
                 role="separator"
@@ -249,23 +262,16 @@ function Dialog({ open, onOpenChange, children, resizable = false, contentClassN
 }
 
 function DialogHeader({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("flex flex-col gap-1.5 mb-4", className)} {...props} />
+  return <div className={cn("flex flex-col gap-1.5 pb-4 mb-2 border-b border-white/[0.06]", className)} {...props} />
 }
 
 function DialogTitle({ className, ...props }: React.HTMLAttributes<HTMLHeadingElement>) {
   return <h2 className={cn("text-lg font-semibold text-foreground", className)} {...props} />
 }
 
-function DialogClose({ onClose }: { onClose: () => void }) {
-  return (
-    <button
-      onClick={onClose}
-      className="absolute right-4 top-4 rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:outline-none"
-    >
-      <X className="size-4" />
-      <span className="sr-only">Close</span>
-    </button>
-  )
+/** @deprecated Close button is now built into the Dialog toolbar. This is a no-op for backwards compat. */
+function DialogClose(_props: { onClose: () => void }) {
+  return null
 }
 
 export { Dialog, DialogHeader, DialogTitle, DialogClose }
