@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { FileText, Lock, Pencil, Trash2, Plus, Search, Clock, ChevronDown, Circle, Presentation, Share2, ExternalLink, RotateCcw, Eye } from 'lucide-react';
+import { FileText, Lock, Pencil, Trash2, Plus, Search, Clock, ChevronDown, Circle, Presentation, Share2, XCircle, RotateCcw, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { Doc } from '@/lib/types';
@@ -63,6 +63,13 @@ function isRecentlyUpdated(doc: Doc): boolean {
 const LIST = {
   staggerMs: 70,   // ms between each card
   delayMs:   0,    // ms before first card
+};
+
+const SHARE_STATUS_COLORS: Record<string, string> = {
+  pending: 'border-yellow-500/30 text-yellow-400',
+  verified: 'border-emerald-500/30 text-emerald-400',
+  expired: 'border-muted-foreground/30 text-muted-foreground',
+  revoked: 'border-red-500/30 text-red-400',
 };
 
 /* ─────────────────────────────────────────────────────────
@@ -203,32 +210,38 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, cu
       fetch('/api/doc-share/list')
         .then(r => r.json())
         .then(data => setSharedLinks(Array.isArray(data) ? data : []))
-        .catch(() => {})
+        .catch(() => toast.error('Failed to load shared links'))
         .finally(() => setSharedLoading(false));
     }
   }, [viewMode, isAdmin]);
 
   async function handleRevoke(inviteId: string) {
-    const res = await fetch('/api/doc-share/revoke', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ invite_id: inviteId }),
-    });
-    if (res.ok) {
-      setSharedLinks(prev => prev.map(l => l.id === inviteId ? { ...l, status: 'revoked', session_token: null } : l));
+    try {
+      const res = await fetch('/api/doc-share/revoke', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ invite_id: inviteId }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error || 'Failed to revoke');
+      setSharedLinks(prev => prev.map(l => l.id === inviteId ? { ...l, status: 'revoked' } : l));
       toast.success('Share link revoked');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to revoke');
     }
   }
 
   async function handleResend(inviteId: string) {
-    const res = await fetch('/api/doc-share/resend', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ invite_id: inviteId }),
-    });
-    if (res.ok) {
+    try {
+      const res = await fetch('/api/doc-share/resend', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ invite_id: inviteId }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error || 'Failed to resend');
       setSharedLinks(prev => prev.map(l => l.id === inviteId ? { ...l, status: 'pending' } : l));
       toast.success('Share link resent');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to resend');
     }
   }
 
@@ -436,14 +449,7 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, cu
             <p className="text-sm text-muted-foreground py-8 text-center">No shared links yet</p>
           ) : (
             <>
-              {(sharedExpanded ? sharedLinks : sharedLinks.slice(0, 3)).map(link => {
-                const statusColors: Record<string, string> = {
-                  pending: 'border-yellow-500/30 text-yellow-400',
-                  verified: 'border-emerald-500/30 text-emerald-400',
-                  expired: 'border-muted-foreground/30 text-muted-foreground',
-                  revoked: 'border-red-500/30 text-red-400',
-                };
-                return (
+              {(sharedExpanded ? sharedLinks : sharedLinks.slice(0, 3)).map(link => (
                   <Card key={link.id}>
                     <CardContent className="flex items-center gap-3 p-3">
                       <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-secondary">
@@ -456,7 +462,7 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, cu
                       <div className="flex flex-col gap-0.5 min-w-0 flex-1">
                         <div className="flex items-center gap-2">
                           <p className="text-sm font-medium text-foreground truncate">{link.doc_title ?? 'Untitled'}</p>
-                          <Badge variant="outline" className={cn('text-[10px] font-medium capitalize', statusColors[link.status] ?? statusColors.expired)}>
+                          <Badge variant="outline" className={cn('text-[10px] font-medium capitalize', SHARE_STATUS_COLORS[link.status] ?? SHARE_STATUS_COLORS.expired)}>
                             {link.status}
                           </Badge>
                         </div>
@@ -477,7 +483,7 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, cu
                             onClick={() => handleRevoke(link.id)}
                             className="flex size-7 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
                           >
-                            <ExternalLink className="size-3.5" />
+                            <XCircle className="size-3.5" />
                           </button>
                         )}
                         {link.status === 'pending' && (
@@ -493,8 +499,7 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, cu
                       </div>
                     </CardContent>
                   </Card>
-                );
-              })}
+              ))}
               {sharedLinks.length > 3 && (
                 <button
                   type="button"
