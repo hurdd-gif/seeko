@@ -70,7 +70,7 @@ export default async function DashboardLayout({
             unreadCount={unreadCount}
             notifications={notifications}
           />
-          <main className="flex-1 min-w-0 overflow-x-hidden md:overflow-auto md:pl-14 md:pr-14" id="tour-main">
+          <main className="flex-1 min-w-0 overflow-x-hidden md:overflow-auto md:pl-14 lg:pl-0" id="tour-main">
             <div className="max-w-5xl mx-auto px-5 md:px-6 py-4 md:py-8 pb-24 md:pb-8">
               <PageTransition>{children}</PageTransition>
             </div>

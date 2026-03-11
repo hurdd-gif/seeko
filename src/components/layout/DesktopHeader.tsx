@@ -63,7 +63,7 @@ export function DesktopHeader(props: DesktopHeaderProps) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ ...SMOOTH, delay: 0.15 }}
-      className="hidden md:flex items-center justify-between px-14 py-3 shrink-0 border-b border-white/[0.04]"
+      className="hidden md:flex items-center justify-between md:pl-20 lg:pl-6 pr-6 py-3 shrink-0 border-b border-white/[0.04]"
     >
       <div className="relative h-5 overflow-hidden">
         <AnimatePresence mode="popLayout" initial={false} custom={direction}>
