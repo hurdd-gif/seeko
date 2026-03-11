@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { FileText, Lock, Pencil, Trash2, Plus, Search, Clock, ChevronDown, Circle, Presentation } from 'lucide-react';
+import { FileText, Lock, Pencil, Trash2, Plus, Search, Clock, ChevronDown, Circle, Presentation, Share2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { Doc } from '@/lib/types';
@@ -25,6 +25,7 @@ import { DeckEditor } from './DeckEditor';
 import { DeckViewer } from './DeckViewer';
 import { DocDeleteConfirm } from './DocDeleteConfirm';
 import { DocContent } from './DocContent';
+import { DocShareDialog } from './DocShareDialog';
 import { useHaptics } from '@/components/HapticsProvider';
 
 const DEPARTMENTS = ['Coding', 'Visual Art', 'UI/UX', 'Animation', 'Asset Creation'] as const;
@@ -130,6 +131,7 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, cu
   const [editingDoc, setEditingDoc] = useState<Doc | 'new' | null>(null);
   const [editingDeck, setEditingDeck] = useState<Doc | 'new' | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [shareDoc, setShareDoc] = useState<Doc | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [departmentFilter, setDepartmentFilter] = useState<string>('all');
   const searchParams = useSearchParams();
@@ -475,11 +477,23 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, cu
           <>
             <DialogClose onClose={() => setSelected(null)} />
             <DialogHeader>
-              <div className="flex items-center gap-2">
-                <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-secondary">
-                  {selected.type === 'deck' ? <Presentation className="size-4 text-foreground" /> : <FileText className="size-4 text-foreground" />}
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-secondary">
+                    {selected.type === 'deck' ? <Presentation className="size-4 text-foreground" /> : <FileText className="size-4 text-foreground" />}
+                  </div>
+                  <DialogTitle>{selected.title}</DialogTitle>
                 </div>
-                <DialogTitle>{selected.title}</DialogTitle>
+                {isAdmin && (
+                  <button
+                    type="button"
+                    title="Share externally"
+                    onClick={() => setShareDoc(selected)}
+                    className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                  >
+                    <Share2 className="size-4" />
+                  </button>
+                )}
               </div>
             </DialogHeader>
             <div className="doc-read-body min-w-0 overflow-x-auto px-2 pt-4 pb-8 max-w-3xl mx-auto">
@@ -530,6 +544,16 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, cu
           </>
         )}
       </Dialog>
+
+      {/* Share externally dialog */}
+      {shareDoc && (
+        <DocShareDialog
+          open={!!shareDoc}
+          onOpenChange={(open) => { if (!open) setShareDoc(null); }}
+          docId={shareDoc.id}
+          docTitle={shareDoc.title}
+        />
+      )}
     </>
   );
 }
