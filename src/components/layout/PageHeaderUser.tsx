@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Notification } from '@/lib/types';
+import { getInitials } from '@/lib/utils';
 import dynamic from 'next/dynamic';
 import { useHaptics } from '@/components/HapticsProvider';
 
@@ -21,10 +22,6 @@ const NotificationBell = dynamic(
 );
 
 const SMOOTH = { type: 'spring' as const, stiffness: 300, damping: 25 };
-
-function getInitials(name: string): string {
-  return name.split(' ').map(p => p[0]).join('').toUpperCase().slice(0, 2) || '?';
-}
 
 interface PageHeaderUserProps {
   email: string;
@@ -107,7 +104,7 @@ export function PageHeaderUser({
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: -4 }}
               transition={SMOOTH}
-              className="absolute right-0 top-full mt-2 w-56 rounded-xl border border-white/[0.08] bg-popover backdrop-blur-xl shadow-xl z-50 overflow-hidden"
+              className="absolute right-0 top-full mt-2 w-56 rounded-xl border border-white/[0.08] bg-popover backdrop-blur-xl backdrop-saturate-150 shadow-xl z-50 overflow-hidden"
             >
               {/* User info */}
               <div className="px-3 py-3 border-b border-white/[0.06]">

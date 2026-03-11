@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { fetchProfile, fetchNotifications, fetchUnreadNotificationCount, fetchTeam, fetchAllDocs } from '@/lib/supabase/data';
 import { IconRail } from '@/components/layout/IconRail';
 import { MobileNav } from '@/components/layout/MobileNav';
-import { PageHeaderUser } from '@/components/layout/PageHeaderUser';
+import { DesktopHeader } from '@/components/layout/DesktopHeader';
 import { DashboardTourWrapper } from '@/components/dashboard/DashboardTourWrapper';
 import { PresenceHeartbeat } from '@/components/PresenceHeartbeat';
 import { ActivityTracker } from '@/components/ActivityTracker';
@@ -61,20 +61,17 @@ export default async function DashboardLayout({
             unreadCount={unreadCount}
             notifications={notifications}
           />
+          <DesktopHeader
+            email={user.email ?? ''}
+            displayName={profile?.display_name ?? undefined}
+            avatarUrl={profile?.avatar_url ?? undefined}
+            userId={user.id}
+            isAdmin={isAdmin}
+            unreadCount={unreadCount}
+            notifications={notifications}
+          />
           <main className="flex-1 min-w-0 overflow-x-hidden md:overflow-auto md:pl-14" id="tour-main">
             <div className="max-w-5xl mx-auto px-5 md:px-6 py-4 md:py-8 pb-24 md:pb-8">
-              {/* Page header with user controls — desktop only */}
-              <div className="hidden md:flex items-center justify-end mb-4">
-                <PageHeaderUser
-                  email={user.email ?? ''}
-                  displayName={profile?.display_name ?? undefined}
-                  avatarUrl={profile?.avatar_url ?? undefined}
-                  userId={user.id}
-                  isAdmin={isAdmin}
-                  unreadCount={unreadCount}
-                  notifications={notifications}
-                />
-              </div>
               <PageTransition>{children}</PageTransition>
             </div>
           </main>

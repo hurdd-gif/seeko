@@ -1,10 +1,5 @@
 'use client';
 
-const BOTTOM_NAV = {
-  tapSpring: { type: 'spring' as const, stiffness: 450, damping: 28 },
-  tapScale: 0.92,
-};
-
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
@@ -24,10 +19,16 @@ import {
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { Notification } from '@/lib/types';
+import { getInitials } from '@/lib/utils';
 import { TOUR_STEP_IDS_MOBILE } from '@/lib/tour-constants';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import Image from 'next/image';
 import { useHaptics } from '@/components/HapticsProvider';
+
+const BOTTOM_NAV = {
+  tapSpring: { type: 'spring' as const, stiffness: 450, damping: 28 },
+  tapScale: 0.92,
+};
 
 const NotificationBell = dynamic(
   () => import('@/components/dashboard/NotificationBell').then(m => m.NotificationBell),
@@ -43,10 +44,6 @@ const NAV_BASE = [
 ];
 
 const NAV_INVESTOR = { href: '/investor', label: 'Investor Panel', mobileLabel: 'Investors', icon: TrendingUp, tourKey: undefined as undefined };
-
-function getInitials(name: string): string {
-  return name.split(' ').map(p => p[0]).join('').toUpperCase().slice(0, 2) || '?';
-}
 
 interface MobileNavProps {
   email: string;

@@ -73,7 +73,7 @@ export function IconRail({ isAdmin = false, isContractor = false }: IconRailProp
         initial={{ opacity: 0, x: -8 }}
         animate={{ opacity: 1, x: 0 }}
         transition={SMOOTH}
-        className="hidden md:flex flex-col items-center gap-1 fixed left-2 top-3 z-30 rounded-xl border border-white/[0.06] bg-card p-1.5 shadow-lg"
+        className="hidden md:flex flex-col items-center gap-1 fixed left-2 top-1/2 -translate-y-1/2 z-30 rounded-xl border border-white/[0.06] bg-card p-1.5 shadow-lg"
       >
         {/* Logo — home link */}
         <Link
