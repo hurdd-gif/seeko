@@ -88,6 +88,7 @@ export function PaymentsAdmin({ team }: PaymentsAdminProps) {
   const [invoiceFormOpen, setInvoiceFormOpen] = useState(false);
   const [selectedRecipient, setSelectedRecipient] = useState<TeamMember | null>(null);
   const [invoiceRequests, setInvoiceRequests] = useState<InvoiceRequest[]>([]);
+  const [invoicesExpanded, setInvoicesExpanded] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -346,10 +347,20 @@ export function PaymentsAdmin({ team }: PaymentsAdminProps) {
             </CardHeader>
             <CardContent className="pt-0">
               <div className="divide-y divide-border/50">
-                {invoiceRequests.map((inv, i) => (
+                {(invoicesExpanded ? invoiceRequests : invoiceRequests.slice(0, 3)).map((inv, i) => (
                   <InvoiceRequestRow key={inv.id} invite={inv} index={i} onAction={fetchData} />
                 ))}
               </div>
+              {invoiceRequests.length >= 4 && (
+                <button
+                  type="button"
+                  onClick={() => setInvoicesExpanded((v) => !v)}
+                  className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-white/[0.04] hover:text-foreground"
+                >
+                  {invoicesExpanded ? 'Show less' : `Show all ${invoiceRequests.length}`}
+                  <ChevronDown className={`size-3.5 transition-transform ${invoicesExpanded ? 'rotate-180' : ''}`} />
+                </button>
+              )}
             </CardContent>
           </Card>
         </FadeRise>
