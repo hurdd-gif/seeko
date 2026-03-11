@@ -2,14 +2,24 @@
   "hooks": {
     "SessionStart": [
       {
-        "type": "command",
-        "command": "echo '=== SEEKO AGENT PROTOCOL ===' && cat CLAUDE.md"
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '=== SEEKO AGENT PROTOCOL ===' && cat CLAUDE.md"
+          }
+        ]
       }
     ],
     "PreToolUse": [
       {
-        "type": "command",
-        "command": "python3 -c \"\nimport sys, json\ndata = json.load(sys.stdin)\ninp = str(data.get('tool_input', {}))\nif '.env' in inp:\n    print('.env files are protected and cannot be accessed.', file=sys.stderr)\n    sys.exit(2)\n\""
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -c \"\nimport sys, json\ndata = json.load(sys.stdin)\ninp = str(data.get('tool_input', {}))\nif '.env' in inp:\n    print('.env files are protected and cannot be accessed.', file=sys.stderr)\n    sys.exit(2)\n\""
+          }
+        ]
       }
     ]
   }
