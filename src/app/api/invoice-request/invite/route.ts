@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { getServiceClient } from '@/lib/supabase/service';
 import { randomBytes, randomInt } from 'crypto';
 import bcrypt from 'bcryptjs';
-// TODO (Task 5): import { sendInvoiceRequestEmail } from '@/lib/email';
+import { sendInvoiceRequestEmail } from '@/lib/email';
 
 export async function POST(request: NextRequest) {
   // 1. Auth — admin only
@@ -92,10 +92,12 @@ export async function POST(request: NextRequest) {
   }
 
   // 5. Send email (non-blocking)
-  // TODO (Task 5): Replace with sendInvoiceRequestEmail when implemented
-  Promise.resolve().then(() => {
-    console.log('[invoice-request/invite] Email placeholder — would send to:', recipientEmail, { token, verificationCode, personalNote, expiresAt: expiresDate.toISOString() });
-  }).catch(console.error);
+  sendInvoiceRequestEmail({
+    recipientEmail,
+    token,
+    personalNote: personalNote || null,
+    expiresAt: expiresDate,
+  }).catch((err) => console.error('[invoice-request/invite] Failed to send email:', err));
 
   return NextResponse.json({ success: true });
 }
