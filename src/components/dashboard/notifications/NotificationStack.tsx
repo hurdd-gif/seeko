@@ -1,7 +1,17 @@
 'use client';
 
+/* ─────────────────────────────────────────────────────────
+ * ANIMATION STORYBOARD — Notification Stack
+ *
+ *  Collapsed  ghost cards stacked behind top card (offset Y, scaled)
+ *  Click      ghost cards spring down into full cards (staggered)
+ *             badge scales out, "Show less" fades in
+ *  Collapse   cards spring back up into stacked position
+ * ───────────────────────────────────────────────────────── */
+
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { ChevronDown } from 'lucide-react';
 import { SNAPPY, SMOOTH } from './constants';
 import { NotificationCard } from './NotificationCard';
 import { DisplayNotification } from './types';
@@ -26,6 +36,7 @@ export function NotificationStack({
   const [expanded, setExpanded] = useState(false);
   const ghostCount = Math.min(notification.count - 1, 2);
 
+  // Single notification — no stacking needed
   if (notification.count <= 1) {
     return (
       <NotificationCard
@@ -47,88 +58,103 @@ export function NotificationStack({
       exit={{ opacity: 0, x: 80, scale: 0.95 }}
       transition={{ ...SMOOTH, delay: index * stagger }}
     >
-      <AnimatePresence mode="wait">
-        {expanded ? (
-          <motion.div
-            key="expanded"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={SNAPPY}
-          >
-            <button
-              onClick={() => setExpanded(false)}
-              className="w-full text-left px-6 py-1"
-            >
-              <span className="text-[11px] text-muted-foreground/50 hover:text-muted-foreground transition-colors">
-                Collapse {notification.count} items
-              </span>
-            </button>
-            <NotificationCard
-              notification={notification}
-              group={group}
-              index={0}
-              stagger={0}
-              onTap={onTap}
-              onDismiss={onDismiss}
-            />
-          </motion.div>
-        ) : (
-          <motion.div
-            key="stacked"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={SNAPPY}
-            className="relative cursor-pointer"
-            onClick={() => setExpanded(true)}
-          >
-            {/* Ghost cards — solid bg cards behind the top card, offset + scaled down */}
-            {Array.from({ length: ghostCount }).map((_, i) => {
-              const layer = i + 1;
-              return (
-                <div
-                  key={`ghost-${i}`}
-                  className="absolute inset-x-0 top-0 px-3 py-1"
-                  style={{
-                    transform: `translateY(${layer * 8}px) scale(${1 - layer * 0.03})`,
-                    zIndex: -layer,
-                  }}
-                >
-                  <div
-                    className="rounded-xl border border-border/30 h-[72px]"
-                    style={{
-                      backgroundColor: `color-mix(in oklch, var(--color-muted), var(--color-card) ${layer * 35}%)`,
-                    }}
-                  />
-                </div>
-              );
-            })}
+      {/* Top card — always visible */}
+      <div className="relative">
+        <NotificationCard
+          notification={notification}
+          group={group}
+          index={0}
+          stagger={0}
+          onTap={expanded ? onTap : () => setExpanded(true)}
+          onDismiss={onDismiss}
+        />
 
-            {/* Top card */}
-            <div className="relative z-10">
-              <NotificationCard
-                notification={notification}
-                group={group}
-                index={0}
-                stagger={0}
-                onTap={() => setExpanded(true)}
-                onDismiss={onDismiss}
-              />
-            </div>
-
-            {/* Count badge — top right of the stack */}
-            <motion.span
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
+        {/* Count badge + expand hint — only when collapsed */}
+        <AnimatePresence>
+          {!expanded && (
+            <motion.button
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
               transition={SNAPPY}
-              className="absolute top-2 right-4 z-20 flex h-5 min-w-5 items-center justify-center rounded-full bg-white/[0.1] backdrop-blur-sm px-1.5 text-[10px] font-semibold text-muted-foreground"
+              onClick={() => setExpanded(true)}
+              className="absolute top-3 right-5 z-20 flex items-center gap-1 rounded-full bg-white/[0.08] backdrop-blur-sm pl-2 pr-1.5 py-0.5 text-[10px] font-medium text-muted-foreground hover:bg-white/[0.12] transition-colors cursor-pointer"
             >
               +{notification.count - 1}
-            </motion.span>
+              <ChevronDown className="size-3" />
+            </motion.button>
+          )}
+        </AnimatePresence>
+      </div>
 
-            {/* Extra bottom padding so ghost cards don't overlap next item */}
-            <div style={{ height: ghostCount * 8 }} />
+      {/* Ghost cards when collapsed — peek below the top card */}
+      <AnimatePresence>
+        {!expanded && Array.from({ length: ghostCount }).map((_, i) => {
+          const layer = i + 1;
+          return (
+            <motion.div
+              key={`ghost-${i}`}
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 8 }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={SNAPPY}
+              className="px-3 -mt-1 relative"
+              style={{ zIndex: -layer }}
+            >
+              <div
+                className="mx-auto rounded-b-lg border-x border-b border-border/30 h-full"
+                style={{
+                  width: `${100 - layer * 4}%`,
+                  backgroundColor: `color-mix(in oklch, var(--color-muted), var(--color-card) ${layer * 35}%)`,
+                }}
+              />
+            </motion.div>
+          );
+        })}
+      </AnimatePresence>
+
+      {/* Expanded cards — spring down vertically */}
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={SMOOTH}
+            className="overflow-hidden"
+          >
+            {/* Duplicate cards to represent the "rest" of the stack */}
+            {Array.from({ length: Math.min(notification.count - 1, 2) }).map((_, i) => (
+              <motion.div
+                key={`expanded-${i}`}
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 0.5, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ ...SNAPPY, delay: i * 0.06 }}
+              >
+                <NotificationCard
+                  notification={{ ...notification, read: true }}
+                  group={group}
+                  index={0}
+                  stagger={0}
+                  onTap={onTap}
+                  onDismiss={onDismiss}
+                />
+              </motion.div>
+            ))}
+
+            {/* Collapse button */}
+            <motion.button
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ delay: 0.1 }}
+              onClick={() => setExpanded(false)}
+              className="w-full flex items-center justify-center gap-1 py-2 text-[11px] text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+            >
+              <ChevronDown className="size-3 rotate-180" />
+              Show less
+            </motion.button>
           </motion.div>
         )}
       </AnimatePresence>
