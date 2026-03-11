@@ -16,6 +16,7 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import DOMPurify from 'dompurify';
 import { Maximize2, ChevronLeft, ChevronRight, X, RotateCcw, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -205,7 +206,7 @@ export function DeckViewer({ slides, title, notes }: DeckViewerProps) {
         {notes && (
           <div className="mt-2 rounded-xl border border-border/50 bg-card/50 p-4">
             <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">Notes</p>
-            <div className="prose-sm text-sm leading-relaxed text-foreground/70" dangerouslySetInnerHTML={{ __html: notes }} />
+            <div className="prose-sm text-sm leading-relaxed text-foreground/70" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(notes) }} />
           </div>
         )}
       </div>

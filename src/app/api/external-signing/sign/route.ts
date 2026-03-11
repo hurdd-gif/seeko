@@ -37,8 +37,14 @@ export async function POST(request: NextRequest) {
   if (!full_name || typeof full_name !== 'string' || !full_name.trim()) {
     return NextResponse.json({ error: 'Full name required' }, { status: 400 });
   }
+  if (full_name.trim().length > 200) {
+    return NextResponse.json({ error: 'Full name must be under 200 characters' }, { status: 400 });
+  }
   if (!address || typeof address !== 'string' || !address.trim()) {
     return NextResponse.json({ error: 'Address required' }, { status: 400 });
+  }
+  if (address.trim().length > 500) {
+    return NextResponse.json({ error: 'Address must be under 500 characters' }, { status: 400 });
   }
 
   const service = getServiceClient();
