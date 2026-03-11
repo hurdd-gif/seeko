@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
       verification_code: hashedCode,
       status: 'pending',
       created_by: user.id,
-    });
+    } as never);
 
   if (insertError) {
     console.error('Failed to create invoice invite:', insertError);

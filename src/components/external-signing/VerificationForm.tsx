@@ -39,8 +39,8 @@ export function VerificationForm({
   token,
   maskedEmail,
   onVerified,
-  sendCodeEndpoint = sendCodeEndpoint,
-  verifyEndpoint = verifyEndpoint,
+  sendCodeEndpoint = '/api/external-signing/send-code',
+  verifyEndpoint = '/api/external-signing/verify',
 }: VerificationFormProps) {
   const [codeSent, setCodeSent] = useState(false);
   const [digits, setDigits] = useState<string[]>(Array(CODE_LENGTH).fill(''));

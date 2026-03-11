@@ -144,7 +144,7 @@ export async function POST(request: NextRequest) {
       description: `External invoice from ${invite.recipient_email}`,
       status: 'pending',
       created_by: invite.created_by,
-    })
+    } as never)
     .select()
     .single();
 
@@ -163,7 +163,7 @@ export async function POST(request: NextRequest) {
 
   const { error: itemsError } = await service
     .from('payment_items')
-    .insert(paymentItems);
+    .insert(paymentItems as never[]);
 
   if (itemsError) {
     console.error('[invoice-request/submit] payment_items insert failed:', itemsError);
@@ -198,7 +198,7 @@ export async function POST(request: NextRequest) {
           body: `Invoice submitted by ${invite.recipient_email}`,
           link: '/payments',
           read: false,
-        })),
+        })) as never[],
       );
       if (notifErr) console.error('[invoice-request/submit] notification insert failed:', notifErr);
     }
