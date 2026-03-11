@@ -210,22 +210,24 @@ export function PaymentsAdmin({ team }: PaymentsAdminProps) {
     <div className="flex flex-col gap-8">
       {/* ── Hero ── */}
       <FadeRise delay={d(TIMING.hero)}>
-        <div className="flex items-start justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h1 className="text-2xl font-semibold tracking-tight text-foreground">Payments</h1>
-            <p className="text-sm text-muted-foreground mt-1">Track and manage team payments.</p>
+            <p className="hidden sm:block text-sm text-muted-foreground mt-1">Track and manage team payments.</p>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setInvoiceFormOpen(true)}>
               <FileText className="size-3.5" />
-              Request Invoice
+              <span className="hidden sm:inline">Request Invoice</span>
+              <span className="sm:hidden">Invoice</span>
             </Button>
             <Button
               onClick={() => { setSelectedRecipient(null); setCreateDialogOpen(true); }}
               className="gap-1.5 bg-seeko-accent text-black hover:bg-seeko-accent/90"
             >
               <Plus className="size-4" />
-              New Payment
+              <span className="hidden sm:inline">New Payment</span>
+              <span className="sm:hidden">Payment</span>
             </Button>
           </div>
         </div>
