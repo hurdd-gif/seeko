@@ -60,8 +60,8 @@ export function NotificationCard({
           onClick={() => onTap(notification)}
           className={[
             'relative flex w-full items-start gap-3 rounded-xl p-3 text-left transition-colors',
-            'bg-white/[0.03] hover:bg-white/[0.06] active:bg-white/[0.08]',
-            'border border-white/[0.04]',
+            'bg-muted hover:brightness-110 active:brightness-125',
+            'border border-border/50',
             notification.read ? 'opacity-50' : '',
           ].join(' ')}
         >
@@ -97,7 +97,7 @@ export function NotificationCard({
             }}
             className={[
               'absolute top-2.5 right-2.5 flex size-6 items-center justify-center rounded-full',
-              'bg-white/[0.06] text-muted-foreground/60 hover:bg-white/[0.12] hover:text-foreground transition-colors',
+              'bg-white/[0.08] text-muted-foreground hover:bg-white/[0.15] hover:text-foreground transition-colors',
               hovered ? 'cursor-pointer' : 'pointer-events-none',
             ].join(' ')}
             role="button"

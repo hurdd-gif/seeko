@@ -83,7 +83,7 @@ export function NotificationStack({
             className="relative cursor-pointer"
             onClick={() => setExpanded(true)}
           >
-            {/* Ghost cards — full-size cards behind the top card, offset + scaled down */}
+            {/* Ghost cards — solid bg cards behind the top card, offset + scaled down */}
             {Array.from({ length: ghostCount }).map((_, i) => {
               const layer = i + 1;
               return (
@@ -91,13 +91,16 @@ export function NotificationStack({
                   key={`ghost-${i}`}
                   className="absolute inset-x-0 top-0 px-3 py-1"
                   style={{
-                    transform: `translateY(${layer * 6}px) scale(${1 - layer * 0.04})`,
+                    transform: `translateY(${layer * 8}px) scale(${1 - layer * 0.03})`,
                     zIndex: -layer,
-                    opacity: 1 - layer * 0.3,
-                    filter: `brightness(${1 - layer * 0.15})`,
                   }}
                 >
-                  <div className="rounded-xl bg-white/[0.03] border border-white/[0.04] h-[72px]" />
+                  <div
+                    className="rounded-xl border border-border/30 h-[72px]"
+                    style={{
+                      backgroundColor: `color-mix(in oklch, var(--color-muted), var(--color-card) ${layer * 35}%)`,
+                    }}
+                  />
                 </div>
               );
             })}
@@ -125,7 +128,7 @@ export function NotificationStack({
             </motion.span>
 
             {/* Extra bottom padding so ghost cards don't overlap next item */}
-            <div style={{ height: ghostCount * 6 }} />
+            <div style={{ height: ghostCount * 8 }} />
           </motion.div>
         )}
       </AnimatePresence>
