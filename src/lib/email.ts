@@ -338,7 +338,68 @@ export async function sendInvoiceRequestEmail({
   });
 }
 
-/* ── 5. Verification Code ────────────────────────────────── */
+/* ── 5. Doc Share ────────────────────────────────────────── */
+
+export interface SendDocShareEmailParams {
+  recipientEmail: string;
+  token: string;
+  docTitle: string;
+  personalNote?: string | null;
+  expiresAt: Date;
+}
+
+export async function sendDocShareEmail({
+  recipientEmail,
+  token,
+  docTitle,
+  personalNote,
+  expiresAt,
+}: SendDocShareEmailParams): Promise<void> {
+  const shareUrl = `${process.env.NEXT_PUBLIC_APP_URL}/shared/${token}`;
+  const expiresFormatted = expiresAt.toLocaleDateString('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  });
+
+  const noteBlock = personalNote
+    ? `<table cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 28px;">
+        <tr>
+          <td width="28" valign="top" style="padding-top:2px;font-size:24px;color:#ccc;font-family:Georgia,serif;">&ldquo;</td>
+          <td style="padding:0 0 0 4px;">
+            <p style="margin:0 0 6px;font-size:15px;color:#333;line-height:1.5;font-style:italic;">${esc(personalNote)}</p>
+            <p style="margin:0;font-size:12px;color:#aaa;">&mdash; the sender</p>
+          </td>
+        </tr>
+      </table>`
+    : '';
+
+  const r = getResend();
+  await r.emails.send({
+    from: FROM_EMAIL,
+    to: recipientEmail,
+    subject: `Shared Document — ${esc(docTitle)}`,
+    html: shell(`
+      ${brandHeader()}
+      ${divider()}
+      <tr><td style="padding:32px 0;">
+        <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#111;">Document Shared With You</h1>
+        <p style="margin:0 0 24px;font-size:15px;color:#666;line-height:1.6;">You've been given access to <strong>${esc(docTitle)}</strong>. Click below to verify your identity and view the document.</p>
+        ${noteBlock}
+        <table cellpadding="0" cellspacing="0" width="100%">
+          <tr><td align="center">
+            <a href="${shareUrl}" style="display:inline-block;background:#111;color:#fff;padding:14px 40px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;">View Document</a>
+          </td></tr>
+        </table>
+        <p style="margin:24px 0 0;font-size:13px;color:#999;line-height:1.6;text-align:center;">This link expires on ${expiresFormatted}</p>
+      </td></tr>
+      ${divider()}
+      ${footer("If you didn't expect this email, you can safely ignore it.")}
+    `),
+  });
+}
+
+/* ── 6. Verification Code ────────────────────────────────── */
 
 export interface SendVerificationCodeEmailParams {
   recipientEmail: string;
