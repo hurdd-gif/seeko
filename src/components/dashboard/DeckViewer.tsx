@@ -27,11 +27,12 @@ interface Slide {
 interface DeckViewerProps {
   slides: Slide[];
   title: string;
+  notes?: string | null;
 }
 
 const SLIDE_SHIFT = 60; // px offset for directional transitions
 
-export function DeckViewer({ slides, title }: DeckViewerProps) {
+export function DeckViewer({ slides, title, notes }: DeckViewerProps) {
   const sorted = [...slides].sort((a, b) => a.sort_order - b.sort_order);
   const [fullscreen, setFullscreen] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -122,8 +123,8 @@ export function DeckViewer({ slides, title }: DeckViewerProps) {
         <div className="relative group rounded-xl overflow-hidden shadow-lg aspect-[16/9] border border-border/50" style={{ backgroundColor: '#111' }}>
           <img src={sorted[currentSlide].url} alt={`Slide ${currentSlide + 1}`} className="w-full h-full object-contain" />
 
-          {/* Overlay bar — slide counter + present button */}
-          <div className="absolute top-0 inset-x-0 flex items-center justify-between px-3 py-2 bg-gradient-to-b from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+          {/* Overlay bar — slide counter + present button (z-10 to sit above nav click zones) */}
+          <div className="absolute top-0 inset-x-0 z-10 flex items-center justify-between px-3 py-2 bg-gradient-to-b from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
             <span className="text-[11px] font-medium text-white/70 tabular-nums">
               {currentSlide + 1} / {sorted.length}
             </span>
@@ -199,6 +200,14 @@ export function DeckViewer({ slides, title }: DeckViewerProps) {
             ))}
           </div>
         )}
+
+        {/* Notes section */}
+        {notes && (
+          <div className="mt-2 rounded-xl border border-border/50 bg-card/50 p-4">
+            <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">Notes</p>
+            <div className="prose-sm text-sm leading-relaxed text-foreground/70" dangerouslySetInnerHTML={{ __html: notes }} />
+          </div>
+        )}
       </div>
 
       {/* ── Fullscreen slideshow (portalled to body to escape dialog transforms) ── */}
@@ -209,7 +218,7 @@ export function DeckViewer({ slides, title }: DeckViewerProps) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-50 flex flex-col items-center justify-center"
+            className="fixed inset-0 z-[70] flex flex-col items-center justify-center"
             style={{ backgroundColor: '#000' }}
           >
             {/* Top bar with scrim */}
