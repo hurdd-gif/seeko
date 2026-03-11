@@ -25,8 +25,23 @@ export async function POST(request: NextRequest) {
 
   let screenshotUrl: string | undefined;
 
+  const ALLOWED_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
+  const MAX_SCREENSHOT_SIZE = 5 * 1024 * 1024; // 5 MB
+
   if (screenshot && screenshot.size > 0) {
-    const ext = screenshot.name.split('.').pop() || 'png';
+    if (!ALLOWED_IMAGE_TYPES.includes(screenshot.type)) {
+      return NextResponse.json({ error: 'Screenshot must be a PNG, JPEG, GIF, or WebP image' }, { status: 400 });
+    }
+    if (screenshot.size > MAX_SCREENSHOT_SIZE) {
+      return NextResponse.json({ error: 'Screenshot must be under 5 MB' }, { status: 400 });
+    }
+    const extMap: Record<string, string> = {
+      'image/png': 'png',
+      'image/jpeg': 'jpg',
+      'image/gif': 'gif',
+      'image/webp': 'webp',
+    };
+    const ext = extMap[screenshot.type] ?? 'png';
     const path = `bug-reports/${user.id}/${Date.now()}.${ext}`;
     const buffer = Buffer.from(await screenshot.arrayBuffer());
 
