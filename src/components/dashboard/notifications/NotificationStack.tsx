@@ -81,9 +81,27 @@ export function NotificationStack({
             exit={{ opacity: 0 }}
             transition={SNAPPY}
             className="relative cursor-pointer"
-            style={{ paddingBottom: ghostCount * 5 }}
             onClick={() => setExpanded(true)}
           >
+            {/* Ghost cards — full-size cards behind the top card, offset + scaled down */}
+            {Array.from({ length: ghostCount }).map((_, i) => {
+              const layer = i + 1;
+              return (
+                <div
+                  key={`ghost-${i}`}
+                  className="absolute inset-x-0 top-0 px-3 py-1"
+                  style={{
+                    transform: `translateY(${layer * 6}px) scale(${1 - layer * 0.04})`,
+                    zIndex: -layer,
+                    opacity: 1 - layer * 0.3,
+                    filter: `brightness(${1 - layer * 0.15})`,
+                  }}
+                >
+                  <div className="rounded-xl bg-white/[0.03] border border-white/[0.04] h-[72px]" />
+                </div>
+              );
+            })}
+
             {/* Top card */}
             <div className="relative z-10">
               <NotificationCard
@@ -96,29 +114,18 @@ export function NotificationStack({
               />
             </div>
 
-            {/* Ghost cards peeking below — same width as card, offset down */}
-            {Array.from({ length: ghostCount }).map((_, i) => (
-              <div
-                key={`ghost-${i}`}
-                className="absolute left-3 right-3 rounded-b-xl bg-white/[0.02] border-x border-b border-white/[0.03]"
-                style={{
-                  bottom: (ghostCount - 1 - i) * 5,
-                  height: 8 + i * 2,
-                  zIndex: -1 - i,
-                  opacity: 0.7 - i * 0.25,
-                }}
-              />
-            ))}
-
-            {/* Count badge */}
+            {/* Count badge — top right of the stack */}
             <motion.span
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={SNAPPY}
-              className="absolute top-4 right-6 z-20 flex h-5 min-w-5 items-center justify-center rounded-full bg-white/[0.08] px-1.5 text-[10px] font-medium text-muted-foreground/70"
+              className="absolute top-2 right-4 z-20 flex h-5 min-w-5 items-center justify-center rounded-full bg-white/[0.1] backdrop-blur-sm px-1.5 text-[10px] font-semibold text-muted-foreground"
             >
               +{notification.count - 1}
             </motion.span>
+
+            {/* Extra bottom padding so ghost cards don't overlap next item */}
+            <div style={{ height: ghostCount * 6 }} />
           </motion.div>
         )}
       </AnimatePresence>
