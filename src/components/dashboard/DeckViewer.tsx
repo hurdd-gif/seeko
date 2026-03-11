@@ -1,22 +1,25 @@
 /* ─────────────────────────────────────────────────────────
  * ANIMATION STORYBOARD — Deck Viewer
  *
- *    0ms   inline: main slide + filmstrip visible
- *  Enter   fullscreen fades in (200ms)
- *   Nav    slides shift left/right (directional, 200ms spring)
- *  Last    end card staggered entrance:
- *            0ms  checkmark icon scales up + fades in
- *          150ms  "All done" heading fades up
- *          250ms  subtitle (title + slide count) fades up
- *          400ms  action buttons fade up
- *  Exit    fullscreen fades out (200ms)
+ *   Inline
+ *     Nav    instant slide swap (no transition — content first)
+ *     Nav    slide counter digit slides vertically (150ms)
+ *     Nav    filmstrip active ring slides via layoutId (snappy spring)
+ *     Hover  inactive thumbnails scale 1.04 on hover
+ *     Notes  fade+rise entrance (150ms delay after mount)
+ *
+ *   Fullscreen
+ *     Enter  fullscreen fades in (200ms)
+ *     Nav    instant slide swap (no transition)
+ *     Nav    dot indicators: active dot widens via layoutId
+ *     Exit   fullscreen fades out (200ms)
  * ───────────────────────────────────────────────────────── */
 
 'use client';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Maximize2, ChevronLeft, ChevronRight, X, RotateCcw, CheckCircle2 } from 'lucide-react';
+import { Maximize2, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface Slide {
@@ -30,43 +33,33 @@ interface DeckViewerProps {
   notes?: string | null;
 }
 
-const SLIDE_SHIFT = 60; // px offset for directional transitions
+const SNAPPY = { type: 'spring' as const, stiffness: 500, damping: 30 };
+const SMOOTH = { type: 'spring' as const, stiffness: 300, damping: 25 };
 
 export function DeckViewer({ slides, title, notes }: DeckViewerProps) {
   const sorted = [...slides].sort((a, b) => a.sort_order - b.sort_order);
   const [fullscreen, setFullscreen] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [direction, setDirection] = useState(0); // -1 = prev, 1 = next
-  const [showEndCard, setShowEndCard] = useState(false);
   const filmstripRef = useRef<HTMLDivElement>(null);
 
-  const isLast = currentSlide >= sorted.length - 1;
-
   const goNext = useCallback(() => {
-    if (isLast) {
-      setShowEndCard(true);
-      return;
-    }
     setDirection(1);
-    setShowEndCard(false);
     setCurrentSlide(prev => Math.min(prev + 1, sorted.length - 1));
-  }, [sorted.length, isLast]);
+  }, [sorted.length]);
 
   const goPrev = useCallback(() => {
     setDirection(-1);
-    setShowEndCard(false);
     setCurrentSlide(prev => Math.max(prev - 1, 0));
   }, []);
 
   const goTo = useCallback((index: number) => {
     setDirection(index > currentSlide ? 1 : -1);
-    setShowEndCard(false);
     setCurrentSlide(index);
   }, [currentSlide]);
 
   const exitFullscreen = useCallback(() => {
     setFullscreen(false);
-    setShowEndCard(false);
   }, []);
 
   useEffect(() => {
@@ -78,13 +71,13 @@ export function DeckViewer({ slides, title, notes }: DeckViewerProps) {
     return () => { document.documentElement.removeAttribute('data-modal-open'); };
   }, [fullscreen]);
 
-  // Keyboard navigation in fullscreen
+  // Keyboard navigation — works in both inline and fullscreen
   useEffect(() => {
-    if (!fullscreen) return;
     function handleKey(e: KeyboardEvent) {
-      if (e.key === 'ArrowRight' || e.key === ' ') goNext();
+      if (e.key === 'ArrowRight') goNext();
       else if (e.key === 'ArrowLeft') goPrev();
-      else if (e.key === 'Escape') exitFullscreen();
+      else if (e.key === 'Escape' && fullscreen) exitFullscreen();
+      else if (e.key === ' ' && fullscreen) { e.preventDefault(); goNext(); }
     }
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
@@ -99,31 +92,20 @@ export function DeckViewer({ slides, title, notes }: DeckViewerProps) {
 
   if (sorted.length === 0) return null;
 
-  // Directional slide animation variants
-  const slideVariants = {
-    enter: (dir: number) => ({
-      x: dir * SLIDE_SHIFT,
-      opacity: 0,
-    }),
-    center: {
-      x: 0,
-      opacity: 1,
-    },
-    exit: (dir: number) => ({
-      x: dir * -SLIDE_SHIFT,
-      opacity: 0,
-    }),
-  };
-
   return (
     <>
       {/* ── Inline view: main slide + filmstrip ───────────── */}
       <div className="flex flex-col gap-4">
         {/* Main slide area */}
-        <div className="relative group rounded-xl overflow-hidden shadow-lg aspect-[16/9] border border-border/50" style={{ backgroundColor: '#111' }}>
-          <img src={sorted[currentSlide].url} alt={`Slide ${currentSlide + 1}`} className="w-full h-full object-contain" />
+        <div className="relative group rounded-xl overflow-hidden shadow-lg aspect-[16/9] border border-border/50" style={{ backgroundColor: 'oklch(0.13 0 0)' }}>
+          <img
+            src={sorted[currentSlide].url}
+            alt={`Slide ${currentSlide + 1}`}
+            className="w-full h-full object-contain"
+            draggable={false}
+          />
 
-          {/* Overlay bar — slide counter + present button (z-10 to sit above nav click zones) */}
+          {/* Overlay bar — slide counter + present button */}
           <div className="absolute top-0 inset-x-0 z-10 flex items-center justify-between px-3 py-2 bg-gradient-to-b from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
             <span className="text-[11px] font-medium text-white/70 tabular-nums">
               {currentSlide + 1} / {sorted.length}
@@ -138,75 +120,112 @@ export function DeckViewer({ slides, title, notes }: DeckViewerProps) {
             </button>
           </div>
 
-          {/* Left click zone — go prev */}
+          {/* Prev arrow — always visible when applicable */}
           {sorted.length > 1 && currentSlide > 0 && (
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); goPrev(); }}
-              className="absolute left-0 top-0 bottom-0 w-1/3 cursor-pointer flex items-center justify-start pl-3 opacity-0 group-hover:opacity-100 transition-opacity"
+              className="absolute left-2 top-1/2 -translate-y-1/2 z-10 flex items-center justify-center size-9 rounded-full bg-black/40 backdrop-blur-sm text-white/80 hover:bg-black/60 hover:text-white transition-all shadow-lg sm:opacity-0 sm:group-hover:opacity-100"
             >
-              <span className="flex items-center justify-center size-8 rounded-full bg-black/50 backdrop-blur-sm text-white/90 shadow-lg">
-                <ChevronLeft className="size-4" />
-              </span>
+              <ChevronLeft className="size-4" />
             </button>
           )}
 
-          {/* Right click zone — go next or open fullscreen on last */}
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              if (currentSlide < sorted.length - 1) goNext();
-              else { setFullscreen(true); }
-            }}
-            className="absolute right-0 top-0 bottom-0 w-1/3 cursor-pointer flex items-center justify-end pr-3 opacity-0 group-hover:opacity-100 transition-opacity"
-          >
-            <span className="flex items-center justify-center size-8 rounded-full bg-black/50 backdrop-blur-sm text-white/90 shadow-lg">
+          {/* Next arrow — always visible when applicable */}
+          {sorted.length > 1 && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (currentSlide < sorted.length - 1) goNext();
+                else setFullscreen(true);
+              }}
+              className="absolute right-2 top-1/2 -translate-y-1/2 z-10 flex items-center justify-center size-9 rounded-full bg-black/40 backdrop-blur-sm text-white/80 hover:bg-black/60 hover:text-white transition-all shadow-lg sm:opacity-0 sm:group-hover:opacity-100"
+            >
               {currentSlide < sorted.length - 1 ? <ChevronRight className="size-4" /> : <Maximize2 className="size-3.5" />}
-            </span>
-          </button>
+            </button>
+          )}
 
           {/* Center click — open fullscreen */}
           <button
             type="button"
             onClick={() => setFullscreen(true)}
-            className="absolute left-1/3 right-1/3 top-0 bottom-0 cursor-pointer"
+            className="absolute left-12 right-12 top-0 bottom-0 cursor-pointer"
           />
         </div>
 
-        {/* Filmstrip thumbnails */}
+        {/* Slide counter — animated number transition */}
+        {sorted.length > 1 && (
+          <div className="flex items-center justify-center">
+            <span className="text-xs font-medium tabular-nums text-muted-foreground/60 flex items-center gap-0">
+              <span className="relative inline-flex overflow-hidden h-[1.2em] w-[1.5ch] justify-center">
+                <AnimatePresence mode="popLayout" initial={false} custom={direction}>
+                  <motion.span
+                    key={currentSlide}
+                    initial={{ y: direction >= 0 ? '100%' : '-100%', opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    exit={{ y: direction >= 0 ? '-100%' : '100%', opacity: 0 }}
+                    transition={{ type: 'spring', visualDuration: 0.15, bounce: 0 }}
+                    className="absolute inset-0 flex items-center justify-center"
+                  >
+                    {currentSlide + 1}
+                  </motion.span>
+                </AnimatePresence>
+              </span>
+              {' / '}{sorted.length}
+            </span>
+          </div>
+        )}
+
+        {/* Filmstrip thumbnails — layoutId active ring + hover scale */}
         {sorted.length > 1 && (
           <div
             ref={filmstripRef}
             className="flex gap-2 overflow-x-auto py-1 px-0.5 scrollbar-thin"
           >
             {sorted.map((slide, i) => (
-              <button
+              <motion.button
                 key={i}
                 type="button"
                 onClick={() => goTo(i)}
-                className={`relative shrink-0 rounded-lg overflow-hidden transition-all border ${
-                  i === currentSlide
-                    ? 'border-seeko-accent/60 ring-1 ring-seeko-accent/30 shadow-md'
-                    : 'border-border/40 opacity-50 hover:opacity-80 hover:border-border'
-                }`}
-                style={{ width: sorted.length <= 6 ? '5.5rem' : '4.5rem', aspectRatio: '16/9' }}
+                whileHover={i !== currentSlide ? { scale: 1.04, opacity: 0.85 } : {}}
+                transition={SNAPPY}
+                className="relative shrink-0 rounded-lg overflow-hidden border border-border/40"
+                style={{ width: sorted.length <= 6 ? '7rem' : '5.5rem', aspectRatio: '16/9' }}
               >
-                <img src={slide.url} alt={`Slide ${i + 1}`} className="w-full h-full object-cover" />
-                <span className="absolute bottom-0.5 left-1 text-[9px] font-mono font-medium text-white/90 bg-black/60 backdrop-blur-sm px-1 rounded">
+                {i === currentSlide && (
+                  <motion.div
+                    layoutId="filmstrip-ring"
+                    className="absolute inset-0 rounded-lg border border-seeko-accent/60 ring-1 ring-seeko-accent/30 shadow-md z-10 pointer-events-none"
+                    transition={SNAPPY}
+                  />
+                )}
+                <motion.div
+                  animate={{ opacity: i === currentSlide ? 1 : 0.5 }}
+                  transition={{ duration: 0.2 }}
+                  className="w-full h-full"
+                >
+                  <img src={slide.url} alt={`Slide ${i + 1}`} className="w-full h-full object-cover" />
+                </motion.div>
+                <span className="absolute bottom-0.5 left-1 text-[9px] font-mono font-medium text-white/90 bg-black/60 backdrop-blur-sm px-1 rounded z-20">
                   {i + 1}
                 </span>
-              </button>
+              </motion.button>
             ))}
           </div>
         )}
 
-        {/* Notes section */}
+        {/* Notes section — fade+rise entrance */}
         {notes && (
-          <div className="mt-2 rounded-xl border border-border/50 bg-card/50 p-4">
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ ...SMOOTH, delay: 0.15 }}
+            className="mt-2 rounded-xl border border-border/50 bg-card/50 p-4"
+          >
             <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">Notes</p>
             <div className="prose-sm text-sm leading-relaxed text-foreground/70" dangerouslySetInnerHTML={{ __html: notes }} />
-          </div>
+          </motion.div>
         )}
       </div>
 
@@ -236,93 +255,16 @@ export function DeckViewer({ slides, title, notes }: DeckViewerProps) {
               className="flex-1 flex items-center justify-center w-full cursor-pointer"
               onClick={goNext}
             >
-              <AnimatePresence mode="wait" custom={direction}>
-                {showEndCard ? (
-                  <motion.div
-                    key="end-card"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    transition={{ duration: 0.15 }}
-                    className="flex flex-col items-center gap-5"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    {/* #1 Visual anchor — checkmark icon with glow */}
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.5 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ type: 'spring', visualDuration: 0.4, bounce: 0.3, delay: 0 }}
-                    >
-                      <div className="relative flex items-center justify-center">
-                        <div className="absolute inset-0 rounded-full blur-xl" style={{ backgroundColor: 'rgba(110, 231, 183, 0.15)' }} />
-                        <CheckCircle2 className="size-12 text-[#6ee7b7] relative" strokeWidth={1.5} />
-                      </div>
-                    </motion.div>
-
-                    {/* #1 + #2 Heading with completion signal */}
-                    <motion.p
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ type: 'spring', visualDuration: 0.3, bounce: 0, delay: 0.15 }}
-                      className="text-xl font-semibold text-white"
-                    >
-                      All done
-                    </motion.p>
-
-                    {/* #5 Title + slide count for context */}
-                    <motion.p
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ type: 'spring', visualDuration: 0.3, bounce: 0, delay: 0.25 }}
-                      className="text-sm text-white/40 -mt-2"
-                    >
-                      {title} &middot; {sorted.length} slide{sorted.length !== 1 ? 's' : ''}
-                    </motion.p>
-
-                    {/* #3 Buttons with primary/secondary distinction + #4 staggered */}
-                    <motion.div
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ type: 'spring', visualDuration: 0.3, bounce: 0, delay: 0.4 }}
-                      className="flex items-center gap-3 mt-1"
-                    >
-                      <button
-                        type="button"
-                        onClick={() => { setDirection(-1); setShowEndCard(false); setCurrentSlide(0); }}
-                        className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-white/[0.07] hover:bg-white/[0.12] text-sm text-white/60 hover:text-white/80 transition-colors"
-                      >
-                        <RotateCcw className="size-3.5" />
-                        Restart
-                      </button>
-                      <button
-                        type="button"
-                        onClick={exitFullscreen}
-                        className="flex items-center gap-1.5 px-5 py-2 rounded-full bg-white/90 hover:bg-white text-sm font-medium text-black transition-colors"
-                      >
-                        Done
-                      </button>
-                    </motion.div>
-                  </motion.div>
-                ) : (
-                  <motion.img
-                    key={currentSlide}
-                    custom={direction}
-                    variants={slideVariants}
-                    initial="enter"
-                    animate="center"
-                    exit="exit"
-                    transition={{ type: 'spring', visualDuration: 0.2, bounce: 0 }}
-                    src={sorted[currentSlide].url}
-                    alt={`Slide ${currentSlide + 1}`}
-                    className="max-h-[85vh] max-w-[95vw] object-contain select-none"
-                    draggable={false}
-                  />
-                )}
-              </AnimatePresence>
+              <img
+                src={sorted[currentSlide].url}
+                alt={`Slide ${currentSlide + 1}`}
+                className="max-h-[85vh] max-w-[95vw] object-contain select-none"
+                draggable={false}
+              />
             </div>
 
             {/* Navigation arrows */}
-            {!showEndCard && currentSlide > 0 && (
+            {currentSlide > 0 && (
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); goPrev(); }}
@@ -331,7 +273,7 @@ export function DeckViewer({ slides, title, notes }: DeckViewerProps) {
                 <ChevronLeft className="size-5" />
               </button>
             )}
-            {!showEndCard && currentSlide < sorted.length - 1 && (
+            {currentSlide < sorted.length - 1 && (
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); goNext(); }}
@@ -341,17 +283,24 @@ export function DeckViewer({ slides, title, notes }: DeckViewerProps) {
               </button>
             )}
 
-            {/* Bottom dot indicators — larger touch targets */}
-            {!showEndCard && sorted.length <= 20 && (
-              <div className="absolute bottom-4 flex items-center gap-2">
+            {/* Bottom dot indicators — active dot widens with layoutId */}
+            {sorted.length <= 20 && (
+              <div className="absolute bottom-4 flex items-center gap-1.5">
                 {sorted.map((_, i) => (
                   <button
                     key={i}
                     type="button"
                     onClick={(e) => { e.stopPropagation(); goTo(i); }}
-                    className="p-1"
+                    className="relative p-1"
                   >
-                    <span className={`block size-2 rounded-full transition-all ${i === currentSlide ? 'bg-white scale-125' : 'bg-white/30 hover:bg-white/50'}`} />
+                    <span className={`block h-2 rounded-full transition-colors ${i === currentSlide ? 'w-5 bg-white' : 'w-2 bg-white/30 hover:bg-white/50'}`} />
+                    {i === currentSlide && (
+                      <motion.span
+                        layoutId="fs-dot-active"
+                        className="absolute inset-1 h-2 w-5 rounded-full bg-white"
+                        transition={SNAPPY}
+                      />
+                    )}
                   </button>
                 ))}
               </div>

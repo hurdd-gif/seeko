@@ -5,6 +5,21 @@ import { motion, AnimatePresence } from "motion/react"
 import { cn } from "@/lib/utils"
 import { X, Maximize2, Minimize2 } from "lucide-react"
 
+/* ─────────────────────────────────────────────────────────
+ * ANIMATION STORYBOARD — Dialog
+ *
+ *    0ms   backdrop fades in (opacity 0 → 1, tween 200ms ease-out)
+ *   50ms   panel springs up (y 24 → 0, scale 0.97 → 1)
+ *          spring: visualDuration 0.35s, bounce 0.12
+ *  EXIT    panel fades + drops (opacity → 0, y → 12, scale → 0.98, 150ms)
+ *          backdrop fades out (opacity → 0, 120ms)
+ * ───────────────────────────────────────────────────────── */
+
+const DIALOG_SPRING = { type: "spring" as const, visualDuration: 0.35, bounce: 0.12 }
+const BACKDROP_IN = { duration: 0.2, ease: [0.16, 1, 0.3, 1] as const }
+const BACKDROP_OUT = { duration: 0.12 }
+const PANEL_EXIT = { duration: 0.15, ease: [0.4, 0, 1, 1] as const }
+
 const DEFAULT_MAX_W = 900
 const DEFAULT_MAX_H_PCT = 88
 const MIN_W = 320
@@ -168,22 +183,25 @@ function Dialog({ open, onOpenChange, children, resizable = false, contentClassN
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
+            transition={BACKDROP_IN}
             onClick={() => onOpenChange(false)}
           />
           <motion.div
             ref={panelRef}
             className={cn(
-              "relative z-50 flex flex-col rounded-t-2xl sm:rounded-xl border border-white/[0.08] bg-popover/80 backdrop-blur-xl backdrop-saturate-150 shadow-xl mx-0 sm:mx-4 pb-[env(safe-area-inset-bottom)] sm:pb-0",
+              "relative z-50 flex flex-col rounded-t-2xl sm:rounded-xl border border-white/[0.08] bg-popover backdrop-blur-xl backdrop-saturate-150 shadow-xl mx-0 sm:mx-4 pb-[env(safe-area-inset-bottom)] sm:pb-0",
               !resizable && "w-full max-w-[900px] max-h-[90vh] sm:max-h-[88vh]",
               !resizable && footer != null && "h-[90vh] sm:h-[88vh]",
               contentClassName
             )}
             style={panelStyle}
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 40 }}
-            transition={{ type: "spring", stiffness: 400, damping: 30 }}
+            initial={{ opacity: 0, y: 24, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 12, scale: 0.98 }}
+            transition={{
+              ...DIALOG_SPRING,
+              opacity: { duration: 0.2 },
+            }}
             drag="y"
             dragConstraints={{ top: 0, bottom: 0 }}
             dragElastic={{ top: 0, bottom: 0.6 }}

@@ -1,13 +1,48 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { FileText, Presentation, Clock, XCircle, AlertTriangle, Shield } from 'lucide-react';
 import { VerificationForm } from '@/components/external-signing/VerificationForm';
 import { DocContent } from '@/components/dashboard/DocContent';
 import { DeckViewer } from '@/components/dashboard/DeckViewer';
 
 const SPRING = { type: 'spring' as const, stiffness: 400, damping: 28 };
+const SMOOTH = { type: 'spring' as const, stiffness: 300, damping: 25 };
+
+/* ─────────────────────────────────────────────────────────
+ * ANIMATION STORYBOARD — Shared Viewer
+ *
+ *  Load     spinner visible while fetching
+ *  Reveal   staggered page entrance:
+ *             0ms  header slides down from top + fades in
+ *           100ms  content area fades up
+ *           250ms  footer fades in
+ *  Verify   card fades+rises in (existing SPRING)
+ * ───────────────────────────────────────────────────────── */
+
+const viewerStagger = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.12, delayChildren: 0.05 },
+  },
+};
+
+const headerReveal = {
+  hidden: { opacity: 0, y: -12 },
+  visible: { opacity: 1, y: 0, transition: SMOOTH },
+};
+
+const contentReveal = {
+  hidden: { opacity: 0, y: 16 },
+  visible: { opacity: 1, y: 0, transition: { ...SMOOTH, delay: 0.05 } },
+};
+
+const footerReveal = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { duration: 0.4, delay: 0.2 } },
+};
 
 interface SharedDocClientProps {
   token: string;
@@ -134,37 +169,60 @@ export function SharedDocClient({ token, initialData }: SharedDocClientProps) {
     );
   }
 
-  // Viewing phase
+  // Viewing phase — staggered page entrance
   return (
-    <div
+    <motion.div
+      variants={viewerStagger}
+      initial="hidden"
+      animate="visible"
       className="min-h-dvh bg-background select-none"
       onContextMenu={(e) => e.preventDefault()}
     >
-      {/* Header */}
-      <div className="sticky top-0 z-10 border-b border-border bg-card/80 backdrop-blur-lg">
-        <div className="mx-auto flex max-w-4xl items-center justify-between px-5 py-3">
-          <div className="flex items-center gap-3">
-            <img src="/seeko-s.png" alt="SEEKO" className="size-5" />
-            <span className="text-sm font-medium text-foreground">{docData.title}</span>
+      {/* Header — brand + title + security context */}
+      <motion.div variants={headerReveal} className="sticky top-0 z-10 border-b border-border/60 bg-card/90 backdrop-blur-lg">
+        <div className="mx-auto flex max-w-5xl items-center justify-between px-5 py-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <img src="/seeko-s.png" alt="SEEKO" className="size-5 shrink-0" />
+            <div className="min-w-0">
+              <span className="text-sm font-medium text-foreground truncate block">{docData.title}</span>
+            </div>
           </div>
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground/60">
-            <Shield className="size-3" />
-            <span>Confidential</span>
+          <div className="flex items-center gap-4 shrink-0">
+            {initialData.expiresAt && (
+              <span className="hidden sm:flex items-center gap-1.5 text-[11px] text-muted-foreground/50">
+                <Clock className="size-3" />
+                {formatExpiry(initialData.expiresAt)}
+              </span>
+            )}
+            <div className="flex items-center gap-1.5 rounded-full bg-muted/50 px-2.5 py-1 text-[11px] text-muted-foreground/60">
+              <Shield className="size-3" />
+              <span>Confidential</span>
+            </div>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Content */}
-      <div className="mx-auto max-w-4xl px-5 py-8">
+      <motion.div variants={contentReveal} className="mx-auto max-w-5xl px-5 py-8">
         {docData.type === 'deck' && docData.slides ? (
-          <DeckViewer slides={docData.slides} title={docData.title} />
+          <DeckViewer slides={docData.slides} title={docData.title} notes={docData.content} />
         ) : docData.content ? (
           <DocContent html={docData.content} />
         ) : (
           <p className="text-sm text-muted-foreground">No content available.</p>
         )}
-      </div>
-    </div>
+      </motion.div>
+
+      {/* Footer — share context */}
+      <motion.div variants={footerReveal} className="border-t border-border/40 py-4">
+        <div className="mx-auto flex max-w-5xl items-center justify-center gap-3 px-5">
+          <img src="/seeko-s.png" alt="SEEKO" className="size-3.5 opacity-30" />
+          <span className="text-[11px] text-muted-foreground/40">
+            Shared by SEEKO Studio{initialData.expiresAt ? ` · ${formatExpiry(initialData.expiresAt)}` : ''} · View-only access
+          </span>
+        </div>
+      </motion.div>
+    </motion.div>
   );
 }
 

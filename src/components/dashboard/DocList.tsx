@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { FileText, Lock, Pencil, Trash2, Plus, Search, Clock, ChevronDown, Circle, Presentation, Share2, XCircle, RotateCcw, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -133,7 +133,26 @@ interface DocListProps {
 export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, currentUserId = '', team = [] }: DocListProps) {
   const [docs, setDocs] = useState<Doc[]>(initialDocs);
   const { trigger } = useHaptics();
-  const [viewMode, setViewMode] = useState<'docs' | 'decks' | 'shared'>('docs');
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const VALID_TABS = ['docs', 'decks', 'shared'] as const;
+  type ViewMode = typeof VALID_TABS[number];
+  const tabParam = searchParams.get('tab');
+  const viewMode: ViewMode = VALID_TABS.includes(tabParam as ViewMode) ? (tabParam as ViewMode) : 'docs';
+
+  const setViewMode = (mode: ViewMode) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (mode === 'docs') {
+      params.delete('tab');
+    } else {
+      params.set('tab', mode);
+    }
+    const qs = params.toString();
+    router.replace(`${pathname}${qs ? `?${qs}` : ''}`, { scroll: false });
+  };
+
   const [selected, setSelected] = useState<Doc | null>(null);
   const [editingDoc, setEditingDoc] = useState<Doc | 'new' | null>(null);
   const [editingDeck, setEditingDeck] = useState<Doc | 'new' | null>(null);
@@ -144,7 +163,6 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, cu
   const [sharedLinks, setSharedLinks] = useState<any[]>([]);
   const [sharedLoading, setSharedLoading] = useState(false);
   const [sharedExpanded, setSharedExpanded] = useState(false);
-  const searchParams = useSearchParams();
 
   const isLocked = (d: Doc) => {
     if (isAdmin) return false;
