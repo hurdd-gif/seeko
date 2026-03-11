@@ -42,7 +42,6 @@ export function NotificationStack({
   return (
     <motion.div
       layout
-      className="relative"
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, x: 80, scale: 0.95 }}
@@ -57,16 +56,14 @@ export function NotificationStack({
             exit={{ opacity: 0 }}
             transition={SNAPPY}
           >
-            {/* Collapse button */}
             <button
               onClick={() => setExpanded(false)}
-              className="w-full text-left px-5 py-1"
+              className="w-full text-left px-6 py-1"
             >
-              <span className="text-[10px] text-muted-foreground/50 hover:text-muted-foreground transition-colors">
+              <span className="text-[11px] text-muted-foreground/50 hover:text-muted-foreground transition-colors">
                 Collapse {notification.count} items
               </span>
             </button>
-            {/* Single expanded card (no ghost) */}
             <NotificationCard
               notification={notification}
               group={group}
@@ -84,23 +81,9 @@ export function NotificationStack({
             exit={{ opacity: 0 }}
             transition={SNAPPY}
             className="relative cursor-pointer"
+            style={{ paddingBottom: ghostCount * 5 }}
             onClick={() => setExpanded(true)}
           >
-            {/* Ghost cards behind — rendered first (below) */}
-            {Array.from({ length: ghostCount }).map((_, i) => (
-              <motion.div
-                key={`ghost-${i}`}
-                className="absolute inset-x-3 top-0 rounded-lg bg-white/[0.03]"
-                style={{
-                  transform: `translateY(${(i + 1) * 5}px) scale(${1 - (i + 1) * 0.03})`,
-                  opacity: 0.6 - i * 0.2,
-                  height: 60,
-                  zIndex: -1 - i,
-                  boxShadow: '0 1px 2px rgba(0,0,0,0.2)',
-                }}
-              />
-            ))}
-
             {/* Top card */}
             <div className="relative z-10">
               <NotificationCard
@@ -111,16 +94,31 @@ export function NotificationStack({
                 onTap={() => setExpanded(true)}
                 onDismiss={onDismiss}
               />
-              {/* Count badge */}
-              <motion.span
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={SNAPPY}
-                className="absolute top-2 right-3 flex h-5 min-w-5 items-center justify-center rounded-full bg-white/[0.06] px-1.5 text-[10px] font-medium text-muted-foreground/70"
-              >
-                +{notification.count - 1}
-              </motion.span>
             </div>
+
+            {/* Ghost cards peeking below — same width as card, offset down */}
+            {Array.from({ length: ghostCount }).map((_, i) => (
+              <div
+                key={`ghost-${i}`}
+                className="absolute left-3 right-3 rounded-b-xl bg-white/[0.02] border-x border-b border-white/[0.03]"
+                style={{
+                  bottom: (ghostCount - 1 - i) * 5,
+                  height: 8 + i * 2,
+                  zIndex: -1 - i,
+                  opacity: 0.7 - i * 0.25,
+                }}
+              />
+            ))}
+
+            {/* Count badge */}
+            <motion.span
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={SNAPPY}
+              className="absolute top-4 right-6 z-20 flex h-5 min-w-5 items-center justify-center rounded-full bg-white/[0.08] px-1.5 text-[10px] font-medium text-muted-foreground/70"
+            >
+              +{notification.count - 1}
+            </motion.span>
           </motion.div>
         )}
       </AnimatePresence>

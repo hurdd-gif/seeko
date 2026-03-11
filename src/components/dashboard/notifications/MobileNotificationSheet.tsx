@@ -92,7 +92,7 @@ export const MobileNotificationSheet = forwardRef<HTMLDivElement, MobileNotifica
                   <AnimatePresence mode="popLayout">
                     {grouped.map(group => (
                       <div key={group.label}>
-                        <div className="px-5 py-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/50">
+                        <div className="px-5 pt-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/50">
                           {group.label}
                         </div>
                         {group.items.map(notif => {
