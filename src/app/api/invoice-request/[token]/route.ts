@@ -59,13 +59,14 @@ export async function GET(
       maskedEmail,
       personalNote: invite.personal_note,
       prefilledItems: invite.prefilled_items,
+      expiresAt: invite.expires_at,
     });
   }
 
-  // Pending — show masked email and note only
+  // Pending — show masked email only (note hidden until verified)
   return NextResponse.json({
     status: invite.status,
     maskedEmail,
-    personalNote: invite.personal_note,
+    expiresAt: invite.expires_at,
   });
 }

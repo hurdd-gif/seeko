@@ -4,6 +4,21 @@ import bcrypt from 'bcryptjs';
 import { getTemplateById } from '@/lib/external-agreement-templates';
 import type { ExternalSigningInvite } from '@/lib/types';
 
+const MAX_ATTEMPTS = 5;
+
+interface VerifyRow {
+  id: string;
+  status: string;
+  expires_at: string;
+  verification_code: string;
+  verification_attempts: number;
+  template_type: string;
+  template_id: string | null;
+  custom_sections: any;
+  custom_title: string | null;
+  personal_note: string | null;
+}
+
 export async function POST(request: NextRequest) {
   const { token, code } = await request.json();
 
@@ -13,6 +28,89 @@ export async function POST(request: NextRequest) {
 
   const service = getServiceClient();
 
+  // Atomic increment: only increment if under the limit, return the updated row.
+  // This prevents race conditions where concurrent requests all read attempts=0.
+  // Note: purpose is NOT filtered here since external-signing invites use purpose='signing' or NULL.
+  const { data: updated, error: rpcError } = await (service as any).rpc('increment_verification_attempt', {
+    p_token: token,
+    p_purpose: 'signing',
+    p_max_attempts: MAX_ATTEMPTS,
+  }) as { data: VerifyRow[] | null; error: { code?: string; message?: string } | null };
+
+  // Fallback: if the RPC doesn't exist yet, use the non-atomic path
+  if (rpcError?.code === '42883') {
+    return verifyFallback(service, token, code);
+  }
+
+  if (rpcError) {
+    console.error('[external-signing/verify] rpc error:', rpcError);
+    return NextResponse.json({ error: 'Verification failed' }, { status: 500 });
+  }
+
+  if (!updated || updated.length === 0) {
+    // RPC returned nothing — either invite not found, wrong status, or attempts exhausted
+    const { data: invite } = await service
+      .from('external_signing_invites')
+      .select('id, status, verification_attempts')
+      .eq('token', token)
+      .single();
+
+    if (!invite) return NextResponse.json({ error: 'Invite not found' }, { status: 404 });
+    if (invite.status === 'verified' || invite.status === 'signed') {
+      return NextResponse.json({ error: 'Invite has already been verified' }, { status: 409 });
+    }
+    if (invite.verification_attempts >= MAX_ATTEMPTS) {
+      return NextResponse.json({ error: 'Too many attempts. Request a new code.' }, { status: 429 });
+    }
+    return NextResponse.json({ error: 'Invite is no longer available' }, { status: 400 });
+  }
+
+  const invite = updated[0];
+
+  // Check expiry
+  if (new Date(invite.expires_at) < new Date()) {
+    await (service.from('external_signing_invites') as any).update({ status: 'expired' }).eq('id', invite.id);
+    return NextResponse.json({ error: 'Invite has expired' }, { status: 400 });
+  }
+
+  // Verify code
+  const valid = await bcrypt.compare(code, invite.verification_code);
+  if (!valid) {
+    const remaining = MAX_ATTEMPTS - invite.verification_attempts;
+    return NextResponse.json(
+      { error: `Invalid code. ${Math.max(remaining, 0)} attempt${remaining !== 1 ? 's' : ''} remaining.` },
+      { status: 400 }
+    );
+  }
+
+  // Mark as verified
+  await (service
+    .from('external_signing_invites') as any)
+    .update({ status: 'verified', verified_at: new Date().toISOString() })
+    .eq('id', invite.id);
+
+  // Return sections
+  let sections;
+  let title;
+  if (invite.template_type === 'preset') {
+    const template = getTemplateById(invite.template_id!);
+    sections = template!.sections;
+    title = template!.name;
+  } else {
+    sections = invite.custom_sections;
+    title = invite.custom_title || 'Agreement';
+  }
+
+  return NextResponse.json({
+    status: 'verified',
+    sections,
+    title,
+    personalNote: invite.personal_note,
+  });
+}
+
+// Non-atomic fallback (used if the RPC hasn't been deployed yet)
+async function verifyFallback(service: ReturnType<typeof getServiceClient>, token: string, code: string) {
   const { data: invite } = await service
     .from('external_signing_invites')
     .select('id, token, status, expires_at, verification_code, verification_attempts, template_type, template_id, custom_sections, custom_title, personal_note')
@@ -34,11 +132,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invite has expired' }, { status: 400 });
   }
 
-  if (invite.verification_attempts >= 3) {
+  if (invite.verification_attempts >= MAX_ATTEMPTS) {
     return NextResponse.json({ error: 'Too many attempts. Request a new code.' }, { status: 429 });
   }
 
-  // Increment attempts
+  // Increment attempts (non-atomic fallback)
   await (service
     .from('external_signing_invites') as any)
     .update({ verification_attempts: invite.verification_attempts + 1 })
@@ -47,7 +145,7 @@ export async function POST(request: NextRequest) {
   // Verify code
   const valid = await bcrypt.compare(code, invite.verification_code);
   if (!valid) {
-    const remaining = 2 - invite.verification_attempts;
+    const remaining = MAX_ATTEMPTS - 1 - invite.verification_attempts;
     return NextResponse.json(
       { error: `Invalid code. ${Math.max(remaining, 0)} attempt${remaining !== 1 ? 's' : ''} remaining.` },
       { status: 400 }

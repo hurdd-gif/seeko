@@ -1,4 +1,10 @@
+import type { Metadata } from 'next';
 import { InvoicePageClient } from './client';
+
+// Prevent token leaking via Referer header
+export const metadata: Metadata = {
+  referrer: 'no-referrer',
+};
 
 interface Props {
   params: Promise<{ token: string }>;

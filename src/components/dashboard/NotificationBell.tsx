@@ -23,7 +23,7 @@ import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { createBrowserClient } from '@supabase/ssr';
 import { motion, AnimatePresence, useMotionValue, useTransform, PanInfo } from 'motion/react';
-import { Bell, CheckSquare, AtSign, MessageSquare, CheckCheck, CheckCircle2, Package, ArrowRightLeft, DollarSign, CircleCheck, CircleX, Clock, AlertCircle, X } from 'lucide-react';
+import { Bell, CheckSquare, AtSign, MessageSquare, CheckCheck, CheckCircle2, Package, ArrowRightLeft, Receipt, CircleCheck, CircleX, Clock, AlertCircle, X } from 'lucide-react';
 import { Notification, NotificationKind } from '@/lib/types';
 import { useIsDesktop } from '@/lib/hooks/useIsDesktop';
 
@@ -40,7 +40,7 @@ const KIND_CONFIG: Record<NotificationKind, { icon: typeof Bell; className: stri
   task_completed:      { icon: CheckCircle2, className: 'text-emerald-500',   bg: 'bg-emerald-500/10' },
   deliverable_uploaded:{ icon: Package,      className: 'text-violet-400',    bg: 'bg-violet-500/10' },
   task_handoff:        { icon: ArrowRightLeft, className: 'text-seeko-accent', bg: 'bg-emerald-500/10' },
-  payment_request:     { icon: DollarSign,    className: 'text-amber-400',    bg: 'bg-amber-500/10' },
+  payment_request:     { icon: Receipt,        className: 'text-cyan-400',     bg: 'bg-cyan-500/10' },
   payment_approved:    { icon: CircleCheck,   className: 'text-emerald-500',  bg: 'bg-emerald-500/10' },
   payment_denied:      { icon: CircleX,       className: 'text-red-400',      bg: 'bg-red-500/10' },
   deadline_extension_requested: { icon: Clock,       className: 'text-amber-400',    bg: 'bg-amber-500/10' },

@@ -85,6 +85,9 @@ export async function POST(request: NextRequest) {
     if (!item.label || typeof item.label !== 'string' || item.label.trim().length === 0) {
       return NextResponse.json({ error: 'Each item must have a non-empty label' }, { status: 400 });
     }
+    if (item.label.length > 200) {
+      return NextResponse.json({ error: 'Item label must be under 200 characters' }, { status: 400 });
+    }
     if (typeof item.amount !== 'number' || !Number.isFinite(item.amount) || item.amount <= 0) {
       return NextResponse.json({ error: 'Each item must have a positive amount' }, { status: 400 });
     }
@@ -99,7 +102,7 @@ export async function POST(request: NextRequest) {
   }
 
   // PayPal email validation
-  if (!paypalEmail || typeof paypalEmail !== 'string' || !EMAIL_RE.test(paypalEmail)) {
+  if (!paypalEmail || typeof paypalEmail !== 'string' || paypalEmail.length > 254 || !EMAIL_RE.test(paypalEmail)) {
     return NextResponse.json({ error: 'Valid PayPal email required' }, { status: 400 });
   }
 

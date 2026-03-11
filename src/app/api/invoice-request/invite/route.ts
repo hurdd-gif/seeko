@@ -38,8 +38,11 @@ export async function POST(request: NextRequest) {
       if (!item.label || typeof item.label !== 'string' || item.label.trim().length === 0) {
         return NextResponse.json({ error: 'Each item must have a non-empty label' }, { status: 400 });
       }
-      if (typeof item.amount !== 'number' || item.amount <= 0) {
-        return NextResponse.json({ error: 'Each item must have a positive amount' }, { status: 400 });
+      if (item.label.length > 200) {
+        return NextResponse.json({ error: 'Item label must be under 200 characters' }, { status: 400 });
+      }
+      if (typeof item.amount !== 'number' || !Number.isFinite(item.amount) || item.amount <= 0 || item.amount > 50_000) {
+        return NextResponse.json({ error: 'Each item must have a positive amount (max $50,000)' }, { status: 400 });
       }
     }
   }
@@ -77,6 +80,7 @@ export async function POST(request: NextRequest) {
     .insert({
       token,
       recipient_email: recipientEmail,
+      template_type: 'invoice',
       purpose: 'invoice',
       prefilled_items: items || null,
       personal_note: personalNote || null,
