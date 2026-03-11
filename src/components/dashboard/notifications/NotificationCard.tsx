@@ -59,10 +59,9 @@ export function NotificationCard({
         <button
           onClick={() => onTap(notification)}
           className={[
-            'relative flex w-full items-start gap-3 rounded-xl p-3 text-left transition-colors',
-            'bg-muted hover:brightness-110 active:brightness-125',
-            'border border-border/50',
-            notification.read ? 'opacity-50' : '',
+            'relative flex w-full items-start gap-3 rounded-xl p-3.5 text-left transition-colors',
+            'border border-border/60 hover:border-border hover:bg-white/[0.02]',
+            notification.read ? 'opacity-45' : '',
           ].join(' ')}
         >
           {/* Icon */}
