@@ -33,7 +33,7 @@ export const DesktopNotificationPanel = forwardRef<HTMLDivElement, DesktopNotifi
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: -8 }}
             transition={SMOOTH}
-            className="absolute right-0 top-full mt-2 w-[380px] rounded-xl border border-white/[0.08] bg-popover/80 backdrop-blur-xl backdrop-saturate-150 shadow-xl z-[9999] overflow-hidden"
+            className="absolute right-0 top-full mt-2 w-[360px] rounded-xl border border-white/[0.06] bg-popover backdrop-blur-2xl backdrop-saturate-150 shadow-2xl z-[9999] overflow-hidden"
             style={{ transformOrigin: 'top right' }}
           >
             {/* Header */}

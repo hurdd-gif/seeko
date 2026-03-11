@@ -29,7 +29,7 @@ import { BellToggle } from './notifications/BellToggle';
 import { DesktopNotificationPanel } from './notifications/DesktopNotificationPanel';
 import { MobileNotificationSheet } from './notifications/MobileNotificationSheet';
 import { groupNotifications } from './notifications/utils';
-import { DisplayNotification } from './notifications/types';
+import type { DisplayNotification } from './notifications/types';
 
 interface NotificationBellProps {
   userId: string;
@@ -163,39 +163,33 @@ export function NotificationBell({ userId, initialCount, initialNotifications }:
         onClick={() => setOpen(v => !v)}
       />
 
-      {mounted && typeof document !== 'undefined' && createPortal(
-        isDesktop ? (
-          <div
-            className="fixed z-[9999]"
-            style={{
-              top: bellRef.current ? bellRef.current.getBoundingClientRect().bottom + 4 : 0,
-              right: bellRef.current ? window.innerWidth - bellRef.current.getBoundingClientRect().right : 16,
-            }}
-          >
-            <DesktopNotificationPanel
-              ref={panelRef}
-              open={open}
-              grouped={grouped}
-              isEmpty={notifications.length === 0}
-              unreadCount={unreadCount}
-              onMarkAllRead={markAllRead}
-              onTap={handleNotificationTap}
-              onDismiss={dismissNotification}
-            />
-          </div>
-        ) : (
-          <MobileNotificationSheet
-            ref={panelRef}
-            open={open}
-            grouped={grouped}
-            isEmpty={notifications.length === 0}
-            unreadCount={unreadCount}
-            onClose={() => setOpen(false)}
-            onMarkAllRead={markAllRead}
-            onTap={handleNotificationTap}
-            onDismiss={dismissNotification}
-          />
-        ),
+      {/* Desktop: render inline (absolute positioned from relative parent) */}
+      {isDesktop && (
+        <DesktopNotificationPanel
+          ref={panelRef}
+          open={open}
+          grouped={grouped}
+          isEmpty={notifications.length === 0}
+          unreadCount={unreadCount}
+          onMarkAllRead={markAllRead}
+          onTap={handleNotificationTap}
+          onDismiss={dismissNotification}
+        />
+      )}
+
+      {/* Mobile: portal the sheet to body */}
+      {mounted && typeof document !== 'undefined' && !isDesktop && createPortal(
+        <MobileNotificationSheet
+          ref={panelRef}
+          open={open}
+          grouped={grouped}
+          isEmpty={notifications.length === 0}
+          unreadCount={unreadCount}
+          onClose={() => setOpen(false)}
+          onMarkAllRead={markAllRead}
+          onTap={handleNotificationTap}
+          onDismiss={dismissNotification}
+        />,
         document.body
       )}
     </div>

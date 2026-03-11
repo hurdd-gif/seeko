@@ -90,12 +90,13 @@ export function NotificationStack({
             {Array.from({ length: ghostCount }).map((_, i) => (
               <motion.div
                 key={`ghost-${i}`}
-                className="absolute inset-x-2 top-0 rounded-lg border border-white/[0.04] bg-card/50"
+                className="absolute inset-x-3 top-0 rounded-lg bg-white/[0.03]"
                 style={{
-                  transform: `translateY(${(i + 1) * 4}px) scale(${1 - (i + 1) * 0.03})`,
-                  opacity: 0.4 - i * 0.15,
-                  height: 64,
+                  transform: `translateY(${(i + 1) * 5}px) scale(${1 - (i + 1) * 0.03})`,
+                  opacity: 0.6 - i * 0.2,
+                  height: 60,
                   zIndex: -1 - i,
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.2)',
                 }}
               />
             ))}
@@ -115,7 +116,7 @@ export function NotificationStack({
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={SNAPPY}
-                className="absolute -top-1.5 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-muted border border-white/[0.08] px-1.5 text-[10px] font-semibold text-muted-foreground"
+                className="absolute top-2 right-3 flex h-5 min-w-5 items-center justify-center rounded-full bg-white/[0.06] px-1.5 text-[10px] font-medium text-muted-foreground/70"
               >
                 +{notification.count - 1}
               </motion.span>

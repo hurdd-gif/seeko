@@ -61,29 +61,29 @@ export function NotificationCard({
           className={[
             'flex w-full items-start gap-3 px-4 py-3 text-left transition-colors',
             'hover:bg-white/[0.04] active:bg-white/[0.06]',
-            'rounded-lg mx-1',
-            notification.read ? 'opacity-60' : '',
+            'rounded-lg',
+            notification.read ? 'opacity-50' : '',
           ].join(' ')}
         >
-          {/* Unread accent bar */}
+          {/* Unread accent dot */}
           {!notification.read && (
-            <div className="absolute left-0 top-3 bottom-3 w-0.5 rounded-full bg-seeko-accent" />
+            <div className="absolute left-1.5 top-1/2 -translate-y-1/2 size-1.5 rounded-full bg-seeko-accent" />
           )}
 
           {/* Icon */}
-          <div className={`mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full ${cfg.bg} ${cfg.className}`}>
-            <Icon className="size-4" />
+          <div className={`mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full ${cfg.bg} ${cfg.className}`}>
+            <Icon className="size-3.5" />
           </div>
 
           {/* Content */}
           <div className="flex-1 min-w-0">
-            <p className={`text-sm leading-snug ${!notification.read ? 'font-medium text-foreground' : 'text-muted-foreground'}`}>
+            <p className={`text-[13px] leading-snug ${!notification.read ? 'font-medium text-foreground' : 'text-muted-foreground'}`}>
               {notification.title}
             </p>
             {notification.body && (
-              <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{notification.body}</p>
+              <p className="text-xs text-muted-foreground/70 mt-0.5 line-clamp-2">{notification.body}</p>
             )}
-            <p className="text-[11px] text-muted-foreground/50 mt-1">{formatTime(notification.created_at, group)}</p>
+            <p className="text-[10px] text-muted-foreground/40 mt-1">{formatTime(notification.created_at, group)}</p>
           </div>
         </button>
       </motion.div>
@@ -97,7 +97,11 @@ export function NotificationCard({
           e.stopPropagation();
           onDismiss(notification.ids);
         }}
-        className="absolute right-3 top-3 flex size-6 items-center justify-center rounded-full bg-white/[0.08] text-muted-foreground hover:bg-white/[0.15] hover:text-foreground transition-colors"
+        className={[
+          'absolute right-3 top-3 flex size-5 items-center justify-center rounded-full',
+          'bg-white/[0.08] text-muted-foreground hover:bg-white/[0.15] hover:text-foreground transition-colors',
+          hovered ? '' : 'pointer-events-none',
+        ].join(' ')}
         aria-label="Dismiss notification"
       >
         <X className="size-3" />
