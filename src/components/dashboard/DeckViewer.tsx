@@ -209,7 +209,7 @@ export function DeckViewer({ slides, title }: DeckViewerProps) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-50 flex flex-col items-center justify-center"
+            className="fixed inset-0 z-[70] flex flex-col items-center justify-center"
             style={{ backgroundColor: '#000' }}
           >
             {/* Top bar with scrim */}
