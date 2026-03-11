@@ -235,7 +235,7 @@ export async function sendExternalInviteEmail({
   templateName,
   expiresAt,
 }: SendExternalInviteEmailParams): Promise<void> {
-  const signUrl = `${process.env.NEXT_PUBLIC_APP_URL}/sign/${token}`;
+  const signUrl = `${process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL}/sign/${token}`;
   const expiresFormatted = expiresAt.toLocaleDateString('en-US', {
     month: 'long',
     day: 'numeric',
@@ -294,7 +294,7 @@ export async function sendInvoiceRequestEmail({
   personalNote,
   expiresAt,
 }: SendInvoiceRequestEmailParams): Promise<void> {
-  const invoiceUrl = `${process.env.NEXT_PUBLIC_APP_URL}/invoice/${token}`;
+  const invoiceUrl = `${process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL}/invoice/${token}`;
   const expiresFormatted = expiresAt.toLocaleDateString('en-US', {
     month: 'long',
     day: 'numeric',
