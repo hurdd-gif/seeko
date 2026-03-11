@@ -16,7 +16,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
   Users, CheckCircle2, Clock,
   CreditCard, Plus, ChevronDown, ChevronUp, Check, X as XIcon,
-  TrendingUp, DollarSign,
+  TrendingUp, DollarSign, FileText,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -26,6 +26,7 @@ import { FadeRise, Stagger, StaggerItem, HoverCard, springs } from '@/components
 import { EmptyState } from '@/components/ui/empty-state';
 import { PaymentsPasswordGate } from '@/components/dashboard/PaymentsPasswordGate';
 import { PaymentCreateDialog } from '@/components/dashboard/PaymentCreateDialog';
+import { InvoiceRequestForm } from '@/components/dashboard/InvoiceRequestForm';
 import type { Profile, Payment } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -70,6 +71,7 @@ export function PaymentsAdmin({ team }: PaymentsAdminProps) {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'owed' | 'paid'>('all');
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [invoiceFormOpen, setInvoiceFormOpen] = useState(false);
   const [selectedRecipient, setSelectedRecipient] = useState<TeamMember | null>(null);
 
   const fetchData = useCallback(async () => {
@@ -140,7 +142,7 @@ export function PaymentsAdmin({ team }: PaymentsAdminProps) {
     return b.pendingAmount - a.pendingAmount;
   });
 
-  const pendingRequests = payments.filter(p => p.status === 'pending' && p.created_by === p.recipient_id);
+  const pendingRequests = payments.filter(p => p.status === 'pending' && (p.created_by === p.recipient_id || p.recipient_id === null));
 
   const recentPaid = payments
     .filter(p => p.status === 'paid')
@@ -207,13 +209,19 @@ export function PaymentsAdmin({ team }: PaymentsAdminProps) {
             <h1 className="text-2xl font-semibold tracking-tight text-foreground">Payments</h1>
             <p className="text-sm text-muted-foreground mt-1">Track and manage team payments.</p>
           </div>
-          <Button
-            onClick={() => { setSelectedRecipient(null); setCreateDialogOpen(true); }}
-            className="gap-1.5 bg-seeko-accent text-black hover:bg-seeko-accent/90"
-          >
-            <Plus className="size-4" />
-            New Payment
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setInvoiceFormOpen(true)}>
+              <FileText className="size-3.5" />
+              Request Invoice
+            </Button>
+            <Button
+              onClick={() => { setSelectedRecipient(null); setCreateDialogOpen(true); }}
+              className="gap-1.5 bg-seeko-accent text-black hover:bg-seeko-accent/90"
+            >
+              <Plus className="size-4" />
+              New Payment
+            </Button>
+          </div>
         </div>
       </FadeRise>
 
@@ -456,6 +464,8 @@ export function PaymentsAdmin({ team }: PaymentsAdminProps) {
         token={null}
         onCreated={handlePaymentCreated}
       />
+
+      <InvoiceRequestForm open={invoiceFormOpen} onOpenChange={setInvoiceFormOpen} />
     </div>
   );
 }
@@ -569,12 +579,14 @@ function PendingRequestRow({ payment, onAction }: { payment: Payment; onAction: 
           <Avatar className="size-8 ring-1 ring-amber-500/20">
             <AvatarImage src={payment.recipient?.avatar_url ?? undefined} />
             <AvatarFallback className="bg-amber-500/10 text-amber-300 text-[10px]">
-              {(payment.recipient?.display_name ?? '?').split(' ').map(p => p[0]).join('').toUpperCase().slice(0, 2)}
+              {(payment.recipient?.display_name ?? payment.recipient_email ?? '?').split(' ').map(p => p[0]).join('').toUpperCase().slice(0, 2)}
             </AvatarFallback>
           </Avatar>
           <div className="min-w-0">
-            <p className="text-sm font-medium text-foreground truncate">{payment.recipient?.display_name}</p>
-            {payment.recipient?.paypal_email && (
+            <p className="text-sm font-medium text-foreground truncate">
+              {payment.recipient?.display_name ?? payment.recipient_email ?? 'External'}
+            </p>
+            {payment.recipient?.paypal_email ? (
               <span
                 role="button"
                 tabIndex={0}
@@ -591,7 +603,11 @@ function PendingRequestRow({ payment, onAction }: { payment: Payment; onAction: 
               >
                 {payment.recipient.paypal_email}
               </span>
-            )}
+            ) : payment.recipient_email ? (
+              <span className="text-[11px] text-muted-foreground/50 font-mono truncate block">
+                {payment.recipient_email}
+              </span>
+            ) : null}
           </div>
         </div>
         <div className="flex items-center gap-3 shrink-0">
