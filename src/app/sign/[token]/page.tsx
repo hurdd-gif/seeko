@@ -1,7 +1,13 @@
+import type { Metadata } from 'next';
 import { getServiceClient } from '@/lib/supabase/service';
 import { getTemplateById } from '@/lib/external-agreement-templates';
 import { SigningPageClient } from './client';
 import type { ExternalSigningInvite } from '@/lib/types';
+
+// Prevent token leaking via Referer header
+export const metadata: Metadata = {
+  referrer: 'no-referrer',
+};
 
 interface Props {
   params: Promise<{ token: string }>;

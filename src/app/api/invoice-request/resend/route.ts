@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getServiceClient } from '@/lib/supabase/service';
 import bcrypt from 'bcryptjs';
-import { sendExternalInviteEmail } from '@/lib/email';
-import { getTemplateById } from '@/lib/external-agreement-templates';
+import { sendInvoiceRequestEmail } from '@/lib/email';
 import type { ExternalSigningInvite } from '@/lib/types';
 
 export async function POST(request: NextRequest) {
@@ -20,16 +19,17 @@ export async function POST(request: NextRequest) {
   const service = getServiceClient();
   const { data: invite } = await service
     .from('external_signing_invites')
-    .select('id, token, status, expires_at, recipient_email, template_type, template_id, custom_title, personal_note')
+    .select('id, token, status, purpose, expires_at, recipient_email, personal_note')
     .eq('id', invite_id)
-    .single() as { data: ExternalSigningInvite | null };
+    .single() as { data: (ExternalSigningInvite & { purpose?: string }) | null };
 
   if (!invite) return NextResponse.json({ error: 'Invite not found' }, { status: 404 });
-  if (invite.status === 'signed') return NextResponse.json({ error: 'Already signed' }, { status: 400 });
+  if ((invite as any).purpose !== 'invoice') return NextResponse.json({ error: 'Not an invoice request' }, { status: 400 });
+  if (invite.status === 'signed') return NextResponse.json({ error: 'Already submitted' }, { status: 400 });
   if (invite.status === 'revoked') return NextResponse.json({ error: 'Invite is revoked' }, { status: 400 });
   if (new Date(invite.expires_at) < new Date()) return NextResponse.json({ error: 'Invite has expired — create a new one' }, { status: 400 });
 
-  // Generate new verification code
+  // Generate new verification code and reset status
   const { randomInt } = await import('crypto');
   const code = String(randomInt(100000, 1000000));
   const hashedCode = await bcrypt.hash(code, 10);
@@ -44,18 +44,11 @@ export async function POST(request: NextRequest) {
     })
     .eq('id', invite_id);
 
-  // Get template name
-  let templateName = invite.custom_title || 'Document';
-  if (invite.template_type === 'preset' && invite.template_id) {
-    const template = getTemplateById(invite.template_id);
-    templateName = template?.name || 'Document';
-  }
-
-  await sendExternalInviteEmail({
+  // Resend email
+  await sendInvoiceRequestEmail({
     recipientEmail: invite.recipient_email,
     token: invite.token,
-    personalNote: invite.personal_note,
-    templateName,
+    personalNote: invite.personal_note ?? null,
     expiresAt: new Date(invite.expires_at),
   });
 

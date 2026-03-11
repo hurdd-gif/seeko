@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceClient } from '@/lib/supabase/service';
 import bcrypt from 'bcryptjs';
-import { getTemplateById } from '@/lib/external-agreement-templates';
 import type { ExternalSigningInvite } from '@/lib/types';
 
 const MAX_ATTEMPTS = 5;
@@ -12,10 +11,7 @@ interface VerifyRow {
   expires_at: string;
   verification_code: string;
   verification_attempts: number;
-  template_type: string;
-  template_id: string | null;
-  custom_sections: any;
-  custom_title: string | null;
+  prefilled_items: { label: string; amount: number }[] | null;
   personal_note: string | null;
 }
 
@@ -30,10 +26,9 @@ export async function POST(request: NextRequest) {
 
   // Atomic increment: only increment if under the limit, return the updated row.
   // This prevents race conditions where concurrent requests all read attempts=0.
-  // Note: purpose is NOT filtered here since external-signing invites use purpose='signing' or NULL.
   const { data: updated, error: rpcError } = await (service as any).rpc('increment_verification_attempt', {
     p_token: token,
-    p_purpose: 'signing',
+    p_purpose: 'invoice',
     p_max_attempts: MAX_ATTEMPTS,
   }) as { data: VerifyRow[] | null; error: { code?: string; message?: string } | null };
 
@@ -43,16 +38,18 @@ export async function POST(request: NextRequest) {
   }
 
   if (rpcError) {
-    console.error('[external-signing/verify] rpc error:', rpcError);
+    console.error('[invoice-request/verify] rpc error:', rpcError);
     return NextResponse.json({ error: 'Verification failed' }, { status: 500 });
   }
 
   if (!updated || updated.length === 0) {
     // RPC returned nothing — either invite not found, wrong status, or attempts exhausted
+    // Re-fetch to give a meaningful error
     const { data: invite } = await service
       .from('external_signing_invites')
       .select('id, status, verification_attempts')
       .eq('token', token)
+      .eq('purpose', 'invoice')
       .single();
 
     if (!invite) return NextResponse.json({ error: 'Invite not found' }, { status: 404 });
@@ -89,22 +86,9 @@ export async function POST(request: NextRequest) {
     .update({ status: 'verified', verified_at: new Date().toISOString() })
     .eq('id', invite.id);
 
-  // Return sections
-  let sections;
-  let title;
-  if (invite.template_type === 'preset') {
-    const template = getTemplateById(invite.template_id!);
-    sections = template!.sections;
-    title = template!.name;
-  } else {
-    sections = invite.custom_sections;
-    title = invite.custom_title || 'Agreement';
-  }
-
   return NextResponse.json({
     status: 'verified',
-    sections,
-    title,
+    prefilledItems: invite.prefilled_items,
     personalNote: invite.personal_note,
   });
 }
@@ -113,9 +97,10 @@ export async function POST(request: NextRequest) {
 async function verifyFallback(service: ReturnType<typeof getServiceClient>, token: string, code: string) {
   const { data: invite } = await service
     .from('external_signing_invites')
-    .select('id, token, status, expires_at, verification_code, verification_attempts, template_type, template_id, custom_sections, custom_title, personal_note')
+    .select('id, token, status, expires_at, verification_code, verification_attempts, prefilled_items, personal_note')
     .eq('token', token)
-    .single() as { data: (ExternalSigningInvite & { verification_code: string }) | null };
+    .eq('purpose', 'invoice')
+    .single() as { data: (ExternalSigningInvite & { verification_code: string; prefilled_items: { label: string; amount: number }[] | null }) | null };
 
   if (!invite) return NextResponse.json({ error: 'Invite not found' }, { status: 404 });
 
@@ -158,22 +143,9 @@ async function verifyFallback(service: ReturnType<typeof getServiceClient>, toke
     .update({ status: 'verified', verified_at: new Date().toISOString() })
     .eq('id', invite.id);
 
-  // Return sections
-  let sections;
-  let title;
-  if (invite.template_type === 'preset') {
-    const template = getTemplateById(invite.template_id!);
-    sections = template!.sections;
-    title = template!.name;
-  } else {
-    sections = invite.custom_sections;
-    title = invite.custom_title || 'Agreement';
-  }
-
   return NextResponse.json({
     status: 'verified',
-    sections,
-    title,
+    prefilledItems: invite.prefilled_items,
     personalNote: invite.personal_note,
   });
 }

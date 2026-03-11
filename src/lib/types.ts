@@ -128,7 +128,7 @@ export type PaymentStatus = 'pending' | 'paid' | 'cancelled';
 
 export type Payment = {
   id: string;
-  recipient_id: string;
+  recipient_id: string | null;
   amount: number;
   currency: string;
   description?: string;
@@ -136,6 +136,7 @@ export type Payment = {
   paid_at?: string;
   created_by: string;
   created_at: string;
+  recipient_email?: string;
   recipient?: Pick<Profile, 'id' | 'display_name' | 'avatar_url' | 'department' | 'paypal_email'>;
   items?: PaymentItem[];
 };

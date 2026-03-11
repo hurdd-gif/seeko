@@ -8,11 +8,9 @@ import { Button } from '@/components/ui/button';
 interface VerificationFormProps {
   token: string;
   maskedEmail: string;
-  onVerified: (data: {
-    sections: { number: number; title: string; content: string }[];
-    title: string;
-    personalNote?: string;
-  }) => void;
+  onVerified: (data: Record<string, unknown>) => void;
+  sendCodeEndpoint?: string;
+  verifyEndpoint?: string;
 }
 
 const SPRING = { type: 'spring' as const, stiffness: 300, damping: 25 };
@@ -37,7 +35,13 @@ function storeCooldown(token: string) {
   } catch { /* noop */ }
 }
 
-export function VerificationForm({ token, maskedEmail, onVerified }: VerificationFormProps) {
+export function VerificationForm({
+  token,
+  maskedEmail,
+  onVerified,
+  sendCodeEndpoint = '/api/external-signing/send-code',
+  verifyEndpoint = '/api/external-signing/verify',
+}: VerificationFormProps) {
   const [codeSent, setCodeSent] = useState(false);
   const [digits, setDigits] = useState<string[]>(Array(CODE_LENGTH).fill(''));
   const [sending, setSending] = useState(false);
@@ -63,7 +67,7 @@ export function VerificationForm({ token, maskedEmail, onVerified }: Verificatio
     setSending(true);
     setError('');
     try {
-      const res = await fetch('/api/external-signing/send-code', {
+      const res = await fetch(sendCodeEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token }),
@@ -98,7 +102,7 @@ export function VerificationForm({ token, maskedEmail, onVerified }: Verificatio
     setSending(true);
     setError('');
     try {
-      const res = await fetch('/api/external-signing/send-code', {
+      const res = await fetch(sendCodeEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token }),
@@ -121,7 +125,7 @@ export function VerificationForm({ token, maskedEmail, onVerified }: Verificatio
     setVerifying(true);
     setError('');
     try {
-      const res = await fetch('/api/external-signing/verify', {
+      const res = await fetch(verifyEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token, code: codeStr }),

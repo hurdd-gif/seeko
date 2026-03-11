@@ -102,9 +102,10 @@ export function SigningPageClient({ token, initialData }: SigningPageClientProps
               token={token}
               maskedEmail={initialData.maskedEmail || '***'}
               onVerified={(data) => {
-                setSections(data.sections);
-                setTitle(data.title);
-                setPersonalNote(data.personalNote);
+                const d = data as { sections: { number: number; title: string; content: string }[]; title: string; personalNote?: string };
+                setSections(d.sections);
+                setTitle(d.title);
+                setPersonalNote(d.personalNote);
                 setVerified(true);
               }}
             />
