@@ -274,6 +274,18 @@ CREATE INDEX IF NOT EXISTS idx_docs_type ON public.docs(type);
 -- Storage bucket: deck-slides (public read, create manually in Supabase dashboard)
 -- Path format: {deck_id}/{slide_number}.webp
 
+-- ─── External Signing Invites — doc sharing columns ─────────────────────────
+-- See migration 20260310100000_external_invoice.sql for base table + invoice columns.
+-- See migration 20260311100000_external_doc_sharing.sql for doc sharing columns.
+
+ALTER TABLE external_signing_invites
+  ADD COLUMN IF NOT EXISTS shared_doc_id uuid REFERENCES docs(id),
+  ADD COLUMN IF NOT EXISTS session_token text,
+  ADD COLUMN IF NOT EXISTS session_ip text,
+  ADD COLUMN IF NOT EXISTS session_user_agent text,
+  ADD COLUMN IF NOT EXISTS session_started_at timestamptz,
+  ADD COLUMN IF NOT EXISTS view_count int DEFAULT 0;
+
 -- ─── NDA Agreement columns ──────────────────────────────────────────────────
 alter table public.profiles
   add column if not exists nda_accepted_at   timestamptz,

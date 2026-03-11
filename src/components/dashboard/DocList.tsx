@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { FileText, Lock, Pencil, Trash2, Plus, Search, Clock, ChevronDown, Circle, Presentation } from 'lucide-react';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
+import { FileText, Lock, Pencil, Trash2, Plus, Search, Clock, ChevronDown, Circle, Presentation, Share2, XCircle, RotateCcw, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { Doc } from '@/lib/types';
@@ -25,6 +25,7 @@ import { DeckEditor } from './DeckEditor';
 import { DeckViewer } from './DeckViewer';
 import { DocDeleteConfirm } from './DocDeleteConfirm';
 import { DocContent } from './DocContent';
+import { DocShareDialog } from './DocShareDialog';
 import { useHaptics } from '@/components/HapticsProvider';
 
 const DEPARTMENTS = ['Coding', 'Visual Art', 'UI/UX', 'Animation', 'Asset Creation'] as const;
@@ -62,6 +63,13 @@ function isRecentlyUpdated(doc: Doc): boolean {
 const LIST = {
   staggerMs: 70,   // ms between each card
   delayMs:   0,    // ms before first card
+};
+
+const SHARE_STATUS_COLORS: Record<string, string> = {
+  pending: 'border-yellow-500/30 text-yellow-400',
+  verified: 'border-emerald-500/30 text-emerald-400',
+  expired: 'border-muted-foreground/30 text-muted-foreground',
+  revoked: 'border-red-500/30 text-red-400',
 };
 
 /* ─────────────────────────────────────────────────────────
@@ -125,14 +133,36 @@ interface DocListProps {
 export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, currentUserId = '', team = [] }: DocListProps) {
   const [docs, setDocs] = useState<Doc[]>(initialDocs);
   const { trigger } = useHaptics();
-  const [viewMode, setViewMode] = useState<'docs' | 'decks'>('docs');
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const VALID_TABS = ['docs', 'decks', 'shared'] as const;
+  type ViewMode = typeof VALID_TABS[number];
+  const tabParam = searchParams.get('tab');
+  const viewMode: ViewMode = VALID_TABS.includes(tabParam as ViewMode) ? (tabParam as ViewMode) : 'docs';
+
+  const setViewMode = (mode: ViewMode) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (mode === 'docs') {
+      params.delete('tab');
+    } else {
+      params.set('tab', mode);
+    }
+    const qs = params.toString();
+    router.replace(`${pathname}${qs ? `?${qs}` : ''}`, { scroll: false });
+  };
+
   const [selected, setSelected] = useState<Doc | null>(null);
   const [editingDoc, setEditingDoc] = useState<Doc | 'new' | null>(null);
   const [editingDeck, setEditingDeck] = useState<Doc | 'new' | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [shareDoc, setShareDoc] = useState<Doc | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [departmentFilter, setDepartmentFilter] = useState<string>('all');
-  const searchParams = useSearchParams();
+  const [sharedLinks, setSharedLinks] = useState<any[]>([]);
+  const [sharedLoading, setSharedLoading] = useState(false);
+  const [sharedExpanded, setSharedExpanded] = useState(false);
 
   const isLocked = (d: Doc) => {
     if (isAdmin) return false;
@@ -191,6 +221,47 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, cu
     const found = docs.find(d => d.id === docId);
     if (found) setSelected(found);
   }, [searchParams, docs]);
+
+  useEffect(() => {
+    if (viewMode === 'shared' && isAdmin) {
+      setSharedLoading(true);
+      fetch('/api/doc-share/list')
+        .then(r => r.json())
+        .then(data => setSharedLinks(Array.isArray(data) ? data : []))
+        .catch(() => toast.error('Failed to load shared links'))
+        .finally(() => setSharedLoading(false));
+    }
+  }, [viewMode, isAdmin]);
+
+  async function handleRevoke(inviteId: string) {
+    try {
+      const res = await fetch('/api/doc-share/revoke', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ invite_id: inviteId }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error || 'Failed to revoke');
+      setSharedLinks(prev => prev.map(l => l.id === inviteId ? { ...l, status: 'revoked' } : l));
+      toast.success('Share link revoked');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to revoke');
+    }
+  }
+
+  async function handleResend(inviteId: string) {
+    try {
+      const res = await fetch('/api/doc-share/resend', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ invite_id: inviteId }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error || 'Failed to resend');
+      setSharedLinks(prev => prev.map(l => l.id === inviteId ? { ...l, status: 'pending' } : l));
+      toast.success('Share link resent');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to resend');
+    }
+  }
 
   const handleSave = (saved: Doc) => {
     setDocs(prev => {
@@ -328,6 +399,7 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, cu
 
   const docCount = docs.filter(d => d.type !== 'deck').length;
   const deckCount = docs.filter(d => d.type === 'deck').length;
+  const sharedCount = sharedLinks.length;
 
   return (
     <>
@@ -358,8 +430,22 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, cu
           >
             Decks{deckCount > 0 && <span className="ml-1 text-muted-foreground/60">{deckCount}</span>}
           </button>
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={() => setViewMode('shared')}
+              className={cn(
+                'rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
+                viewMode === 'shared'
+                  ? 'bg-card text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              Shared{sharedCount > 0 && <span className="ml-1 text-muted-foreground/60">{sharedCount}</span>}
+            </button>
+          )}
         </div>
-        {isAdmin && (
+        {isAdmin && viewMode !== 'shared' && (
           <Button
             size="sm"
             onClick={() => viewMode === 'decks' ? setEditingDeck('new') : setEditingDoc('new')}
@@ -370,7 +456,83 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, cu
         )}
       </div>
 
-      {sortedDocs.length === 0 && docs.filter(d => viewMode === 'decks' ? d.type === 'deck' : d.type !== 'deck').length === 0 ? (
+      {/* ── Shared tab content ─────────────────────────────── */}
+      {viewMode === 'shared' && isAdmin && (
+        <div className="flex flex-col gap-2">
+          {sharedLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="size-5 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-foreground" />
+            </div>
+          ) : sharedLinks.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-8 text-center">No shared links yet</p>
+          ) : (
+            <>
+              {(sharedExpanded ? sharedLinks : sharedLinks.slice(0, 3)).map(link => (
+                  <Card key={link.id}>
+                    <CardContent className="flex items-center gap-3 p-3">
+                      <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-secondary">
+                        {link.doc_type === 'deck' ? (
+                          <Presentation className="size-3.5 text-foreground" />
+                        ) : (
+                          <FileText className="size-3.5 text-foreground" />
+                        )}
+                      </div>
+                      <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-medium text-foreground truncate">{link.doc_title ?? 'Untitled'}</p>
+                          <Badge variant="outline" className={cn('text-[10px] font-medium capitalize', SHARE_STATUS_COLORS[link.status] ?? SHARE_STATUS_COLORS.expired)}>
+                            {link.status}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-3 text-[11px] text-muted-foreground/70">
+                          <span className="truncate">{link.recipient_email}</span>
+                          <span className="flex items-center gap-1 shrink-0">
+                            <Eye className="size-3" />
+                            {link.view_count ?? 0}
+                          </span>
+                          <span className="shrink-0">{timeAgo(link.created_at)}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {(link.status === 'pending' || link.status === 'verified') && (
+                          <button
+                            type="button"
+                            title="Revoke"
+                            onClick={() => handleRevoke(link.id)}
+                            className="flex size-7 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                          >
+                            <XCircle className="size-3.5" />
+                          </button>
+                        )}
+                        {link.status === 'pending' && (
+                          <button
+                            type="button"
+                            title="Resend"
+                            onClick={() => handleResend(link.id)}
+                            className="flex size-7 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                          >
+                            <RotateCcw className="size-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+              ))}
+              {sharedLinks.length > 3 && (
+                <button
+                  type="button"
+                  onClick={() => setSharedExpanded(prev => !prev)}
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors py-1.5"
+                >
+                  {sharedExpanded ? 'Show less' : `Show ${sharedLinks.length - 3} more`}
+                </button>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
+      {viewMode !== 'shared' && (sortedDocs.length === 0 && docs.filter(d => viewMode === 'decks' ? d.type === 'deck' : d.type !== 'deck').length === 0 ? (
         <EmptyState
           icon="FileText"
           title={viewMode === 'decks' ? 'No decks yet' : 'No documents yet'}
@@ -467,15 +629,29 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, cu
             </div>
           )}
         </>
-      )}
+      ))}
 
       {/* Read dialog */}
-      <Dialog open={!!selected} onOpenChange={() => setSelected(null)} resizable>
+      <Dialog
+        open={!!selected}
+        onOpenChange={() => setSelected(null)}
+        resizable
+        actions={isAdmin && selected ? (
+          <button
+            type="button"
+            title="Share externally"
+            onClick={() => setShareDoc(selected)}
+            className="flex size-8 items-center justify-center rounded-md opacity-60 transition-opacity hover:opacity-100 hover:bg-white/[0.06] focus:outline-none"
+          >
+            <Share2 className="size-3.5" />
+          </button>
+        ) : undefined}
+      >
         {selected && (
           <>
             <DialogClose onClose={() => setSelected(null)} />
             <DialogHeader>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 pr-20">
                 <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-secondary">
                   {selected.type === 'deck' ? <Presentation className="size-4 text-foreground" /> : <FileText className="size-4 text-foreground" />}
                 </div>
@@ -488,7 +664,24 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, cu
               ) : selected.content ? (
                 <DocContent html={selected.content} />
               ) : (
-                <p className="text-sm text-muted-foreground">No content yet.</p>
+                <div className="flex flex-col items-center gap-3 py-16 text-center">
+                  <div className="flex size-12 items-center justify-center rounded-xl bg-secondary">
+                    <FileText className="size-5 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-foreground">No content yet</p>
+                    <p className="text-xs text-muted-foreground mt-1">Edit this document to add content.</p>
+                  </div>
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      onClick={() => { setSelected(null); setEditingDoc(selected); }}
+                      className="mt-2 text-xs font-medium text-seeko-accent hover:text-seeko-accent/80 transition-colors"
+                    >
+                      Edit document
+                    </button>
+                  )}
+                </div>
               )}
             </div>
           </>
@@ -530,6 +723,16 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, cu
           </>
         )}
       </Dialog>
+
+      {/* Share externally dialog */}
+      {shareDoc && (
+        <DocShareDialog
+          open={!!shareDoc}
+          onOpenChange={(open) => { if (!open) setShareDoc(null); }}
+          docId={shareDoc.id}
+          docTitle={shareDoc.title}
+        />
+      )}
     </>
   );
 }

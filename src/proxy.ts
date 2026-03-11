@@ -36,7 +36,7 @@ export async function proxy(request: NextRequest) {
   const isAgreementRoute = pathname.startsWith('/agreement') || pathname.startsWith('/api/agreement');
   const isPublicAsset =
     pathname.startsWith('/_next') || pathname.startsWith('/favicon');
-  const isExternalSigningRoute = pathname.startsWith('/sign') || pathname.startsWith('/api/external-signing') || pathname.startsWith('/api/geocode') || pathname.startsWith('/invoice') || pathname.startsWith('/api/invoice-request');
+  const isExternalSigningRoute = pathname.startsWith('/sign') || pathname.startsWith('/api/external-signing') || pathname.startsWith('/api/geocode') || pathname.startsWith('/invoice') || pathname.startsWith('/api/invoice-request') || pathname.startsWith('/shared') || pathname.startsWith('/api/doc-share');
 
   if (!user && !isAuthRoute && !isPublicAsset && !isExternalSigningRoute) {
     const url = request.nextUrl.clone();
