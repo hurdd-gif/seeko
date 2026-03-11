@@ -1,5 +1,14 @@
 'use client';
 
+/* ─────────────────────────────────────────────────────────
+ * ANIMATION STORYBOARD — Page Header User
+ *
+ *  Avatar   spring scale 1.05 on hover, 0.95 on tap (snappy)
+ *  Popover  scale 0.95 → 1, opacity 0 → 1 (smooth spring)
+ *  Links    x: 0 → 2 nudge on hover (snappy)
+ *  Sign out AnimatePresence crossfade between button ↔ confirm
+ * ───────────────────────────────────────────────────────── */
+
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import Link from 'next/link';
@@ -22,6 +31,7 @@ const NotificationBell = dynamic(
 );
 
 const SMOOTH = { type: 'spring' as const, stiffness: 300, damping: 25 };
+const SNAPPY = { type: 'spring' as const, stiffness: 500, damping: 30 };
 
 interface PageHeaderUserProps {
   email: string;
@@ -83,10 +93,13 @@ export function PageHeaderUser({
         />
       )}
       <div className="relative">
-        <button
+        <motion.button
           ref={avatarRef}
           onClick={() => { trigger('selection'); setOpen(prev => !prev); }}
-          className="rounded-full transition-shadow hover:ring-2 hover:ring-seeko-accent/30"
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          transition={SNAPPY}
+          className="rounded-full"
         >
           <Avatar className="size-8">
             <AvatarImage src={avatarUrl} alt={label} />
@@ -94,7 +107,7 @@ export function PageHeaderUser({
               {getInitials(label)}
             </AvatarFallback>
           </Avatar>
-        </button>
+        </motion.button>
 
         <AnimatePresence>
           {open && (
@@ -128,33 +141,47 @@ export function PageHeaderUser({
               </div>
 
               {/* Sign out */}
-              <div className="border-t border-white/[0.06] py-1">
-                {confirmingSignOut ? (
-                  <div className="flex items-center justify-between px-3 py-2">
-                    <span className="text-xs text-muted-foreground">Sign out?</span>
-                    <div className="flex items-center gap-2">
-                      <form action="/auth/signout" method="post">
-                        <button type="submit" className="text-xs font-medium text-red-400 hover:text-red-300 transition-colors">
-                          Yes
+              <div className="border-t border-white/[0.06] py-1 overflow-hidden">
+                <AnimatePresence mode="wait" initial={false}>
+                  {confirmingSignOut ? (
+                    <motion.div
+                      key="confirm"
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -8 }}
+                      transition={{ ...SNAPPY, opacity: { duration: 0.12 } }}
+                      className="flex items-center justify-between px-3 py-2"
+                    >
+                      <span className="text-xs text-muted-foreground">Sign out?</span>
+                      <div className="flex items-center gap-2">
+                        <form action="/auth/signout" method="post">
+                          <button type="submit" className="text-xs font-medium text-red-400 hover:text-red-300 transition-colors">
+                            Yes
+                          </button>
+                        </form>
+                        <button
+                          onClick={() => setConfirmingSignOut(false)}
+                          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          Cancel
                         </button>
-                      </form>
-                      <button
-                        onClick={() => setConfirmingSignOut(false)}
-                        className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => setConfirmingSignOut(true)}
-                    className="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-muted-foreground hover:text-red-400 hover:bg-white/[0.03] transition-colors"
-                  >
-                    <LogOut className="size-3.5" />
-                    Sign out
-                  </button>
-                )}
+                      </div>
+                    </motion.div>
+                  ) : (
+                    <motion.button
+                      key="signout"
+                      initial={{ opacity: 0, y: -8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 8 }}
+                      transition={{ ...SNAPPY, opacity: { duration: 0.12 } }}
+                      onClick={() => setConfirmingSignOut(true)}
+                      className="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-muted-foreground hover:text-red-400 hover:bg-white/[0.03] transition-colors"
+                    >
+                      <LogOut className="size-3.5" />
+                      Sign out
+                    </motion.button>
+                  )}
+                </AnimatePresence>
               </div>
             </motion.div>
           )}
@@ -164,15 +191,19 @@ export function PageHeaderUser({
   );
 }
 
+const LINK_SNAPPY = { type: 'spring' as const, stiffness: 500, damping: 30 };
+
 function PopoverLink({ href, icon: Icon, label, onClick }: { href: string; icon: React.ElementType; label: string; onClick: () => void }) {
   return (
-    <Link
-      href={href}
-      onClick={onClick}
-      className="flex items-center gap-2.5 px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-white/[0.03] transition-colors"
-    >
-      <Icon className="size-3.5" />
-      {label}
-    </Link>
+    <motion.div whileHover={{ x: 2 }} transition={LINK_SNAPPY}>
+      <Link
+        href={href}
+        onClick={onClick}
+        className="flex items-center gap-2.5 px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-white/[0.03] transition-colors"
+      >
+        <Icon className="size-3.5" />
+        {label}
+      </Link>
+    </motion.div>
   );
 }

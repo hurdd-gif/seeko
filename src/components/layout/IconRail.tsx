@@ -107,7 +107,7 @@ export function IconRail({ isAdmin = false, isContractor = false }: IconRailProp
                   {isActive && (
                     <motion.div
                       layoutId="rail-active"
-                      className="absolute inset-0 rounded-lg bg-muted"
+                      className="absolute inset-0 rounded-lg bg-muted border border-seeko-accent/20"
                       transition={SNAPPY}
                     />
                   )}
