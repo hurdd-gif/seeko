@@ -86,7 +86,7 @@ export function DocShareDialog({ open, onOpenChange, docId, docTitle }: DocShare
 
         <div className="space-y-1.5">
           <label className="text-sm font-medium text-foreground">Expires <span className="text-muted-foreground font-normal">(default 30 days)</span></label>
-          <DatePicker value={expiresAt} onChange={setExpiresAt} minDate={null} dateLabel="Expires" />
+          <DatePicker value={expiresAt} onChange={setExpiresAt} dateLabel="Expires" />
         </div>
 
         <Button onClick={handleSubmit} disabled={sending} className="w-full gap-2 bg-seeko-accent text-black hover:bg-seeko-accent/90">

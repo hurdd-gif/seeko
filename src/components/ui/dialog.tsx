@@ -12,6 +12,9 @@ const MIN_H = 200
 const MAX_W_PCT = 96
 const MAX_H_PCT = 94
 
+// Track open dialog close handlers as a stack — Escape only closes the topmost
+const dialogCloseStack: Array<() => void> = []
+
 type DialogFooterContextValue = {
   setFooter: (node: React.ReactNode) => void
 }
@@ -74,16 +77,24 @@ function Dialog({ open, onOpenChange, children, resizable = false, contentClassN
     document.addEventListener('wheel', blockScroll, { passive: false })
     document.addEventListener('touchmove', blockScroll, { passive: false })
 
+    // Register in dialog stack — Escape only closes the topmost dialog
+    const closeHandler = () => onOpenChange(false)
+    dialogCloseStack.push(closeHandler)
+
     const keyHandler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onOpenChange(false)
+      if (e.key === 'Escape' && dialogCloseStack.length > 0 && dialogCloseStack[dialogCloseStack.length - 1] === closeHandler) {
+        onOpenChange(false)
+      }
     }
     document.addEventListener('keydown', keyHandler)
 
     return () => {
+      const idx = dialogCloseStack.indexOf(closeHandler)
+      if (idx >= 0) dialogCloseStack.splice(idx, 1)
+      document.removeEventListener('keydown', keyHandler)
       scrollables.forEach((el, i) => { el.style.overflow = prev[i] })
       document.removeEventListener('wheel', blockScroll)
       document.removeEventListener('touchmove', blockScroll)
-      document.removeEventListener('keydown', keyHandler)
     }
   }, [open, onOpenChange])
 
