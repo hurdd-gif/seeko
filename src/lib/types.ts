@@ -64,6 +64,7 @@ export type Doc = {
   restricted_department?: string[];
   granted_user_ids?: string[];
   type?: 'doc' | 'deck';
+  deck_orientation?: 'horizontal' | 'vertical';
   slides?: { url: string; sort_order: number }[];
 };
 

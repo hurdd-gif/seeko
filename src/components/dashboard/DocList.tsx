@@ -660,7 +660,7 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, cu
             </DialogHeader>
             <div className="doc-read-body min-w-0 overflow-x-auto px-2 pt-4 pb-8 max-w-3xl mx-auto">
               {selected.type === 'deck' && selected.slides ? (
-                <DeckViewer slides={selected.slides} title={selected.title} notes={selected.content} />
+                <DeckViewer slides={selected.slides} title={selected.title} notes={selected.content} orientation={selected.deck_orientation} />
               ) : selected.content ? (
                 <DocContent html={selected.content} />
               ) : (

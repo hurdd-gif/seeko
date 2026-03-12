@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
   } catch {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
-  const { title, content, sort_order, restricted_department, granted_user_ids, type, slides } = body;
+  const { title, content, sort_order, restricted_department, granted_user_ids, type, slides, deck_orientation } = body;
 
   const service = createServiceClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -55,6 +55,7 @@ export async function POST(req: NextRequest) {
       granted_user_ids: Array.isArray(granted_user_ids) && granted_user_ids.length ? granted_user_ids : null,
       ...(type === 'deck' ? { type: 'deck' } : {}),
       ...(slides ? { slides } : {}),
+      ...(deck_orientation ? { deck_orientation } : {}),
     })
     .select()
     .single();

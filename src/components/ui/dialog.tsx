@@ -89,6 +89,8 @@ function Dialog({ open, onOpenChange, children, resizable = false, contentClassN
     // Block wheel + touch scroll outside the dialog panel (non-passive so preventDefault works)
     const blockScroll = (e: WheelEvent | TouchEvent) => {
       if (panelRef.current?.contains(e.target as Node)) return
+      // Allow scroll inside portalled fullscreen overlays (e.g. DeckViewer)
+      if ((e.target as Element)?.closest?.('[data-fullscreen-overlay]')) return
       e.preventDefault()
     }
     document.addEventListener('wheel', blockScroll, { passive: false })
