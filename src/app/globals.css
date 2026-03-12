@@ -82,6 +82,13 @@ body.tour-cmd-k-active #command-palette-container * {
   pointer-events: none !important;
 }
 
+/* Toast timer fill: grows from bottom to top over AUTO_DISMISS_MS.
+   Paused on hover via animationPlayState. */
+@keyframes toast-fill {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}
+
 /* Confetti burst: see TourConfetti.tsx CONFETTI/BURST storyboard.
    Duration via --confetti-duration on container. */
 @keyframes confetti-burst {

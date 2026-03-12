@@ -42,7 +42,7 @@ export function LiveToastContainer({ onTapToast, onOpenPanel }: LiveToastContain
             exit={{ opacity: 0, scale: 0.8 }}
             transition={{ type: 'spring', stiffness: 500, damping: 30 }}
             onClick={onOpenPanel}
-            className="pointer-events-auto mb-2 px-3 py-1 rounded-full bg-white/[0.12] text-xs font-medium text-muted-foreground hover:bg-white/[0.18] hover:text-foreground transition-colors backdrop-blur-sm cursor-pointer"
+            className="pointer-events-auto mb-2 px-3 py-1.5 rounded-full bg-card border border-border/50 text-xs font-medium text-muted-foreground hover:text-foreground hover:border-border transition-colors shadow-lg shadow-black/20 cursor-pointer"
           >
             +{overflowCount} more
           </motion.button>

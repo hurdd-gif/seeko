@@ -11,7 +11,6 @@ import { PageTransition } from '@/components/layout/PageTransition';
 import { CommandPalette } from '@/components/dashboard/CommandPalette';
 import { BugReportFAB } from '@/components/BugReportFAB';
 import { LiveToastProvider } from '@/components/dashboard/notifications/LiveToastContext';
-import { LiveToastTestPanel } from '@/components/dashboard/notifications/LiveToastTestPanel';
 
 export default async function DashboardLayout({
   children,
@@ -93,7 +92,6 @@ export default async function DashboardLayout({
         displayName={profile?.display_name ?? 'Unknown'}
         email={user.email ?? ''}
       />
-      <LiveToastTestPanel />
       </LiveToastProvider>
     </DashboardTourWrapper>
   );

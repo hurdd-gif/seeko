@@ -1,5 +1,15 @@
 'use client';
 
+/* ─────────────────────────────────────────────────────────
+ * LIVE TOAST CARD — ANIMATION STORYBOARD
+ *
+ *    0ms   card enters: y 40→0, scale 0.95→1, opacity 0→1 (spring)
+ *    0ms   progress bar starts depleting over AUTO_DISMISS_MS
+ *   hover  progress bar pauses, X button fades in
+ *   swipe  drag down → opacity/scale reduce → dismiss at 60px or 300px/s
+ *   exit   y 0→20, scale 1→0.95, opacity 1→0 (spring)
+ * ───────────────────────────────────────────────────────── */
+
 import { useState, useRef, useCallback } from 'react';
 import { motion, useMotionValue, useTransform, animate, useReducedMotion } from 'motion/react';
 import { X } from 'lucide-react';
@@ -29,11 +39,16 @@ export function LiveToastCard({
   const { notification } = toast;
   const prefersReducedMotion = useReducedMotion();
   const [hovered, setHovered] = useState(false);
+  const [progressPaused, setProgressPaused] = useState(false);
   const cfg = KIND_CONFIG[notification.kind] ?? KIND_CONFIG.comment_reply;
   const Icon = cfg.icon;
 
   const remainingRef = useRef(AUTO_DISMISS_MS);
   const pausedAtRef = useRef<number | null>(null);
+  const progressRef = useRef<HTMLDivElement>(null);
+
+  // Progress bar animation — CSS animation paused/running via state
+  const progressDuration = `${AUTO_DISMISS_MS}ms`;
 
   const y = useMotionValue(0);
   const dragOpacity = useTransform(y, [0, 80], [1, 0]);
@@ -54,6 +69,7 @@ export function LiveToastCard({
 
   const handleMouseEnter = useCallback(() => {
     setHovered(true);
+    setProgressPaused(true);
     pausedAtRef.current = Date.now();
     const elapsed = Date.now() - toast.createdAt;
     remainingRef.current = Math.max(AUTO_DISMISS_MS - elapsed, 1000);
@@ -62,11 +78,13 @@ export function LiveToastCard({
 
   const handleMouseLeave = useCallback(() => {
     setHovered(false);
+    setProgressPaused(false);
     onResumeTimer(toast.id, remainingRef.current);
     pausedAtRef.current = null;
   }, [toast.id, onResumeTimer]);
 
   const handleTouchStart = useCallback(() => {
+    setProgressPaused(true);
     pausedAtRef.current = Date.now();
     const elapsed = Date.now() - toast.createdAt;
     remainingRef.current = Math.max(AUTO_DISMISS_MS - elapsed, 1000);
@@ -75,6 +93,7 @@ export function LiveToastCard({
 
   const handleTouchEnd = useCallback(() => {
     if (pausedAtRef.current) {
+      setProgressPaused(false);
       onResumeTimer(toast.id, remainingRef.current);
       pausedAtRef.current = null;
     }
@@ -101,23 +120,26 @@ export function LiveToastCard({
       <motion.div style={{ opacity: dragOpacity, scale: dragScale }}>
       <button
         onClick={() => onTap(toast)}
-        className={[
-          'relative flex w-full items-start gap-3 rounded-xl px-3.5 py-3 text-left transition-colors',
-          notification.read
-            ? 'bg-[#212121] border border-white/[0.06]'
-            : 'bg-[#1a1a1a] border border-white/[0.08]',
-        ].join(' ')}
-        style={{ backdropFilter: 'blur(16px) saturate(180%)', WebkitBackdropFilter: 'blur(16px) saturate(180%)' }}
+        className="relative flex w-full items-start gap-3 rounded-xl bg-[#2c2c2c] border border-white/[0.10] px-3.5 py-3 text-left overflow-hidden"
       >
-        {!notification.read && (
-          <div className="absolute left-1.5 top-1/2 -translate-y-1/2 size-1.5 rounded-full bg-seeko-accent" />
-        )}
+        {/* Timer fill — grows from bottom to top, subtle blur wash */}
+        <div
+          ref={progressRef}
+          className="absolute inset-0 rounded-xl"
+          style={{
+            backdropFilter: 'blur(8px) brightness(0.7)',
+            WebkitBackdropFilter: 'blur(8px) brightness(0.7)',
+            transformOrigin: 'bottom',
+            animation: `toast-fill ${progressDuration} linear forwards`,
+            animationPlayState: progressPaused ? 'paused' : 'running',
+          }}
+        />
 
-        <div className={`mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg ${cfg.bg} ${cfg.className}`}>
+        <div className={`relative mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg ${cfg.bg} ${cfg.className}`}>
           <Icon className="size-3.5" />
         </div>
 
-        <div className="flex-1 min-w-0 pr-6">
+        <div className="relative flex-1 min-w-0 pr-5">
           <p className="text-[13px] leading-snug font-medium text-foreground">
             {notification.title}
           </p>
@@ -131,10 +153,11 @@ export function LiveToastCard({
           </p>
         </div>
 
+        {/* X button — hidden until hover on desktop */}
         <motion.span
           initial={false}
           animate={{
-            opacity: hovered ? 1 : 0.5,
+            opacity: hovered ? 1 : 0,
             scale: hovered ? 1 : 0.8,
           }}
           transition={{ type: 'spring', stiffness: 500, damping: 30 }}
