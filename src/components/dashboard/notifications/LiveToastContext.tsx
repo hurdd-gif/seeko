@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useCallback, useRef, useState } from 'react';
+import { createContext, useContext, useCallback, useEffect, useRef, useState } from 'react';
 import { Notification } from '@/lib/types';
 
 export interface LiveToast {
@@ -17,7 +17,7 @@ interface LiveToastContextValue {
   toasts: LiveToast[];
   overflowCount: number;
   suppress: boolean;
-  setSuppressed: (v: boolean) => void;
+  setSuppress: (v: boolean) => void;
 }
 
 const LiveToastContext = createContext<LiveToastContextValue | null>(null);
@@ -28,7 +28,7 @@ const ACCELERATED_DISMISS_MS = 2_000;
 
 export function LiveToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<LiveToast[]>([]);
-  const [suppress, setSuppressed] = useState(false);
+  const [suppress, setSuppress] = useState(false);
   const timersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const seenIds = useRef<Set<string>>(new Set());
 
@@ -74,17 +74,21 @@ export function LiveToastProvider({ children }: { children: React.ReactNode }) {
       createdAt: Date.now(),
     };
 
-    setToasts(prev => {
-      const next = [...prev, toast];
-      if (next.length > MAX_VISIBLE) {
-        const oldest = next[0];
-        startTimer(oldest.id, ACCELERATED_DISMISS_MS);
-      }
-      return next;
-    });
+    // Check if adding this toast will overflow — accelerate oldest
+    if (toasts.length >= MAX_VISIBLE && toasts[0]) {
+      startTimer(toasts[0].id, ACCELERATED_DISMISS_MS);
+    }
 
+    setToasts(prev => [...prev, toast]);
     startTimer(notification.id, AUTO_DISMISS_MS);
-  }, [suppress, startTimer]);
+  }, [suppress, startTimer, toasts]);
+
+  useEffect(() => {
+    return () => {
+      timersRef.current.forEach(clearTimeout);
+      timersRef.current.clear();
+    };
+  }, []);
 
   return (
     <LiveToastContext.Provider
@@ -96,7 +100,7 @@ export function LiveToastProvider({ children }: { children: React.ReactNode }) {
         toasts,
         overflowCount: Math.max(0, toasts.length - MAX_VISIBLE),
         suppress,
-        setSuppressed,
+        setSuppress,
       }}
     >
       {children}
