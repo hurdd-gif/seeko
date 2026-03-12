@@ -11,12 +11,7 @@ import { PageTransition } from '@/components/layout/PageTransition';
 import { CommandPalette } from '@/components/dashboard/CommandPalette';
 import { BugReportFAB } from '@/components/BugReportFAB';
 import { LiveToastProvider } from '@/components/dashboard/notifications/LiveToastContext';
-import dynamic from 'next/dynamic';
-
-const LiveToastTestPanel = dynamic(
-  () => import('@/components/dashboard/notifications/LiveToastTestPanel').then(m => m.LiveToastTestPanel),
-  { ssr: false }
-);
+import { LiveToastTestPanel } from '@/components/dashboard/notifications/LiveToastTestPanel';
 
 export default async function DashboardLayout({
   children,
