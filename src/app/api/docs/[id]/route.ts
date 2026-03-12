@@ -58,6 +58,20 @@ export async function PATCH(
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
+  // If slides are being replaced, clean up orphaned slide files in storage
+  if ('slides' in body) {
+    const { data: existing } = await service.from('docs').select('slides').eq('id', id).single();
+    const oldSlides = (existing?.slides as { sort_order: number }[] | null) ?? [];
+    const newSlides = (body.slides as { sort_order: number }[] | null) ?? [];
+    if (oldSlides.length > newSlides.length) {
+      const orphanPaths = Array.from(
+        { length: oldSlides.length - newSlides.length },
+        (_, i) => `${id}/${newSlides.length + i}.webp`
+      );
+      await service.storage.from('deck-slides').remove(orphanPaths);
+    }
+  }
+
   const { data, error } = await service
     .from('docs')
     .update(updates)

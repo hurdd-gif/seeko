@@ -71,5 +71,8 @@ export async function POST(req: NextRequest) {
     .from('deck-slides')
     .getPublicUrl(path);
 
-  return NextResponse.json({ url: urlData.publicUrl, sort_order: Number(slideIndex) }, { status: 201 });
+  // Append cache-buster so browsers fetch the new file after a PDF replacement
+  const bustUrl = `${urlData.publicUrl}?v=${Date.now()}`;
+
+  return NextResponse.json({ url: bustUrl, sort_order: Number(slideIndex) }, { status: 201 });
 }
