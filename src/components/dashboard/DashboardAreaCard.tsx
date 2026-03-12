@@ -94,7 +94,7 @@ export function DashboardAreaCard({ area, isAdmin }: DashboardAreaCardProps) {
             {area.progress}%
           </span>
         </div>
-        <div className="w-full h-2 rounded-full bg-secondary overflow-hidden">
+        <div className="w-full h-2.5 rounded-full bg-secondary overflow-hidden">
           <motion.div
             initial={{ width: 0 }}
             animate={{ width: `${area.progress}%` }}
@@ -115,12 +115,12 @@ export function DashboardAreaCard({ area, isAdmin }: DashboardAreaCardProps) {
             <button
               type="button"
               onClick={handleOpen}
-              className="w-full text-left rounded-lg bg-white/[0.03] transition-colors hover:bg-white/[0.06] focus:outline-none focus:ring-2 focus:ring-seeko-accent/30"
+              className="w-full text-left rounded-lg bg-white/[0.03] border border-transparent transition-all hover:bg-white/[0.06] hover:border-seeko-accent/10 hover:shadow-[0_0_12px_rgba(110,231,183,0.04)] focus:outline-none focus:ring-2 focus:ring-seeko-accent/30"
             >
               {cardContent}
             </button>
           ) : (
-            <div className="rounded-lg bg-white/[0.03]">
+            <div className="rounded-lg bg-white/[0.03] border border-transparent transition-all hover:border-white/[0.06]">
               {cardContent}
             </div>
           )}
