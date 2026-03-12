@@ -144,7 +144,13 @@ const Select = React.forwardRef<
         )}
       >
         <span className="truncate">{selected?.label || 'Select...'}</span>
-        <ChevronDown className={cn('ml-2 size-3.5 shrink-0 text-muted-foreground transition-transform', open && 'rotate-180')} />
+        <motion.span
+          animate={{ rotate: open ? 180 : 0 }}
+          transition={SELECT_SPRING}
+          className="ml-2 flex shrink-0 items-center"
+        >
+          <ChevronDown className="size-3.5 text-muted-foreground" />
+        </motion.span>
       </button>
 
       {typeof document !== 'undefined' &&

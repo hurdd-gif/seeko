@@ -132,6 +132,28 @@ export function StaggerItem({
   );
 }
 
+// ── Interactive row (hover lift + tap feedback) ─────────────────
+export function InteractiveRow({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  const shouldReduce = useReducedMotion();
+  if (shouldReduce) return <div className={className}>{children}</div>;
+  return (
+    <motion.div
+      whileHover={{ y: -1, backgroundColor: 'rgba(255,255,255,0.04)' }}
+      whileTap={{ scale: 0.995 }}
+      transition={springs.snappy}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
 // ── Hover-lift card ─────────────────────────────────────────────
 export function HoverCard({
   children,

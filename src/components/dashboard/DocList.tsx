@@ -18,6 +18,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from '@/components/ui/dropdown-menu';
+import { motion, AnimatePresence } from 'motion/react';
 import { Stagger, StaggerItem, HoverCard } from '@/components/motion';
 import { EmptyState } from '@/components/ui/empty-state';
 import { DocEditor } from './DocEditor';
@@ -63,6 +64,21 @@ function isRecentlyUpdated(doc: Doc): boolean {
 const LIST = {
   staggerMs: 70,   // ms between each card
   delayMs:   0,    // ms before first card
+};
+
+const TAB_ORDER: Record<string, number> = { docs: 0, decks: 1, shared: 2 };
+
+const tabSlideVariants = {
+  enter: (d: number) => ({ opacity: 0, x: d * 40 }),
+  active: { opacity: 1, x: 0 },
+  exit: (d: number) => ({ opacity: 0, x: d * -40 }),
+};
+
+const tabSlideTransition = {
+  type: 'spring' as const,
+  stiffness: 400,
+  damping: 32,
+  opacity: { duration: 0.15 },
 };
 
 const SHARE_STATUS_COLORS: Record<string, string> = {
@@ -141,8 +157,10 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, cu
   type ViewMode = typeof VALID_TABS[number];
   const tabParam = searchParams.get('tab');
   const viewMode: ViewMode = VALID_TABS.includes(tabParam as ViewMode) ? (tabParam as ViewMode) : 'docs';
+  const [tabDirection, setTabDirection] = useState(1);
 
   const setViewMode = (mode: ViewMode) => {
+    setTabDirection(TAB_ORDER[mode] > TAB_ORDER[viewMode] ? 1 : -1);
     const params = new URLSearchParams(searchParams.toString());
     if (mode === 'docs') {
       params.delete('tab');
@@ -456,9 +474,19 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, cu
         )}
       </div>
 
-      {/* ── Shared tab content ─────────────────────────────── */}
+      {/* ── Tab content with directional slide ────────────── */}
+      <AnimatePresence mode="wait" custom={tabDirection}>
       {viewMode === 'shared' && isAdmin && (
-        <div className="flex flex-col gap-2">
+        <motion.div
+          key="shared"
+          custom={tabDirection}
+          variants={tabSlideVariants}
+          initial="enter"
+          animate="active"
+          exit="exit"
+          transition={tabSlideTransition}
+          className="flex flex-col gap-2"
+        >
           {sharedLoading ? (
             <div className="flex items-center justify-center py-12">
               <div className="size-5 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-foreground" />
@@ -529,10 +557,19 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, cu
               )}
             </>
           )}
-        </div>
+        </motion.div>
       )}
 
       {viewMode !== 'shared' && (sortedDocs.length === 0 && docs.filter(d => viewMode === 'decks' ? d.type === 'deck' : d.type !== 'deck').length === 0 ? (
+        <motion.div
+          key={viewMode}
+          custom={tabDirection}
+          variants={tabSlideVariants}
+          initial="enter"
+          animate="active"
+          exit="exit"
+          transition={tabSlideTransition}
+        >
         <EmptyState
           icon="FileText"
           title={viewMode === 'decks' ? 'No decks yet' : 'No documents yet'}
@@ -553,8 +590,17 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, cu
             </Button>
           ) : undefined}
         />
+        </motion.div>
       ) : (
-        <>
+        <motion.div
+          key={viewMode}
+          custom={tabDirection}
+          variants={tabSlideVariants}
+          initial="enter"
+          animate="active"
+          exit="exit"
+          transition={tabSlideTransition}
+        >
           {/* Search + filter row */}
           <div className="flex flex-wrap items-center gap-2 mb-4">
             <div className="relative flex-1 min-w-[200px]">
@@ -628,8 +674,9 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, cu
               )}
             </div>
           )}
-        </>
+        </motion.div>
       ))}
+      </AnimatePresence>
 
       {/* Read dialog */}
       <Dialog

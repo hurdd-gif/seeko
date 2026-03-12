@@ -11,7 +11,7 @@
 import { fetchTeam } from '@/lib/supabase/data';
 import { createClient } from '@/lib/supabase/server';
 import { Profile } from '@/lib/types';
-import { FadeRise, Stagger, StaggerItem } from '@/components/motion';
+import { FadeRise, Stagger, StaggerItem, InteractiveRow } from '@/components/motion';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -118,7 +118,7 @@ function MemberRow({ member, isAdmin }: { member: Profile; isAdmin: boolean }) {
   const offset = tzAbbrev(member.timezone);
 
   return (
-    <div className="flex items-center gap-3 rounded-lg px-3 py-2.5 -mx-3 hover:bg-white/[0.02] transition-colors">
+    <InteractiveRow className="flex items-center gap-3 rounded-lg px-3 py-2.5 -mx-3 transition-colors">
       {/* Avatar */}
       <div className="relative shrink-0">
         <Avatar className="size-10">
@@ -192,7 +192,7 @@ function MemberRow({ member, isAdmin }: { member: Profile; isAdmin: boolean }) {
           {lastSeenLabel(member.last_seen_at, member.must_set_password)}
         </span>
       </div>
-    </div>
+    </InteractiveRow>
   );
 }
 
