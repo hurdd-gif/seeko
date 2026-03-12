@@ -36,7 +36,7 @@ export default async function DocsPage() {
     <div className="space-y-6">
       <div>
         <FadeRise delay={delay(TIMING.heading)}>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Documents</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground text-balance">Documents</h1>
         </FadeRise>
         <FadeRise delay={delay(TIMING.subtitle)}>
           <p className="text-sm text-muted-foreground mt-1">Team documents, specs, and shared resources.</p>

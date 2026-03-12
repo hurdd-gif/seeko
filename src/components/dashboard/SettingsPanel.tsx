@@ -307,7 +307,7 @@ export function SettingsPanel({ profile, isAdmin, team, revalidate, completedTas
   return (
     <div className="flex flex-col gap-8 max-w-3xl mx-auto w-full">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Settings</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground text-balance">Settings</h1>
         <p className="text-sm text-muted-foreground">Manage your profile and preferences.</p>
       </div>
 

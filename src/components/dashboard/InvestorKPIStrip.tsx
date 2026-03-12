@@ -164,7 +164,7 @@ export function InvestorKPIStrip({
                       <ProgressRing pct={liveOverallPct} />
                     </CardHeader>
                     <CardContent>
-                      <span className="text-2xl font-semibold tracking-tight">{liveOverallPct}%</span>
+                      <span className="text-2xl font-semibold tracking-tight tabular-nums">{liveOverallPct}%</span>
                       <p className="text-xs text-muted-foreground mt-0.5">overall progress</p>
                     </CardContent>
                   </Card>
@@ -176,7 +176,7 @@ export function InvestorKPIStrip({
                     <ProgressRing pct={liveOverallPct} />
                   </CardHeader>
                   <CardContent>
-                    <span className="text-2xl font-semibold tracking-tight">{liveOverallPct}%</span>
+                    <span className="text-2xl font-semibold tracking-tight tabular-nums">{liveOverallPct}%</span>
                     <p className="text-xs text-muted-foreground mt-0.5">overall progress</p>
                   </CardContent>
                 </Card>
@@ -195,7 +195,7 @@ export function InvestorKPIStrip({
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <span className="text-2xl font-semibold tracking-tight">{completedThisWeek}</span>
+                  <span className="text-2xl font-semibold tracking-tight tabular-nums">{completedThisWeek}</span>
                   <p className="text-xs text-muted-foreground mt-0.5">tasks completed</p>
                 </CardContent>
               </Card>
@@ -226,7 +226,7 @@ export function InvestorKPIStrip({
                       )}
                     </div>
                   ) : (
-                    <span className="text-2xl font-semibold tracking-tight">0</span>
+                    <span className="text-2xl font-semibold tracking-tight tabular-nums">0</span>
                   )}
                   <p className="text-xs text-muted-foreground mt-0.5">
                     {blocked > 0 && overdue > 0
@@ -253,7 +253,7 @@ export function InvestorKPIStrip({
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <span className="text-2xl font-semibold tracking-tight">{activeAreas}</span>
+                  <span className="text-2xl font-semibold tracking-tight tabular-nums">{activeAreas}</span>
                   <p className="text-xs text-muted-foreground mt-0.5">in development</p>
                 </CardContent>
               </Card>

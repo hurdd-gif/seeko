@@ -37,6 +37,8 @@ import { TaskDetail } from '@/components/dashboard/TaskDetail';
 import { DeliverablesUploadDialog } from '@/components/dashboard/DeliverablesUploadDialog';
 import { HandoffDialog } from '@/components/dashboard/HandoffDialog';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
+import { formatDeadline } from '@/lib/format-deadline';
+import { acquireScrollLock, releaseScrollLock } from '@/lib/scroll-lock';
 
 /* ------------------------------------------------------------------ */
 /*  FilterPill                                                         */
@@ -69,8 +71,8 @@ function FilterPill({
           className={cn(
             'inline-flex items-center gap-1.5 rounded-xl px-4 py-1.5 text-xs font-medium uppercase tracking-wide transition-colors',
             value !== 'All'
-              ? 'bg-[#2c2c2c] text-seeko-accent'
-              : 'bg-[#212121] text-muted-foreground hover:text-foreground'
+              ? 'bg-white/[0.06] text-seeko-accent'
+              : 'bg-white/[0.03] text-muted-foreground hover:text-foreground'
           )}
         >
           {value !== 'All' ? options.find(o => o.value === value)?.label ?? label : label}
@@ -447,6 +449,13 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
 
   const [statusSheetTask, setStatusSheetTask] = useState<Task | TaskWithAssignee | null>(null);
 
+  // Lock scroll when status sheet is open
+  useEffect(() => {
+    if (!statusSheetTask) return;
+    acquireScrollLock();
+    return () => { releaseScrollLock(); };
+  }, [statusSheetTask]);
+
   const openStatusSheet = useCallback((e: React.MouseEvent | React.TouchEvent, task: Task | TaskWithAssignee) => {
     e.stopPropagation();
     setStatusSheetTask(task);
@@ -461,6 +470,10 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
     const assignee = getAssignee(task);
     const badgeStyle = STATUS_BADGE_STYLE[status] ?? STATUS_BADGE_STYLE['In Progress'];
     const BadgeIcon = STATUS_BADGE_ICON[status] ?? Timer;
+    const dl = task.deadline ? formatDeadline(task.deadline) : null;
+    const isOverdue = dl?.className === 'text-red-400';
+    const isBlocked = status === 'Blocked';
+    const isUrgentRow = isOverdue || isBlocked;
 
     const statusBadge = (
       <span
@@ -483,7 +496,7 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
         exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: TASK_DIALS.row.exitY, scale: TASK_DIALS.row.exitScale }}
         transition={TASK_DIALS.row.spring}
       >
-        {/* Desktop: original row layout */}
+        {/* Desktop row */}
         <motion.div
           whileHover={shouldReduceMotion ? undefined : { x: TASK_DIALS.row.hoverX }}
           transition={TASK_DIALS.row.spring}
@@ -491,13 +504,34 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
           tabIndex={0}
           onClick={() => setSelectedTask(task)}
           onKeyDown={e => { if (e.key === 'Enter') setSelectedTask(task); }}
-          className="group hidden md:flex items-center gap-4 px-3 py-3 rounded-xl transition-colors hover:bg-[#212121] cursor-pointer"
+          className={cn(
+            'group hidden md:flex items-center gap-4 px-3 py-3 rounded-xl transition-colors hover:bg-white/[0.04] cursor-pointer',
+            isBlocked && 'bg-red-500/[0.03]',
+            isOverdue && !isBlocked && 'bg-amber-500/[0.03]',
+          )}
         >
-          <span className={cn('size-2 rounded-full shrink-0', PRIORITY_DOT[task.priority] ?? 'bg-zinc-500')} title={task.priority} />
-          <span className="min-w-0 flex-1 truncate text-sm text-foreground">
-            {task.name}
-          </span>
+          <span className={cn('size-2.5 rounded-full shrink-0', PRIORITY_DOT[task.priority] ?? 'bg-zinc-500')} title={task.priority} />
+          <div className="min-w-0 flex-1">
+            <span className="truncate text-sm text-foreground block">
+              {task.name}
+            </span>
+            {task.department && (
+              <span className="text-xs text-muted-foreground font-mono">{task.department}</span>
+            )}
+          </div>
 
+          {/* Deadline */}
+          <div className="w-24 flex justify-center shrink-0">
+            {dl ? (
+              <span className={cn('text-xs tabular-nums', dl.className)} title={task.deadline}>
+                {dl.label}
+              </span>
+            ) : (
+              <span className="text-xs text-muted-foreground/30">—</span>
+            )}
+          </div>
+
+          {/* Assignee */}
           <div className="flex items-center -space-x-2 w-24 justify-center shrink-0">
             {assignee ? (
               <Avatar className="size-8" style={{ outline: '1px solid rgba(255,255,255,0.1)', outlineOffset: '-1px' }}>
@@ -507,7 +541,9 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
                 </AvatarFallback>
               </Avatar>
             ) : (
-              <span className="text-xs text-muted-foreground">—</span>
+              <div className="size-8 rounded-full border border-dashed border-border flex items-center justify-center">
+                <UserPlus className="size-3 text-muted-foreground/40" />
+              </div>
             )}
           </div>
 
@@ -570,7 +606,7 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
               <Button
                 variant="ghost"
                 size="icon"
-                className="size-8 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[#212121]"
+                className="size-8 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white/[0.06]"
                 onClick={e => e.stopPropagation()}
               >
                 <MoreHorizontal className="size-4" />
@@ -655,13 +691,29 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
           tabIndex={0}
           onClick={() => setSelectedTask(task)}
           onKeyDown={e => { if (e.key === 'Enter') setSelectedTask(task); }}
-          className="flex md:hidden flex-col gap-2 px-3 py-3 rounded-xl transition-colors active:bg-[#212121] cursor-pointer"
+          className={cn(
+            'flex md:hidden flex-col gap-2 px-3 py-3 rounded-xl transition-colors active:bg-white/[0.04] cursor-pointer',
+            isBlocked && 'bg-red-500/[0.03]',
+            isOverdue && !isBlocked && 'bg-amber-500/[0.03]',
+          )}
         >
           <div className="flex items-center gap-3">
-            <span className={cn('size-2 rounded-full shrink-0', PRIORITY_DOT[task.priority] ?? 'bg-zinc-500')} title={task.priority} />
-            <span className="min-w-0 flex-1 text-sm font-medium text-foreground line-clamp-2">
-              {task.name}
-            </span>
+            <span className={cn('size-2.5 rounded-full shrink-0', PRIORITY_DOT[task.priority] ?? 'bg-zinc-500')} title={task.priority} />
+            <div className="min-w-0 flex-1">
+              <span className="text-sm font-medium text-foreground line-clamp-2 block">
+                {task.name}
+              </span>
+              <div className="flex items-center gap-2 mt-0.5">
+                {task.department && (
+                  <span className="text-xs text-muted-foreground font-mono">{task.department}</span>
+                )}
+                {dl && (
+                  <span className={cn('text-xs tabular-nums', dl.className)}>
+                    {dl.label}
+                  </span>
+                )}
+              </div>
+            </div>
             {(() => {
               const lockedForReview = !isAdmin && status === 'In Review';
               return lockedForReview ? (
@@ -774,14 +826,11 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
   return (
     <div className="flex flex-col gap-4">
       <div
-        className="rounded-2xl bg-[#222222] px-2 py-3"
-        style={{
-          boxShadow: '0 0 0 1px rgba(255,255,255,0.03), 0 4px 16px rgba(0,0,0,0.1)',
-        }}
+        className="rounded-2xl border border-border bg-card px-2 py-3 shadow-sm"
       >
         {/* Header: title + kebab menu */}
         <div className="flex items-center justify-between px-3 pb-3">
-          <h2 className="text-[15px] text-balance font-semibold tracking-tight text-foreground">
+          <h2 className="text-base text-balance font-semibold tracking-tight text-foreground">
             {isAdmin ? 'All Tasks' : 'My Tasks'}
           </h2>
           {isAdmin && (
@@ -789,7 +838,7 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
               transition={TASK_DIALS.status.spring}
-              className="flex items-center justify-center size-8 rounded-lg bg-[#212121] text-muted-foreground hover:text-foreground transition-colors"
+              className="flex items-center justify-center size-8 rounded-lg bg-seeko-accent/10 text-seeko-accent hover:bg-seeko-accent/20 transition-colors"
               onClick={() => setShowAddForm(true)}
             >
               <Plus className="size-4" />
@@ -807,7 +856,7 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
                 transition={TASK_DIALS.filter.spring}
-                className="overflow-hidden border-b border-white/[0.06]"
+                className="overflow-hidden border-b border-border/50"
               >
                 <div className="px-3 py-3">
                   <div className="flex flex-col gap-3">
@@ -898,9 +947,9 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
             const inReview = filtered.filter(t => getEffectiveStatus(t) === 'In Review').length;
             return (
               <>
-                {inProgress > 0 && <span className="text-[11px] tabular-nums text-amber-400">{inProgress} in progress</span>}
-                {inReview > 0 && <span className="text-[11px] tabular-nums text-blue-400">{inReview} in review</span>}
-                {blocked > 0 && <span className="text-[11px] tabular-nums text-red-400">{blocked} blocked</span>}
+                {inProgress > 0 && <span className="text-xs tabular-nums text-amber-400">{inProgress} in progress</span>}
+                {inReview > 0 && <span className="text-xs tabular-nums text-blue-400">{inReview} in review</span>}
+                {blocked > 0 && <span className="text-xs tabular-nums text-red-400">{blocked} blocked</span>}
               </>
             );
           })()}
@@ -934,20 +983,13 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
           />
         </div>
 
-        {/* Column headers — desktop only */}
-        <div className="hidden md:flex items-center gap-4 border-b border-white/[0.06] px-3 py-2">
-          <span className="flex-1 text-[10px] font-medium uppercase tracking-widest text-muted-foreground/60">Name</span>
-          <span className="w-24 text-center text-[10px] font-medium uppercase tracking-widest text-muted-foreground/60 shrink-0">Assignee</span>
-          <span className="w-32 text-center text-[10px] font-medium uppercase tracking-widest text-muted-foreground/60 shrink-0">Status</span>
-          <span className="w-8 shrink-0" />
-        </div>
-        {/* Mobile separator */}
-        <div className="md:hidden border-b border-white/[0.06]" />
+        {/* Separator */}
+        <div className="border-b border-border/50" />
 
         {/* Task rows */}
         <div>
           <AnimatePresence mode="popLayout">
-          <div className="flex flex-col divide-y divide-white/[0.06]">
+          <div className="flex flex-col divide-y divide-border/30">
             {filtered.map(t => renderTaskRow(t))}
             {filtered.length === 0 && (
               <div className="flex flex-col items-center justify-center py-12 text-center">
@@ -1039,7 +1081,7 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.15 }}
-              className="fixed inset-0 z-50 bg-black/40"
+              className="fixed inset-0 z-50 bg-black/40 touch-none"
               onClick={() => setStatusSheetTask(null)}
             />
             <motion.div
@@ -1054,8 +1096,18 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
                 WebkitBackdropFilter: 'saturate(180%) blur(20px)',
                 paddingBottom: 'calc(env(safe-area-inset-bottom) + 0.75rem)',
               }}
+              drag="y"
+              dragConstraints={{ top: 0, bottom: 0 }}
+              dragElastic={{ top: 0, bottom: 0.6 }}
+              onDragEnd={(_e, info) => {
+                if (info.offset.y > 80 || info.velocity.y > 300) setStatusSheetTask(null);
+              }}
             >
-              <div className="flex items-center justify-between px-5 pt-4 pb-1">
+              {/* Drag handle */}
+              <div className="flex justify-center pt-2 pb-1">
+                <div className="w-9 h-1 rounded-full bg-white/20" />
+              </div>
+              <div className="flex items-center justify-between px-5 pt-2 pb-1">
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold text-foreground truncate">{statusSheetTask.name}</p>
                   <p className="text-xs text-muted-foreground">Change status</p>
@@ -1089,10 +1141,10 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
                       className={cn(
                         'flex items-center gap-3 rounded-xl px-4 py-3.5 text-left transition-colors',
                         isLockedForReview
-                          ? 'opacity-40 cursor-not-allowed bg-[#1a1a1a]'
+                          ? 'opacity-40 cursor-not-allowed bg-muted/50'
                           : isCurrentStatus
-                            ? 'bg-[#2c2c2c]'
-                            : 'bg-[#212121] hover:bg-[#272727]'
+                            ? 'bg-white/[0.06]'
+                            : 'bg-white/[0.03] hover:bg-white/[0.05]'
                       )}
                     >
                       <Icon className={cn('size-5', isLockedForReview ? 'text-muted-foreground' : cfg.className)} />

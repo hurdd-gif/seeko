@@ -129,7 +129,7 @@ export function PaymentsAdmin({ team }: PaymentsAdminProps) {
     return (
       <div className="flex flex-col gap-6">
         <FadeRise delay={0}>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Payments</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground text-balance">Payments</h1>
           <p className="text-sm text-muted-foreground">Track and manage team payments.</p>
         </FadeRise>
         <PaymentsPasswordGate onAuthenticated={() => setAuthenticated(true)} />
@@ -212,7 +212,7 @@ export function PaymentsAdmin({ team }: PaymentsAdminProps) {
       <FadeRise delay={d(TIMING.hero)}>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground">Payments</h1>
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground text-balance">Payments</h1>
             <p className="hidden sm:block text-sm text-muted-foreground mt-1">Track and manage team payments.</p>
           </div>
           <div className="flex items-center gap-2">

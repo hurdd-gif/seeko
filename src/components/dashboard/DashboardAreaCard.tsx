@@ -90,7 +90,7 @@ export function DashboardAreaCard({ area, isAdmin }: DashboardAreaCardProps) {
       <div>
         <div className="flex items-center justify-between mb-1.5">
           <span className="text-xs text-muted-foreground">Progress</span>
-          <span className="text-xs font-mono text-muted-foreground">
+          <span className="text-xs font-mono tabular-nums text-muted-foreground">
             {area.progress}%
           </span>
         </div>

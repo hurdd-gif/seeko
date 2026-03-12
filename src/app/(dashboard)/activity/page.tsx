@@ -25,7 +25,7 @@ export default async function ActivityPage() {
   return (
     <div className="flex flex-col gap-6 max-w-2xl mx-auto overflow-hidden">
       <FadeRise delay={delay(TIMING.hero)}>
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Activity</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground text-balance">Activity</h1>
         <p className="text-sm text-muted-foreground mt-0.5">What the team&apos;s been up to.</p>
       </FadeRise>
 

@@ -25,6 +25,7 @@ import { useRouter } from 'next/navigation';
 import { createBrowserClient } from '@supabase/ssr';
 import { Notification } from '@/lib/types';
 import { useIsDesktop } from '@/lib/hooks/useIsDesktop';
+import { acquireScrollLock, releaseScrollLock } from '@/lib/scroll-lock';
 import { BellToggle } from './notifications/BellToggle';
 import { DesktopNotificationPanel } from './notifications/DesktopNotificationPanel';
 import { MobileNotificationSheet } from './notifications/MobileNotificationSheet';
@@ -52,10 +53,10 @@ export function NotificationBell({ userId, initialCount, initialNotifications }:
   // Lock body scroll on mobile when sheet is open
   useEffect(() => {
     if (!isDesktop && open) {
-      document.documentElement.setAttribute('data-modal-open', '');
+      acquireScrollLock();
       document.body.style.overflow = 'hidden';
       return () => {
-        document.documentElement.removeAttribute('data-modal-open');
+        releaseScrollLock();
         document.body.style.overflow = '';
       };
     }

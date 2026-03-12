@@ -139,7 +139,7 @@ export default async function OverviewPage() {
       <FadeRise delay={delay(TIMING.hero)} y={SECTION_Y}>
         <div className="flex flex-col gap-3">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+            <h1 className="text-3xl font-bold tracking-tight text-foreground text-balance">
               {firstName ? `Hey, ${firstName}` : 'Overview'}
             </h1>
             <p className="text-sm text-muted-foreground mt-0.5">{greeting}</p>
@@ -149,7 +149,7 @@ export default async function OverviewPage() {
           <div className="flex flex-wrap items-center gap-2">
             {overdue > 0 && (
               <span className="inline-flex items-center gap-1.5 rounded-full border border-red-500/20 bg-red-500/[0.06] px-3 py-1 text-xs font-medium text-red-400">
-                {overdue} overdue
+                <span className="tabular-nums">{overdue}</span> overdue
               </span>
             )}
             <Link
@@ -157,21 +157,21 @@ export default async function OverviewPage() {
               className="inline-flex items-center gap-1.5 rounded-full border border-seeko-accent/20 bg-seeko-accent/[0.06] px-3 py-1 text-xs font-medium text-seeko-accent transition-colors hover:bg-seeko-accent/[0.12]"
             >
               <CheckSquare className="size-3" />
-              {openTasks} open
+              <span className="tabular-nums">{openTasks}</span> open
             </Link>
             {inProgress > 0 && (
               <span className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1 text-xs text-muted-foreground">
-                {inProgress} in progress
+                <span className="tabular-nums">{inProgress}</span> in progress
               </span>
             )}
             {blocked > 0 && (
               <span className="inline-flex items-center gap-1.5 rounded-full border border-red-500/20 bg-red-500/[0.06] px-3 py-1 text-xs font-medium text-red-400">
-                {blocked} blocked
+                <span className="tabular-nums">{blocked}</span> blocked
               </span>
             )}
             {completed > 0 && (
               <span className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1 text-xs text-muted-foreground">
-                {completed} completed
+                <span className="tabular-nums">{completed}</span> completed
               </span>
             )}
           </div>
@@ -185,7 +185,7 @@ export default async function OverviewPage() {
         <FadeRise delay={delay(TIMING.tasks)} y={SECTION_Y} className="md:col-span-3">
           <Card>
             <CardHeader>
-              <CardTitle className="text-xl font-semibold text-foreground">Your Tasks</CardTitle>
+              <CardTitle className="text-xl">Your Tasks</CardTitle>
               {earliestDeadline && upcoming.length > 0 && (
                 <CardDescription className={new Date(earliestDeadline + 'T23:59:59') < new Date() ? 'text-red-400' : undefined}>
                   {new Date(earliestDeadline + 'T23:59:59') < new Date()
@@ -229,7 +229,7 @@ export default async function OverviewPage() {
         <FadeRise delay={delay(TIMING.activity)} y={SECTION_Y} className="md:col-span-2 flex">
           <Card className="border-border/50 flex flex-col flex-1">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Activity</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground leading-none">Activity</CardTitle>
             </CardHeader>
             <CardContent className="flex-1 flex flex-col">
               {activity.length === 0 ? (
@@ -288,7 +288,7 @@ export default async function OverviewPage() {
               <CardHeader>
                 <div className="flex items-center gap-2">
                   <Map className="size-4 text-muted-foreground" />
-                  <CardTitle className="text-lg font-semibold text-foreground">Game Areas</CardTitle>
+                  <CardTitle className="text-lg">Game Areas</CardTitle>
                 </div>
                 <CardDescription className="line-clamp-1">{areasSubtitle}</CardDescription>
               </CardHeader>

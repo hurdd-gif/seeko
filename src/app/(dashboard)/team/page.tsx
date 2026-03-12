@@ -244,11 +244,11 @@ function DepartmentSection({
   return (
     <div>
       <div className="flex items-center gap-2 mb-1 px-3">
-        <p className={`text-[11px] font-semibold uppercase tracking-widest ${colorClass ?? 'text-muted-foreground/60'}`}>
+        <p className={`text-xs font-semibold uppercase tracking-widest ${colorClass ?? 'text-muted-foreground/60'}`}>
           {label}
         </p>
-        <div className="flex-1 h-px bg-border/50" />
-        <span className="text-[11px] text-muted-foreground/40">{members.length}</span>
+        <div className="flex-1 h-px bg-border" />
+        <span className="text-xs tabular-nums text-muted-foreground/60">{members.length}</span>
       </div>
       <Stagger className="flex flex-col" staggerMs={0.04}>
         {members.map(member => (
@@ -296,7 +296,7 @@ export default async function TeamPage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <FadeRise delay={delay(TIMING.heading)}>
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground">Team</h1>
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground text-balance">Team</h1>
           </FadeRise>
           <FadeRise delay={delay(TIMING.subtitle)}>
             <p className="text-sm text-muted-foreground mt-1">
@@ -350,11 +350,11 @@ export default async function TeamPage() {
             <CardContent className="pt-5 pb-4">
               <div className="flex items-center gap-2 mb-1 px-3">
                 <Globe className="size-3.5 text-muted-foreground/60" />
-                <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/60">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/60">
                   Contractors
                 </p>
-                <div className="flex-1 h-px bg-border/50" />
-                <span className="text-[11px] text-muted-foreground/40">{contractors.length}</span>
+                <div className="flex-1 h-px bg-border" />
+                <span className="text-xs tabular-nums text-muted-foreground/60">{contractors.length}</span>
               </div>
               {contractors.length === 0 ? (
                 <EmptyState

@@ -25,6 +25,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'motion/react';
+import { acquireScrollLock, releaseScrollLock } from '@/lib/scroll-lock';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -97,12 +98,9 @@ export function AgreementForm({
   const [showConfirmation, setShowConfirmation] = useState(false);
 
   useEffect(() => {
-    if (showConfirmation) {
-      document.documentElement.setAttribute('data-modal-open', '');
-    } else {
-      document.documentElement.removeAttribute('data-modal-open');
-    }
-    return () => { document.documentElement.removeAttribute('data-modal-open'); };
+    if (!showConfirmation) return;
+    acquireScrollLock();
+    return () => { releaseScrollLock(); };
   }, [showConfirmation]);
 
   // Signature animation timing
