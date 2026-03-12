@@ -156,11 +156,6 @@ const TASK_DIALS = {
   filter: {
     spring: { type: 'spring' as const, stiffness: 300, damping: 25 },
   },
-  gooey: {
-    open: { type: 'spring' as const, stiffness: 400, damping: 28 },
-    close: { type: 'spring' as const, stiffness: 500, damping: 35 },
-    stagger: 0.04,
-  },
 };
 
 const ALL_STATUSES: TaskStatus[] = ['Complete', 'In Progress', 'In Review', 'Blocked'];
@@ -179,191 +174,6 @@ function getInitials(name: string): string {
   return name.split(' ').map(p => p[0]).join('').toUpperCase().slice(0, 2) || '?';
 }
 
-/* ------------------------------------------------------------------ */
-/*  MorphStatusDropdown — badge springs open into dropdown panel        */
-/* ------------------------------------------------------------------ */
-
-interface GooeyStatusDropdownProps {
-  taskId: string;
-  status: TaskStatus;
-  onStatusChange: (taskId: string, newStatus: TaskStatus) => void;
-  shouldReduceMotion: boolean | null;
-}
-
-function GooeyStatusDropdown({ taskId, status, onStatusChange, shouldReduceMotion }: GooeyStatusDropdownProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [focusIndex, setFocusIndex] = useState(-1);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const optionRefs = useRef<(HTMLButtonElement | null)[]>([]);
-
-  const badgeStyle = STATUS_BADGE_STYLE[status] ?? STATUS_BADGE_STYLE['In Progress'];
-  const BadgeIcon = STATUS_BADGE_ICON[status] ?? Timer;
-
-  // Close on click outside
-  useEffect(() => {
-    if (!isOpen) return;
-    function handleClickOutside(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setIsOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isOpen]);
-
-  // Close on Escape
-  useEffect(() => {
-    if (!isOpen) return;
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape') {
-        setIsOpen(false);
-        setFocusIndex(-1);
-      }
-    }
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen]);
-
-  // Focus management
-  useEffect(() => {
-    if (isOpen && focusIndex >= 0) {
-      optionRefs.current[focusIndex]?.focus();
-    }
-  }, [isOpen, focusIndex]);
-
-  const handleToggle = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (isOpen) {
-      setIsOpen(false);
-      setFocusIndex(-1);
-    } else {
-      setIsOpen(true);
-      setFocusIndex(-1);
-    }
-  }, [isOpen]);
-
-  const handleSelect = useCallback((newStatus: TaskStatus) => {
-    onStatusChange(taskId, newStatus);
-    setIsOpen(false);
-    setFocusIndex(-1);
-  }, [taskId, onStatusChange]);
-
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      e.stopPropagation();
-      setIsOpen(prev => !prev);
-    }
-    if (isOpen) {
-      if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        setFocusIndex(prev => Math.min(prev + 1, ALL_STATUSES.length - 1));
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        setFocusIndex(prev => Math.max(prev - 1, 0));
-      }
-    }
-  }, [isOpen]);
-
-  return (
-    <div ref={containerRef} className="relative z-40">
-      {/* The morph container — springs borderRadius + bg + shadow between states */}
-      <motion.div
-        animate={{
-          borderRadius: isOpen ? 12 : 9999,
-          backgroundColor: isOpen ? '#212121' : 'transparent',
-          boxShadow: isOpen
-            ? '0 0 0 1px rgba(255,255,255,0.06), 0 4px 16px rgba(0,0,0,0.4), 0 12px 32px rgba(0,0,0,0.3)'
-            : '0 0 0 0px rgba(255,255,255,0), 0 0px 0px rgba(0,0,0,0), 0 0px 0px rgba(0,0,0,0)',
-        }}
-        transition={TASK_DIALS.gooey.open}
-        className={cn('overflow-hidden', !isOpen && badgeStyle)}
-      >
-        {/* Badge / header — always visible, acts as trigger */}
-        <motion.button
-          layout={!shouldReduceMotion}
-          onClick={handleToggle}
-          onKeyDown={handleKeyDown}
-          whileHover={shouldReduceMotion || isOpen ? undefined : { scale: TASK_DIALS.status.hoverScale }}
-          whileTap={shouldReduceMotion ? undefined : { scale: TASK_DIALS.status.tapScale }}
-          transition={TASK_DIALS.status.spring}
-          aria-haspopup="listbox"
-          aria-expanded={isOpen}
-          className={cn(
-            'inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium uppercase tracking-wide whitespace-nowrap w-full',
-            isOpen ? 'text-muted-foreground' : '',
-          )}
-        >
-          <BadgeIcon className="size-3" />
-          {status}
-        </motion.button>
-
-        {/* Options — expand below the badge text */}
-        <AnimatePresence>
-          {isOpen && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={isOpen ? TASK_DIALS.gooey.open : TASK_DIALS.gooey.close}
-              role="listbox"
-              aria-label="Change task status"
-              className="overflow-hidden"
-            >
-              <div className="py-1">
-                {ALL_STATUSES.map((s, i) => {
-                  const cfg = STATUS_ICONS[s];
-                  const Icon = cfg.icon;
-                  const isCurrent = s === status;
-                  return (
-                    <motion.button
-                      key={s}
-                      ref={(el) => { optionRefs.current[i] = el; }}
-                      role="option"
-                      aria-selected={isCurrent}
-                      initial={shouldReduceMotion ? false : { opacity: 0, x: -8 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{
-                        ...TASK_DIALS.gooey.open,
-                        delay: shouldReduceMotion ? 0 : i * TASK_DIALS.gooey.stagger,
-                      }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleSelect(s);
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          handleSelect(s);
-                        }
-                        if (e.key === 'ArrowDown') {
-                          e.preventDefault();
-                          setFocusIndex(Math.min(i + 1, ALL_STATUSES.length - 1));
-                        }
-                        if (e.key === 'ArrowUp') {
-                          e.preventDefault();
-                          setFocusIndex(Math.max(i - 1, 0));
-                        }
-                      }}
-                      className={cn(
-                        'flex w-full items-center gap-2 px-3 py-2 text-xs text-left transition-colors',
-                        isCurrent ? 'bg-[#2c2c2c] font-medium' : 'hover:bg-[#2c2c2c]'
-                      )}
-                    >
-                      <Icon className={cn('size-3.5', cfg.className)} />
-                      <span>{s}</span>
-                    </motion.button>
-                  );
-                })}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </motion.div>
-    </div>
-  );
-}
 
 /* ------------------------------------------------------------------ */
 /*  TaskList                                                           */
@@ -703,12 +513,39 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
 
           <div className="w-32 flex justify-center shrink-0">
             {isAdmin ? (
-              <GooeyStatusDropdown
-                taskId={task.id}
-                status={status}
-                onStatusChange={handleStatusChange}
-                shouldReduceMotion={shouldReduceMotion}
-              />
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <motion.button
+                    whileHover={{ scale: TASK_DIALS.status.hoverScale }}
+                    whileTap={{ scale: TASK_DIALS.status.tapScale }}
+                    transition={TASK_DIALS.status.spring}
+                    onClick={e => e.stopPropagation()}
+                    className={cn(
+                      'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium uppercase tracking-wide whitespace-nowrap',
+                      badgeStyle
+                    )}
+                  >
+                    <BadgeIcon className="size-3" />
+                    {status}
+                  </motion.button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {ALL_STATUSES.map(s => {
+                    const cfg = STATUS_ICONS[s];
+                    const Icon = cfg.icon;
+                    return (
+                      <DropdownMenuItem
+                        key={s}
+                        onClick={() => handleStatusChange(task.id, s)}
+                        className={cn('flex items-center gap-2 text-xs', s === status && 'font-medium')}
+                      >
+                        <Icon className={cn('size-3.5', cfg.className)} />
+                        <span>{s}</span>
+                      </DropdownMenuItem>
+                    );
+                  })}
+                </DropdownMenuContent>
+              </DropdownMenu>
             ) : (
               statusBadge
             )}
@@ -937,9 +774,9 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
   return (
     <div className="flex flex-col gap-4">
       <div
-        className="rounded-2xl bg-[#1a1a1a] px-2 py-3"
+        className="rounded-2xl bg-[#222222] px-2 py-3"
         style={{
-          boxShadow: '0 0 0 1px rgba(255,255,255,0.04), 0 2px 8px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.2)',
+          boxShadow: '0 0 0 1px rgba(255,255,255,0.03), 0 4px 16px rgba(0,0,0,0.1)',
         }}
       >
         {/* Header: title + kebab menu */}
