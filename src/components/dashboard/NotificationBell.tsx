@@ -132,6 +132,33 @@ export function NotificationBell({ userId, initialCount, initialNotifications }:
     await supabase.from('notifications').update({ read: true }).eq('id', notifId);
   }, [supabase]);
 
+  // Swipe mark-read: toggle read state for given IDs
+  const swipeMarkRead = useCallback(async (ids: string[]) => {
+    // Check if all are already read — if so, mark unread
+    const allRead = ids.every(id => notifications.find(n => n.id === id)?.read);
+
+    if (allRead) {
+      // Mark unread
+      setNotifications(prev =>
+        prev.map(n => ids.includes(n.id) ? { ...n, read: false } : n)
+      );
+      setUnreadCount(c => c + ids.length);
+      for (const id of ids) {
+        await supabase.from('notifications').update({ read: false }).eq('id', id);
+      }
+    } else {
+      // Mark read
+      const unreadIds = ids.filter(id => !notifications.find(n => n.id === id)?.read);
+      setNotifications(prev =>
+        prev.map(n => ids.includes(n.id) ? { ...n, read: true } : n)
+      );
+      setUnreadCount(c => Math.max(0, c - unreadIds.length));
+      for (const id of unreadIds) {
+        await supabase.from('notifications').update({ read: true }).eq('id', id);
+      }
+    }
+  }, [supabase, notifications]);
+
   // Dismiss = mark read + remove from list
   const dismissNotification = useCallback(async (ids: string[]) => {
     const unreadDismissed = ids.filter(id => !notifications.find(n => n.id === id)?.read).length;
@@ -176,6 +203,7 @@ export function NotificationBell({ userId, initialCount, initialNotifications }:
           onMarkAllRead={markAllRead}
           onTap={handleNotificationTap}
           onDismiss={dismissNotification}
+          onMarkRead={swipeMarkRead}
         />
       )}
 
@@ -191,6 +219,7 @@ export function NotificationBell({ userId, initialCount, initialNotifications }:
           onMarkAllRead={markAllRead}
           onTap={handleNotificationTap}
           onDismiss={dismissNotification}
+          onMarkRead={swipeMarkRead}
         />,
         document.body
       )}

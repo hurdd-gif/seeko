@@ -17,11 +17,12 @@ interface MobileNotificationSheetProps {
   onMarkAllRead: () => void;
   onTap: (notif: DisplayNotification) => void;
   onDismiss: (ids: string[]) => void;
+  onMarkRead?: (ids: string[]) => void;
 }
 
 export const MobileNotificationSheet = forwardRef<HTMLDivElement, MobileNotificationSheetProps>(
   function MobileNotificationSheet(
-    { open, grouped, isEmpty, unreadCount, onClose, onMarkAllRead, onTap, onDismiss },
+    { open, grouped, isEmpty, unreadCount, onClose, onMarkAllRead, onTap, onDismiss, onMarkRead },
     ref
   ) {
     let rowIndex = 0;
@@ -97,8 +98,8 @@ export const MobileNotificationSheet = forwardRef<HTMLDivElement, MobileNotifica
 
               {/* Notification list */}
               <div
-                className="flex-1 overflow-y-auto overscroll-contain touch-auto"
-                onPointerDownCapture={(e) => e.stopPropagation()}
+                className="flex-1 overflow-y-auto overscroll-contain touch-auto px-2"
+                onPointerDown={(e) => e.stopPropagation()}
               >
                 {isEmpty ? (
                   <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -123,6 +124,7 @@ export const MobileNotificationSheet = forwardRef<HTMLDivElement, MobileNotifica
                               stagger={MOBILE_ROW_STAGGER}
                               onTap={onTap}
                               onDismiss={onDismiss}
+                              onMarkRead={onMarkRead}
                             />
                           );
                         })}
