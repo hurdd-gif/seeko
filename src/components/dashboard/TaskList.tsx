@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback, useEffect, useRef, useId } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { createBrowserClient } from '@supabase/ssr';
@@ -180,7 +180,7 @@ function getInitials(name: string): string {
 }
 
 /* ------------------------------------------------------------------ */
-/*  GooeyStatusDropdown — SVG filter liquid morph from badge to panel  */
+/*  MorphStatusDropdown — badge springs open into dropdown panel        */
 /* ------------------------------------------------------------------ */
 
 interface GooeyStatusDropdownProps {
@@ -191,21 +191,13 @@ interface GooeyStatusDropdownProps {
 }
 
 function GooeyStatusDropdown({ taskId, status, onStatusChange, shouldReduceMotion }: GooeyStatusDropdownProps) {
-  const filterId = useId().replace(/:/g, '');  // unique per instance, strip colons for valid SVG id
   const [isOpen, setIsOpen] = useState(false);
   const [focusIndex, setFocusIndex] = useState(-1);
   const containerRef = useRef<HTMLDivElement>(null);
   const optionRefs = useRef<(HTMLButtonElement | null)[]>([]);
-  const [opensUp, setOpensUp] = useState(false);
-  const [opensRight, setOpensRight] = useState(true);
 
   const badgeStyle = STATUS_BADGE_STYLE[status] ?? STATUS_BADGE_STYLE['In Progress'];
   const BadgeIcon = STATUS_BADGE_ICON[status] ?? Timer;
-  // When open, badge needs a solid bg so the gooey filter can form liquid blobs
-  // (10% opacity backgrounds are invisible to the blur+threshold pipeline)
-  const activeBadgeStyle = isOpen
-    ? 'bg-[#212121] text-foreground'
-    : badgeStyle;
 
   // Close on click outside
   useEffect(() => {
@@ -239,18 +231,16 @@ function GooeyStatusDropdown({ taskId, status, onStatusChange, shouldReduceMotio
     }
   }, [isOpen, focusIndex]);
 
-  // Viewport edge detection
-  const handleOpen = useCallback(() => {
-    if (containerRef.current) {
-      const rect = containerRef.current.getBoundingClientRect();
-      const spaceBelow = window.innerHeight - rect.bottom;
-      const spaceRight = window.innerWidth - rect.left;
-      setOpensUp(spaceBelow < 220);
-      setOpensRight(spaceRight >= 176); // w-44 = 176px
+  const handleToggle = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isOpen) {
+      setIsOpen(false);
+      setFocusIndex(-1);
+    } else {
+      setIsOpen(true);
+      setFocusIndex(-1);
     }
-    setIsOpen(true);
-    setFocusIndex(-1);
-  }, []);
+  }, [isOpen]);
 
   const handleSelect = useCallback((newStatus: TaskStatus) => {
     onStatusChange(taskId, newStatus);
@@ -258,15 +248,11 @@ function GooeyStatusDropdown({ taskId, status, onStatusChange, shouldReduceMotio
     setFocusIndex(-1);
   }, [taskId, onStatusChange]);
 
-  const handleBadgeKeyDown = useCallback((e: React.KeyboardEvent) => {
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       e.stopPropagation();
-      if (isOpen) {
-        setIsOpen(false);
-      } else {
-        handleOpen();
-      }
+      setIsOpen(prev => !prev);
     }
     if (isOpen) {
       if (e.key === 'ArrowDown') {
@@ -277,134 +263,105 @@ function GooeyStatusDropdown({ taskId, status, onStatusChange, shouldReduceMotio
         setFocusIndex(prev => Math.max(prev - 1, 0));
       }
     }
-  }, [isOpen, handleOpen]);
+  }, [isOpen]);
 
   return (
-    <div ref={containerRef} className="relative">
-      {/* SVG gooey filter — unique ID per instance */}
-      <svg className="absolute" width="0" height="0" aria-hidden="true">
-        <defs>
-          <filter id={filterId}>
-            {/* 1. Blur source → soft blobs merge where badge + panel touch */}
-            <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur" />
-            {/* 2. Threshold alpha → tight blob edges (higher = sharper) */}
-            <feColorMatrix in="blur" type="matrix"
-              values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 30 -12"
-              result="gooey" />
-            {/* 3. Blend original content OVER gooey → crisp text on blobby shapes */}
-            <feBlend in="SourceGraphic" in2="gooey" />
-          </filter>
-        </defs>
-      </svg>
-
-      {/* Single filtered container — transparent bg required for alpha manipulation.
-          Badge + panel are siblings with solid bg. The filter blurs their shapes,
-          thresholds the alpha (creating liquid bridges), then blends original
-          content on top (preserving crisp text/icons). */}
-      <div
-        style={{ filter: isOpen ? `url(#${filterId})` : 'none' }}
+    <div ref={containerRef} className="relative z-40">
+      {/* The morph container — one div that springs from badge size to panel size */}
+      <motion.div
+        layout={!shouldReduceMotion}
+        transition={isOpen ? TASK_DIALS.gooey.open : TASK_DIALS.gooey.close}
+        className={cn(
+          'overflow-hidden',
+          isOpen ? 'rounded-xl bg-[#212121]' : 'rounded-full',
+          !isOpen && badgeStyle,
+        )}
+        style={isOpen ? {
+          boxShadow: '0 0 0 1px rgba(255,255,255,0.04), 0 4px 16px rgba(0,0,0,0.4), 0 12px 32px rgba(0,0,0,0.3)',
+        } : undefined}
       >
-        {/* Badge trigger */}
+        {/* Badge / header — always visible, acts as trigger */}
         <motion.button
-          onClick={(e) => { e.stopPropagation(); isOpen ? setIsOpen(false) : handleOpen(); }}
-          onKeyDown={handleBadgeKeyDown}
-          whileHover={shouldReduceMotion ? undefined : { scale: TASK_DIALS.status.hoverScale }}
+          layout={!shouldReduceMotion}
+          onClick={handleToggle}
+          onKeyDown={handleKeyDown}
+          whileHover={shouldReduceMotion || isOpen ? undefined : { scale: TASK_DIALS.status.hoverScale }}
           whileTap={shouldReduceMotion ? undefined : { scale: TASK_DIALS.status.tapScale }}
           transition={TASK_DIALS.status.spring}
           aria-haspopup="listbox"
           aria-expanded={isOpen}
           className={cn(
-            'relative inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium uppercase tracking-wide whitespace-nowrap transition-colors',
-            isOpen ? 'bg-[#212121] text-foreground' : activeBadgeStyle
+            'inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium uppercase tracking-wide whitespace-nowrap w-full',
+            isOpen ? 'text-muted-foreground' : '',
           )}
         >
-          <AnimatePresence mode="wait">
-            <motion.span
-              key={`badge-${status}`}
-              initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.8, filter: 'blur(4px)' }}
-              animate={isOpen
-                ? { opacity: 0.4, scale: 1, filter: 'blur(0px)' }
-                : { opacity: 1, scale: 1, filter: 'blur(0px)' }
-              }
-              exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.8, filter: 'blur(4px)' }}
-              transition={TASK_DIALS.status.spring}
-              className="inline-flex items-center gap-1.5"
-            >
-              <BadgeIcon className="size-3" />
-              {status}
-            </motion.span>
-          </AnimatePresence>
+          <BadgeIcon className="size-3" />
+          {status}
         </motion.button>
 
-        {/* Dropdown panel */}
+        {/* Options — expand below the badge text */}
         <AnimatePresence>
           {isOpen && (
             <motion.div
-              initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scaleY: 0.6, scaleX: 0.9 }}
-              animate={{ opacity: 1, scaleY: 1, scaleX: 1 }}
-              exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.95 }}
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
               transition={isOpen ? TASK_DIALS.gooey.open : TASK_DIALS.gooey.close}
               role="listbox"
               aria-label="Change task status"
-              className={cn(
-                'absolute z-50 w-44 rounded-xl bg-[#212121] py-1',
-                opensUp ? 'bottom-full mb-0 origin-bottom' : 'top-full mt-0 origin-top',
-                opensRight ? 'left-0' : 'right-0',
-              )}
-              style={{
-                boxShadow: '0 0 0 1px rgba(255,255,255,0.04), 0 4px 16px rgba(0,0,0,0.4), 0 12px 32px rgba(0,0,0,0.3)',
-              }}
+              className="overflow-hidden"
             >
-              {ALL_STATUSES.map((s, i) => {
-                const cfg = STATUS_ICONS[s];
-                const Icon = cfg.icon;
-                const isCurrent = s === status;
-                return (
-                  <motion.button
-                    key={s}
-                    ref={(el) => { optionRefs.current[i] = el; }}
-                    role="option"
-                    aria-selected={isCurrent}
-                    initial={shouldReduceMotion ? false : { opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.95 }}
-                    transition={{
-                      ...TASK_DIALS.gooey.open,
-                      delay: shouldReduceMotion ? 0 : i * TASK_DIALS.gooey.stagger,
-                    }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleSelect(s);
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
+              <div className="py-1">
+                {ALL_STATUSES.map((s, i) => {
+                  const cfg = STATUS_ICONS[s];
+                  const Icon = cfg.icon;
+                  const isCurrent = s === status;
+                  return (
+                    <motion.button
+                      key={s}
+                      ref={(el) => { optionRefs.current[i] = el; }}
+                      role="option"
+                      aria-selected={isCurrent}
+                      initial={shouldReduceMotion ? false : { opacity: 0, x: -8 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{
+                        ...TASK_DIALS.gooey.open,
+                        delay: shouldReduceMotion ? 0 : i * TASK_DIALS.gooey.stagger,
+                      }}
+                      onClick={(e) => {
                         e.stopPropagation();
                         handleSelect(s);
-                      }
-                      if (e.key === 'ArrowDown') {
-                        e.preventDefault();
-                        setFocusIndex(Math.min(i + 1, ALL_STATUSES.length - 1));
-                      }
-                      if (e.key === 'ArrowUp') {
-                        e.preventDefault();
-                        setFocusIndex(Math.max(i - 1, 0));
-                      }
-                    }}
-                    className={cn(
-                      'flex w-full items-center gap-2 px-3 py-2 text-xs text-left transition-colors',
-                      isCurrent ? 'bg-[#2c2c2c] font-medium' : 'hover:bg-[#2c2c2c]'
-                    )}
-                  >
-                    <Icon className={cn('size-3.5', cfg.className)} />
-                    <span>{s}</span>
-                  </motion.button>
-                );
-              })}
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleSelect(s);
+                        }
+                        if (e.key === 'ArrowDown') {
+                          e.preventDefault();
+                          setFocusIndex(Math.min(i + 1, ALL_STATUSES.length - 1));
+                        }
+                        if (e.key === 'ArrowUp') {
+                          e.preventDefault();
+                          setFocusIndex(Math.max(i - 1, 0));
+                        }
+                      }}
+                      className={cn(
+                        'flex w-full items-center gap-2 px-3 py-2 text-xs text-left transition-colors',
+                        isCurrent ? 'bg-[#2c2c2c] font-medium' : 'hover:bg-[#2c2c2c]'
+                      )}
+                    >
+                      <Icon className={cn('size-3.5', cfg.className)} />
+                      <span>{s}</span>
+                    </motion.button>
+                  );
+                })}
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
-      </div>
+      </motion.div>
     </div>
   );
 }
