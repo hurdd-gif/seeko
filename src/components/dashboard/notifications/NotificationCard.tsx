@@ -272,7 +272,7 @@ export function NotificationCard({
           position: 'relative',
           overflow: 'hidden',
           borderRadius: 12,
-          touchAction: 'none',
+          touchAction: 'pan-y',
         }}
         onPointerDown={handlePointerDown}
       >
