@@ -35,8 +35,8 @@ export function LiveToastCard({
   const pausedAtRef = useRef<number | null>(null);
 
   const y = useMotionValue(0);
-  const opacity = useTransform(y, [0, 80], [1, 0]);
-  const scale = useTransform(y, [0, 80], [1, 0.95]);
+  const dragOpacity = useTransform(y, [0, 80], [1, 0]);
+  const dragScale = useTransform(y, [0, 80], [1, 0.95]);
 
   const handleDragEnd = useCallback(
     (_: unknown, info: { offset: { y: number }; velocity: { y: number } }) => {
@@ -86,7 +86,7 @@ export function LiveToastCard({
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: 20, scale: 0.95 }}
       transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-      style={{ opacity, scale, y }}
+      style={{ y }}
       drag="y"
       dragConstraints={{ top: 0, bottom: 0 }}
       dragElastic={{ top: 0.1, bottom: 0.6 }}
@@ -97,6 +97,7 @@ export function LiveToastCard({
       onTouchEnd={handleTouchEnd}
       className="w-full max-w-[400px] mx-auto touch-none"
     >
+      <motion.div style={{ opacity: dragOpacity, scale: dragScale }}>
       <button
         onClick={() => onTap(toast)}
         className={[
@@ -150,6 +151,7 @@ export function LiveToastCard({
           <X className="size-3" />
         </motion.span>
       </button>
+      </motion.div>
     </motion.div>
   );
 }
