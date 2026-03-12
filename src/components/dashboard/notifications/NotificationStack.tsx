@@ -18,6 +18,7 @@ interface NotificationStackProps {
   stagger: number;
   onTap: (notif: DisplayNotification) => void;
   onDismiss: (ids: string[]) => void;
+  onMarkRead?: (ids: string[]) => void;
 }
 
 export function NotificationStack({
@@ -27,6 +28,7 @@ export function NotificationStack({
   stagger,
   onTap,
   onDismiss,
+  onMarkRead,
 }: NotificationStackProps) {
   const [expanded, setExpanded] = useState(false);
   const d = useDials();
@@ -63,6 +65,7 @@ export function NotificationStack({
         stagger={stagger}
         onTap={onTap}
         onDismiss={onDismiss}
+        onMarkRead={onMarkRead}
       />
     );
   }
@@ -119,6 +122,7 @@ export function NotificationStack({
                 stagger={isFront ? stagger : 0}
                 onTap={isFront && !expanded ? () => setExpanded(true) : onTap}
                 onDismiss={onDismiss}
+                onMarkRead={onMarkRead}
                 hideClose={isFront}
               />
             </motion.div>
