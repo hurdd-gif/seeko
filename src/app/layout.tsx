@@ -3,8 +3,6 @@ import { Toaster } from "sonner";
 import { Outfit, JetBrains_Mono, Caveat } from "next/font/google";
 import { HapticsProvider } from "@/components/HapticsProvider";
 import { DevAgentation } from "@/components/dev/agentation";
-import { DialRoot } from "dialkit";
-import "dialkit/styles.css";
 import "./globals.css";
 
 const outfit = Outfit({
@@ -66,7 +64,7 @@ export default function RootLayout({
             }}
           />
           <DevAgentation />
-          <DialRoot position="top-right" />
+
         </HapticsProvider>
       </body>
     </html>

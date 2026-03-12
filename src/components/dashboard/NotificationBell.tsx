@@ -156,14 +156,15 @@ export function NotificationBell({ userId, initialCount, initialNotifications }:
 
   return (
     <div className="relative">
+      {/* Bell button — always rendered, morphs icon to X when open */}
       <BellToggle
         ref={bellRef}
         open={open}
         unreadCount={unreadCount}
-        onClick={() => setOpen(v => !v)}
+        onClick={() => setOpen(o => !o)}
       />
 
-      {/* Desktop: render inline (absolute positioned from relative parent) */}
+      {/* Desktop: dropdown panel */}
       {isDesktop && (
         <DesktopNotificationPanel
           ref={panelRef}

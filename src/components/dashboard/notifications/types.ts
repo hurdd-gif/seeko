@@ -10,6 +10,8 @@ export interface DisplayNotification {
   created_at: string;
   count: number;
   ids: string[];
+  /** Original individual notifications when count > 1 */
+  children?: DisplayNotification[];
 }
 
 export interface GroupedNotification {

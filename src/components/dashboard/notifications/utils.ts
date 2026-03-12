@@ -29,10 +29,18 @@ export function collapseNotifications(items: Notification[]): DisplayNotificatio
     const key = `${n.kind}:${titlePrefix}`;
     const existingIdx = seen.get(key);
 
+    const child: DisplayNotification = {
+      id: n.id, kind: n.kind, title: n.title, body: n.body,
+      link: n.link, read: n.read, created_at: n.created_at,
+      count: 1, ids: [n.id],
+    };
+
     if (existingIdx !== undefined && result[existingIdx]) {
       const existing = result[existingIdx];
       existing.count++;
       existing.ids.push(n.id);
+      existing.children = existing.children ?? [];
+      existing.children.push(child);
       if (!n.read) existing.read = false;
       if (n.kind === 'payment_request') {
         const existAmount = parseFloat(existing.title.match(/\$([\d,.]+)/)?.[1]?.replace(',', '') ?? '0');
