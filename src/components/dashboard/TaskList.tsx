@@ -160,7 +160,6 @@ const TASK_DIALS = {
     open: { type: 'spring' as const, stiffness: 400, damping: 28 },
     close: { type: 'spring' as const, stiffness: 500, damping: 35 },
     stagger: 0.04,
-    colorFade: 0.15,
   },
 };
 
@@ -197,6 +196,7 @@ function GooeyStatusDropdown({ taskId, status, onStatusChange, shouldReduceMotio
   const containerRef = useRef<HTMLDivElement>(null);
   const optionRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const [opensUp, setOpensUp] = useState(false);
+  const [opensRight, setOpensRight] = useState(true);
 
   const badgeStyle = STATUS_BADGE_STYLE[status] ?? STATUS_BADGE_STYLE['In Progress'];
   const BadgeIcon = STATUS_BADGE_ICON[status] ?? Timer;
@@ -238,7 +238,9 @@ function GooeyStatusDropdown({ taskId, status, onStatusChange, shouldReduceMotio
     if (containerRef.current) {
       const rect = containerRef.current.getBoundingClientRect();
       const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceRight = window.innerWidth - rect.left;
       setOpensUp(spaceBelow < 220);
+      setOpensRight(spaceRight >= 176); // w-44 = 176px
     }
     setIsOpen(true);
     setFocusIndex(-1);
@@ -292,19 +294,20 @@ function GooeyStatusDropdown({ taskId, status, onStatusChange, shouldReduceMotio
         )}
       >
         <AnimatePresence mode="wait">
-          {!isOpen && (
-            <motion.span
-              key="badge-content"
-              initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.8, filter: 'blur(4px)' }}
-              animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
-              exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.8, filter: 'blur(4px)' }}
-              transition={{ duration: 0.08 }}
-              className="inline-flex items-center gap-1.5"
-            >
-              <BadgeIcon className="size-3" />
-              {status}
-            </motion.span>
-          )}
+          <motion.span
+            key={`badge-${status}`}
+            initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.8, filter: 'blur(4px)' }}
+            animate={isOpen
+              ? { opacity: 0.4, scale: 1, filter: 'blur(0px)' }
+              : { opacity: 1, scale: 1, filter: 'blur(0px)' }
+            }
+            exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.8, filter: 'blur(4px)' }}
+            transition={TASK_DIALS.status.spring}
+            className="inline-flex items-center gap-1.5"
+          >
+            <BadgeIcon className="size-3" />
+            {status}
+          </motion.span>
         </AnimatePresence>
       </motion.button>
 
@@ -319,8 +322,9 @@ function GooeyStatusDropdown({ taskId, status, onStatusChange, shouldReduceMotio
             role="listbox"
             aria-label="Change task status"
             className={cn(
-              'absolute z-50 w-44 rounded-xl bg-[#212121] py-1 origin-top',
-              opensUp ? 'bottom-full mb-1' : 'top-full mt-1',
+              'absolute z-50 w-44 rounded-xl bg-[#212121] py-1',
+              opensUp ? 'bottom-full mb-1 origin-bottom' : 'top-full mt-1 origin-top',
+              opensRight ? 'left-0' : 'right-0',
             )}
             style={{
               boxShadow: '0 0 0 1px rgba(255,255,255,0.04), 0 4px 16px rgba(0,0,0,0.4), 0 12px 32px rgba(0,0,0,0.3)',
@@ -360,10 +364,6 @@ function GooeyStatusDropdown({ taskId, status, onStatusChange, shouldReduceMotio
                     if (e.key === 'ArrowUp') {
                       e.preventDefault();
                       setFocusIndex(Math.max(i - 1, 0));
-                    }
-                    if (e.key === 'Escape') {
-                      setIsOpen(false);
-                      setFocusIndex(-1);
                     }
                   }}
                   className={cn(
