@@ -267,18 +267,17 @@ function GooeyStatusDropdown({ taskId, status, onStatusChange, shouldReduceMotio
 
   return (
     <div ref={containerRef} className="relative z-40">
-      {/* The morph container — one div that springs from badge size to panel size */}
+      {/* The morph container — springs borderRadius + bg + shadow between states */}
       <motion.div
-        layout={!shouldReduceMotion}
-        transition={isOpen ? TASK_DIALS.gooey.open : TASK_DIALS.gooey.close}
-        className={cn(
-          'overflow-hidden',
-          isOpen ? 'rounded-xl bg-[#212121]' : 'rounded-full',
-          !isOpen && badgeStyle,
-        )}
-        style={isOpen ? {
-          boxShadow: '0 0 0 1px rgba(255,255,255,0.04), 0 4px 16px rgba(0,0,0,0.4), 0 12px 32px rgba(0,0,0,0.3)',
-        } : undefined}
+        animate={{
+          borderRadius: isOpen ? 12 : 9999,
+          backgroundColor: isOpen ? '#212121' : 'transparent',
+          boxShadow: isOpen
+            ? '0 0 0 1px rgba(255,255,255,0.06), 0 4px 16px rgba(0,0,0,0.4), 0 12px 32px rgba(0,0,0,0.3)'
+            : '0 0 0 0px rgba(255,255,255,0), 0 0px 0px rgba(0,0,0,0), 0 0px 0px rgba(0,0,0,0)',
+        }}
+        transition={TASK_DIALS.gooey.open}
+        className={cn('overflow-hidden', !isOpen && badgeStyle)}
       >
         {/* Badge / header — always visible, acts as trigger */}
         <motion.button
