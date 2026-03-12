@@ -279,13 +279,16 @@ function GooeyStatusDropdown({ taskId, status, onStatusChange, shouldReduceMotio
     }
   }, [isOpen, handleOpen]);
 
+  // Panel position classes (shared between shape layer and content layer)
+  const panelPosition = cn(
+    'absolute z-50 w-44',
+    opensUp ? 'bottom-full mb-0' : 'top-full mt-0',
+    opensRight ? 'left-0' : 'right-0',
+  );
+
   return (
-    <div
-      ref={containerRef}
-      className="relative"
-      style={{ filter: isOpen ? `url(#${filterId})` : 'none' }}
-    >
-      {/* Inline SVG filter — unique ID per instance, co-located for Next.js url(#id) */}
+    <div ref={containerRef} className="relative">
+      {/* SVG filter definition — unique per instance */}
       <svg className="absolute" width="0" height="0" aria-hidden="true">
         <defs>
           <filter id={filterId}>
@@ -296,11 +299,40 @@ function GooeyStatusDropdown({ taskId, status, onStatusChange, shouldReduceMotio
               values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 20 -10"
               result="gooey"
             />
-            {/* feBlend layers original content over gooey shape — blob bridges stay visible */}
-            <feBlend in="SourceGraphic" in2="gooey" />
           </filter>
         </defs>
       </svg>
+
+      {/* ── Layer 1: Shape layer (FILTERED) ── */}
+      {/* Only solid-colored divs here — no text, no icons.                */}
+      {/* The gooey filter blurs these shapes and creates liquid bridges.  */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{ filter: isOpen ? `url(#${filterId})` : 'none' }}
+      >
+        {/* Badge shape */}
+        <div className={cn(
+          'rounded-full px-3 py-1 inline-flex h-[26px]',
+          isOpen ? 'bg-[#212121]' : 'invisible',
+        )} />
+        {/* Panel shape */}
+        <AnimatePresence>
+          {isOpen && (
+            <motion.div
+              initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scaleY: 0.6, scaleX: 0.9 }}
+              animate={{ opacity: 1, scaleY: 1, scaleX: 1 }}
+              exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.95 }}
+              transition={isOpen ? TASK_DIALS.gooey.open : TASK_DIALS.gooey.close}
+              className={cn(panelPosition, 'rounded-xl bg-[#212121] h-[164px]',
+                opensUp ? 'origin-bottom' : 'origin-top',
+              )}
+            />
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* ── Layer 2: Content layer (NOT filtered) ── */}
+      {/* Crisp text and icons rendered on top of the gooey shapes.       */}
 
       {/* Badge trigger */}
       <motion.button
@@ -312,8 +344,8 @@ function GooeyStatusDropdown({ taskId, status, onStatusChange, shouldReduceMotio
         aria-haspopup="listbox"
         aria-expanded={isOpen}
         className={cn(
-          'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium uppercase tracking-wide whitespace-nowrap transition-colors',
-          activeBadgeStyle
+          'relative inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium uppercase tracking-wide whitespace-nowrap transition-colors',
+          isOpen ? 'bg-transparent text-foreground' : activeBadgeStyle
         )}
       >
         <AnimatePresence mode="wait">
@@ -334,7 +366,7 @@ function GooeyStatusDropdown({ taskId, status, onStatusChange, shouldReduceMotio
         </AnimatePresence>
       </motion.button>
 
-      {/* Dropdown panel */}
+      {/* Dropdown panel (content) */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -344,10 +376,8 @@ function GooeyStatusDropdown({ taskId, status, onStatusChange, shouldReduceMotio
             transition={isOpen ? TASK_DIALS.gooey.open : TASK_DIALS.gooey.close}
             role="listbox"
             aria-label="Change task status"
-            className={cn(
-              'absolute z-50 w-44 rounded-xl bg-[#212121] py-1',
-              opensUp ? 'bottom-full mb-1 origin-bottom' : 'top-full mt-1 origin-top',
-              opensRight ? 'left-0' : 'right-0',
+            className={cn(panelPosition, 'rounded-xl bg-[#212121] py-1',
+              opensUp ? 'origin-bottom' : 'origin-top',
             )}
             style={{
               boxShadow: '0 0 0 1px rgba(255,255,255,0.04), 0 4px 16px rgba(0,0,0,0.4), 0 12px 32px rgba(0,0,0,0.3)',
