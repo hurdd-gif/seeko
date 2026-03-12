@@ -71,7 +71,7 @@ function formatExpiry(expiresAt: string): string {
 export function SharedDocClient({ token, initialData }: SharedDocClientProps) {
   const alreadyVerified = initialData.status === 'verified';
   const [phase, setPhase] = useState<Phase>(alreadyVerified ? 'viewing' : 'verify');
-  const [docData, setDocData] = useState<{ title: string; content?: string; type: string; slides?: { url: string; sort_order: number }[] } | null>(null);
+  const [docData, setDocData] = useState<{ title: string; content?: string; type: string; deck_orientation?: 'horizontal' | 'vertical'; slides?: { url: string; sort_order: number }[] } | null>(null);
   const [loading, setLoading] = useState(false);
 
   const fetchContent = async () => {
@@ -205,7 +205,7 @@ export function SharedDocClient({ token, initialData }: SharedDocClientProps) {
       {/* Content */}
       <motion.div variants={contentReveal} className="mx-auto max-w-5xl px-5 py-8">
         {docData.type === 'deck' && docData.slides ? (
-          <DeckViewer slides={docData.slides} title={docData.title} notes={docData.content} />
+          <DeckViewer slides={docData.slides} title={docData.title} notes={docData.content} orientation={docData.deck_orientation} />
         ) : docData.content ? (
           <DocContent html={docData.content} />
         ) : (

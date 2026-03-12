@@ -27,6 +27,7 @@ export function DeckEditor({ doc, onSave, onCancel, team = [] }: DeckEditorProps
   const [departments, setDepartments] = useState<string[]>(doc?.restricted_department ?? []);
   const [grantedIds, setGrantedIds] = useState<string[]>(doc?.granted_user_ids ?? []);
   const [slides, setSlides] = useState<{ url: string; sort_order: number }[]>(doc?.slides ?? []);
+  const [orientation, setOrientation] = useState<'horizontal' | 'vertical'>(doc?.deck_orientation ?? 'horizontal');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [addUserValue, setAddUserValue] = useState('');
@@ -51,6 +52,7 @@ export function DeckEditor({ doc, onSave, onCancel, team = [] }: DeckEditorProps
           restricted_department: departments.length > 0 ? departments : null,
           granted_user_ids: grantedIds.length > 0 ? grantedIds : null,
           slides: slides.length > 0 ? slides : null,
+          deck_orientation: orientation,
         };
         const res = await fetch(`/api/docs/${doc.id}`, {
           method: 'PATCH',
@@ -74,6 +76,7 @@ export function DeckEditor({ doc, onSave, onCancel, team = [] }: DeckEditorProps
           restricted_department: departments.length > 0 ? departments : null,
           granted_user_ids: grantedIds.length > 0 ? grantedIds : null,
           slides: slides.length > 0 ? slides : null,
+          deck_orientation: orientation,
         };
         const res = await fetch(`/api/docs/${deckId}`, {
           method: 'PATCH',
@@ -97,6 +100,7 @@ export function DeckEditor({ doc, onSave, onCancel, team = [] }: DeckEditorProps
           type: 'deck',
           restricted_department: departments.length > 0 ? departments : null,
           granted_user_ids: grantedIds.length > 0 ? grantedIds : null,
+          deck_orientation: orientation,
         };
         const res = await fetch('/api/docs', {
           method: 'POST',
@@ -268,6 +272,37 @@ export function DeckEditor({ doc, onSave, onCancel, team = [] }: DeckEditorProps
           })}
         </div>
       )}
+
+      {/* Orientation toggle */}
+      <div className="flex items-center gap-3">
+        <span className="text-xs text-muted-foreground whitespace-nowrap">Layout:</span>
+        <div className="flex rounded-lg border border-border overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setOrientation('horizontal')}
+            className={cn(
+              'px-3 py-1.5 text-xs font-medium transition-colors',
+              orientation === 'horizontal'
+                ? 'bg-seeko-accent/10 text-seeko-accent'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+          >
+            Slides
+          </button>
+          <button
+            type="button"
+            onClick={() => setOrientation('vertical')}
+            className={cn(
+              'px-3 py-1.5 text-xs font-medium transition-colors border-l border-border',
+              orientation === 'vertical'
+                ? 'bg-seeko-accent/10 text-seeko-accent'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+          >
+            Document
+          </button>
+        </div>
+      </div>
 
       {/* PDF Upload */}
       <DeckUploader

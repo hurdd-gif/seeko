@@ -60,7 +60,7 @@ export async function fetchDocs(parentId?: string): Promise<Doc[]> {
 
   let query = supabase
     .from('docs')
-    .select('id, title, content, parent_id, sort_order, restricted_department, granted_user_ids, type, slides, created_at, updated_at')
+    .select('id, title, content, parent_id, sort_order, restricted_department, granted_user_ids, type, slides, deck_orientation, created_at, updated_at')
     .order('sort_order', { ascending: true });
 
   if (parentId) {
@@ -78,7 +78,7 @@ export async function fetchAllDocs(): Promise<Doc[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from('docs')
-    .select('id, title, content, parent_id, sort_order, restricted_department, granted_user_ids, type, slides, created_at, updated_at')
+    .select('id, title, content, parent_id, sort_order, restricted_department, granted_user_ids, type, slides, deck_orientation, created_at, updated_at')
     .order('sort_order', { ascending: true });
   if (error) throw error;
   return (data ?? []) as Doc[];

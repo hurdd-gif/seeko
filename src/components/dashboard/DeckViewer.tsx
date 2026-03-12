@@ -1,17 +1,21 @@
 /* ─────────────────────────────────────────────────────────
  * ANIMATION STORYBOARD — Deck Viewer
  *
- *   Inline
+ *   Horizontal (slides)
  *     Nav    instant slide swap (no transition — content first)
  *     Nav    slide counter digit slides vertically (150ms)
  *     Nav    filmstrip active ring slides via layoutId (snappy spring)
  *     Hover  inactive thumbnails scale 1.04 on hover
  *     Notes  fade+rise entrance (150ms delay after mount)
  *
- *   Fullscreen
+ *   Vertical (scrolling document)
+ *     Inline  all pages stacked, scroll container
+ *     Hover   fullscreen button appears top-right
+ *     Full    scrollable fullscreen with all pages
+ *
+ *   Fullscreen (both orientations)
  *     Enter  fullscreen fades in (200ms)
- *     Nav    instant slide swap (no transition)
- *     Nav    dot indicators: active dot widens via layoutId
+ *     Nav    (horizontal) instant slide swap, dot indicators
  *     Exit   fullscreen fades out (200ms)
  * ───────────────────────────────────────────────────────── */
 
@@ -31,12 +35,13 @@ interface DeckViewerProps {
   slides: Slide[];
   title: string;
   notes?: string | null;
+  orientation?: 'horizontal' | 'vertical';
 }
 
 const SNAPPY = { type: 'spring' as const, stiffness: 500, damping: 30 };
 const SMOOTH = { type: 'spring' as const, stiffness: 300, damping: 25 };
 
-export function DeckViewer({ slides, title, notes }: DeckViewerProps) {
+export function DeckViewer({ slides, title, notes, orientation = 'horizontal' }: DeckViewerProps) {
   const sorted = [...slides].sort((a, b) => a.sort_order - b.sort_order);
   const [fullscreen, setFullscreen] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -65,33 +70,141 @@ export function DeckViewer({ slides, title, notes }: DeckViewerProps) {
   useEffect(() => {
     if (fullscreen) {
       document.documentElement.setAttribute('data-modal-open', '');
+      // In vertical fullscreen, we need scroll — override any parent dialog's overflow lock
+      if (orientation === 'vertical') {
+        document.documentElement.style.overflow = 'auto';
+        document.body.style.overflow = 'auto';
+      }
     } else {
       document.documentElement.removeAttribute('data-modal-open');
     }
-    return () => { document.documentElement.removeAttribute('data-modal-open'); };
-  }, [fullscreen]);
+    return () => {
+      document.documentElement.removeAttribute('data-modal-open');
+      if (orientation === 'vertical') {
+        document.documentElement.style.overflow = '';
+        document.body.style.overflow = '';
+      }
+    };
+  }, [fullscreen, orientation]);
 
   // Keyboard navigation — works in both inline and fullscreen
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
-      if (e.key === 'ArrowRight') goNext();
-      else if (e.key === 'ArrowLeft') goPrev();
-      else if (e.key === 'Escape' && fullscreen) exitFullscreen();
-      else if (e.key === ' ' && fullscreen) { e.preventDefault(); goNext(); }
+      if (orientation === 'horizontal') {
+        if (e.key === 'ArrowRight') goNext();
+        else if (e.key === 'ArrowLeft') goPrev();
+        else if (e.key === ' ' && fullscreen) { e.preventDefault(); goNext(); }
+      }
+      if (e.key === 'Escape' && fullscreen) exitFullscreen();
     }
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [fullscreen, goNext, goPrev, exitFullscreen]);
+  }, [fullscreen, goNext, goPrev, exitFullscreen, orientation]);
 
   // Scroll filmstrip to keep active thumbnail visible
   useEffect(() => {
-    if (!filmstripRef.current) return;
+    if (orientation !== 'horizontal' || !filmstripRef.current) return;
     const active = filmstripRef.current.children[currentSlide] as HTMLElement | undefined;
     active?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-  }, [currentSlide]);
+  }, [currentSlide, orientation]);
 
   if (sorted.length === 0) return null;
 
+  /* ── Vertical mode: scrollable stack ─────────────────── */
+  if (orientation === 'vertical') {
+    return (
+      <>
+        <div className="flex flex-col gap-0">
+          {/* Scrollable page stack */}
+          <div className="relative group rounded-xl overflow-hidden border border-border/50" style={{ backgroundColor: 'oklch(0.13 0 0)' }}>
+            {/* Fullscreen button overlay */}
+            <button
+              type="button"
+              onClick={() => setFullscreen(true)}
+              className="absolute top-3 right-3 z-10 flex items-center gap-1.5 text-[11px] font-medium text-white/70 hover:text-white bg-black/50 backdrop-blur-sm rounded-md px-2 py-1.5 transition-all opacity-0 group-hover:opacity-100"
+            >
+              <Maximize2 className="size-3" />
+              Expand
+            </button>
+
+            <div className="max-h-[70vh] overflow-y-auto scrollbar-thin">
+              {sorted.map((slide, i) => (
+                <img
+                  key={i}
+                  src={slide.url}
+                  alt={`Page ${i + 1}`}
+                  className="w-full"
+                  draggable={false}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Page count */}
+          {sorted.length > 1 && (
+            <div className="flex items-center justify-center mt-3">
+              <span className="text-xs font-medium tabular-nums text-muted-foreground/60">
+                {sorted.length} {sorted.length === 1 ? 'page' : 'pages'}
+              </span>
+            </div>
+          )}
+
+          {/* Notes section */}
+          {notes && (
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ ...SMOOTH, delay: 0.15 }}
+              className="mt-4 rounded-xl border border-border/50 bg-card/50 p-4"
+            >
+              <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">Notes</p>
+              <div className="prose-sm text-sm leading-relaxed text-foreground/70" dangerouslySetInnerHTML={{ __html: notes }} />
+            </motion.div>
+          )}
+        </div>
+
+        {/* Fullscreen — scrollable vertical view */}
+        {createPortal(<AnimatePresence>
+          {fullscreen && (
+            <motion.div
+              initial={false}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              data-fullscreen-overlay
+              className="fixed inset-0 z-[70] overflow-y-auto"
+              style={{ backgroundColor: '#000' }}
+            >
+              {/* Top bar — fixed overlay */}
+              <div className="fixed top-0 inset-x-0 z-10 pointer-events-none" style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.4) 70%, transparent 100%)' }}>
+                <div className="flex items-center justify-between px-5 py-3.5 pointer-events-auto">
+                  <span className="text-xs font-medium tracking-widest uppercase text-white/50 truncate">{title}</span>
+                  <button type="button" onClick={exitFullscreen} className="text-white/40 hover:text-white transition-colors">
+                    <X className="size-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Scrollable pages */}
+              <div className="mx-auto max-w-3xl pt-14 pb-8">
+                {sorted.map((slide, i) => (
+                  <img
+                    key={i}
+                    src={slide.url}
+                    alt={`Page ${i + 1}`}
+                    className="w-full select-none"
+                    draggable={false}
+                  />
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>, document.body)}
+      </>
+    );
+  }
+
+  /* ── Horizontal mode: slideshow (original behavior) ──── */
   return (
     <>
       {/* ── Inline view: main slide + filmstrip ───────────── */}

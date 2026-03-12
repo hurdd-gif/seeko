@@ -47,11 +47,11 @@ export async function POST(request: NextRequest) {
   }
 
   // Fetch doc content
-  const { data: doc } = await service
-    .from('docs')
-    .select('id, title, content, type, slides')
+  const { data: doc } = await (service
+    .from('docs') as any)
+    .select('id, title, content, type, slides, deck_orientation')
     .eq('id', invite.shared_doc_id)
-    .single();
+    .single() as { data: { id: string; title: string; content?: string; type?: string; slides?: any; deck_orientation?: string } | null };
 
   if (!doc) {
     return NextResponse.json({ error: 'Document not found' }, { status: 404 });
@@ -68,5 +68,6 @@ export async function POST(request: NextRequest) {
     content: doc.content,
     type: doc.type || 'doc',
     slides: doc.slides || null,
+    deck_orientation: doc.deck_orientation || 'horizontal',
   });
 }
