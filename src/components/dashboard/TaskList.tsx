@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { createBrowserClient } from '@supabase/ssr';
 import {
   MoreHorizontal,
@@ -20,7 +20,6 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Task, Profile, TaskWithAssignee, TaskStatus, Department, Priority } from '@/lib/types';
-import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -37,7 +36,6 @@ import { Dialog, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { TaskDetail } from '@/components/dashboard/TaskDetail';
 import { DeliverablesUploadDialog } from '@/components/dashboard/DeliverablesUploadDialog';
 import { HandoffDialog } from '@/components/dashboard/HandoffDialog';
-import { Stagger, StaggerItem } from '@/components/motion';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 
 /* ------------------------------------------------------------------ */
@@ -64,17 +62,20 @@ function FilterPill({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button
+        <motion.button
+          whileHover={{ scale: 1.03 }}
+          whileTap={{ scale: 0.97 }}
+          transition={TASK_DIALS.filter.spring}
           className={cn(
-            'inline-flex items-center gap-1.5 rounded-full border px-4 py-1.5 text-xs font-medium uppercase tracking-wide transition-colors',
+            'inline-flex items-center gap-1.5 rounded-xl px-4 py-1.5 text-xs font-medium uppercase tracking-wide transition-colors',
             value !== 'All'
-              ? 'border-seeko-accent/40 bg-seeko-accent/10 text-seeko-accent'
-              : 'border-border text-muted-foreground hover:text-foreground hover:border-foreground/20'
+              ? 'bg-[#2c2c2c] text-seeko-accent'
+              : 'bg-[#212121] text-muted-foreground hover:text-foreground'
           )}
         >
           {value !== 'All' ? options.find(o => o.value === value)?.label ?? label : label}
-          <ChevronDown className="size-3 text-muted-foreground" />
-        </button>
+          <ChevronDown className="size-3 ml-0.5 text-muted-foreground" />
+        </motion.button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start">
         {options.map(opt => (
@@ -134,6 +135,29 @@ const STATUS_BADGE_ICON: Record<string, typeof Circle> = {
   'Blocked':     Circle,
 };
 
+/* ------------------------------------------------------------------ */
+/*  Animation dials (tuned to match notification panel)                */
+/* ------------------------------------------------------------------ */
+
+const TASK_DIALS = {
+  row: {
+    spring: { type: 'spring' as const, stiffness: 500, damping: 30 },
+    hoverX: 2,
+    entranceY: 16,
+    exitY: -12,
+    exitScale: 0.95,
+    stagger: 0.05,
+  },
+  status: {
+    spring: { type: 'spring' as const, stiffness: 500, damping: 30 },
+    hoverScale: 1.05,
+    tapScale: 0.95,
+  },
+  filter: {
+    spring: { type: 'spring' as const, stiffness: 300, damping: 25 },
+  },
+};
+
 const ALL_STATUSES: TaskStatus[] = ['Complete', 'In Progress', 'In Review', 'Blocked'];
 const DEPARTMENTS: Department[] = ['Coding', 'Visual Art', 'UI/UX', 'Animation', 'Asset Creation'];
 const PRIORITIES: Priority[] = ['High', 'Medium', 'Low'];
@@ -150,6 +174,7 @@ function getInitials(name: string): string {
   return name.split(' ').map(p => p[0]).join('').toUpperCase().slice(0, 2) || '?';
 }
 
+
 /* ------------------------------------------------------------------ */
 /*  TaskList                                                           */
 /* ------------------------------------------------------------------ */
@@ -165,6 +190,7 @@ interface TaskListProps {
 export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs = [], currentUserId = '' }: TaskListProps) {
   const searchParams = useSearchParams();
   const isMobile = useMediaQuery('(max-width: 639px)');
+  const shouldReduceMotion = useReducedMotion();
 
   /* --- filter state --- */
   const [filterAssignee, setFilterAssignee] = useState('All');
@@ -439,7 +465,7 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
     const statusBadge = (
       <span
         className={cn(
-          'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-wide whitespace-nowrap',
+          'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium uppercase tracking-wide whitespace-nowrap',
           badgeStyle
         )}
       >
@@ -449,23 +475,32 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
     );
 
     return (
-      <StaggerItem key={task.id}>
+      <motion.div
+        key={task.id}
+        layout={!shouldReduceMotion}
+        initial={shouldReduceMotion ? false : { opacity: 0, y: TASK_DIALS.row.entranceY }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: TASK_DIALS.row.exitY, scale: TASK_DIALS.row.exitScale }}
+        transition={TASK_DIALS.row.spring}
+      >
         {/* Desktop: original row layout */}
-        <div
+        <motion.div
+          whileHover={shouldReduceMotion ? undefined : { x: TASK_DIALS.row.hoverX }}
+          transition={TASK_DIALS.row.spring}
           role="button"
           tabIndex={0}
           onClick={() => setSelectedTask(task)}
           onKeyDown={e => { if (e.key === 'Enter') setSelectedTask(task); }}
-          className="group hidden md:flex items-center gap-4 px-4 py-3 transition-all duration-150 hover:bg-muted/50 cursor-pointer"
+          className="group hidden md:flex items-center gap-4 px-3 py-3 rounded-xl transition-colors hover:bg-[#212121] cursor-pointer"
         >
-          <span className={cn('size-2 rounded-full shrink-0', PRIORITY_DOT[task.priority] ?? 'bg-zinc-500')} />
+          <span className={cn('size-2 rounded-full shrink-0', PRIORITY_DOT[task.priority] ?? 'bg-zinc-500')} title={task.priority} />
           <span className="min-w-0 flex-1 truncate text-sm text-foreground">
             {task.name}
           </span>
 
           <div className="flex items-center -space-x-2 w-24 justify-center shrink-0">
             {assignee ? (
-              <Avatar className="size-8 border-2 border-card">
+              <Avatar className="size-8" style={{ outline: '1px solid rgba(255,255,255,0.1)', outlineOffset: '-1px' }}>
                 <AvatarImage src={assignee.avatar_url ?? undefined} alt={assignee.display_name ?? ''} />
                 <AvatarFallback className="text-[10px] bg-secondary">
                   {getInitials(assignee.display_name ?? '?')}
@@ -480,16 +515,19 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
             {isAdmin ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button
+                  <motion.button
+                    whileHover={{ scale: TASK_DIALS.status.hoverScale }}
+                    whileTap={{ scale: TASK_DIALS.status.tapScale }}
+                    transition={TASK_DIALS.status.spring}
                     onClick={e => e.stopPropagation()}
                     className={cn(
-                      'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-wide transition-colors whitespace-nowrap',
+                      'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium uppercase tracking-wide whitespace-nowrap',
                       badgeStyle
                     )}
                   >
                     <BadgeIcon className="size-3" />
                     {status}
-                  </button>
+                  </motion.button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   {ALL_STATUSES.map(s => {
@@ -532,7 +570,7 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
               <Button
                 variant="ghost"
                 size="icon"
-                className="size-8 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white/[0.06]"
+                className="size-8 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[#212121]"
                 onClick={e => e.stopPropagation()}
               >
                 <MoreHorizontal className="size-4" />
@@ -607,18 +645,20 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
           </DropdownMenu>
             );
           })()}
-        </div>
+        </motion.div>
 
         {/* Mobile: stacked layout — full-width name, status + assignee on second line */}
-        <div
+        <motion.div
+          whileTap={{ scale: 0.98 }}
+          transition={TASK_DIALS.row.spring}
           role="button"
           tabIndex={0}
           onClick={() => setSelectedTask(task)}
           onKeyDown={e => { if (e.key === 'Enter') setSelectedTask(task); }}
-          className="flex md:hidden flex-col gap-2 px-4 py-3 transition-all duration-150 active:bg-muted/50 active:scale-[0.99] cursor-pointer"
+          className="flex md:hidden flex-col gap-2 px-3 py-3 rounded-xl transition-colors active:bg-[#212121] cursor-pointer"
         >
           <div className="flex items-center gap-3">
-            <span className={cn('size-2 rounded-full shrink-0', PRIORITY_DOT[task.priority] ?? 'bg-zinc-500')} />
+            <span className={cn('size-2 rounded-full shrink-0', PRIORITY_DOT[task.priority] ?? 'bg-zinc-500')} title={task.priority} />
             <span className="min-w-0 flex-1 text-sm font-medium text-foreground line-clamp-2">
               {task.name}
             </span>
@@ -693,23 +733,24 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
           </div>
           <div className="flex items-center gap-2">
             {/* Tappable status pill — opens bottom sheet on mobile */}
-            <button
+            <motion.button
+              whileTap={{ scale: 0.93 }}
+              transition={TASK_DIALS.status.spring}
               onClick={e => {
                 e.stopPropagation();
                 if (isAdmin || task.assignee_id === currentUserId) openStatusSheet(e, task);
               }}
               className={cn(
-                'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-wide whitespace-nowrap',
-                badgeStyle,
-                (isAdmin || task.assignee_id === currentUserId) && 'active:scale-95 transition-transform'
+                'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium uppercase tracking-wide whitespace-nowrap',
+                badgeStyle
               )}
             >
               <BadgeIcon className="size-3" />
               {status}
-            </button>
+            </motion.button>
             {assignee && (
               <div className="flex items-center gap-1.5 ml-auto">
-                <Avatar className="size-5 border border-card">
+                <Avatar className="size-5" style={{ outline: '1px solid rgba(255,255,255,0.1)', outlineOffset: '-1px' }}>
                   <AvatarImage src={assignee.avatar_url ?? undefined} alt={assignee.display_name ?? ''} />
                   <AvatarFallback className="text-[7px] bg-secondary">
                     {getInitials(assignee.display_name ?? '?')}
@@ -721,8 +762,8 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
               </div>
             )}
           </div>
-        </div>
-      </StaggerItem>
+        </motion.div>
+      </motion.div>
     );
   };
 
@@ -732,17 +773,28 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
 
   return (
     <div className="flex flex-col gap-4">
-      <Card>
+      <div
+        className="rounded-2xl bg-[#222222] px-2 py-3"
+        style={{
+          boxShadow: '0 0 0 1px rgba(255,255,255,0.03), 0 4px 16px rgba(0,0,0,0.1)',
+        }}
+      >
         {/* Header: title + kebab menu */}
-        <div className="flex items-center justify-between px-4 pt-4 pb-2">
-          <h2 className="text-lg font-semibold tracking-tight text-foreground">
+        <div className="flex items-center justify-between px-3 pb-3">
+          <h2 className="text-[15px] text-balance font-semibold tracking-tight text-foreground">
             {isAdmin ? 'All Tasks' : 'My Tasks'}
           </h2>
           {isAdmin && (
-            <Button variant="ghost" size="icon" className="size-8" onClick={() => setShowAddForm(true)}>
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              transition={TASK_DIALS.status.spring}
+              className="flex items-center justify-center size-8 rounded-lg bg-[#212121] text-muted-foreground hover:text-foreground transition-colors"
+              onClick={() => setShowAddForm(true)}
+            >
               <Plus className="size-4" />
               <span className="sr-only">Add Task</span>
-            </Button>
+            </motion.button>
           )}
         </div>
 
@@ -754,10 +806,10 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.15 }}
-                className="overflow-hidden border-b border-border"
+                transition={TASK_DIALS.filter.spring}
+                className="overflow-hidden border-b border-white/[0.06]"
               >
-                <div className="px-4 py-3">
+                <div className="px-3 py-3">
                   <div className="flex flex-col gap-3">
                     <Input
                       placeholder="Task name..."
@@ -838,24 +890,24 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
         )}
 
         {/* Summary bar */}
-        <div className="flex items-center gap-3 px-4 pt-2 text-xs text-muted-foreground">
-          <span>{filtered.length} task{filtered.length !== 1 ? 's' : ''}</span>
+        <div className="flex items-center gap-3 px-3 pt-1 text-xs text-muted-foreground">
+          <span className="text-[13px] tabular-nums">{filtered.length} task{filtered.length !== 1 ? 's' : ''}</span>
           {(() => {
             const inProgress = filtered.filter(t => getEffectiveStatus(t) === 'In Progress').length;
             const blocked = filtered.filter(t => getEffectiveStatus(t) === 'Blocked').length;
             const inReview = filtered.filter(t => getEffectiveStatus(t) === 'In Review').length;
             return (
               <>
-                {inProgress > 0 && <span className="text-amber-400">{inProgress} in progress</span>}
-                {inReview > 0 && <span className="text-blue-400">{inReview} in review</span>}
-                {blocked > 0 && <span className="text-red-400">{blocked} blocked</span>}
+                {inProgress > 0 && <span className="text-[11px] tabular-nums text-amber-400">{inProgress} in progress</span>}
+                {inReview > 0 && <span className="text-[11px] tabular-nums text-blue-400">{inReview} in review</span>}
+                {blocked > 0 && <span className="text-[11px] tabular-nums text-red-400">{blocked} blocked</span>}
               </>
             );
           })()}
         </div>
 
         {/* Filter pills */}
-        <div className="flex flex-wrap items-center gap-2 px-4 py-3">
+        <div className="flex flex-wrap items-center gap-2 px-3 py-3">
           <FilterPill
             label="Assignee"
             value={filterAssignee}
@@ -883,18 +935,19 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
         </div>
 
         {/* Column headers — desktop only */}
-        <div className="hidden md:flex items-center gap-4 border-b border-border px-4 py-2">
-          <span className="flex-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">Name</span>
-          <span className="w-24 text-center text-xs font-medium uppercase tracking-wide text-muted-foreground shrink-0">Assignee</span>
-          <span className="w-32 text-center text-xs font-medium uppercase tracking-wide text-muted-foreground shrink-0">Status</span>
+        <div className="hidden md:flex items-center gap-4 border-b border-white/[0.06] px-3 py-2">
+          <span className="flex-1 text-[10px] font-medium uppercase tracking-widest text-muted-foreground/60">Name</span>
+          <span className="w-24 text-center text-[10px] font-medium uppercase tracking-widest text-muted-foreground/60 shrink-0">Assignee</span>
+          <span className="w-32 text-center text-[10px] font-medium uppercase tracking-widest text-muted-foreground/60 shrink-0">Status</span>
           <span className="w-8 shrink-0" />
         </div>
         {/* Mobile separator */}
-        <div className="md:hidden border-b border-border" />
+        <div className="md:hidden border-b border-white/[0.06]" />
 
         {/* Task rows */}
-        <CardContent className="p-0">
-          <Stagger className="flex flex-col divide-y divide-border">
+        <div>
+          <AnimatePresence mode="popLayout">
+          <div className="flex flex-col divide-y divide-white/[0.06]">
             {filtered.map(t => renderTaskRow(t))}
             {filtered.length === 0 && (
               <div className="flex flex-col items-center justify-center py-12 text-center">
@@ -903,9 +956,10 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
                 <p className="text-xs text-muted-foreground">Try adjusting your filters.</p>
               </div>
             )}
-          </Stagger>
-        </CardContent>
-      </Card>
+          </div>
+          </AnimatePresence>
+        </div>
+      </div>
 
       {/* Dialogs */}
       {selectedTask && (
@@ -1033,12 +1087,12 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
                         setStatusSheetTask(null);
                       }}
                       className={cn(
-                        'flex items-center gap-3 rounded-xl border px-4 py-3.5 text-left transition-colors',
+                        'flex items-center gap-3 rounded-xl px-4 py-3.5 text-left transition-colors',
                         isLockedForReview
-                          ? 'opacity-40 cursor-not-allowed border-border/30'
+                          ? 'opacity-40 cursor-not-allowed bg-[#1a1a1a]'
                           : isCurrentStatus
-                            ? style + ' ring-1 ring-foreground/10'
-                            : 'border-border/50 hover:bg-white/[0.04]'
+                            ? 'bg-[#2c2c2c]'
+                            : 'bg-[#212121] hover:bg-[#272727]'
                       )}
                     >
                       <Icon className={cn('size-5', isLockedForReview ? 'text-muted-foreground' : cfg.className)} />
