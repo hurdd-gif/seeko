@@ -1,7 +1,9 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { fetchProfile, fetchNotifications, fetchUnreadNotificationCount, fetchTeam, fetchAllDocs } from '@/lib/supabase/data';
-import { Sidebar } from '@/components/layout/Sidebar';
+import { IconRail } from '@/components/layout/IconRail';
+import { MobileNav } from '@/components/layout/MobileNav';
+import { DesktopHeader } from '@/components/layout/DesktopHeader';
 import { DashboardTourWrapper } from '@/components/dashboard/DashboardTourWrapper';
 import { PresenceHeartbeat } from '@/components/PresenceHeartbeat';
 import { ActivityTracker } from '@/components/ActivityTracker';
@@ -45,24 +47,34 @@ export default async function DashboardLayout({
 
   return (
     <DashboardTourWrapper showTour={showTour} userId={user.id} isContractor={profile?.is_contractor ?? false} isAdmin={isAdmin}>
-      <div className="flex h-dvh flex-col overflow-hidden bg-background md:min-h-screen md:h-auto md:overflow-visible md:flex-row">
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden md:flex-row md:overflow-visible">
+      <div className="flex h-dvh flex-col overflow-hidden bg-background md:min-h-screen md:h-auto md:overflow-visible">
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden md:overflow-visible">
           <div id="dashboard-mobile-header-slot" className="md:hidden shrink-0 pt-[env(safe-area-inset-top)]" aria-hidden="true" />
-          <Sidebar
-          email={user.email ?? ''}
-          displayName={profile?.display_name ?? undefined}
-          avatarUrl={profile?.avatar_url ?? undefined}
-          userId={user.id}
-          isAdmin={profile?.is_admin ?? false}
-          isContractor={profile?.is_contractor ?? false}
-          unreadCount={unreadCount}
-          notifications={notifications}
-        />
-        <main className="flex-1 min-w-0 overflow-x-hidden md:overflow-auto" id="tour-main">
-          <div className="max-w-5xl mx-auto px-5 md:px-6 py-4 md:py-8 pb-24 md:pb-8">
-            <PageTransition>{children}</PageTransition>
-          </div>
-        </main>
+          <IconRail isAdmin={isAdmin} isContractor={profile?.is_contractor ?? false} />
+          <MobileNav
+            email={user.email ?? ''}
+            displayName={profile?.display_name ?? undefined}
+            avatarUrl={profile?.avatar_url ?? undefined}
+            userId={user.id}
+            isAdmin={isAdmin}
+            isContractor={profile?.is_contractor ?? false}
+            unreadCount={unreadCount}
+            notifications={notifications}
+          />
+          <DesktopHeader
+            email={user.email ?? ''}
+            displayName={profile?.display_name ?? undefined}
+            avatarUrl={profile?.avatar_url ?? undefined}
+            userId={user.id}
+            isAdmin={isAdmin}
+            unreadCount={unreadCount}
+            notifications={notifications}
+          />
+          <main className="flex-1 min-w-0 overflow-x-hidden md:overflow-auto md:pl-14 lg:pl-0" id="tour-main">
+            <div className="max-w-5xl mx-auto px-5 md:px-6 py-4 md:py-8 pb-24 md:pb-8">
+              <PageTransition>{children}</PageTransition>
+            </div>
+          </main>
         </div>
       </div>
       <PresenceHeartbeat userId={user.id} />

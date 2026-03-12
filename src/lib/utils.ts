@@ -5,6 +5,11 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+/** Extract initials from a display name (e.g. "Jane Doe" → "JD"). */
+export function getInitials(name: string): string {
+  return name.split(' ').map(p => p[0]).join('').toUpperCase().slice(0, 2) || '?';
+}
+
 /** Safe UUID v4 — falls back for browsers without crypto.randomUUID (older Safari/WebKit). */
 export function uuid(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
