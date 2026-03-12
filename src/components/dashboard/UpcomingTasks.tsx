@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { motion, useReducedMotion } from 'motion/react';
 import { Circle, CheckCircle2, Timer, AlertCircle } from 'lucide-react';
 import { Task, Profile, Doc } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -23,6 +24,7 @@ const PRIORITY_COLOR: Record<string, string> = {
   Low:    'text-muted-foreground/60',
 };
 
+const SPRING = { type: 'spring' as const, stiffness: 500, damping: 30 };
 
 interface UpcomingTasksProps {
   tasks: Task[];
@@ -35,6 +37,7 @@ interface UpcomingTasksProps {
 
 export function UpcomingTasks({ tasks, team, docs, currentUserId, emptyAction, isAdmin = false }: UpcomingTasksProps) {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const shouldReduce = useReducedMotion();
 
   if (tasks.length === 0) {
     return (
@@ -57,9 +60,12 @@ export function UpcomingTasks({ tasks, team, docs, currentUserId, emptyAction, i
           const DlIcon = dl?.icon;
           return (
             <StaggerItem key={task.id}>
-              <button
+              <motion.button
                 onClick={() => setSelectedTask(task)}
-                className="flex w-full cursor-pointer items-center justify-between rounded-lg p-3 text-left transition-colors hover:bg-white/[0.04]"
+                whileHover={shouldReduce ? undefined : { y: -1, backgroundColor: 'rgba(255,255,255,0.04)' }}
+                whileTap={shouldReduce ? undefined : { scale: 0.995 }}
+                transition={SPRING}
+                className="flex w-full cursor-pointer items-center justify-between rounded-lg p-3 text-left"
               >
                 <div className="flex items-center gap-3 min-w-0 flex-1">
                   <div className={`flex size-8 shrink-0 items-center justify-center rounded-lg ${cfg.bg}`} title={task.status}>
@@ -83,7 +89,7 @@ export function UpcomingTasks({ tasks, team, docs, currentUserId, emptyAction, i
                     </span>
                   )}
                 </div>
-              </button>
+              </motion.button>
             </StaggerItem>
           );
         })}
