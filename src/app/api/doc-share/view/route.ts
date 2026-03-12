@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { timingSafeEqual } from 'crypto';
 import { getServiceClient } from '@/lib/supabase/service';
 
 export async function POST(request: NextRequest) {
@@ -32,8 +33,12 @@ export async function POST(request: NextRequest) {
 
   if (!invite) return NextResponse.json({ error: 'Invite not found' }, { status: 404 });
 
-  // Validate session
-  if (invite.session_token !== sessionCookie) {
+  // Validate session (constant-time comparison to prevent timing side-channel)
+  const tokenValid =
+    invite.session_token !== null &&
+    invite.session_token.length === sessionCookie.length &&
+    timingSafeEqual(Buffer.from(invite.session_token), Buffer.from(sessionCookie));
+  if (!tokenValid) {
     return NextResponse.json({ error: 'session_expired' }, { status: 401 });
   }
 
