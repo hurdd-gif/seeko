@@ -31,6 +31,8 @@ import { DesktopNotificationPanel } from './notifications/DesktopNotificationPan
 import { MobileNotificationSheet } from './notifications/MobileNotificationSheet';
 import { groupNotifications } from './notifications/utils';
 import type { DisplayNotification } from './notifications/types';
+import { useLiveToast } from './notifications/LiveToastContext';
+import { LiveToastContainer } from './notifications/LiveToastContainer';
 
 interface NotificationBellProps {
   userId: string;
@@ -47,8 +49,14 @@ export function NotificationBell({ userId, initialCount, initialNotifications }:
   const [mounted, setMounted] = useState(false);
   const bellRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  const { addLiveToast, setSuppress } = useLiveToast();
 
   useEffect(() => { setMounted(true); }, []);
+
+  // Suppress toasts when notification panel is open
+  useEffect(() => {
+    setSuppress(open);
+  }, [open, setSuppress]);
 
   // Lock body scroll on mobile when sheet is open
   useEffect(() => {
@@ -100,6 +108,7 @@ export function NotificationBell({ userId, initialCount, initialNotifications }:
           const notif = payload.new as Notification;
           setNotifications(prev => [notif, ...prev].slice(0, 20));
           setUnreadCount(c => c + 1);
+          addLiveToast(notif);
         }
       )
       .on(
@@ -222,6 +231,24 @@ export function NotificationBell({ userId, initialCount, initialNotifications }:
           onMarkRead={swipeMarkRead}
         />,
         document.body
+      )}
+      {mounted && typeof document !== 'undefined' && (
+        <LiveToastContainer
+          onTapToast={(toast) => {
+            handleNotificationTap({
+              id: toast.notification.id,
+              kind: toast.notification.kind,
+              title: toast.notification.title,
+              body: toast.notification.body,
+              link: toast.notification.link,
+              read: toast.notification.read,
+              created_at: toast.notification.created_at,
+              count: 1,
+              ids: [toast.notification.id],
+            });
+          }}
+          onOpenPanel={() => setOpen(true)}
+        />
       )}
     </div>
   );
