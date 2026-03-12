@@ -54,84 +54,74 @@ export function NotificationCard({
   // Core motion values
   const swipeAmount = useMotionValue(0);
   const swipeAmountSpring = useSpring(swipeAmount, d.swipe.spring);
-  const swipeProgress = useTransform(swipeAmount, (value) => {
+
+  // ── Dismiss action (right swipe, positive values) ──────────
+
+  // Dismiss background: only visible when swiping right (p > 0)
+  const dismissBgColor = useTransform(swipeAmount, (v) => {
     const w = itemWidth.current;
-    if (!w) return 0;
-    return value / w;
+    if (!w || v <= 0) return 'transparent';
+    const p = v / w;
+    const t = Math.min(p / d.swipe.fullThreshold, 1);
+    return t < 0.5 ? d.swipe.dismissBg : d.swipe.dismissBgFull;
   });
 
-  // Card content visual feedback
-  const cardOpacity = useTransform(
-    swipeProgress,
-    [-0.5, 0, 0.5],
-    [0.3, 1, 0.3]
-  );
-  const cardContentX = useTransform(
-    swipeProgress,
-    [-0.5, 0, 0.5],
-    [40, 0, -40]
-  );
-  const cardOpacitySpring = useSpring(cardOpacity, d.swipe.spring);
-  const cardContentXSpring = useSpring(cardContentX, d.swipe.spring);
+  // Dismiss layer opacity: 0 when card is at rest, 1 when swiping right
+  const dismissLayerOpacity = useTransform(swipeAmount, (v) => {
+    const w = itemWidth.current;
+    if (!w || v <= 2) return 0;
+    return Math.min(v / (w * 0.1), 1);
+  });
 
-  // Action icon elastic motion (dismiss — right side, revealed on right swipe)
-  const dismissIconOpacity = useTransform(
-    swipeProgress,
-    [0, 0.15, 0.5, 0.8, 1],
-    [0, 1, 1, 1, 1]
-  );
-  const dismissIconX = useTransform(
-    swipeProgress,
-    [0, 0.5, 0.8, 1],
-    [0, 0, -16, 0]
-  );
-  const dismissIconScale = useTransform(
-    swipeProgress,
-    [0, 0.5, 0.8, 1],
-    [1, 1, 0.8, 1]
-  );
-  const dismissIconOpacitySpr = useSpring(dismissIconOpacity, d.swipe.spring);
-  const dismissIconXSpr = useSpring(dismissIconX, d.swipe.spring);
-  const dismissIconScaleSpr = useSpring(dismissIconScale, d.swipe.spring);
+  const dismissIconScale = useTransform(swipeAmount, (v) => {
+    const w = itemWidth.current;
+    if (!w || v <= 0) return 0.6;
+    const p = v / w;
+    if (p < 0.15) return 0.6 + (p / 0.15) * 0.4;
+    if (p > 0.8) return 0.8 + (Math.min(p, 1) - 0.8) * 1;
+    return 1;
+  });
 
-  // Action icon elastic motion (mark-read — left side, revealed on left swipe)
-  const readIconOpacity = useTransform(
-    swipeProgress,
-    [-1, -0.8, -0.5, -0.15, 0],
-    [1, 1, 1, 1, 0]
-  );
-  const readIconX = useTransform(
-    swipeProgress,
-    [-1, -0.8, -0.5, 0],
-    [0, 16, 0, 0]
-  );
-  const readIconScale = useTransform(
-    swipeProgress,
-    [-1, -0.8, -0.5, 0],
-    [1, 0.8, 1, 1]
-  );
-  const readIconOpacitySpr = useSpring(readIconOpacity, d.swipe.spring);
-  const readIconXSpr = useSpring(readIconX, d.swipe.spring);
-  const readIconScaleSpr = useSpring(readIconScale, d.swipe.spring);
+  // ── Mark-read action (left swipe, negative values) ─────────
 
-  // Background color based on swipe direction
-  const bgColor = useTransform(swipeProgress, (p) => {
-    if (p > 0) {
-      // Swiping right — dismiss (red)
-      const t = Math.min(p / d.swipe.fullThreshold, 1);
-      return t < 0.5 ? d.swipe.dismissBg : d.swipe.dismissBgFull;
-    } else if (p < 0) {
-      // Swiping left — mark read (green)
-      const t = Math.min(Math.abs(p) / d.swipe.fullThreshold, 1);
-      return t < 0.5 ? d.swipe.readBg : d.swipe.readBgFull;
-    }
-    return 'transparent';
+  // Read background: only visible when swiping left (p < 0)
+  const readBgColor = useTransform(swipeAmount, (v) => {
+    const w = itemWidth.current;
+    if (!w || v >= 0) return 'transparent';
+    const p = Math.abs(v) / w;
+    const t = Math.min(p / d.swipe.fullThreshold, 1);
+    return t < 0.5 ? d.swipe.readBg : d.swipe.readBgFull;
+  });
+
+  // Read layer opacity: 0 when card is at rest, 1 when swiping left
+  const readLayerOpacity = useTransform(swipeAmount, (v) => {
+    const w = itemWidth.current;
+    if (!w || v >= -2) return 0;
+    return Math.min(Math.abs(v) / (w * 0.1), 1);
+  });
+
+  const readIconScale = useTransform(swipeAmount, (v) => {
+    const w = itemWidth.current;
+    if (!w || v >= 0) return 0.6;
+    const p = Math.abs(v) / w;
+    if (p < 0.15) return 0.6 + (p / 0.15) * 0.4;
+    if (p > 0.8) return 0.8 + (Math.min(p, 1) - 0.8) * 1;
+    return 1;
+  });
+
+  // ── Card content feedback (no spring — direct transform) ───
+
+  const cardOpacity = useTransform(swipeAmount, (v) => {
+    const w = itemWidth.current;
+    if (!w) return 1;
+    const p = Math.abs(v) / w;
+    // Fade from 1 → 0.4 as swipe reaches 60%
+    return Math.max(1 - p * 1.2, 0.4);
   });
 
   // Pointer event handlers
   const handlePointerDown = useCallback(
     (e: React.PointerEvent) => {
-      // Only respond to primary button / touch
       if (e.button !== 0) return;
       setIsSwiping(true);
       swipeStartX.current = e.clientX;
@@ -152,7 +142,6 @@ export function NotificationCard({
       const isLeft = delta < 0;
 
       if (fullSwipeSnapPosition.current) {
-        // Already snapped — check if pulling back
         if (Math.abs(delta) < fullThresholdPx) {
           fullSwipeSnapPosition.current = null;
           swipeAmount.set(delta);
@@ -200,7 +189,6 @@ export function NotificationCard({
           ]);
         }
 
-        // Execute action after brief delay
         const direction = fullSwipeSnapPosition.current;
         setTimeout(() => {
           if (direction === 'right') {
@@ -210,10 +198,8 @@ export function NotificationCard({
           }
         }, 150);
 
-        // Reset position
         animate(swipeAmount, 0, { duration: 0.5, delay: d.swipe.commitResetDelay });
       } else {
-        // Partial swipe — snap to partial reveal or back to center
         let target = 0;
         const partialThresholdPx = w * d.swipe.partialThreshold;
 
@@ -246,16 +232,15 @@ export function NotificationCard({
       if (!w) return;
       itemWidth.current = w;
 
-      const currentProgress = swipeProgress.get();
-      const newOffset = currentProgress * w;
-      swipeAmount.jump(newOffset);
-      swipeAmountSpring.jump(newOffset);
+      const raw = swipeAmount.get();
+      swipeAmount.jump(raw);
+      swipeAmountSpring.jump(raw);
     };
 
     measure();
     window.addEventListener('resize', measure);
     return () => window.removeEventListener('resize', measure);
-  }, [swipeAmount, swipeAmountSpring, swipeProgress]);
+  }, [swipeAmount, swipeAmountSpring]);
 
   return (
     <motion.div
@@ -266,7 +251,7 @@ export function NotificationCard({
       transition={{ ...d.card.spring, delay: index * stagger }}
       className={noPadding ? '' : 'px-1 py-[3px]'}
     >
-      <motion.div
+      <div
         ref={containerRef}
         style={{
           position: 'relative',
@@ -285,14 +270,12 @@ export function NotificationCard({
             x: swipeAmountSpring,
           }}
         >
-          <motion.div style={{ opacity: cardOpacitySpring }}>
+          <motion.div style={{ opacity: cardOpacity }}>
             <button
               onClick={() => {
-                // Only fire tap if not mid-swipe and card is near center
                 if (Math.abs(swipeAmount.get()) < 5) {
                   onTap(notification);
                 } else {
-                  // Tapped while partially revealed — snap back
                   swipeAmount.set(0);
                 }
               }}
@@ -315,10 +298,7 @@ export function NotificationCard({
                 <Icon className="size-3.5" />
               </div>
 
-              <motion.div
-                className="flex-1 min-w-0 pr-5"
-                style={{ x: cardContentXSpring }}
-              >
+              <div className="flex-1 min-w-0 pr-5">
                 <p
                   className={`text-[13px] leading-snug ${
                     !notification.read
@@ -348,7 +328,7 @@ export function NotificationCard({
                 >
                   {formatTime(notification.created_at, group)}
                 </p>
-              </motion.div>
+              </div>
 
               {!hideClose && (
                 <motion.span
@@ -377,9 +357,7 @@ export function NotificationCard({
           </motion.div>
         </motion.div>
 
-        {/* Action backgrounds — positioned behind the card */}
-
-        {/* Right side: dismiss (revealed when swiping right) */}
+        {/* Dismiss action — behind card, only visible when swiping right */}
         <motion.div
           style={{
             position: 'absolute',
@@ -388,18 +366,15 @@ export function NotificationCard({
             alignItems: 'center',
             justifyContent: 'flex-start',
             paddingLeft: 20,
-            backgroundColor: bgColor,
+            backgroundColor: dismissBgColor,
+            opacity: dismissLayerOpacity,
             zIndex: 1,
             borderRadius: 12,
+            pointerEvents: 'none',
           }}
         >
           <motion.div
-            style={{
-              opacity: dismissIconOpacitySpr,
-              x: dismissIconXSpr,
-              scale: dismissIconScaleSpr,
-              transformOrigin: 'left',
-            }}
+            style={{ scale: dismissIconScale }}
             className="flex flex-col items-center gap-1 text-red-400"
           >
             <X className="size-5" />
@@ -407,7 +382,7 @@ export function NotificationCard({
           </motion.div>
         </motion.div>
 
-        {/* Left side: mark read (revealed when swiping left) */}
+        {/* Mark-read action — behind card, only visible when swiping left */}
         <motion.div
           style={{
             position: 'absolute',
@@ -416,18 +391,15 @@ export function NotificationCard({
             alignItems: 'center',
             justifyContent: 'flex-end',
             paddingRight: 20,
-            backgroundColor: bgColor,
+            backgroundColor: readBgColor,
+            opacity: readLayerOpacity,
             zIndex: 1,
             borderRadius: 12,
+            pointerEvents: 'none',
           }}
         >
           <motion.div
-            style={{
-              opacity: readIconOpacitySpr,
-              x: readIconXSpr,
-              scale: readIconScaleSpr,
-              transformOrigin: 'right',
-            }}
+            style={{ scale: readIconScale }}
             className="flex flex-col items-center gap-1 text-seeko-accent"
           >
             {notification.read ? (
@@ -443,7 +415,7 @@ export function NotificationCard({
             )}
           </motion.div>
         </motion.div>
-      </motion.div>
+      </div>
     </motion.div>
   );
 }
