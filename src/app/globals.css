@@ -319,6 +319,20 @@ body.tour-cmd-k-active #command-palette-container * {
   display: none !important;
 }
 
+/* Lock ALL scroll containers when a dialog/drawer is open */
+:root[data-modal-open] body,
+:root[data-modal-open] #dashboard-scroll,
+:root[data-modal-open] #tour-main {
+  overflow: hidden !important;
+  overscroll-behavior: none !important;
+  touch-action: none !important;
+}
+
+:root[data-modal-open] {
+  overflow: hidden !important;
+  overscroll-behavior: none !important;
+}
+
 /* Kill paragraph margin inside table cells so rows aren't bloated */
 .doc-content td p,
 .doc-content th p,

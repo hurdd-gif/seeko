@@ -170,7 +170,7 @@ export default async function OverviewPage() {
       <FadeRise delay={delay(TIMING.hero)} y={SECTION_Y}>
         <div className="flex flex-col gap-3">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+            <h1 className="text-3xl font-bold tracking-tight text-foreground text-balance">
               {firstName ? `Hey, ${firstName}` : 'Overview'}
             </h1>
             <p className="text-sm text-muted-foreground mt-0.5">{greeting}</p>

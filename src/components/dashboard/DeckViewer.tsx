@@ -25,6 +25,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Maximize2, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { acquireScrollLock, releaseScrollLock } from '@/lib/scroll-lock';
 
 interface Slide {
   url: string;
@@ -68,18 +69,15 @@ export function DeckViewer({ slides, title, notes, orientation = 'horizontal' }:
   }, []);
 
   useEffect(() => {
-    if (fullscreen) {
-      document.documentElement.setAttribute('data-modal-open', '');
-      // In vertical fullscreen, we need scroll — override any parent dialog's overflow lock
-      if (orientation === 'vertical') {
-        document.documentElement.style.overflow = 'auto';
-        document.body.style.overflow = 'auto';
-      }
-    } else {
-      document.documentElement.removeAttribute('data-modal-open');
+    if (!fullscreen) return;
+    acquireScrollLock();
+    // In vertical fullscreen, we need scroll — override any parent dialog's overflow lock
+    if (orientation === 'vertical') {
+      document.documentElement.style.overflow = 'auto';
+      document.body.style.overflow = 'auto';
     }
     return () => {
-      document.documentElement.removeAttribute('data-modal-open');
+      releaseScrollLock();
       if (orientation === 'vertical') {
         document.documentElement.style.overflow = '';
         document.body.style.overflow = '';

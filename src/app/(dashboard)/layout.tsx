@@ -48,7 +48,7 @@ export default async function DashboardLayout({
   return (
     <DashboardTourWrapper showTour={showTour} userId={user.id} isContractor={profile?.is_contractor ?? false} isAdmin={isAdmin}>
       <div className="flex h-dvh flex-col overflow-hidden bg-background md:min-h-screen md:h-auto md:overflow-visible">
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden md:overflow-visible">
+        <div id="dashboard-scroll" className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden md:overflow-visible">
           <div id="dashboard-mobile-header-slot" className="md:hidden shrink-0 pt-[env(safe-area-inset-top)]" aria-hidden="true" />
           <IconRail isAdmin={isAdmin} isContractor={profile?.is_contractor ?? false} />
           <MobileNav

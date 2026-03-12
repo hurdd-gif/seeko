@@ -29,6 +29,14 @@ import { DocContent } from './DocContent';
 import { DocShareDialog } from './DocShareDialog';
 import { useHaptics } from '@/components/HapticsProvider';
 
+/** Strip HTML tags and decode common entities for plain-text previews */
+const _decodeEl = typeof document !== 'undefined' ? document.createElement('textarea') : null;
+function stripHtml(html: string): string {
+  const text = html.replace(/<[^>]*>/g, '');
+  if (_decodeEl) { _decodeEl.innerHTML = text; return _decodeEl.value; }
+  return text.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, ' ');
+}
+
 const DEPARTMENTS = ['Coding', 'Visual Art', 'UI/UX', 'Animation', 'Asset Creation'] as const;
 
 /** Threshold for "recently updated" indicator (48 hours) */
@@ -398,12 +406,12 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, cu
                   ) : null}
                   {!isDeck && doc.content ? (
                     <p className="text-xs text-muted-foreground/80 leading-relaxed line-clamp-2">
-                      {doc.content.replace(/<[^>]*>/g, '').slice(0, 200)}
+                      {stripHtml(doc.content).slice(0, 200)}
                     </p>
                   ) : null}
                   {isDeck && doc.content ? (
                     <p className="text-xs text-muted-foreground/80 leading-relaxed line-clamp-1">
-                      {doc.content.replace(/<[^>]*>/g, '').slice(0, 100)}
+                      {stripHtml(doc.content).slice(0, 100)}
                     </p>
                   ) : null}
                 </div>
@@ -422,7 +430,7 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, cu
   return (
     <>
       {/* Tab toggle + New button */}
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
         <div className="flex items-center gap-1 rounded-lg bg-secondary/50 p-0.5">
           <button
             type="button"
@@ -466,10 +474,11 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, cu
         {isAdmin && viewMode !== 'shared' && (
           <Button
             size="sm"
+            aria-label={viewMode === 'decks' ? 'New Deck' : 'New Document'}
             onClick={() => viewMode === 'decks' ? setEditingDeck('new') : setEditingDoc('new')}
           >
-            <Plus className="size-3.5 mr-1.5" />
-            {viewMode === 'decks' ? 'New Deck' : 'New Document'}
+            <Plus className="size-3.5 sm:mr-1.5" />
+            <span className="hidden sm:inline">{viewMode === 'decks' ? 'New Deck' : 'New Document'}</span>
           </Button>
         )}
       </div>
