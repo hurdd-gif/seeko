@@ -279,43 +279,64 @@ function GooeyStatusDropdown({ taskId, status, onStatusChange, shouldReduceMotio
     }
   }, [isOpen, handleOpen]);
 
-  // Panel position classes (shared between shape layer and content layer)
-  const panelPosition = cn(
-    'absolute z-50 w-44',
-    opensUp ? 'bottom-full mb-0' : 'top-full mt-0',
-    opensRight ? 'left-0' : 'right-0',
-  );
-
   return (
     <div ref={containerRef} className="relative">
-      {/* SVG filter definition — unique per instance */}
+      {/* SVG gooey filter — unique ID per instance */}
       <svg className="absolute" width="0" height="0" aria-hidden="true">
         <defs>
           <filter id={filterId}>
+            {/* 1. Blur source → soft blobs merge where badge + panel are close */}
             <feGaussianBlur in="SourceGraphic" stdDeviation="10" result="blur" />
-            <feColorMatrix
-              in="blur"
-              type="matrix"
-              values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 20 -10"
-              result="gooey"
-            />
+            {/* 2. Threshold alpha channel → hard-edged blob shapes */}
+            <feColorMatrix in="blur" type="matrix"
+              values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 18 -7"
+              result="gooey" />
+            {/* 3. Blend original content OVER gooey → crisp text on blobby shapes */}
+            <feBlend in="SourceGraphic" in2="gooey" />
           </filter>
         </defs>
       </svg>
 
-      {/* ── Layer 1: Shape layer (FILTERED) ── */}
-      {/* Only solid-colored divs here — no text, no icons.                */}
-      {/* The gooey filter blurs these shapes and creates liquid bridges.  */}
+      {/* Single filtered container — transparent bg required for alpha manipulation.
+          Badge + panel are siblings with solid bg. The filter blurs their shapes,
+          thresholds the alpha (creating liquid bridges), then blends original
+          content on top (preserving crisp text/icons). */}
       <div
-        className="absolute inset-0 pointer-events-none"
         style={{ filter: isOpen ? `url(#${filterId})` : 'none' }}
       >
-        {/* Badge shape */}
-        <div className={cn(
-          'rounded-full px-3 py-1 inline-flex h-[26px]',
-          isOpen ? 'bg-[#212121]' : 'invisible',
-        )} />
-        {/* Panel shape */}
+        {/* Badge trigger */}
+        <motion.button
+          onClick={(e) => { e.stopPropagation(); isOpen ? setIsOpen(false) : handleOpen(); }}
+          onKeyDown={handleBadgeKeyDown}
+          whileHover={shouldReduceMotion ? undefined : { scale: TASK_DIALS.status.hoverScale }}
+          whileTap={shouldReduceMotion ? undefined : { scale: TASK_DIALS.status.tapScale }}
+          transition={TASK_DIALS.status.spring}
+          aria-haspopup="listbox"
+          aria-expanded={isOpen}
+          className={cn(
+            'relative inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium uppercase tracking-wide whitespace-nowrap transition-colors',
+            isOpen ? 'bg-[#212121] text-foreground' : activeBadgeStyle
+          )}
+        >
+          <AnimatePresence mode="wait">
+            <motion.span
+              key={`badge-${status}`}
+              initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.8, filter: 'blur(4px)' }}
+              animate={isOpen
+                ? { opacity: 0.4, scale: 1, filter: 'blur(0px)' }
+                : { opacity: 1, scale: 1, filter: 'blur(0px)' }
+              }
+              exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.8, filter: 'blur(4px)' }}
+              transition={TASK_DIALS.status.spring}
+              className="inline-flex items-center gap-1.5"
+            >
+              <BadgeIcon className="size-3" />
+              {status}
+            </motion.span>
+          </AnimatePresence>
+        </motion.button>
+
+        {/* Dropdown panel */}
         <AnimatePresence>
           {isOpen && (
             <motion.div
@@ -323,115 +344,67 @@ function GooeyStatusDropdown({ taskId, status, onStatusChange, shouldReduceMotio
               animate={{ opacity: 1, scaleY: 1, scaleX: 1 }}
               exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.95 }}
               transition={isOpen ? TASK_DIALS.gooey.open : TASK_DIALS.gooey.close}
-              className={cn(panelPosition, 'rounded-xl bg-[#212121] h-[164px]',
-                opensUp ? 'origin-bottom' : 'origin-top',
+              role="listbox"
+              aria-label="Change task status"
+              className={cn(
+                'absolute z-50 w-44 rounded-xl bg-[#212121] py-1',
+                opensUp ? 'bottom-full mb-0 origin-bottom' : 'top-full mt-0 origin-top',
+                opensRight ? 'left-0' : 'right-0',
               )}
-            />
+              style={{
+                boxShadow: '0 0 0 1px rgba(255,255,255,0.04), 0 4px 16px rgba(0,0,0,0.4), 0 12px 32px rgba(0,0,0,0.3)',
+              }}
+            >
+              {ALL_STATUSES.map((s, i) => {
+                const cfg = STATUS_ICONS[s];
+                const Icon = cfg.icon;
+                const isCurrent = s === status;
+                return (
+                  <motion.button
+                    key={s}
+                    ref={(el) => { optionRefs.current[i] = el; }}
+                    role="option"
+                    aria-selected={isCurrent}
+                    initial={shouldReduceMotion ? false : { opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.95 }}
+                    transition={{
+                      ...TASK_DIALS.gooey.open,
+                      delay: shouldReduceMotion ? 0 : i * TASK_DIALS.gooey.stagger,
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleSelect(s);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleSelect(s);
+                      }
+                      if (e.key === 'ArrowDown') {
+                        e.preventDefault();
+                        setFocusIndex(Math.min(i + 1, ALL_STATUSES.length - 1));
+                      }
+                      if (e.key === 'ArrowUp') {
+                        e.preventDefault();
+                        setFocusIndex(Math.max(i - 1, 0));
+                      }
+                    }}
+                    className={cn(
+                      'flex w-full items-center gap-2 px-3 py-2 text-xs text-left transition-colors',
+                      isCurrent ? 'bg-[#2c2c2c] font-medium' : 'hover:bg-[#2c2c2c]'
+                    )}
+                  >
+                    <Icon className={cn('size-3.5', cfg.className)} />
+                    <span>{s}</span>
+                  </motion.button>
+                );
+              })}
+            </motion.div>
           )}
         </AnimatePresence>
       </div>
-
-      {/* ── Layer 2: Content layer (NOT filtered) ── */}
-      {/* Crisp text and icons rendered on top of the gooey shapes.       */}
-
-      {/* Badge trigger */}
-      <motion.button
-        onClick={(e) => { e.stopPropagation(); isOpen ? setIsOpen(false) : handleOpen(); }}
-        onKeyDown={handleBadgeKeyDown}
-        whileHover={shouldReduceMotion ? undefined : { scale: TASK_DIALS.status.hoverScale }}
-        whileTap={shouldReduceMotion ? undefined : { scale: TASK_DIALS.status.tapScale }}
-        transition={TASK_DIALS.status.spring}
-        aria-haspopup="listbox"
-        aria-expanded={isOpen}
-        className={cn(
-          'relative inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium uppercase tracking-wide whitespace-nowrap transition-colors',
-          isOpen ? 'bg-transparent text-foreground' : activeBadgeStyle
-        )}
-      >
-        <AnimatePresence mode="wait">
-          <motion.span
-            key={`badge-${status}`}
-            initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.8, filter: 'blur(4px)' }}
-            animate={isOpen
-              ? { opacity: 0.4, scale: 1, filter: 'blur(0px)' }
-              : { opacity: 1, scale: 1, filter: 'blur(0px)' }
-            }
-            exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.8, filter: 'blur(4px)' }}
-            transition={TASK_DIALS.status.spring}
-            className="inline-flex items-center gap-1.5"
-          >
-            <BadgeIcon className="size-3" />
-            {status}
-          </motion.span>
-        </AnimatePresence>
-      </motion.button>
-
-      {/* Dropdown panel (content) */}
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scaleY: 0.6, scaleX: 0.9 }}
-            animate={{ opacity: 1, scaleY: 1, scaleX: 1 }}
-            exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.95 }}
-            transition={isOpen ? TASK_DIALS.gooey.open : TASK_DIALS.gooey.close}
-            role="listbox"
-            aria-label="Change task status"
-            className={cn(panelPosition, 'rounded-xl bg-[#212121] py-1',
-              opensUp ? 'origin-bottom' : 'origin-top',
-            )}
-            style={{
-              boxShadow: '0 0 0 1px rgba(255,255,255,0.04), 0 4px 16px rgba(0,0,0,0.4), 0 12px 32px rgba(0,0,0,0.3)',
-            }}
-          >
-            {ALL_STATUSES.map((s, i) => {
-              const cfg = STATUS_ICONS[s];
-              const Icon = cfg.icon;
-              const isCurrent = s === status;
-              return (
-                <motion.button
-                  key={s}
-                  ref={(el) => { optionRefs.current[i] = el; }}
-                  role="option"
-                  aria-selected={isCurrent}
-                  initial={shouldReduceMotion ? false : { opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.95 }}
-                  transition={{
-                    ...TASK_DIALS.gooey.open,
-                    delay: shouldReduceMotion ? 0 : i * TASK_DIALS.gooey.stagger,
-                  }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleSelect(s);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      handleSelect(s);
-                    }
-                    if (e.key === 'ArrowDown') {
-                      e.preventDefault();
-                      setFocusIndex(Math.min(i + 1, ALL_STATUSES.length - 1));
-                    }
-                    if (e.key === 'ArrowUp') {
-                      e.preventDefault();
-                      setFocusIndex(Math.max(i - 1, 0));
-                    }
-                  }}
-                  className={cn(
-                    'flex w-full items-center gap-2 px-3 py-2 text-xs text-left transition-colors',
-                    isCurrent ? 'bg-[#2c2c2c] font-medium' : 'hover:bg-[#2c2c2c]'
-                  )}
-                >
-                  <Icon className={cn('size-3.5', cfg.className)} />
-                  <span>{s}</span>
-                </motion.button>
-              );
-            })}
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }
