@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useCallback } from 'react';
-import { motion, useMotionValue, useTransform, animate } from 'motion/react';
+import { motion, useMotionValue, useTransform, animate, useReducedMotion } from 'motion/react';
 import { X } from 'lucide-react';
 import { KIND_CONFIG } from './constants';
 import { formatTime } from './utils';
@@ -27,6 +27,7 @@ export function LiveToastCard({
   onResumeTimer,
 }: LiveToastCardProps) {
   const { notification } = toast;
+  const prefersReducedMotion = useReducedMotion();
   const [hovered, setHovered] = useState(false);
   const cfg = KIND_CONFIG[notification.kind] ?? KIND_CONFIG.comment_reply;
   const Icon = cfg.icon;
@@ -81,11 +82,11 @@ export function LiveToastCard({
 
   return (
     <motion.div
-      layout
-      initial={{ opacity: 0, y: 40, scale: 0.95 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: 20, scale: 0.95 }}
-      transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+      layout={!prefersReducedMotion}
+      initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 40, scale: 0.95 }}
+      animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }}
+      exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 20, scale: 0.95 }}
+      transition={prefersReducedMotion ? { duration: 0.15 } : { type: 'spring', stiffness: 300, damping: 25 }}
       style={{ y }}
       drag="y"
       dragConstraints={{ top: 0, bottom: 0 }}
