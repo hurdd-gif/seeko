@@ -240,10 +240,13 @@ export function OnboardingForm({
             <p className="text-sm text-destructive">{error}</p>
           )}
 
-          <button
+          <motion.button
             type="submit"
             disabled={saving || uploading}
             className="inline-flex w-full items-center justify-center gap-2 whitespace-nowrap rounded-md bg-primary text-primary-foreground text-sm font-medium h-9 px-4 py-2 transition-colors transition-[box-shadow_var(--focus-ring-duration)_ease-out] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            transition={{ type: 'spring', stiffness: 500, damping: 30 }}
           >
             <AnimatePresence mode="wait">
               <motion.span
@@ -267,7 +270,7 @@ export function OnboardingForm({
                 )}
               </motion.span>
             </AnimatePresence>
-          </button>
+          </motion.button>
         </form>
       </CardContent>
     </Card>
