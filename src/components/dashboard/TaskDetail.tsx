@@ -179,6 +179,7 @@ function CommentItem({
   onReply,
   allComments,
   currentUserId,
+  staggerIndex = 0,
 }: {
   comment: TaskComment;
   isOwn: boolean;
@@ -192,6 +193,7 @@ function CommentItem({
   onReply: (comment: TaskComment) => void;
   allComments: TaskComment[];
   currentUserId: string;
+  staggerIndex?: number;
 }) {
   const highlightRef = useRef<HTMLDivElement>(null);
   const [editing, setEditing] = useState(false);
@@ -249,14 +251,20 @@ function CommentItem({
     <motion.div
       ref={highlightRef}
       key={comment.id}
-      initial={{ opacity: 0, y: 8 }}
+      initial={{ opacity: 0, y: 12 }}
       animate={{
         opacity: 1,
         y: 0,
         backgroundColor: isHighlighted ? ['rgba(59,130,246,0.25)', 'rgba(59,130,246,0)'] : 'rgba(59,130,246,0)',
       }}
-      exit={{ opacity: 0, height: 0, marginBottom: 0 }}
-      transition={{ duration: isHighlighted ? 2 : 0.15, backgroundColor: { duration: 2, delay: 0.5 } }}
+      exit={{ opacity: 0, height: 0, marginBottom: 0, transition: { duration: 0.15 } }}
+      transition={{
+        type: 'spring',
+        stiffness: 380,
+        damping: 28,
+        delay: Math.min(staggerIndex * 0.04, 0.5),
+        backgroundColor: { duration: 2, delay: 0.5 },
+      }}
       className={cn('group relative flex gap-3 rounded-md px-2 -mx-2 md:select-auto select-none [&_*]:select-none md:[&_*]:select-auto', isGrouped ? 'py-0 mt-0.5 pl-[44px]' : 'py-1 mt-3 first:mt-0')}
       style={{ WebkitTouchCallout: 'none', WebkitUserSelect: 'none' } as React.CSSProperties}
       {...longPress}
@@ -665,6 +673,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
   }, [open, isDesktop]);
 
   const [activeTab, setActiveTab] = useState<'details' | 'chat'>('details');
+  const [tabDirection, setTabDirection] = useState(1); // 1 = right, -1 = left
   const [comments, setComments] = useState<TaskComment[]>([]);
   const [loading, setLoading] = useState(false);
   const [deliverables, setDeliverables] = useState<TaskDeliverable[]>([]);
@@ -1842,6 +1851,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
               onReply={setReplyTo}
               allComments={comments}
               currentUserId={currentUserId}
+              staggerIndex={idx}
             />
           );
         })}
@@ -1988,7 +1998,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
             'relative rounded-lg px-4 py-1.5 text-sm font-medium transition-colors',
             activeTab === 'details' ? 'text-seeko-accent' : 'text-muted-foreground hover:text-foreground'
           )}
-          onClick={() => setActiveTab('details')}
+          onClick={() => { setTabDirection(-1); setActiveTab('details'); }}
         >
           {activeTab === 'details' && (
             <motion.div
@@ -2004,7 +2014,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
             'relative rounded-lg px-4 py-1.5 text-sm font-medium transition-colors',
             activeTab === 'chat' ? 'text-seeko-accent' : 'text-muted-foreground hover:text-foreground'
           )}
-          onClick={() => setActiveTab('chat')}
+          onClick={() => { setTabDirection(1); setActiveTab('chat'); }}
         >
           {activeTab === 'chat' && (
             <motion.div
@@ -2106,8 +2116,11 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
                     {detailsContent}
                   </div>
                   {/* Right — Chat */}
-                  <div
+                  <motion.div
                     className={cn('flex flex-1 flex-col min-h-0 min-w-0', isDragging && 'ring-2 ring-inset ring-seeko-accent/50')}
+                    initial={{ opacity: 0, x: 16 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ type: 'spring', stiffness: 300, damping: 28, delay: 0.1 }}
                     onDragOver={e => { e.preventDefault(); setIsDragging(true); }}
                     onDragLeave={e => {
                       if (!e.currentTarget.contains(e.relatedTarget as Node)) setIsDragging(false);
@@ -2133,13 +2146,27 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
                     <div className="shrink-0 border-t border-white/[0.06] bg-muted/[0.04] px-5 py-3">
                       {chatCompose}
                     </div>
-                  </div>
+                  </motion.div>
                 </div>
               ) : (
                 /* Mobile: tabbed layout */
-                <AnimatePresence mode="wait" initial={false}>
+                <AnimatePresence mode="wait" initial={false} custom={tabDirection}>
                   {activeTab === 'details' && (
-                    <motion.div key="details" className="flex-1 overflow-y-auto touch-auto px-5 py-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ type: 'spring', stiffness: 500, damping: 35, opacity: { duration: 0.12 } }} onPointerDownCapture={(e) => e.stopPropagation()}>
+                    <motion.div
+                      key="details"
+                      className="flex-1 overflow-y-auto touch-auto px-5 py-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                      custom={tabDirection}
+                      initial="enter"
+                      animate="active"
+                      exit="exit"
+                      variants={{
+                        enter: (d: number) => ({ opacity: 0, x: d * 40 }),
+                        active: { opacity: 1, x: 0 },
+                        exit: (d: number) => ({ opacity: 0, x: d * -40 }),
+                      }}
+                      transition={{ type: 'spring', stiffness: 400, damping: 32, opacity: { duration: 0.15 } }}
+                      onPointerDownCapture={(e) => e.stopPropagation()}
+                    >
                       {detailsContent}
                     </motion.div>
                   )}
@@ -2147,10 +2174,16 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
                     <motion.div
                       key="chat"
                       className={cn('flex flex-1 flex-col min-h-0', isDragging && 'ring-2 ring-inset ring-seeko-accent/50')}
-                      initial={{ opacity: 0, y: 6 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -6 }}
-                      transition={{ type: 'spring', stiffness: 500, damping: 35, opacity: { duration: 0.12 } }}
+                      custom={tabDirection}
+                      initial="enter"
+                      animate="active"
+                      exit="exit"
+                      variants={{
+                        enter: (d: number) => ({ opacity: 0, x: d * 40 }),
+                        active: { opacity: 1, x: 0 },
+                        exit: (d: number) => ({ opacity: 0, x: d * -40 }),
+                      }}
+                      transition={{ type: 'spring', stiffness: 400, damping: 32, opacity: { duration: 0.15 } }}
                       onDragOver={e => { e.preventDefault(); setIsDragging(true); }}
                       onDragLeave={e => {
                         if (!e.currentTarget.contains(e.relatedTarget as Node)) setIsDragging(false);

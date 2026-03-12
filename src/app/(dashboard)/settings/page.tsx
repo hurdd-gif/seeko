@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { fetchProfile, fetchTeam } from '@/lib/supabase/data';
 import { SettingsPanel } from '@/components/dashboard/SettingsPanel';
+import { FadeRise } from '@/components/motion';
 
 export default async function SettingsPage() {
   const supabase = await createClient();
@@ -23,11 +24,13 @@ export default async function SettingsPage() {
     .order('updated_at', { ascending: false });
 
   return (
-    <SettingsPanel
-      profile={profile}
-      isAdmin={isAdmin}
-      team={team}
-      completedTasks={completedTasks ?? []}
-    />
+    <FadeRise delay={0} y={16}>
+      <SettingsPanel
+        profile={profile}
+        isAdmin={isAdmin}
+        team={team}
+        completedTasks={completedTasks ?? []}
+      />
+    </FadeRise>
   );
 }
