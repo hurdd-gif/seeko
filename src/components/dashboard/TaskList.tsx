@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef, useId } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { createBrowserClient } from '@supabase/ssr';
@@ -191,6 +191,7 @@ interface GooeyStatusDropdownProps {
 }
 
 function GooeyStatusDropdown({ taskId, status, onStatusChange, shouldReduceMotion }: GooeyStatusDropdownProps) {
+  const filterId = useId().replace(/:/g, '');  // unique per instance, strip colons for valid SVG id
   const [isOpen, setIsOpen] = useState(false);
   const [focusIndex, setFocusIndex] = useState(-1);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -200,6 +201,11 @@ function GooeyStatusDropdown({ taskId, status, onStatusChange, shouldReduceMotio
 
   const badgeStyle = STATUS_BADGE_STYLE[status] ?? STATUS_BADGE_STYLE['In Progress'];
   const BadgeIcon = STATUS_BADGE_ICON[status] ?? Timer;
+  // When open, badge needs a solid bg so the gooey filter can form liquid blobs
+  // (10% opacity backgrounds are invisible to the blur+threshold pipeline)
+  const activeBadgeStyle = isOpen
+    ? 'bg-[#212121] text-foreground'
+    : badgeStyle;
 
   // Close on click outside
   useEffect(() => {
@@ -277,8 +283,25 @@ function GooeyStatusDropdown({ taskId, status, onStatusChange, shouldReduceMotio
     <div
       ref={containerRef}
       className="relative"
-      style={{ filter: isOpen ? 'url(#gooey-status)' : 'none' }}
+      style={{ filter: isOpen ? `url(#${filterId})` : 'none' }}
     >
+      {/* Inline SVG filter — unique ID per instance, co-located for Next.js url(#id) */}
+      <svg className="absolute" width="0" height="0" aria-hidden="true">
+        <defs>
+          <filter id={filterId}>
+            <feGaussianBlur in="SourceGraphic" stdDeviation="10" result="blur" />
+            <feColorMatrix
+              in="blur"
+              type="matrix"
+              values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 20 -10"
+              result="gooey"
+            />
+            {/* feBlend layers original content over gooey shape — blob bridges stay visible */}
+            <feBlend in="SourceGraphic" in2="gooey" />
+          </filter>
+        </defs>
+      </svg>
+
       {/* Badge trigger */}
       <motion.button
         onClick={(e) => { e.stopPropagation(); isOpen ? setIsOpen(false) : handleOpen(); }}
@@ -289,8 +312,8 @@ function GooeyStatusDropdown({ taskId, status, onStatusChange, shouldReduceMotio
         aria-haspopup="listbox"
         aria-expanded={isOpen}
         className={cn(
-          'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium uppercase tracking-wide whitespace-nowrap',
-          badgeStyle
+          'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium uppercase tracking-wide whitespace-nowrap transition-colors',
+          activeBadgeStyle
         )}
       >
         <AnimatePresence mode="wait">
@@ -954,22 +977,6 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Gooey SVG filter — defined once, referenced per-dropdown */}
-      <svg className="absolute size-0" aria-hidden="true">
-        <defs>
-          <filter id="gooey-status">
-            <feGaussianBlur in="SourceGraphic" stdDeviation="10" result="blur" />
-            <feColorMatrix
-              in="blur"
-              type="matrix"
-              values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 20 -10"
-              result="gooey"
-            />
-            <feComposite in="SourceGraphic" in2="gooey" operator="atop" />
-          </filter>
-        </defs>
-      </svg>
-
       <div
         className="rounded-2xl bg-[#1a1a1a] px-2 py-3"
         style={{
