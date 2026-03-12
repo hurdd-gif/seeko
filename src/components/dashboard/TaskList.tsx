@@ -285,11 +285,11 @@ function GooeyStatusDropdown({ taskId, status, onStatusChange, shouldReduceMotio
       <svg className="absolute" width="0" height="0" aria-hidden="true">
         <defs>
           <filter id={filterId}>
-            {/* 1. Blur source → soft blobs merge where badge + panel are close */}
-            <feGaussianBlur in="SourceGraphic" stdDeviation="10" result="blur" />
-            {/* 2. Threshold alpha channel → hard-edged blob shapes */}
+            {/* 1. Blur source → soft blobs merge where badge + panel touch */}
+            <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur" />
+            {/* 2. Threshold alpha → tight blob edges (higher = sharper) */}
             <feColorMatrix in="blur" type="matrix"
-              values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 18 -7"
+              values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 30 -12"
               result="gooey" />
             {/* 3. Blend original content OVER gooey → crisp text on blobby shapes */}
             <feBlend in="SourceGraphic" in2="gooey" />
