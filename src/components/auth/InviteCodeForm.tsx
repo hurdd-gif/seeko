@@ -62,7 +62,7 @@ export function InviteCodeForm() {
         />
       </div>
 
-      <div>
+      <div className="mb-[18px]">
         <label className="block text-xs font-medium text-muted-foreground mb-3 text-center">
           Enter the 8-digit code from your invite email
         </label>
