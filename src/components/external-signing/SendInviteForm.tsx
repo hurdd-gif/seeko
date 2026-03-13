@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Send, Upload, FileText, Loader2, X, Eye, ChevronDown, ChevronUp, AlertCircle, Calendar } from 'lucide-react';
+import { acquireScrollLock, releaseScrollLock } from '@/lib/scroll-lock';
 import { EXTERNAL_TEMPLATES } from '@/lib/external-agreement-templates';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -377,12 +378,9 @@ function ConfirmDialog({ show, onClose, onConfirm, email, templateMode, template
   email: string; templateMode: string; templateName: string; customTitle: string; expiration: string; customDate: string;
 }) {
   useEffect(() => {
-    if (show) {
-      document.documentElement.setAttribute('data-modal-open', '');
-    } else {
-      document.documentElement.removeAttribute('data-modal-open');
-    }
-    return () => { document.documentElement.removeAttribute('data-modal-open'); };
+    if (!show) return;
+    acquireScrollLock();
+    return () => { releaseScrollLock(); };
   }, [show]);
 
   return (

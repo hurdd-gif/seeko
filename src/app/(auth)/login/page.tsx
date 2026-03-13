@@ -19,7 +19,6 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'motion/react';
-import { Loader2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { InviteCodeForm } from '@/components/auth/InviteCodeForm';
 import { useHaptics } from '@/components/HapticsProvider';
@@ -102,7 +101,7 @@ export default function LoginPage() {
 
       {/* Card */}
       <motion.div
-        className="relative rounded-2xl border border-border bg-card p-8 shadow-2xl"
+        className="relative rounded-2xl border border-transparent bg-transparent p-8"
         initial={{ opacity: 0, y: CARD.offsetY }}
         animate={{ opacity: stage >= 1 ? 1 : 0, y: stage >= 1 ? 0 : CARD.offsetY }}
         transition={CARD.spring}
@@ -125,15 +124,26 @@ export default function LoginPage() {
           <h1 className="text-xl font-bold tracking-tight text-foreground">SEEKO Studio</h1>
         </motion.div>
 
-        {/* Subtitle */}
-        <motion.p
-          className="mb-6 text-center text-sm text-muted-foreground"
+        {/* Subtitle — crossfade between tab labels */}
+        <motion.div
+          className="mb-6 text-center text-sm text-muted-foreground relative h-5"
           initial={{ opacity: 0 }}
           animate={{ opacity: stage >= 3 ? 1 : 0 }}
           transition={FADE.spring}
         >
-          Sign in to your workspace
-        </motion.p>
+          <AnimatePresence mode="wait">
+            <motion.p
+              key={tab}
+              className="absolute inset-0"
+              initial={{ opacity: 0, filter: 'blur(4px)', y: 2 }}
+              animate={{ opacity: 1, filter: 'blur(0px)', y: 0 }}
+              exit={{ opacity: 0, filter: 'blur(4px)', y: -2 }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+            >
+              {tab === 'signin' ? 'Sign in to your workspace' : 'Join the team!'}
+            </motion.p>
+          </AnimatePresence>
+        </motion.div>
 
         {/* Tabs */}
         <motion.div
@@ -230,21 +240,14 @@ export default function LoginPage() {
               <motion.button
                 type="submit"
                 disabled={loading}
-                className="w-full py-2 px-4 rounded-lg bg-seeko-accent text-[#1a1a1a] font-semibold text-sm hover:bg-seeko-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors inline-flex items-center justify-center gap-2"
+                className="w-full py-2 px-4 rounded-lg bg-seeko-accent text-[#1a1a1a] font-semibold text-sm hover:bg-seeko-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 initial={{ opacity: 0, y: FIELD.offsetY }}
                 animate={{ opacity: stage >= 7 ? 1 : 0, y: stage >= 7 ? 0 : FIELD.offsetY }}
                 transition={FIELD.spring}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+                whileHover={{ scale: 1.015 }}
+                whileTap={{ scale: 0.985 }}
               >
-                {loading ? (
-                  <>
-                    <Loader2 className="size-4 shrink-0 animate-spin" />
-                    Signing in…
-                  </>
-                ) : (
-                  'Sign in'
-                )}
+                {loading ? 'Signing in…' : 'Sign in'}
               </motion.button>
             </motion.form>
           ) : (

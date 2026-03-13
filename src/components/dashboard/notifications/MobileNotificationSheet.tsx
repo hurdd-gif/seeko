@@ -1,11 +1,12 @@
 'use client';
 
-import { forwardRef } from 'react';
+import { forwardRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { CheckCheck, CheckCircle2, X } from 'lucide-react';
 import { SHEET_SPRING, MOBILE_ROW_STAGGER } from './constants';
 import { NotificationStack } from './NotificationStack';
 import { GroupedNotification, DisplayNotification } from './types';
+import { acquireScrollLock, releaseScrollLock } from '@/lib/scroll-lock';
 
 interface MobileNotificationSheetProps {
   open: boolean;
@@ -16,14 +17,22 @@ interface MobileNotificationSheetProps {
   onMarkAllRead: () => void;
   onTap: (notif: DisplayNotification) => void;
   onDismiss: (ids: string[]) => void;
+  onMarkRead?: (ids: string[]) => void;
 }
 
 export const MobileNotificationSheet = forwardRef<HTMLDivElement, MobileNotificationSheetProps>(
   function MobileNotificationSheet(
-    { open, grouped, isEmpty, unreadCount, onClose, onMarkAllRead, onTap, onDismiss },
+    { open, grouped, isEmpty, unreadCount, onClose, onMarkAllRead, onTap, onDismiss, onMarkRead },
     ref
   ) {
     let rowIndex = 0;
+
+    // Lock scroll when sheet is open
+    useEffect(() => {
+      if (!open) return;
+      acquireScrollLock();
+      return () => { releaseScrollLock(); };
+    }, [open]);
 
     return (
       <AnimatePresence>
@@ -35,7 +44,7 @@ export const MobileNotificationSheet = forwardRef<HTMLDivElement, MobileNotifica
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="fixed inset-0 z-[9998]"
+              className="fixed inset-0 z-[9998] touch-none"
               style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}
               onClick={onClose}
             />
@@ -52,6 +61,12 @@ export const MobileNotificationSheet = forwardRef<HTMLDivElement, MobileNotifica
                 maxHeight: '85dvh',
                 paddingTop: 'env(safe-area-inset-top)',
                 paddingBottom: 'env(safe-area-inset-bottom)',
+              }}
+              drag="y"
+              dragConstraints={{ top: 0, bottom: 0 }}
+              dragElastic={{ top: 0, bottom: 0.6 }}
+              onDragEnd={(_e, info) => {
+                if (info.offset.y > 100 || info.velocity.y > 300) onClose();
               }}
             >
               {/* Drag handle */}
@@ -82,7 +97,10 @@ export const MobileNotificationSheet = forwardRef<HTMLDivElement, MobileNotifica
               </div>
 
               {/* Notification list */}
-              <div className="flex-1 overflow-y-auto overscroll-contain">
+              <div
+                className="flex-1 overflow-y-auto overscroll-contain touch-auto px-2"
+                onPointerDown={(e) => e.stopPropagation()}
+              >
                 {isEmpty ? (
                   <div className="flex flex-col items-center justify-center py-16 text-center">
                     <CheckCircle2 className="size-10 text-muted-foreground/20" />
@@ -106,6 +124,7 @@ export const MobileNotificationSheet = forwardRef<HTMLDivElement, MobileNotifica
                               stagger={MOBILE_ROW_STAGGER}
                               onTap={onTap}
                               onDismiss={onDismiss}
+                              onMarkRead={onMarkRead}
                             />
                           );
                         })}

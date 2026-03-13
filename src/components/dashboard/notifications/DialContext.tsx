@@ -21,7 +21,28 @@ export const DIALS = {
     entranceY: 20,
     exitX: 80,
     exitScale: 0.88,
-    swipeThreshold: 130,
+    swipeThreshold: 130, // kept for backwards compat but superseded by swipe config
+  },
+  swipe: {
+    spring: { stiffness: 900, damping: 80 },
+    /** Fraction of card width — release above this snaps to 50% revealing actions */
+    partialThreshold: 0.25,
+    /** Fraction of card width — swipe past this locks to edge, commits on release */
+    fullThreshold: 0.8,
+    /** Fraction of card width to snap to when partially revealed */
+    partialSnap: 0.5,
+    /** Colors for dismiss (right swipe) */
+    dismissBg: 'rgba(239,68,68,0.12)',
+    dismissBgFull: 'rgba(239,68,68,0.3)',
+    /** Colors for mark-read (left swipe) */
+    readBg: 'rgba(110,231,183,0.12)',
+    readBgFull: 'rgba(110,231,183,0.3)',
+    /** Squish animation on full-swipe commit */
+    commitScaleY: 1.05,
+    commitScaleX: 0.95,
+    commitY: -24,
+    /** Delay before reset after commit animation */
+    commitResetDelay: 0.3,
   },
   stack: {
     spring: { type: 'spring' as const, stiffness: 600, damping: 50 },

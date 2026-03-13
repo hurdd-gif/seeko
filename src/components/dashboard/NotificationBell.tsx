@@ -25,11 +25,14 @@ import { useRouter } from 'next/navigation';
 import { createBrowserClient } from '@supabase/ssr';
 import { Notification } from '@/lib/types';
 import { useIsDesktop } from '@/lib/hooks/useIsDesktop';
+import { acquireScrollLock, releaseScrollLock } from '@/lib/scroll-lock';
 import { BellToggle } from './notifications/BellToggle';
 import { DesktopNotificationPanel } from './notifications/DesktopNotificationPanel';
 import { MobileNotificationSheet } from './notifications/MobileNotificationSheet';
 import { groupNotifications } from './notifications/utils';
 import type { DisplayNotification } from './notifications/types';
+import { useLiveToast } from './notifications/LiveToastContext';
+import { LiveToastContainer } from './notifications/LiveToastContainer';
 
 interface NotificationBellProps {
   userId: string;
@@ -46,16 +49,22 @@ export function NotificationBell({ userId, initialCount, initialNotifications }:
   const [mounted, setMounted] = useState(false);
   const bellRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  const { addLiveToast, setSuppress } = useLiveToast();
 
   useEffect(() => { setMounted(true); }, []);
+
+  // Suppress toasts when notification panel is open
+  useEffect(() => {
+    setSuppress(open);
+  }, [open, setSuppress]);
 
   // Lock body scroll on mobile when sheet is open
   useEffect(() => {
     if (!isDesktop && open) {
-      document.documentElement.setAttribute('data-modal-open', '');
+      acquireScrollLock();
       document.body.style.overflow = 'hidden';
       return () => {
-        document.documentElement.removeAttribute('data-modal-open');
+        releaseScrollLock();
         document.body.style.overflow = '';
       };
     }
@@ -99,6 +108,7 @@ export function NotificationBell({ userId, initialCount, initialNotifications }:
           const notif = payload.new as Notification;
           setNotifications(prev => [notif, ...prev].slice(0, 20));
           setUnreadCount(c => c + 1);
+          addLiveToast(notif);
         }
       )
       .on(
@@ -143,6 +153,33 @@ export function NotificationBell({ userId, initialCount, initialNotifications }:
     await supabase.from('notifications').update({ read: true }).eq('id', notifId);
   }, [supabase]);
 
+  // Swipe mark-read: toggle read state for given IDs
+  const swipeMarkRead = useCallback(async (ids: string[]) => {
+    // Check if all are already read — if so, mark unread
+    const allRead = ids.every(id => notifications.find(n => n.id === id)?.read);
+
+    if (allRead) {
+      // Mark unread
+      setNotifications(prev =>
+        prev.map(n => ids.includes(n.id) ? { ...n, read: false } : n)
+      );
+      setUnreadCount(c => c + ids.length);
+      for (const id of ids) {
+        await supabase.from('notifications').update({ read: false }).eq('id', id);
+      }
+    } else {
+      // Mark read
+      const unreadIds = ids.filter(id => !notifications.find(n => n.id === id)?.read);
+      setNotifications(prev =>
+        prev.map(n => ids.includes(n.id) ? { ...n, read: true } : n)
+      );
+      setUnreadCount(c => Math.max(0, c - unreadIds.length));
+      for (const id of unreadIds) {
+        await supabase.from('notifications').update({ read: true }).eq('id', id);
+      }
+    }
+  }, [supabase, notifications]);
+
   // Dismiss = delete from DB + remove from list
   const dismissNotification = useCallback(async (ids: string[]) => {
     const unreadDismissed = ids.filter(id => !notifications.find(n => n.id === id)?.read).length;
@@ -185,6 +222,7 @@ export function NotificationBell({ userId, initialCount, initialNotifications }:
           onMarkAllRead={markAllRead}
           onTap={handleNotificationTap}
           onDismiss={dismissNotification}
+          onMarkRead={swipeMarkRead}
         />
       )}
 
@@ -200,8 +238,27 @@ export function NotificationBell({ userId, initialCount, initialNotifications }:
           onMarkAllRead={markAllRead}
           onTap={handleNotificationTap}
           onDismiss={dismissNotification}
+          onMarkRead={swipeMarkRead}
         />,
         document.body
+      )}
+      {mounted && typeof document !== 'undefined' && (
+        <LiveToastContainer
+          onTapToast={(toast) => {
+            handleNotificationTap({
+              id: toast.notification.id,
+              kind: toast.notification.kind,
+              title: toast.notification.title,
+              body: toast.notification.body,
+              link: toast.notification.link,
+              read: toast.notification.read,
+              created_at: toast.notification.created_at,
+              count: 1,
+              ids: [toast.notification.id],
+            });
+          }}
+          onOpenPanel={() => setOpen(true)}
+        />
       )}
     </div>
   );

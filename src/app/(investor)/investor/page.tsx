@@ -13,7 +13,6 @@ import { createClient } from '@/lib/supabase/server';
 import { fetchProfile, fetchAreas, fetchActivity, fetchAllTasksWithAssignees } from '@/lib/supabase/data';
 import { Area } from '@/lib/types';
 import type { TaskWithAssignee } from '@/lib/types';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { FadeRise } from '@/components/motion';
 import { EmptyState } from '@/components/ui/empty-state';
 import { InvestorKPIStrip } from '@/components/dashboard/InvestorKPIStrip';
@@ -149,6 +148,10 @@ export default async function InvestorPage() {
   );
   const hasIssues = blocked > 0 || overdueCount > 0;
 
+  // Shared surface style matching the main dashboard
+  const surface = 'rounded-2xl bg-[#222222] border-0';
+  const surfaceShadow = { boxShadow: '0 0 0 1px rgba(255,255,255,0.03), 0 4px 16px rgba(0,0,0,0.1)' };
+
   // Build task-to-area lookup for activity context
   const taskAreaLookup: Record<string, string> = {};
   for (const task of tasks) {
@@ -167,10 +170,7 @@ export default async function InvestorPage() {
       <FadeRise delay={delay(TIMING.hero)} className="pb-2">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h1
-              className="text-2xl font-semibold tracking-tight"
-              style={{ color: 'var(--color-seeko-accent)' }}
-            >
+            <h1 className="text-3xl font-bold tracking-tight text-seeko-accent text-balance">
               Investor Panel
             </h1>
             <p className="text-sm text-muted-foreground mt-1">
@@ -178,7 +178,15 @@ export default async function InvestorPage() {
             </p>
           </div>
         </div>
-        <div className={`mt-3 rounded-lg px-3.5 py-2.5 text-sm ${hasIssues ? 'bg-red-950/15 border border-red-900/30 text-red-300' : 'bg-muted/50 border border-border/50 text-muted-foreground'}`}>
+        <div
+          className={`mt-3 rounded-xl px-3.5 py-2.5 text-sm ${hasIssues ? 'text-red-300' : 'text-muted-foreground'}`}
+          style={{
+            backgroundColor: hasIssues ? 'rgba(127, 29, 29, 0.15)' : '#222222',
+            boxShadow: hasIssues
+              ? '0 0 0 1px rgba(185, 28, 28, 0.3), 0 4px 16px rgba(0,0,0,0.1)'
+              : '0 0 0 1px rgba(255,255,255,0.03), 0 4px 16px rgba(0,0,0,0.1)',
+          }}
+        >
           {healthSummary}
         </div>
       </FadeRise>
@@ -198,22 +206,22 @@ export default async function InvestorPage() {
       {/* ── Game Areas (open by default) ─────────────────── */}
       <FadeRise delay={delay(TIMING.areas)}>
         {areas.length === 0 ? (
-          <Card>
-            <CardHeader>
+          <div className={surface} style={surfaceShadow}>
+            <div className="flex flex-col space-y-1.5 p-6">
               <div className="flex items-center gap-2">
                 <Map className="size-4 text-muted-foreground" />
-                <CardTitle className="text-xl font-semibold text-foreground">Game Areas</CardTitle>
+                <h3 className="text-lg font-semibold text-foreground">Game Areas</h3>
               </div>
-              <CardDescription>Progress by area.</CardDescription>
-            </CardHeader>
-            <CardContent>
+              <p className="text-sm text-muted-foreground">Progress by area.</p>
+            </div>
+            <div className="p-6 pt-0">
               <EmptyState
                 icon="Map"
                 title="No game areas yet"
                 description="Areas will appear here when the team adds them."
               />
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         ) : (
           <CollapsibleInvestorAreas
             areas={areas}
@@ -227,15 +235,15 @@ export default async function InvestorPage() {
 
       {/* ── Recent Activity (grouped by day) ──────────────── */}
       <FadeRise delay={delay(TIMING.summary)}>
-        <Card>
-          <CardHeader>
+        <div className={surface} style={surfaceShadow}>
+          <div className="flex flex-col space-y-1.5 p-6">
             <div className="flex items-center gap-2">
               <Activity className="size-4 text-muted-foreground" />
-              <CardTitle className="text-xl font-semibold text-foreground">Recent Activity</CardTitle>
+              <h3 className="text-lg font-semibold text-foreground">Recent Activity</h3>
             </div>
-            <CardDescription>Latest updates from the team.</CardDescription>
-          </CardHeader>
-          <CardContent>
+            <p className="text-sm text-muted-foreground">Latest updates from the team.</p>
+          </div>
+          <div className="p-6 pt-0">
             {recentActivity.length === 0 ? (
               <EmptyState
                 icon="Activity"
@@ -252,7 +260,7 @@ export default async function InvestorPage() {
                     {group.items.map((entry, i) => {
                       const areaName = taskAreaLookup[(entry as typeof recentActivity[number]).target];
                       return (
-                        <div key={i} className="flex items-start gap-3 py-2.5 border-b border-border last:border-0">
+                        <div key={i} className="flex items-start gap-3 py-2.5 border-b border-white/[0.04] last:border-0">
                           <span
                             className="mt-1.5 h-2 w-2 rounded-full shrink-0"
                             style={{ backgroundColor: actionColor((entry as typeof recentActivity[number]).action) }}
@@ -267,7 +275,7 @@ export default async function InvestorPage() {
                               {' '}
                               <span className="text-muted-foreground">{(entry as typeof recentActivity[number]).target}</span>
                             </p>
-                            <p className="text-xs text-muted-foreground/70 mt-0.5">
+                            <p className="text-xs text-muted-foreground/70 tabular-nums mt-0.5">
                               {timeAgo(entry.created_at)}
                             </p>
                           </div>
@@ -278,8 +286,8 @@ export default async function InvestorPage() {
                 ))}
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </FadeRise>
 
     </div>

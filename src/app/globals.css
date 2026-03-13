@@ -82,6 +82,13 @@ body.tour-cmd-k-active #command-palette-container * {
   pointer-events: none !important;
 }
 
+/* Toast timer fill: grows from bottom to top over AUTO_DISMISS_MS.
+   Paused on hover via animationPlayState. */
+@keyframes toast-fill {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}
+
 /* Confetti burst: see TourConfetti.tsx CONFETTI/BURST storyboard.
    Duration via --confetti-duration on container. */
 @keyframes confetti-burst {
@@ -317,6 +324,20 @@ body.tour-cmd-k-active #command-palette-container * {
 /* Hide mobile bottom nav when a full-screen modal is open */
 :root[data-modal-open] .mobile-bottom-nav {
   display: none !important;
+}
+
+/* Lock ALL scroll containers when a dialog/drawer is open */
+:root[data-modal-open] body,
+:root[data-modal-open] #dashboard-scroll,
+:root[data-modal-open] #tour-main {
+  overflow: hidden !important;
+  overscroll-behavior: none !important;
+  touch-action: none !important;
+}
+
+:root[data-modal-open] {
+  overflow: hidden !important;
+  overscroll-behavior: none !important;
 }
 
 /* Kill paragraph margin inside table cells so rows aren't bloated */

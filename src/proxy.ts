@@ -53,7 +53,7 @@ export async function proxy(request: NextRequest) {
   if (user && !isSetPasswordRoute && !isAgreementRoute && !isPublicAsset && !isExternalSigningRoute) {
     const { data: profile } = await supabase
       .from('profiles')
-      .select('onboarded, must_set_password, nda_accepted_at, is_admin')
+      .select('onboarded, must_set_password, nda_accepted_at, is_admin, is_investor')
       .eq('id', user.id)
       .single();
 
@@ -63,8 +63,8 @@ export async function proxy(request: NextRequest) {
       return NextResponse.redirect(url);
     }
 
-    // NDA gate: non-admin users without a signed NDA get redirected (including from onboarding)
-    if (!isAuthRoute && !isAgreementRoute && profile && !profile.nda_accepted_at && !profile.is_admin) {
+    // NDA gate: non-admin and non-investor users without a signed NDA get redirected (including from onboarding)
+    if (!isAuthRoute && !isAgreementRoute && profile && !profile.nda_accepted_at && !profile.is_admin && !profile.is_investor) {
       const url = request.nextUrl.clone();
       url.pathname = '/agreement';
       return NextResponse.redirect(url);

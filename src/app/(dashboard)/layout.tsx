@@ -10,6 +10,7 @@ import { ActivityTracker } from '@/components/ActivityTracker';
 import { PageTransition } from '@/components/layout/PageTransition';
 import { CommandPalette } from '@/components/dashboard/CommandPalette';
 import { BugReportFAB } from '@/components/BugReportFAB';
+import { LiveToastProvider } from '@/components/dashboard/notifications/LiveToastContext';
 
 export default async function DashboardLayout({
   children,
@@ -47,8 +48,9 @@ export default async function DashboardLayout({
 
   return (
     <DashboardTourWrapper showTour={showTour} userId={user.id} isContractor={profile?.is_contractor ?? false} isAdmin={isAdmin}>
+      <LiveToastProvider>
       <div className="flex h-dvh flex-col overflow-hidden bg-background md:min-h-screen md:h-auto md:overflow-visible">
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden md:overflow-visible">
+        <div id="dashboard-scroll" className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden md:overflow-visible">
           <div id="dashboard-mobile-header-slot" className="md:hidden shrink-0 pt-[env(safe-area-inset-top)]" aria-hidden="true" />
           <IconRail isAdmin={isAdmin} isContractor={profile?.is_contractor ?? false} />
           <MobileNav
@@ -90,6 +92,7 @@ export default async function DashboardLayout({
         displayName={profile?.display_name ?? 'Unknown'}
         email={user.email ?? ''}
       />
+      </LiveToastProvider>
     </DashboardTourWrapper>
   );
 }

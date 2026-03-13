@@ -10,6 +10,7 @@ import { Select } from '@/components/ui/select';
 import { toast } from 'sonner';
 import type { Profile } from '@/lib/types';
 import { uuid } from '@/lib/utils';
+import { acquireScrollLock, releaseScrollLock } from '@/lib/scroll-lock';
 
 type TeamMember = Profile & { paypal_email?: string };
 
@@ -53,15 +54,13 @@ export function PaymentCreateDialog({
 
   useEffect(() => {
     if (open) {
-      document.documentElement.setAttribute('data-modal-open', '');
+      acquireScrollLock();
       setItems([{ id: uuid(), label: '', amount: '' }]);
       setSaving(false);
       setSuccess(false);
       setCopied(false);
-    } else {
-      document.documentElement.removeAttribute('data-modal-open');
     }
-    return () => { document.documentElement.removeAttribute('data-modal-open'); };
+    return () => { if (open) releaseScrollLock(); };
   }, [open]);
 
   const total = items.reduce((sum, i) => sum + (parseFloat(i.amount) || 0), 0);
@@ -150,8 +149,8 @@ export function PaymentCreateDialog({
   const nonInvestorTeam = team.filter(m => !m.is_investor);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 sm:px-4">
-      <div className="w-full max-w-md rounded-t-2xl sm:rounded-xl border border-border bg-card p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:pb-6 shadow-xl max-h-[90dvh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 sm:px-4 touch-none">
+      <div className="w-full max-w-md rounded-t-2xl sm:rounded-xl border border-border bg-card p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:pb-6 shadow-xl max-h-[90dvh] overflow-y-auto touch-auto">
         {success ? (
           <div className="flex flex-col items-center gap-4 py-8">
             <div className="flex size-14 items-center justify-center rounded-full bg-emerald-500/10">

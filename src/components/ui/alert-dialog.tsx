@@ -4,6 +4,7 @@ import * as React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { acquireScrollLock, releaseScrollLock } from '@/lib/scroll-lock';
 
 interface AlertDialogProps {
   open: boolean;
@@ -13,21 +14,18 @@ interface AlertDialogProps {
 
 function AlertDialog({ open, onOpenChange, children }: AlertDialogProps) {
   React.useEffect(() => {
-    if (open) {
-      document.documentElement.setAttribute('data-modal-open', '');
-      document.body.style.overflow = 'hidden';
-      const handler = (e: KeyboardEvent) => {
-        if (e.key === 'Escape') onOpenChange(false);
-      }
-      document.addEventListener('keydown', handler);
-      return () => {
-        document.documentElement.removeAttribute('data-modal-open');
-        document.body.style.overflow = '';
-        document.removeEventListener('keydown', handler);
-      };
+    if (!open) return;
+    acquireScrollLock();
+    document.body.style.overflow = 'hidden';
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onOpenChange(false);
     }
-    document.documentElement.removeAttribute('data-modal-open');
-    document.body.style.overflow = '';
+    document.addEventListener('keydown', handler);
+    return () => {
+      releaseScrollLock();
+      document.body.style.overflow = '';
+      document.removeEventListener('keydown', handler);
+    };
   }, [open, onOpenChange]);
 
   return (

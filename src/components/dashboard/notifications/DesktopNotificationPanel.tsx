@@ -15,11 +15,12 @@ interface DesktopNotificationPanelProps {
   onMarkAllRead: () => void;
   onTap: (notif: DisplayNotification) => void;
   onDismiss: (ids: string[]) => void;
+  onMarkRead?: (ids: string[]) => void;
 }
 
 export const DesktopNotificationPanel = forwardRef<HTMLDivElement, DesktopNotificationPanelProps>(
   function DesktopNotificationPanel(
-    { open, grouped, isEmpty, unreadCount, onMarkAllRead, onTap, onDismiss },
+    { open, grouped, isEmpty, unreadCount, onMarkAllRead, onTap, onDismiss, onMarkRead },
     ref
   ) {
     const d = useDials();
@@ -76,6 +77,7 @@ export const DesktopNotificationPanel = forwardRef<HTMLDivElement, DesktopNotifi
                             stagger={d.panel.rowStagger}
                             onTap={onTap}
                             onDismiss={onDismiss}
+                            onMarkRead={onMarkRead}
                           />
                         );
                       })}

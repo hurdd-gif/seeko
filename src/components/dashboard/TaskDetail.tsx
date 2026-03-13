@@ -38,6 +38,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { DURATION_BACKDROP_MS, PANEL_SPRING, PANEL, SLIDEOUT, SLIDEOUT_SPRING } from '@/lib/motion';
 import { formatDeadline, formatDeadlineFull } from '@/lib/format-deadline';
+import { acquireScrollLock, releaseScrollLock } from '@/lib/scroll-lock';
 
 const REACTION_EMOJIS = ['👍', '👎', '🎉', '😂', '❓', '🔥', '❤️'];
 
@@ -549,7 +550,7 @@ function CommentItem({
         <AnimatePresence>
           {mobileActions && (
             <motion.div
-              className="fixed inset-0 z-[100] flex items-end justify-center md:hidden"
+              className="fixed inset-0 z-[100] flex items-end justify-center md:hidden touch-none"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -562,6 +563,12 @@ function CommentItem({
                 exit={{ y: '100%' }}
                 transition={{ type: 'spring', stiffness: 400, damping: 34 }}
                 className="relative w-full max-w-md rounded-t-2xl border-t border-border bg-card pb-[env(safe-area-inset-bottom)]"
+                drag="y"
+                dragConstraints={{ top: 0, bottom: 0 }}
+                dragElastic={{ top: 0, bottom: 0.6 }}
+                onDragEnd={(_e, info) => {
+                  if (info.offset.y > 80 || info.velocity.y > 300) setMobileActions(false);
+                }}
               >
                 <div className="flex justify-center pt-3 pb-1">
                   <div className="h-1 w-10 rounded-full bg-muted-foreground/20" />
@@ -643,8 +650,8 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
   // Signal to bottom nav that a modal is open (so it can hide)
   useEffect(() => {
     if (!open) return;
-    document.documentElement.setAttribute('data-modal-open', '');
-    return () => document.documentElement.removeAttribute('data-modal-open');
+    acquireScrollLock();
+    return () => { releaseScrollLock(); };
   }, [open]);
 
   // Escape key handler for desktop slide-out
@@ -2029,7 +2036,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
         {open && (
           /* Centered card modal */
           <motion.div
-            className="fixed inset-0 z-[60] flex items-end md:items-center justify-center p-0 md:p-4"
+            className="fixed inset-0 z-[60] flex items-end md:items-center justify-center p-0 md:p-4 touch-none"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -2041,6 +2048,12 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
             />
             <motion.div
               className="relative w-full rounded-t-2xl md:rounded-xl border border-border bg-card shadow-2xl flex flex-col overflow-hidden"
+              drag="y"
+              dragConstraints={{ top: 0, bottom: 0 }}
+              dragElastic={{ top: 0, bottom: 0.6 }}
+              onDragEnd={(_e, info) => {
+                if (info.offset.y > 100 || info.velocity.y > 300) onOpenChange(false);
+              }}
               initial={{ opacity: 0, scale: 0.95, y: 10, maxWidth: 576, maxHeight: '70vh' }}
               animate={{
                 opacity: 1,
@@ -2141,7 +2154,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
                   {activeTab === 'details' && (
                     <motion.div
                       key="details"
-                      className="flex-1 overflow-y-auto px-5 py-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                      className="flex-1 overflow-y-auto touch-auto px-5 py-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                       custom={tabDirection}
                       initial="enter"
                       animate="active"
@@ -2152,6 +2165,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
                         exit: (d: number) => ({ opacity: 0, x: d * -40 }),
                       }}
                       transition={{ type: 'spring', stiffness: 400, damping: 32, opacity: { duration: 0.15 } }}
+                      onPointerDownCapture={(e) => e.stopPropagation()}
                     >
                       {detailsContent}
                     </motion.div>
@@ -2181,10 +2195,10 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
                         if (files.length > 0) setPendingFiles(prev => [...prev, ...files]);
                       }}
                     >
-                      <div className="flex-1 overflow-y-auto px-3 py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                      <div className="flex-1 overflow-y-auto touch-auto px-3 py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" onPointerDownCapture={(e) => e.stopPropagation()}>
                         {chatMessages}
                       </div>
-                      <div className="shrink-0 border-t border-border px-3 py-3">
+                      <div className="shrink-0 border-t border-border px-3 py-3 touch-auto" onPointerDownCapture={(e) => e.stopPropagation()}>
                         {chatCompose}
                       </div>
                     </motion.div>

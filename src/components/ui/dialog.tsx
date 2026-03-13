@@ -3,6 +3,7 @@
 import * as React from "react"
 import { motion, AnimatePresence } from "motion/react"
 import { cn } from "@/lib/utils"
+import { acquireScrollLock, releaseScrollLock } from "@/lib/scroll-lock"
 import { X, Maximize2, Minimize2 } from "lucide-react"
 
 /* ─────────────────────────────────────────────────────────
@@ -64,32 +65,24 @@ function Dialog({ open, onOpenChange, children, resizable = false, contentClassN
   const sizeBeforeMax = React.useRef(size)
   const panelRef = React.useRef<HTMLDivElement>(null)
 
-  // Hide mobile bottom nav when dialog is open
+  // Lock scroll + hide mobile bottom nav when dialog is open
   React.useEffect(() => {
-    if (open) {
-      document.documentElement.setAttribute('data-modal-open', '')
-    } else {
-      document.documentElement.removeAttribute('data-modal-open')
-    }
-    return () => { document.documentElement.removeAttribute('data-modal-open') }
+    if (!open) return
+    acquireScrollLock()
+    return () => { releaseScrollLock() }
   }, [open])
 
   React.useEffect(() => {
     if (!open) return
 
-    // Lock all scroll containers
-    const scrollables: HTMLElement[] = [
-      document.documentElement,
-      document.body,
-      document.getElementById('tour-main'),
-    ].filter(Boolean) as HTMLElement[]
-    const prev = scrollables.map(el => el.style.overflow)
-    scrollables.forEach(el => { el.style.overflow = 'hidden' })
+    // Scroll lock is handled entirely by CSS via :root[data-modal-open] in globals.css.
+    // The attribute is set in the effect above. This effect only handles:
+    // 1. JS-level touchmove/wheel blocking as a safety net
+    // 2. Escape key handling via the dialog stack
 
     // Block wheel + touch scroll outside the dialog panel (non-passive so preventDefault works)
     const blockScroll = (e: WheelEvent | TouchEvent) => {
       if (panelRef.current?.contains(e.target as Node)) return
-      // Allow scroll inside portalled fullscreen overlays (e.g. DeckViewer)
       if ((e.target as Element)?.closest?.('[data-fullscreen-overlay]')) return
       e.preventDefault()
     }
@@ -111,7 +104,6 @@ function Dialog({ open, onOpenChange, children, resizable = false, contentClassN
       const idx = dialogCloseStack.indexOf(closeHandler)
       if (idx >= 0) dialogCloseStack.splice(idx, 1)
       document.removeEventListener('keydown', keyHandler)
-      scrollables.forEach((el, i) => { el.style.overflow = prev[i] })
       document.removeEventListener('wheel', blockScroll)
       document.removeEventListener('touchmove', blockScroll)
     }
@@ -179,9 +171,9 @@ function Dialog({ open, onOpenChange, children, resizable = false, contentClassN
   return (
     <AnimatePresence>
       {open && (
-        <div className={cn("fixed inset-0 z-[60] flex items-end sm:items-center justify-center", className)}>
+        <div className={cn("fixed inset-0 z-[60] flex items-end sm:items-center justify-center touch-none", className)}>
           <motion.div
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm touch-none"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -212,7 +204,7 @@ function Dialog({ open, onOpenChange, children, resizable = false, contentClassN
             }}
           >
             {/* Mobile drag handle */}
-            <div className="sm:hidden flex justify-center pt-2 pb-1 shrink-0 cursor-grab active:cursor-grabbing">
+            <div className="sm:hidden flex justify-center pt-3 pb-2 shrink-0 cursor-grab active:cursor-grabbing select-none">
               <div className="w-9 h-1 rounded-full bg-white/20" />
             </div>
             {/* Action toolbar — consolidated top-right button row */}
@@ -243,7 +235,10 @@ function Dialog({ open, onOpenChange, children, resizable = false, contentClassN
             </div>
             <DialogFooterContext.Provider value={{ setFooter }}>
               <div className="flex min-h-0 flex-1 flex-col">
-                <div className="flex-1 min-h-0 overflow-y-auto p-6 pt-2 sm:pt-6 [scrollbar-width:thin] [scrollbar-color:theme(colors.white/0.08)_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-white/10">
+                <div
+                  className="flex-1 min-h-0 overflow-y-auto touch-auto p-6 pt-2 sm:pt-6 [scrollbar-width:thin] [scrollbar-color:theme(colors.white/0.08)_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-white/10"
+                  onPointerDownCapture={(e) => e.stopPropagation()}
+                >
                   {children}
                 </div>
                 {footer != null ? (

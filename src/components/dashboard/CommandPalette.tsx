@@ -16,6 +16,7 @@ import {
   LayoutDashboard, Users, FileText, Activity, Settings, Search, PanelLeftClose, DollarSign, Presentation,
 } from 'lucide-react';
 import { useCommandPalette } from '@/lib/hooks/useCommandPalette';
+import { acquireScrollLock, releaseScrollLock } from '@/lib/scroll-lock';
 import type { Profile, Doc } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
@@ -123,14 +124,11 @@ export function CommandPalette({ team, docs, decks = [], isContractor = false, i
   useEffect(() => setSelectedIndex(0), [filtered]);
 
   useEffect(() => {
-    if (open) {
-      document.documentElement.setAttribute('data-modal-open', '');
-      setQuery('');
-      setTimeout(() => inputRef.current?.focus(), 50);
-    } else {
-      document.documentElement.removeAttribute('data-modal-open');
-    }
-    return () => { document.documentElement.removeAttribute('data-modal-open'); };
+    if (!open) return;
+    acquireScrollLock();
+    setQuery('');
+    setTimeout(() => inputRef.current?.focus(), 50);
+    return () => { releaseScrollLock(); };
   }, [open]);
 
   useEffect(() => {

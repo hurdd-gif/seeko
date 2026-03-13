@@ -165,7 +165,8 @@ export type NotificationKind =
   | 'deadline_extension_denied'
   | 'task_submitted_review'
   | 'task_review_approved'
-  | 'task_review_denied';
+  | 'task_review_denied'
+  | 'user_joined';
 
 export type UserEvent = {
   id: string;

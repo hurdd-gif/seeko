@@ -4,18 +4,16 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
 import { X } from 'lucide-react';
+import { acquireScrollLock, releaseScrollLock } from '@/lib/scroll-lock';
 
 export function ContractorToggle({ userId, isContractor }: { userId: string; isContractor: boolean }) {
   const [confirming, setConfirming] = useState(false);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (confirming) {
-      document.documentElement.setAttribute('data-modal-open', '');
-    } else {
-      document.documentElement.removeAttribute('data-modal-open');
-    }
-    return () => { document.documentElement.removeAttribute('data-modal-open'); };
+    if (!confirming) return;
+    acquireScrollLock();
+    return () => { releaseScrollLock(); };
   }, [confirming]);
 
   const next = !isContractor;
