@@ -10,7 +10,7 @@
  *   on complete → cells glow with accent ring
  * ───────────────────────────────────────────────────────── */
 
-import { useState, useRef, useCallback, useEffect, type KeyboardEvent, type ClipboardEvent } from 'react';
+import React, { useState, useRef, useCallback, useEffect, type KeyboardEvent, type ClipboardEvent } from 'react';
 import { motion } from 'motion/react';
 import { cn } from '@/lib/utils';
 
@@ -79,11 +79,16 @@ export function SegmentedCodeInput({ value, onChange, disabled }: SegmentedCodeI
   }, [focusCell]);
 
   const isComplete = value.replace(/\D/g, '').length === CELL_COUNT;
+  const filledCount = value.replace(/\D/g, '').length;
 
   return (
-    <div className="flex items-center justify-center gap-1 sm:gap-1.5 w-full max-w-sm mx-auto">
+    <motion.div
+      animate={{ scale: filledCount > 0 ? 1.05 : 1 }}
+      transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+      className="flex items-center justify-center gap-1 sm:gap-1.5 w-full max-w-sm mx-auto px-1.5"
+    >
       {digits.map((digit, i) => (
-        <div key={i} className="flex items-center">
+        <React.Fragment key={i}>
           {i === 4 && (
             <div className="w-2 sm:w-3 flex items-center justify-center text-muted-foreground/30 text-base sm:text-lg font-light select-none">
               &ndash;
@@ -93,7 +98,7 @@ export function SegmentedCodeInput({ value, onChange, disabled }: SegmentedCodeI
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ ...SPRING, delay: i * 0.04 }}
-            className="relative"
+            className="relative flex-1"
           >
             <input
               ref={el => { inputRefs.current[i] = el; }}
@@ -108,8 +113,8 @@ export function SegmentedCodeInput({ value, onChange, disabled }: SegmentedCodeI
               onFocus={() => setFocusedIndex(i)}
               onBlur={() => setFocusedIndex(-1)}
               className={cn(
-                'size-9 sm:size-11 md:size-12 rounded-lg sm:rounded-xl border text-center text-base sm:text-lg font-semibold font-mono transition-all duration-150',
-                'bg-muted text-foreground focus:outline-none caret-transparent',
+                'w-full aspect-square rounded-lg sm:rounded-xl border text-center text-base sm:text-lg font-semibold font-mono transition-all duration-150',
+                'bg-white/5 text-foreground focus:outline-none caret-transparent',
                 'disabled:opacity-50',
                 isComplete
                   ? 'border-seeko-accent/50 ring-1 ring-seeko-accent/20'
@@ -122,8 +127,8 @@ export function SegmentedCodeInput({ value, onChange, disabled }: SegmentedCodeI
               aria-label={`Digit ${i + 1}`}
             />
           </motion.div>
-        </div>
+        </React.Fragment>
       ))}
-    </div>
+    </motion.div>
   );
 }
