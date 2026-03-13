@@ -1,18 +1,18 @@
 'use client';
 
 /* ──────────────────────────────────────────────────────────
- * ANIMATION STORYBOARD — Login page entrance
+ * ANIMATION STORYBOARD — Login page entrance (redesign)
  *
  * Read top-to-bottom. Each value is ms after page mount.
  *
- *    0ms   page mounts — card hidden (opacity 0, y +20)
- *  150ms   card fades in, slides up to rest
- *  300ms   logo mark + wordmark fade in from y +8
- *  420ms   subtitle fades in
- *  540ms   tab bar fades in
- *  660ms   first form field slides in
- *  760ms   second form field slides in (staggered 100ms)
- *  880ms   submit button fades in
+ *    0ms   page mounts — shader already rendering
+ *  100ms   frosted panel fades in, slides from left (x -30 → 0)
+ *  250ms   logo mark + wordmark fade in
+ *  370ms   subtitle fades in
+ *  490ms   tab bar fades in
+ *  610ms   first form field slides up + fades in
+ *  710ms   second form field slides up (100ms stagger)
+ *  830ms   submit button fades in
  * ────────────────────────────────────────────────────────── */
 
 import { useState, useEffect } from 'react';
@@ -26,28 +26,28 @@ import { useHaptics } from '@/components/HapticsProvider';
 
 /* ─── Timing (ms after mount) ───────────────────────────── */
 const TIMING = {
-  card:     150,   // outer card slides up
-  logo:     300,   // wordmark + mark fade in
-  subtitle: 420,   // tagline fades in
-  tabs:     540,   // tab switcher fades in
-  field1:   660,   // first form field
-  field2:   760,   // second form field (staggered)
-  button:   880,   // submit button
+  panel:    100,   // frosted panel slides in from left
+  logo:     250,   // wordmark + mark fade in
+  subtitle: 370,   // tagline fades in
+  tabs:     490,   // tab switcher fades in
+  field1:   610,   // first form field
+  field2:   710,   // second form field (staggered)
+  button:   830,   // submit button
 };
 
 /* ─── Element configs ────────────────────────────────────── */
-const CARD = {
-  offsetY:  20,    // px card starts below resting position
+const PANEL = {
+  offsetX:  -30,   // px panel starts to the left of resting position
   spring:   { type: 'spring' as const, stiffness: 320, damping: 28 },
 };
 
 const LOGO = {
-  offsetY:  8,     // px logo starts below resting position
+  offsetY:  8,
   spring:   { type: 'spring' as const, stiffness: 400, damping: 30 },
 };
 
 const FIELD = {
-  offsetY:  10,    // px each field slides up from
+  offsetY:  10,
   spring:   { type: 'spring' as const, stiffness: 350, damping: 28 },
 };
 
@@ -67,7 +67,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     const timers: ReturnType<typeof setTimeout>[] = [];
-    timers.push(setTimeout(() => setStage(1), TIMING.card));
+    timers.push(setTimeout(() => setStage(1), TIMING.panel));
     timers.push(setTimeout(() => setStage(2), TIMING.logo));
     timers.push(setTimeout(() => setStage(3), TIMING.subtitle));
     timers.push(setTimeout(() => setStage(4), TIMING.tabs));
@@ -100,12 +100,12 @@ export default function LoginPage() {
   return (
     <div className="relative w-full max-w-sm">
 
-      {/* Card */}
+      {/* Frosted glass panel */}
       <motion.div
-        className="relative rounded-2xl border border-border bg-card p-8 shadow-2xl"
-        initial={{ opacity: 0, y: CARD.offsetY }}
-        animate={{ opacity: stage >= 1 ? 1 : 0, y: stage >= 1 ? 0 : CARD.offsetY }}
-        transition={CARD.spring}
+        className="relative rounded-2xl bg-white/5 backdrop-blur-xl border border-white/[0.08] p-8 shadow-[0_0_80px_rgba(0,0,0,0.4)]"
+        initial={{ opacity: 0, x: PANEL.offsetX }}
+        animate={{ opacity: stage >= 1 ? 1 : 0, x: stage >= 1 ? 0 : PANEL.offsetX }}
+        transition={PANEL.spring}
       >
         {/* Logo */}
         <motion.div
@@ -114,7 +114,6 @@ export default function LoginPage() {
           animate={{ opacity: stage >= 2 ? 1 : 0, y: stage >= 2 ? 0 : LOGO.offsetY }}
           transition={LOGO.spring}
         >
-          {/* Logo mark */}
           <Image
             src="/seeko-s.png"
             alt="SEEKO"
@@ -137,7 +136,7 @@ export default function LoginPage() {
 
         {/* Tabs */}
         <motion.div
-          className="relative mb-6 flex rounded-lg border border-border bg-background p-1 gap-1"
+          className="relative mb-6 flex rounded-lg border border-white/[0.08] bg-white/[0.03] p-1 gap-1"
           initial={{ opacity: 0 }}
           animate={{ opacity: stage >= 4 ? 1 : 0 }}
           transition={FADE.spring}
@@ -192,7 +191,7 @@ export default function LoginPage() {
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   required
-                  className="w-full px-3 py-2 rounded-lg bg-background border border-border text-foreground text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:border-seeko-accent transition-colors"
+                  className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-foreground text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:border-seeko-accent transition-colors"
                   placeholder="you@seeko.studio"
                 />
               </motion.div>
@@ -212,7 +211,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   required
-                  className="w-full px-3 py-2 rounded-lg bg-background border border-border text-foreground text-sm focus:outline-none focus:border-seeko-accent transition-colors"
+                  className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-foreground text-sm focus:outline-none focus:border-seeko-accent transition-colors"
                 />
               </motion.div>
 
