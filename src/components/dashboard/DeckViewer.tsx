@@ -25,6 +25,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Maximize2, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import DOMPurify from 'dompurify';
 import { acquireScrollLock, releaseScrollLock } from '@/lib/scroll-lock';
 
 interface Slide {
@@ -156,7 +157,7 @@ export function DeckViewer({ slides, title, notes, orientation = 'horizontal' }:
               className="mt-4 rounded-xl border border-border/50 bg-card/50 p-4"
             >
               <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">Notes</p>
-              <div className="prose-sm text-sm leading-relaxed text-foreground/70" dangerouslySetInnerHTML={{ __html: notes }} />
+              <div className="prose-sm text-sm leading-relaxed text-foreground/70" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(notes) }} />
             </motion.div>
           )}
         </div>

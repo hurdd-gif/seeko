@@ -152,9 +152,7 @@ export function NotificationBell({ userId, initialCount, initialNotifications }:
         prev.map(n => ids.includes(n.id) ? { ...n, read: false } : n)
       );
       setUnreadCount(c => c + ids.length);
-      for (const id of ids) {
-        await supabase.from('notifications').update({ read: false }).eq('id', id);
-      }
+      await supabase.from('notifications').update({ read: false }).in('id', ids);
     } else {
       // Mark read
       const unreadIds = ids.filter(id => !notifications.find(n => n.id === id)?.read);
@@ -162,8 +160,8 @@ export function NotificationBell({ userId, initialCount, initialNotifications }:
         prev.map(n => ids.includes(n.id) ? { ...n, read: true } : n)
       );
       setUnreadCount(c => Math.max(0, c - unreadIds.length));
-      for (const id of unreadIds) {
-        await supabase.from('notifications').update({ read: true }).eq('id', id);
+      if (unreadIds.length > 0) {
+        await supabase.from('notifications').update({ read: true }).in('id', unreadIds);
       }
     }
   }, [supabase, notifications]);
@@ -173,9 +171,7 @@ export function NotificationBell({ userId, initialCount, initialNotifications }:
     const unreadDismissed = ids.filter(id => !notifications.find(n => n.id === id)?.read).length;
     setNotifications(prev => prev.filter(n => !ids.includes(n.id)));
     setUnreadCount(c => Math.max(0, c - unreadDismissed));
-    for (const id of ids) {
-      await supabase.from('notifications').update({ read: true }).eq('id', id);
-    }
+    await supabase.from('notifications').update({ read: true }).in('id', ids);
   }, [supabase, notifications]);
 
   // Click notification = mark read + navigate
