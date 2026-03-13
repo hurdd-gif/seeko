@@ -1,6 +1,6 @@
 import {
   Bell, CheckSquare, AtSign, MessageSquare, CheckCircle2, Package,
-  ArrowRightLeft, Receipt, CircleCheck, CircleX, Clock, AlertCircle,
+  ArrowRightLeft, Receipt, CircleCheck, CircleX, Clock, AlertCircle, UserPlus,
 } from 'lucide-react';
 import { NotificationKind } from '@/lib/types';
 
@@ -27,4 +27,5 @@ export const KIND_CONFIG: Record<NotificationKind, { icon: typeof Bell; classNam
   task_submitted_review:        { icon: AlertCircle,  className: 'text-blue-400',     bg: 'bg-blue-500/15',    bar: 'bg-blue-400/40' },
   task_review_approved:         { icon: CheckCircle2, className: 'text-emerald-500',  bg: 'bg-emerald-500/15', bar: 'bg-emerald-500/40' },
   task_review_denied:           { icon: CircleX,      className: 'text-red-400',      bg: 'bg-red-500/15',     bar: 'bg-red-400/40' },
+  user_joined:                  { icon: UserPlus,     className: 'text-purple-400',   bg: 'bg-purple-500/15',  bar: 'bg-purple-400/40' },
 };

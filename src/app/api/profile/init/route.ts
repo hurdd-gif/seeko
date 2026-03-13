@@ -38,6 +38,27 @@ export async function POST() {
       .from('pending_invites')
       .delete()
       .eq('email', user.email.toLowerCase());
+
+    // Notify admins that a new user joined
+    const role = row.is_investor ? 'investor' : row.is_contractor ? 'contractor' : 'team member';
+    const label = user.email;
+    const { data: admins } = await admin
+      .from('profiles')
+      .select('id')
+      .eq('is_admin', true);
+
+    if (admins?.length) {
+      await admin.from('notifications').insert(
+        admins.map(({ id }) => ({
+          user_id: id,
+          kind: 'user_joined' as const,
+          title: `${label} joined as ${role}`,
+          body: row.department ? `Department: ${row.department}` : null,
+          link: '/team',
+          read: false,
+        })) as never
+      );
+    }
   }
 
   return NextResponse.json({ success: true });
