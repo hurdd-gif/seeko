@@ -51,12 +51,12 @@ export async function POST() {
       await admin.from('notifications').insert(
         admins.map(({ id }) => ({
           user_id: id,
-          kind: 'user_joined',
+          kind: 'user_joined' as const,
           title: `${label} joined as ${role}`,
           body: row.department ? `Department: ${row.department}` : null,
           link: '/team',
           read: false,
-        }))
+        })) as never
       );
     }
   }
