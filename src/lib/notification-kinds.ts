@@ -17,6 +17,7 @@ export const VALID_NOTIFICATION_KINDS = new Set<NotificationKind>([
   'task_submitted_review',
   'task_review_approved',
   'task_review_denied',
+  'user_joined',
 ]);
 
 export function isValidNotificationKind(kind: string): kind is NotificationKind {
