@@ -109,7 +109,7 @@ export function SegmentedCodeInput({ value, onChange, disabled }: SegmentedCodeI
               onBlur={() => setFocusedIndex(-1)}
               className={cn(
                 'size-9 sm:size-11 md:size-12 rounded-lg sm:rounded-xl border text-center text-base sm:text-lg font-semibold font-mono transition-all duration-150',
-                'bg-muted text-foreground focus:outline-none caret-transparent',
+                'bg-white/5 text-foreground focus:outline-none caret-transparent',
                 'disabled:opacity-50',
                 isComplete
                   ? 'border-seeko-accent/50 ring-1 ring-seeko-accent/20'
