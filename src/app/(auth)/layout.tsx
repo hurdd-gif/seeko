@@ -6,7 +6,7 @@ export default function AuthLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-dvh flex bg-background pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+    <div className="min-h-dvh flex bg-black pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
       {/* Left: login panel area */}
       <div className="flex w-full items-center justify-center px-6 md:w-[45%] md:px-12">
         {children}

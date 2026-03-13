@@ -18,6 +18,7 @@ uniform float u_pixelRatio;
 uniform vec4 u_colorBack;
 uniform vec4 u_colorFront;
 uniform vec2 u_mouse;
+uniform float u_intensity;
 
 out vec4 fragColor;
 
@@ -81,10 +82,13 @@ void main() {
   float dithering = getBayerValue(pxSizeUv) - 0.5;
   float res = step(.5, shape + dithering);
 
-  vec3 fgColor = u_colorFront.rgb * u_colorFront.a;
+  // Modulate foreground by cursor intensity
+  float fgAlpha = u_colorFront.a * u_intensity;
+
+  vec3 fgColor = u_colorFront.rgb * fgAlpha;
   vec3 bgColor = u_colorBack.rgb * u_colorBack.a;
-  vec3 color = fgColor * res + bgColor * (1. - u_colorFront.a * res);
-  float opacity = u_colorFront.a * res + u_colorBack.a * (1. - u_colorFront.a * res);
+  vec3 color = fgColor * res + bgColor * (1. - fgAlpha * res);
+  float opacity = fgAlpha * res + u_colorBack.a * (1. - fgAlpha * res);
 
   fragColor = vec4(color, opacity);
 }`;
@@ -116,12 +120,20 @@ function createProgram(gl: WebGL2RenderingContext, vs: WebGLShader, fs: WebGLSha
   return p;
 }
 
+// ── Cursor activity decay (seconds) ────────────────────────────
+const IDLE_TIMEOUT = 1.5;  // seconds before pattern starts fading
+const FADE_SPEED = 0.03;   // lerp factor for intensity fade-out
+const RISE_SPEED = 0.08;   // lerp factor for intensity fade-in
+
 // ── Component ───────────────────────────────────────────────────
 
 export function DitheredShaderCanvas({ className }: { className?: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const mouseRef = useRef({ x: 0.5, y: 0.5 });
   const smoothMouseRef = useRef({ x: 0.5, y: 0.5 });
+  const lastMoveRef = useRef(0);       // timestamp of last mouse move
+  const isHoveringRef = useRef(false);  // is cursor over the canvas
+  const intensityRef = useRef(0);       // current pattern intensity (0-1)
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
     const canvas = canvasRef.current;
@@ -131,10 +143,12 @@ export function DitheredShaderCanvas({ className }: { className?: string }) {
       x: (e.clientX - rect.left) / rect.width,
       y: 1.0 - (e.clientY - rect.top) / rect.height,
     };
+    lastMoveRef.current = performance.now();
+    isHoveringRef.current = true;
   }, []);
 
   const handleMouseLeave = useCallback(() => {
-    mouseRef.current = { x: 0.5, y: 0.5 };
+    isHoveringRef.current = false;
   }, []);
 
   useEffect(() => {
@@ -168,12 +182,13 @@ export function DitheredShaderCanvas({ className }: { className?: string }) {
     const uBack = gl.getUniformLocation(prog, 'u_colorBack');
     const uFront = gl.getUniformLocation(prog, 'u_colorFront');
     const uMouse = gl.getUniformLocation(prog, 'u_mouse');
+    const uIntensity = gl.getUniformLocation(prog, 'u_intensity');
 
     // Static uniforms
     const dpr = window.devicePixelRatio || 1;
     gl.uniform1f(uPR, dpr);
-    // Background: #1a1a1a
-    gl.uniform4f(uBack, 0.102, 0.102, 0.102, 1.0);
+    // Background: black
+    gl.uniform4f(uBack, 0.0, 0.0, 0.0, 1.0);
     // Foreground: seeko-accent #6ee7b7 at 35% opacity
     gl.uniform4f(uFront, 0.431, 0.906, 0.718, 0.35);
 
@@ -204,12 +219,22 @@ export function DitheredShaderCanvas({ className }: { className?: string }) {
     const LERP = 0.05;
 
     const loop = () => {
-      // Smooth mouse
+      const now = performance.now();
+
+      // Smooth mouse position
       smoothMouseRef.current.x += (mouseRef.current.x - smoothMouseRef.current.x) * LERP;
       smoothMouseRef.current.y += (mouseRef.current.y - smoothMouseRef.current.y) * LERP;
 
-      gl.uniform1f(uTime, (performance.now() - start) / 1000);
+      // Compute target intensity based on cursor activity
+      const timeSinceMove = (now - lastMoveRef.current) / 1000;
+      const isActive = isHoveringRef.current && timeSinceMove < IDLE_TIMEOUT;
+      const targetIntensity = isActive ? 1.0 : 0.0;
+      const speed = targetIntensity > intensityRef.current ? RISE_SPEED : FADE_SPEED;
+      intensityRef.current += (targetIntensity - intensityRef.current) * speed;
+
+      gl.uniform1f(uTime, (now - start) / 1000);
       gl.uniform2f(uMouse, smoothMouseRef.current.x, smoothMouseRef.current.y);
+      gl.uniform1f(uIntensity, intensityRef.current);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
       raf = requestAnimationFrame(loop);
     };
