@@ -2,6 +2,10 @@
 
 import { useRef, useEffect, useCallback } from 'react';
 
+// ── Trail config ────────────────────────────────────────────────
+const TRAIL_LENGTH = 48;   // number of trail points stored
+const TRAIL_INTERVAL = 30; // ms between trail samples
+
 // ── Shader sources ──────────────────────────────────────────────
 
 const VERT = `#version 300 es
@@ -18,7 +22,11 @@ uniform float u_pixelRatio;
 uniform vec4 u_colorBack;
 uniform vec4 u_colorFront;
 uniform vec2 u_mouse;
-uniform float u_intensity;
+
+// Trail: positions + ages (0 = fresh, 1 = expired)
+uniform vec2 u_trail[${TRAIL_LENGTH}];
+uniform float u_trailAge[${TRAIL_LENGTH}];
+uniform int u_trailCount;
 
 out vec4 fragColor;
 
@@ -50,7 +58,8 @@ float getBayerValue(vec2 uv) {
 
 void main() {
   float t = .5 * u_time;
-  vec2 uv = gl_FragCoord.xy / u_resolution.xy;
+  vec2 rawUv = gl_FragCoord.xy / u_resolution.xy;
+  vec2 uv = rawUv;
 
   // Pixelization
   float pxSize = 3.50 * u_pixelRatio;
@@ -82,13 +91,22 @@ void main() {
   float dithering = getBayerValue(pxSizeUv) - 0.5;
   float res = step(.5, shape + dithering);
 
-  // Radial cursor spotlight — dots only appear near the cursor
+  // Trail influence — check proximity to each trail point
+  // Use raw UV (not pixelized) for accurate cursor distance
   vec2 aspect = vec2(u_resolution.x / u_resolution.y, 1.0);
-  float dist = length((uv - u_mouse) * aspect);
-  float radius = 0.35;  // spotlight radius in normalized coords
-  float spot = smoothstep(radius, 0.0, dist) * u_intensity;
+  float trailInfluence = 0.0;
+  float dotRadius = 0.04; // small radius — reveals individual dots
 
-  float fgAlpha = u_colorFront.a * spot;
+  for (int i = 0; i < ${TRAIL_LENGTH}; i++) {
+    if (i >= u_trailCount) break;
+    float age = u_trailAge[i];
+    if (age >= 1.0) continue;
+    float dist = length((rawUv - u_trail[i]) * aspect);
+    float fade = 1.0 - age; // newest = 1, oldest = 0
+    trailInfluence = max(trailInfluence, smoothstep(dotRadius, dotRadius * 0.2, dist) * fade);
+  }
+
+  float fgAlpha = u_colorFront.a * trailInfluence;
 
   vec3 fgColor = u_colorFront.rgb * fgAlpha;
   vec3 bgColor = u_colorBack.rgb * u_colorBack.a;
@@ -125,20 +143,23 @@ function createProgram(gl: WebGL2RenderingContext, vs: WebGLShader, fs: WebGLSha
   return p;
 }
 
-// ── Cursor activity decay (seconds) ────────────────────────────
-const IDLE_TIMEOUT = 1.5;  // seconds before pattern starts fading
-const FADE_SPEED = 0.03;   // lerp factor for intensity fade-out
-const RISE_SPEED = 0.08;   // lerp factor for intensity fade-in
+// ── Trail point ─────────────────────────────────────────────────
+interface TrailPoint {
+  x: number;
+  y: number;
+  time: number; // timestamp when recorded
+}
+
+const TRAIL_LIFETIME = 2.0; // seconds before a trail point fully fades
 
 // ── Component ───────────────────────────────────────────────────
 
 export function DitheredShaderCanvas({ className }: { className?: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const mouseRef = useRef({ x: 0.5, y: 0.5 });
-  const smoothMouseRef = useRef({ x: 0.5, y: 0.5 });
-  const lastMoveRef = useRef(0);       // timestamp of last mouse move
-  const isHoveringRef = useRef(false);  // is cursor over the canvas
-  const intensityRef = useRef(0);       // current pattern intensity (0-1)
+  const mouseRef = useRef({ x: -1, y: -1 }); // -1 = offscreen
+  const isHoveringRef = useRef(false);
+  const trailRef = useRef<TrailPoint[]>([]);
+  const lastTrailTimeRef = useRef(0);
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
     const canvas = canvasRef.current;
@@ -148,12 +169,16 @@ export function DitheredShaderCanvas({ className }: { className?: string }) {
       x: (e.clientX - rect.left) / rect.width,
       y: 1.0 - (e.clientY - rect.top) / rect.height,
     };
-    lastMoveRef.current = performance.now();
+    isHoveringRef.current = true;
+  }, []);
+
+  const handleMouseEnter = useCallback(() => {
     isHoveringRef.current = true;
   }, []);
 
   const handleMouseLeave = useCallback(() => {
     isHoveringRef.current = false;
+    mouseRef.current = { x: -1, y: -1 };
   }, []);
 
   useEffect(() => {
@@ -187,14 +212,20 @@ export function DitheredShaderCanvas({ className }: { className?: string }) {
     const uBack = gl.getUniformLocation(prog, 'u_colorBack');
     const uFront = gl.getUniformLocation(prog, 'u_colorFront');
     const uMouse = gl.getUniformLocation(prog, 'u_mouse');
-    const uIntensity = gl.getUniformLocation(prog, 'u_intensity');
+    const uTrailCount = gl.getUniformLocation(prog, 'u_trailCount');
+
+    // Trail uniform locations (arrays)
+    const uTrail: WebGLUniformLocation[] = [];
+    const uTrailAge: WebGLUniformLocation[] = [];
+    for (let i = 0; i < TRAIL_LENGTH; i++) {
+      uTrail.push(gl.getUniformLocation(prog, `u_trail[${i}]`)!);
+      uTrailAge.push(gl.getUniformLocation(prog, `u_trailAge[${i}]`)!);
+    }
 
     // Static uniforms
     const dpr = window.devicePixelRatio || 1;
     gl.uniform1f(uPR, dpr);
-    // Background: black
     gl.uniform4f(uBack, 0.0, 0.0, 0.0, 1.0);
-    // Foreground: seeko-accent #6ee7b7 at 35% opacity
     gl.uniform4f(uFront, 0.431, 0.906, 0.718, 0.35);
 
     // Resize handler
@@ -214,32 +245,55 @@ export function DitheredShaderCanvas({ className }: { className?: string }) {
     ro.observe(canvas);
     resize();
 
-    // Mouse events
+    // Mouse events — directly on canvas only
     canvas.addEventListener('mousemove', handleMouseMove);
+    canvas.addEventListener('mouseenter', handleMouseEnter);
     canvas.addEventListener('mouseleave', handleMouseLeave);
 
     // Animation loop
     const start = performance.now();
     let raf = 0;
-    const LERP = 0.05;
 
     const loop = () => {
       const now = performance.now();
+      const elapsed = (now - start) / 1000;
 
-      // Smooth mouse position
-      smoothMouseRef.current.x += (mouseRef.current.x - smoothMouseRef.current.x) * LERP;
-      smoothMouseRef.current.y += (mouseRef.current.y - smoothMouseRef.current.y) * LERP;
+      // Record trail point if hovering and enough time has passed
+      if (isHoveringRef.current && mouseRef.current.x >= 0) {
+        if (now - lastTrailTimeRef.current > TRAIL_INTERVAL) {
+          trailRef.current.push({
+            x: mouseRef.current.x,
+            y: mouseRef.current.y,
+            time: elapsed,
+          });
+          lastTrailTimeRef.current = now;
+          // Cap trail length
+          if (trailRef.current.length > TRAIL_LENGTH) {
+            trailRef.current.shift();
+          }
+        }
+      }
 
-      // Compute target intensity based on cursor activity
-      const timeSinceMove = (now - lastMoveRef.current) / 1000;
-      const isActive = isHoveringRef.current && timeSinceMove < IDLE_TIMEOUT;
-      const targetIntensity = isActive ? 1.0 : 0.0;
-      const speed = targetIntensity > intensityRef.current ? RISE_SPEED : FADE_SPEED;
-      intensityRef.current += (targetIntensity - intensityRef.current) * speed;
+      // Prune expired trail points
+      trailRef.current = trailRef.current.filter(
+        p => (elapsed - p.time) < TRAIL_LIFETIME
+      );
 
-      gl.uniform1f(uTime, (now - start) / 1000);
-      gl.uniform2f(uMouse, smoothMouseRef.current.x, smoothMouseRef.current.y);
-      gl.uniform1f(uIntensity, intensityRef.current);
+      // Upload trail data to uniforms
+      const trail = trailRef.current;
+      gl.uniform1i(uTrailCount, trail.length);
+      for (let i = 0; i < trail.length; i++) {
+        const age = (elapsed - trail[i].time) / TRAIL_LIFETIME; // 0 = fresh, 1 = expired
+        gl.uniform2f(uTrail[i], trail[i].x, trail[i].y);
+        gl.uniform1f(uTrailAge[i], age);
+      }
+
+      // Current mouse for parallax (use center if not hovering)
+      const mx = isHoveringRef.current && mouseRef.current.x >= 0 ? mouseRef.current.x : 0.5;
+      const my = isHoveringRef.current && mouseRef.current.y >= 0 ? mouseRef.current.y : 0.5;
+
+      gl.uniform1f(uTime, elapsed);
+      gl.uniform2f(uMouse, mx, my);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
       raf = requestAnimationFrame(loop);
     };
@@ -249,6 +303,7 @@ export function DitheredShaderCanvas({ className }: { className?: string }) {
       cancelAnimationFrame(raf);
       ro.disconnect();
       canvas.removeEventListener('mousemove', handleMouseMove);
+      canvas.removeEventListener('mouseenter', handleMouseEnter);
       canvas.removeEventListener('mouseleave', handleMouseLeave);
       gl.deleteProgram(prog);
       gl.deleteShader(vs);
@@ -256,7 +311,7 @@ export function DitheredShaderCanvas({ className }: { className?: string }) {
       gl.deleteBuffer(buf);
       gl.deleteVertexArray(vao);
     };
-  }, [handleMouseMove, handleMouseLeave]);
+  }, [handleMouseMove, handleMouseEnter, handleMouseLeave]);
 
   return (
     <canvas
