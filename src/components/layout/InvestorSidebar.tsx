@@ -6,7 +6,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion, LayoutGroup } from 'motion/react';
-import { LogOut, LayoutDashboard, FileDown, Settings, Home, DollarSign } from 'lucide-react';
+import { LogOut, LayoutDashboard, FileDown, Settings, Home, DollarSign, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -125,6 +125,29 @@ export function InvestorSidebar({ email, displayName, avatarUrl, isAdmin = false
                 <LayoutDashboard className={`h-4 w-4 ${pathname === '/investor' ? 'text-seeko-accent' : ''}`} />
               </span>
               <span className="relative whitespace-nowrap">Dashboard</span>
+            </Link>
+
+            {/* Documents */}
+            <Link
+              href="/investor/docs"
+              className={[
+                'relative flex items-center rounded-lg py-2 text-sm gap-3 px-3',
+                pathname.startsWith('/investor/docs')
+                  ? 'text-seeko-accent font-medium'
+                  : 'text-muted-foreground hover:text-sidebar-foreground hover:bg-white/5 transition-colors',
+              ].join(' ')}
+            >
+              {pathname.startsWith('/investor/docs') && (
+                <motion.div
+                  layoutId="investor-nav-highlight"
+                  className="absolute inset-0 rounded-lg bg-white/[0.06]"
+                  transition={NAV_HIGHLIGHT.spring}
+                />
+              )}
+              <span className="relative flex items-center justify-center size-7 shrink-0">
+                <FileText className={`h-4 w-4 ${pathname.startsWith('/investor/docs') ? 'text-seeko-accent' : ''}`} />
+              </span>
+              <span className="relative whitespace-nowrap">Documents</span>
             </Link>
 
             {/* Payments */}
@@ -287,6 +310,26 @@ export function InvestorSidebar({ email, displayName, avatarUrl, isAdmin = false
                       >
                         <LayoutDashboard className="size-5" />
                         Dashboard
+                      </Link>
+                    </motion.div>
+                    <motion.div className="relative flex flex-1" whileTap={{ scale: BOTTOM_NAV.tapScale }} transition={BOTTOM_NAV.tapSpring}>
+                      {pathname.startsWith('/investor/docs') && (
+                        <motion.div
+                          layoutId="investor-mobile-indicator"
+                          className="absolute top-0 left-1/2 -translate-x-1/2 w-5 h-0.5 rounded-full bg-seeko-accent"
+                          transition={NAV_HIGHLIGHT.spring}
+                        />
+                      )}
+                      <Link
+                        href="/investor/docs"
+                        onClick={() => trigger('selection')}
+                        className={[
+                          'flex flex-1 flex-col items-center justify-center gap-1 text-[10px] font-medium transition-colors',
+                          pathname.startsWith('/investor/docs') ? 'text-seeko-accent' : 'text-muted-foreground',
+                        ].join(' ')}
+                      >
+                        <FileText className="size-5" />
+                        Docs
                       </Link>
                     </motion.div>
                     <motion.div className="relative flex flex-1" whileTap={{ scale: BOTTOM_NAV.tapScale }} transition={BOTTOM_NAV.tapSpring}>

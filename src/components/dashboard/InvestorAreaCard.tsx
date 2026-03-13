@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { StaggerItem, HoverCard } from '@/components/motion';
 import {
@@ -120,17 +119,20 @@ export function InvestorAreaCard({ area, tasksInArea, isAdmin = false }: Investo
           <button
             type="button"
             onClick={() => setOpen(true)}
-            className="group relative w-full text-left rounded-xl border border-border bg-card transition-colors hover:bg-card/90 hover:border-border/80 focus:outline-none focus:ring-2 focus:ring-seeko-accent/30 cursor-pointer"
+            className="group relative w-full text-left rounded-xl transition-colors hover:bg-white/[0.02] focus:outline-none focus:ring-2 focus:ring-seeko-accent/30 cursor-pointer"
+            style={{
+              backgroundColor: '#2a2a2a',
+              boxShadow: '0 0 0 1px rgba(255,255,255,0.04), 0 2px 8px rgba(0,0,0,0.08)',
+            }}
           >
-            <Card className="border-0 shadow-none">
-              <CardContent className="p-4 space-y-3">
+            <div className="p-4 space-y-3">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-foreground truncate">{area.name}</p>
                     <div className="mt-2">
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-xs text-muted-foreground">Progress</span>
-                        <span className="text-xs text-muted-foreground font-mono">
+                        <span className="text-xs text-muted-foreground font-mono tabular-nums">
                           {tasksInArea.filter(t => t.status === 'Complete').length}/{tasksInArea.length} tasks
                         </span>
                       </div>
@@ -163,7 +165,7 @@ export function InvestorAreaCard({ area, tasksInArea, isAdmin = false }: Investo
                         <span className="text-[11px] text-muted-foreground font-medium">{area.status}</span>
                       </div>
                     )}
-                    <span className="text-xs font-mono text-muted-foreground">{area.progress}%</span>
+                    <span className="text-xs font-mono tabular-nums text-muted-foreground">{area.progress}%</span>
                   </div>
                 </div>
                 {area.description && (
@@ -171,8 +173,7 @@ export function InvestorAreaCard({ area, tasksInArea, isAdmin = false }: Investo
                     {area.description}
                   </p>
                 )}
-              </CardContent>
-            </Card>
+            </div>
           </button>
         </HoverCard>
       </StaggerItem>

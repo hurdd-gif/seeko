@@ -15,9 +15,11 @@
 
 import { useState } from 'react';
 import { TrendingUp, AlertCircle, Map } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card';
 import { Dialog, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
 import { FadeRise, Stagger, StaggerItem, HoverCard } from '@/components/motion';
+
+const kpiSurface = 'rounded-2xl bg-[#222222] border-0 h-full';
+const kpiShadow = { boxShadow: '0 0 0 1px rgba(255,255,255,0.03), 0 4px 16px rgba(0,0,0,0.1)' };
 import { toast } from 'sonner';
 import { useHaptics } from '@/components/HapticsProvider';
 
@@ -158,28 +160,28 @@ export function InvestorKPIStrip({
             <HoverCard>
               {isAdmin ? (
                 <button type="button" onClick={handleCompletionClick} className="w-full text-left">
-                  <Card className="h-full transition-colors hover:border-seeko-accent/30">
-                    <CardHeader className="flex flex-row items-center justify-between pb-2">
-                      <CardDescription className="text-sm font-medium">Completion</CardDescription>
+                  <div className={kpiSurface} style={kpiShadow}>
+                    <div className="flex flex-row items-center justify-between p-6 pb-2">
+                      <p className="text-sm font-medium text-muted-foreground">Completion</p>
                       <ProgressRing pct={liveOverallPct} />
-                    </CardHeader>
-                    <CardContent>
+                    </div>
+                    <div className="p-6 pt-0">
                       <span className="text-2xl font-semibold tracking-tight tabular-nums">{liveOverallPct}%</span>
                       <p className="text-xs text-muted-foreground mt-0.5">overall progress</p>
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </div>
                 </button>
               ) : (
-                <Card className="h-full">
-                  <CardHeader className="flex flex-row items-center justify-between pb-2">
-                    <CardDescription className="text-sm font-medium">Completion</CardDescription>
+                <div className={kpiSurface} style={kpiShadow}>
+                  <div className="flex flex-row items-center justify-between p-6 pb-2">
+                    <p className="text-sm font-medium text-muted-foreground">Completion</p>
                     <ProgressRing pct={liveOverallPct} />
-                  </CardHeader>
-                  <CardContent>
+                  </div>
+                  <div className="p-6 pt-0">
                     <span className="text-2xl font-semibold tracking-tight tabular-nums">{liveOverallPct}%</span>
                     <p className="text-xs text-muted-foreground mt-0.5">overall progress</p>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               )}
             </HoverCard>
           </StaggerItem>
@@ -187,42 +189,50 @@ export function InvestorKPIStrip({
           {/* Completed This Week */}
           <StaggerItem>
             <HoverCard>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardDescription className="text-sm font-medium">This Week</CardDescription>
+              <div className={kpiSurface} style={kpiShadow}>
+                <div className="flex flex-row items-center justify-between p-6 pb-2">
+                  <p className="text-sm font-medium text-muted-foreground">This Week</p>
                   <div className="flex size-8 items-center justify-center rounded-lg bg-secondary">
                     <TrendingUp className="size-4 text-muted-foreground" />
                   </div>
-                </CardHeader>
-                <CardContent>
+                </div>
+                <div className="p-6 pt-0">
                   <span className="text-2xl font-semibold tracking-tight tabular-nums">{completedThisWeek}</span>
                   <p className="text-xs text-muted-foreground mt-0.5">tasks completed</p>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             </HoverCard>
           </StaggerItem>
 
           {/* Blocked / Overdue */}
           <StaggerItem>
             <HoverCard>
-              <Card className={hasIssues ? 'border-red-900/40 bg-red-950/10' : ''}>
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardDescription className="text-sm font-medium">Issues</CardDescription>
+              <div
+                className="rounded-2xl border-0 h-full"
+                style={{
+                  backgroundColor: hasIssues ? 'rgba(127, 29, 29, 0.1)' : '#222222',
+                  boxShadow: hasIssues
+                    ? '0 0 0 1px rgba(185, 28, 28, 0.3), 0 4px 16px rgba(0,0,0,0.1)'
+                    : '0 0 0 1px rgba(255,255,255,0.03), 0 4px 16px rgba(0,0,0,0.1)',
+                }}
+              >
+                <div className="flex flex-row items-center justify-between p-6 pb-2">
+                  <p className="text-sm font-medium text-muted-foreground">Issues</p>
                   <div className={`flex size-8 items-center justify-center rounded-lg ${hasIssues ? 'bg-red-950/30' : 'bg-secondary'}`}>
                     <AlertCircle className={`size-4 ${hasIssues ? 'text-red-400' : 'text-muted-foreground'}`} />
                   </div>
-                </CardHeader>
-                <CardContent>
+                </div>
+                <div className="p-6 pt-0">
                   {hasIssues ? (
                     <div className="flex items-baseline gap-2">
                       {blocked > 0 && (
-                        <span className="text-2xl font-semibold tracking-tight text-red-400">{blocked}</span>
+                        <span className="text-2xl font-semibold tracking-tight tabular-nums text-red-400">{blocked}</span>
                       )}
                       {blocked > 0 && overdue > 0 && (
                         <span className="text-muted-foreground">/</span>
                       )}
                       {overdue > 0 && (
-                        <span className="text-2xl font-semibold tracking-tight text-amber-400">{overdue}</span>
+                        <span className="text-2xl font-semibold tracking-tight tabular-nums text-amber-400">{overdue}</span>
                       )}
                     </div>
                   ) : (
@@ -237,26 +247,26 @@ export function InvestorKPIStrip({
                           ? 'overdue'
                           : 'all clear'}
                   </p>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             </HoverCard>
           </StaggerItem>
 
           {/* Active Areas */}
           <StaggerItem>
             <HoverCard>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardDescription className="text-sm font-medium">Active Areas</CardDescription>
+              <div className={kpiSurface} style={kpiShadow}>
+                <div className="flex flex-row items-center justify-between p-6 pb-2">
+                  <p className="text-sm font-medium text-muted-foreground">Active Areas</p>
                   <div className="flex size-8 items-center justify-center rounded-lg bg-secondary">
                     <Map className="size-4 text-muted-foreground" />
                   </div>
-                </CardHeader>
-                <CardContent>
+                </div>
+                <div className="p-6 pt-0">
                   <span className="text-2xl font-semibold tracking-tight tabular-nums">{activeAreas}</span>
                   <p className="text-xs text-muted-foreground mt-0.5">in development</p>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             </HoverCard>
           </StaggerItem>
         </Stagger>
