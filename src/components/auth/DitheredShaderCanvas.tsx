@@ -82,8 +82,13 @@ void main() {
   float dithering = getBayerValue(pxSizeUv) - 0.5;
   float res = step(.5, shape + dithering);
 
-  // Modulate foreground by cursor intensity
-  float fgAlpha = u_colorFront.a * u_intensity;
+  // Radial cursor spotlight — dots only appear near the cursor
+  vec2 aspect = vec2(u_resolution.x / u_resolution.y, 1.0);
+  float dist = length((uv - u_mouse) * aspect);
+  float radius = 0.35;  // spotlight radius in normalized coords
+  float spot = smoothstep(radius, 0.0, dist) * u_intensity;
+
+  float fgAlpha = u_colorFront.a * spot;
 
   vec3 fgColor = u_colorFront.rgb * fgAlpha;
   vec3 bgColor = u_colorBack.rgb * u_colorBack.a;
