@@ -124,15 +124,26 @@ export default function LoginPage() {
           <h1 className="text-xl font-bold tracking-tight text-foreground">SEEKO Studio</h1>
         </motion.div>
 
-        {/* Subtitle */}
-        <motion.p
-          className="mb-6 text-center text-sm text-muted-foreground"
+        {/* Subtitle — crossfade between tab labels */}
+        <motion.div
+          className="mb-6 text-center text-sm text-muted-foreground relative h-5"
           initial={{ opacity: 0 }}
           animate={{ opacity: stage >= 3 ? 1 : 0 }}
           transition={FADE.spring}
         >
-          Sign in to your workspace
-        </motion.p>
+          <AnimatePresence mode="wait">
+            <motion.p
+              key={tab}
+              className="absolute inset-0"
+              initial={{ opacity: 0, filter: 'blur(4px)', y: 2 }}
+              animate={{ opacity: 1, filter: 'blur(0px)', y: 0 }}
+              exit={{ opacity: 0, filter: 'blur(4px)', y: -2 }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+            >
+              {tab === 'signin' ? 'Sign in to your workspace' : 'Join the team!'}
+            </motion.p>
+          </AnimatePresence>
+        </motion.div>
 
         {/* Tabs */}
         <motion.div
