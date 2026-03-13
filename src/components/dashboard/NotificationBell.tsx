@@ -123,6 +123,18 @@ export function NotificationBell({ userId, initialCount, initialNotifications }:
           });
         }
       )
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` },
+        (payload) => {
+          const deletedId = (payload.old as { id: string }).id;
+          setNotifications(prev => {
+            const next = prev.filter(n => n.id !== deletedId);
+            setUnreadCount(next.filter(n => !n.read).length);
+            return next;
+          });
+        }
+      )
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [userId, supabase]);
@@ -168,14 +180,12 @@ export function NotificationBell({ userId, initialCount, initialNotifications }:
     }
   }, [supabase, notifications]);
 
-  // Dismiss = mark read + remove from list
+  // Dismiss = delete from DB + remove from list
   const dismissNotification = useCallback(async (ids: string[]) => {
     const unreadDismissed = ids.filter(id => !notifications.find(n => n.id === id)?.read).length;
     setNotifications(prev => prev.filter(n => !ids.includes(n.id)));
     setUnreadCount(c => Math.max(0, c - unreadDismissed));
-    for (const id of ids) {
-      await supabase.from('notifications').update({ read: true }).eq('id', id);
-    }
+    await supabase.from('notifications').delete().in('id', ids);
   }, [supabase, notifications]);
 
   // Click notification = mark read + navigate
