@@ -58,7 +58,7 @@ export function InviteCodeForm() {
           onChange={e => setEmail(e.target.value)}
           required
           placeholder="you@example.com"
-          className="w-full px-3 py-2.5 rounded-xl bg-muted border border-border text-foreground text-sm placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-foreground/10 focus:border-foreground/40 transition-all"
+          className="w-full px-3 py-2.5 rounded-lg bg-white/5 border border-white/10 text-foreground text-sm placeholder:text-muted-foreground/40 focus:outline-none focus:border-seeko-accent transition-all"
         />
       </div>
 
@@ -89,7 +89,7 @@ export function InviteCodeForm() {
       <button
         type="submit"
         disabled={loading || token.length < 8}
-        className="w-full py-2.5 px-4 rounded-xl bg-foreground text-background font-semibold text-sm hover:bg-foreground/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+        className="w-full py-2.5 px-4 rounded-lg bg-seeko-accent text-[#1a1a1a] font-semibold text-sm hover:bg-seeko-accent/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
       >
         {loading ? (
           <>
