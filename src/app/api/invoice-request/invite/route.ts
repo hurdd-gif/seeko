@@ -4,6 +4,7 @@ import { getServiceClient } from '@/lib/supabase/service';
 import { randomBytes, randomInt } from 'crypto';
 import bcrypt from 'bcryptjs';
 import { sendInvoiceRequestEmail } from '@/lib/email';
+import { isValidEmail } from '@/lib/validation';
 
 export async function POST(request: NextRequest) {
   // 1. Auth — admin only
@@ -19,7 +20,7 @@ export async function POST(request: NextRequest) {
   const { recipientEmail, items, personalNote, expiresAt } = body;
 
   // Email validation
-  if (!recipientEmail || typeof recipientEmail !== 'string' || recipientEmail.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipientEmail)) {
+  if (!isValidEmail(recipientEmail)) {
     return NextResponse.json({ error: 'Valid email required' }, { status: 400 });
   }
 

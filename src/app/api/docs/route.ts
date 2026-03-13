@@ -40,6 +40,16 @@ export async function POST(req: NextRequest) {
   }
   const { title, content, sort_order, restricted_department, granted_user_ids, type, slides, deck_orientation } = body;
 
+  if (!title || typeof title !== 'string' || !title.trim()) {
+    return NextResponse.json({ error: 'title is required' }, { status: 400 });
+  }
+  if (title.length > 500) {
+    return NextResponse.json({ error: 'title must be under 500 characters' }, { status: 400 });
+  }
+  if (content !== undefined && content !== null && typeof content !== 'string') {
+    return NextResponse.json({ error: 'content must be a string' }, { status: 400 });
+  }
+
   const service = createServiceClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!

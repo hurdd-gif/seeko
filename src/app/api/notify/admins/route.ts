@@ -4,26 +4,10 @@ import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 import type { NotificationKind } from '@/lib/types';
 import { isValidNotificationKind } from '@/lib/notification-kinds';
+import { createRateLimiter } from '@/lib/rate-limiter';
 
-// Rate limiter: 20 notifications per user per minute
-const RATE_LIMIT = { max: 20, windowMs: 60 * 1000 };
-const userHits = new Map<string, { count: number; resetAt: number }>();
-
-function isRateLimited(userId: string): boolean {
-  const now = Date.now();
-  // Prune expired entries to prevent memory growth
-  if (userHits.size > 100) {
-    for (const [key, entry] of userHits) { if (now > entry.resetAt) userHits.delete(key); }
-  }
-  const entry = userHits.get(userId);
-  if (!entry || now > entry.resetAt) {
-    userHits.set(userId, { count: 1, resetAt: now + RATE_LIMIT.windowMs });
-    return false;
-  }
-  if (entry.count >= RATE_LIMIT.max) return true;
-  entry.count++;
-  return false;
-}
+// 20 notifications per user per minute
+const isRateLimited = createRateLimiter(20, 60 * 1000);
 
 async function getAuthenticatedUser() {
   const cookieStore = await cookies();

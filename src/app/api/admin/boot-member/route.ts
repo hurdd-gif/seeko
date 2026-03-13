@@ -2,26 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
+import { createRateLimiter } from '@/lib/rate-limiter';
 
-// Rate limiter: 3 attempts per admin per 15 minutes
-const RATE_LIMIT = { max: 3, windowMs: 15 * 60 * 1000 };
-const attempts = new Map<string, { count: number; resetAt: number }>();
-
-function isRateLimited(userId: string): boolean {
-  const now = Date.now();
-  // Prune expired entries to prevent memory growth
-  if (attempts.size > 50) {
-    for (const [key, entry] of attempts) { if (now > entry.resetAt) attempts.delete(key); }
-  }
-  const entry = attempts.get(userId);
-  if (!entry || now > entry.resetAt) {
-    attempts.set(userId, { count: 1, resetAt: now + RATE_LIMIT.windowMs });
-    return false;
-  }
-  if (entry.count >= RATE_LIMIT.max) return true;
-  entry.count++;
-  return false;
-}
+// 3 boot attempts per admin per 15 minutes
+const isRateLimited = createRateLimiter(3, 15 * 60 * 1000, 50);
 
 export async function POST(req: NextRequest) {
   const cookieStore = await cookies();

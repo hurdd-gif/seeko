@@ -3,48 +3,19 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getServiceClient } from '@/lib/supabase/service';
 import { sendInviteEmail } from '@/lib/email';
+import { createRateLimiter } from '@/lib/rate-limiter';
+import { EMAIL_REGEX } from '@/lib/validation';
 
 const VALID_DEPARTMENTS: Department[] = ['Coding', 'Visual Art', 'UI/UX', 'Animation', 'Asset Creation'];
 
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-/* ─── In-memory rate limiter ────────────────────────────────
- * 5 invite requests per IP per hour.
- * Use rightmost IP in x-forwarded-for (trusted proxy appends last).
- * Prune expired entries to avoid unbounded memory growth.
- * Fine for a single Render instance; swap for Upstash if horizontal scale.
- * ─────────────────────────────────────────────────────────── */
-const RATE_LIMIT = { max: 5, windowMs: 60 * 60 * 1000 };
-const ipHits = new Map<string, { count: number; resetAt: number }>();
+// 5 invite requests per IP per hour
+const isRateLimited = createRateLimiter(5, 60 * 60 * 1000);
 
 function getClientIp(request: NextRequest): string {
   const forwarded = request.headers.get('x-forwarded-for');
   if (!forwarded) return 'unknown';
   const parts = forwarded.split(',').map((s) => s.trim()).filter(Boolean);
   return parts.length > 0 ? parts[parts.length - 1]! : 'unknown';
-}
-
-function pruneExpiredRateLimitEntries(): void {
-  const now = Date.now();
-  for (const [key, entry] of ipHits.entries()) {
-    if (now > entry.resetAt) ipHits.delete(key);
-  }
-}
-
-function isRateLimited(ip: string): boolean {
-  pruneExpiredRateLimitEntries();
-  const now = Date.now();
-  const entry = ipHits.get(ip);
-
-  if (!entry || now > entry.resetAt) {
-    ipHits.set(ip, { count: 1, resetAt: now + RATE_LIMIT.windowMs });
-    return false;
-  }
-
-  if (entry.count >= RATE_LIMIT.max) return true;
-
-  entry.count++;
-  return false;
 }
 
 export async function POST(request: NextRequest) {

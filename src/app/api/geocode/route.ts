@@ -1,6 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createRateLimiter } from '@/lib/rate-limiter';
+
+// 30 requests per IP per hour — prevents the public endpoint being used to flood Nominatim
+const isRateLimited = createRateLimiter(30, 60 * 60 * 1000);
 
 export async function GET(request: NextRequest) {
+  const ip = request.headers.get('x-forwarded-for')?.split(',').pop()?.trim() || 'unknown';
+  if (isRateLimited(ip)) {
+    return NextResponse.json({ error: 'Too many requests. Try again later.' }, { status: 429 });
+  }
+
   const q = request.nextUrl.searchParams.get('q');
   if (!q || q.length < 3) {
     return NextResponse.json([]);

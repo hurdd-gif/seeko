@@ -5,6 +5,7 @@ import { randomBytes, randomInt } from 'crypto';
 import bcrypt from 'bcryptjs';
 import { getTemplateById } from '@/lib/external-agreement-templates';
 import { sendExternalInviteEmail } from '@/lib/email';
+import { isValidEmail } from '@/lib/validation';
 
 export async function POST(request: NextRequest) {
   // 1. Auth — admin only
@@ -19,7 +20,7 @@ export async function POST(request: NextRequest) {
   const body = await request.json();
   const { recipient_email, template_type, template_id, custom_sections, custom_title, personal_note, expires_at } = body;
 
-  if (!recipient_email || typeof recipient_email !== 'string' || recipient_email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient_email)) {
+  if (!isValidEmail(recipient_email)) {
     return NextResponse.json({ error: 'Valid email required' }, { status: 400 });
   }
   if (personal_note && typeof personal_note === 'string' && personal_note.length > 1000) {

@@ -4,25 +4,10 @@ import { getTemplateById } from '@/lib/external-agreement-templates';
 import { generateAgreementPdf } from '@/lib/agreement-pdf';
 import { sendAgreementEmail } from '@/lib/email';
 import type { ExternalSigningInvite } from '@/lib/types';
+import { createRateLimiter } from '@/lib/rate-limiter';
 
-// Rate limiter: max 5 sign attempts per IP per hour (PDF generation is expensive)
-const RATE_LIMIT = { max: 5, windowMs: 60 * 60 * 1000 };
-const ipHits = new Map<string, { count: number; resetAt: number }>();
-
-function isSignRateLimited(ip: string): boolean {
-  const now = Date.now();
-  if (ipHits.size > 100) {
-    for (const [key, entry] of ipHits) { if (now > entry.resetAt) ipHits.delete(key); }
-  }
-  const entry = ipHits.get(ip);
-  if (!entry || now > entry.resetAt) {
-    ipHits.set(ip, { count: 1, resetAt: now + RATE_LIMIT.windowMs });
-    return false;
-  }
-  if (entry.count >= RATE_LIMIT.max) return true;
-  entry.count++;
-  return false;
-}
+// 5 sign attempts per IP per hour (PDF generation is expensive)
+const isSignRateLimited = createRateLimiter(5, 60 * 60 * 1000);
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
