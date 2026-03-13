@@ -150,11 +150,12 @@ interface DocListProps {
   docs: Doc[];
   userDepartment?: string | null;
   isAdmin?: boolean;
+  isInvestor?: boolean;
   currentUserId?: string;
   team?: Pick<Profile, 'id' | 'display_name'>[];
 }
 
-export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, currentUserId = '', team = [] }: DocListProps) {
+export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, isInvestor = false, currentUserId = '', team = [] }: DocListProps) {
   const [docs, setDocs] = useState<Doc[]>(initialDocs);
   const { trigger } = useHaptics();
   const searchParams = useSearchParams();
@@ -191,7 +192,7 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, cu
   const [sharedExpanded, setSharedExpanded] = useState(false);
 
   const isLocked = (d: Doc) => {
-    if (isAdmin) return false;
+    if (isAdmin || isInvestor) return false;
     const hasDeptRestriction = !!d.restricted_department?.length;
     const inDept = hasDeptRestriction && d.restricted_department!.includes(userDepartment ?? '');
     const granted = !!d.granted_user_ids?.length && d.granted_user_ids.includes(currentUserId);

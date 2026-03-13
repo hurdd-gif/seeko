@@ -3,10 +3,12 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ChevronDown, Map } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { InvestorAreaCard } from '@/components/dashboard/InvestorAreaCard';
 import { Stagger } from '@/components/motion';
 import type { Area, TaskWithAssignee } from '@/lib/types';
+
+const surface = 'rounded-2xl bg-[#222222] border-0';
+const surfaceShadow = { boxShadow: '0 0 0 1px rgba(255,255,255,0.03), 0 4px 16px rgba(0,0,0,0.1)' };
 
 interface CollapsibleInvestorAreasProps {
   areas: Area[];
@@ -20,16 +22,16 @@ export function CollapsibleInvestorAreas({ areas, tasks, subtitle, defaultOpen =
   const [open, setOpen] = useState(defaultOpen);
 
   return (
-    <Card>
+    <div className={surface} style={surfaceShadow}>
       <button
         onClick={() => setOpen(prev => !prev)}
         className="w-full text-left"
       >
-        <CardHeader>
+        <div className="flex flex-col space-y-1.5 p-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Map className="size-4 text-muted-foreground" />
-              <CardTitle className="text-xl font-semibold text-foreground">Game Areas</CardTitle>
+              <h3 className="text-lg font-semibold text-foreground">Game Areas</h3>
             </div>
             <motion.div
               animate={{ rotate: open ? 180 : 0 }}
@@ -38,8 +40,8 @@ export function CollapsibleInvestorAreas({ areas, tasks, subtitle, defaultOpen =
               <ChevronDown className="size-4 text-muted-foreground" />
             </motion.div>
           </div>
-          <CardDescription className="line-clamp-1">{subtitle}</CardDescription>
-        </CardHeader>
+          <p className="text-sm text-muted-foreground line-clamp-1">{subtitle}</p>
+        </div>
       </button>
       <AnimatePresence>
         {open && (
@@ -50,7 +52,7 @@ export function CollapsibleInvestorAreas({ areas, tasks, subtitle, defaultOpen =
             transition={{ type: 'spring', stiffness: 300, damping: 28 }}
             className="overflow-hidden"
           >
-            <CardContent>
+            <div className="p-6 pt-0">
               <Stagger className="grid grid-cols-1 gap-4" delayMs={0.05}>
                 {areas.map(area => (
                   <InvestorAreaCard
@@ -61,10 +63,10 @@ export function CollapsibleInvestorAreas({ areas, tasks, subtitle, defaultOpen =
                   />
                 ))}
               </Stagger>
-            </CardContent>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
-    </Card>
+    </div>
   );
 }
