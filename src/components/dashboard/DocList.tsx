@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
-import { FileText, Lock, Pencil, Trash2, Plus, Search, Clock, ChevronDown, Circle, Presentation, Share2, XCircle, RotateCcw, Eye } from 'lucide-react';
+import { FileText, Lock, Pencil, Trash2, Plus, Search, Clock, ChevronDown, Circle, Presentation, Share2, XCircle, RotateCcw, Eye, Calendar, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { Doc } from '@/lib/types';
@@ -27,6 +27,7 @@ import { DeckViewer } from './DeckViewer';
 import { DocDeleteConfirm } from './DocDeleteConfirm';
 import { DocContent } from './DocContent';
 import { DocShareDialog } from './DocShareDialog';
+import { DatePicker } from '@/components/ui/date-picker';
 import { useHaptics } from '@/components/HapticsProvider';
 
 /** Strip HTML tags and decode common entities for plain-text previews */
@@ -53,6 +54,18 @@ function timeAgo(dateStr: string | undefined | null): string {
   const days = Math.floor(hours / 24);
   if (days < 7) return `${days}d ago`;
   return new Date(dateStr).toLocaleDateString();
+}
+
+function timeUntil(dateStr: string | undefined | null): string {
+  if (!dateStr) return '';
+  const diff = new Date(dateStr).getTime() - Date.now();
+  if (diff <= 0) return 'expired';
+  const days = Math.floor(diff / 86400000);
+  if (days === 0) return 'today';
+  if (days === 1) return 'in 1d';
+  if (days < 7) return `in ${days}d`;
+  if (days < 30) return `in ${Math.floor(days / 7)}w`;
+  return `in ${Math.floor(days / 30)}mo`;
 }
 
 function isRecentlyUpdated(doc: Doc): boolean {
@@ -190,6 +203,9 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, is
   const [sharedLinks, setSharedLinks] = useState<any[]>([]);
   const [sharedLoading, setSharedLoading] = useState(false);
   const [sharedExpanded, setSharedExpanded] = useState(false);
+  const [editingDeadlineId, setEditingDeadlineId] = useState<string | null>(null);
+  const [deadlineDate, setDeadlineDate] = useState('');
+  const [deadlineLoading, setDeadlineLoading] = useState(false);
 
   const isLocked = (d: Doc) => {
     if (isAdmin || isInvestor) return false;
@@ -287,6 +303,27 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, is
       toast.success('Share link resent');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to resend');
+    }
+  }
+
+  async function handleUpdateDeadline(inviteId: string, newExpiresAt: string) {
+    setDeadlineLoading(true);
+    try {
+      const res = await fetch('/api/doc-share/update-deadline', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ invite_id: inviteId, expires_at: new Date(newExpiresAt + 'T00:00:00').toISOString() }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error || 'Failed to update deadline');
+      const data = await res.json();
+      setSharedLinks(prev => prev.map(l => l.id === inviteId ? { ...l, expires_at: data.expires_at } : l));
+      toast.success('Deadline updated');
+      setEditingDeadlineId(null);
+      setDeadlineDate('');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to update deadline');
+    } finally {
+      setDeadlineLoading(false);
     }
   }
 
@@ -529,6 +566,12 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, is
                             {link.view_count ?? 0}
                           </span>
                           <span className="shrink-0">{timeAgo(link.created_at)}</span>
+                          {link.expires_at && (link.status === 'pending' || link.status === 'verified') && (
+                            <span className="flex items-center gap-1 shrink-0">
+                              <Clock className="size-3" />
+                              {timeUntil(link.expires_at)}
+                            </span>
+                          )}
                         </div>
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0">
@@ -552,8 +595,63 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, is
                             <RotateCcw className="size-3.5" />
                           </button>
                         )}
+                        {(link.status === 'pending' || link.status === 'verified') && (
+                          <button
+                            type="button"
+                            title="Edit deadline"
+                            onClick={() => {
+                              const current = link.expires_at ? new Date(link.expires_at).toISOString().split('T')[0] : '';
+                              setDeadlineDate(current);
+                              setEditingDeadlineId(editingDeadlineId === link.id ? null : link.id);
+                            }}
+                            className="flex size-7 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                          >
+                            <Calendar className="size-3.5" />
+                          </button>
+                        )}
                       </div>
                     </CardContent>
+                    <AnimatePresence>
+                      {editingDeadlineId === link.id && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          transition={{ type: 'spring', visualDuration: 0.3, bounce: 0 }}
+                          className="overflow-hidden border-t border-border/50"
+                        >
+                          <div className="p-3 flex flex-col gap-2">
+                            <p className="text-xs text-muted-foreground">
+                              Current expiry: {link.expires_at ? new Date(link.expires_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'None'}
+                            </p>
+                            <DatePicker
+                              value={deadlineDate}
+                              onChange={setDeadlineDate}
+                              minDate={(() => { const d = new Date(); d.setDate(d.getDate() + 1); d.setHours(0,0,0,0); return d; })()}
+                              dateLabel="New deadline"
+                            />
+                            <div className="flex items-center gap-2 mt-1">
+                              <Button
+                                size="sm"
+                                disabled={!deadlineDate || deadlineLoading}
+                                onClick={() => handleUpdateDeadline(link.id, deadlineDate)}
+                                className="gap-1.5 bg-seeko-accent text-black hover:bg-seeko-accent/90"
+                              >
+                                {deadlineLoading ? <Loader2 className="size-3 animate-spin" /> : null}
+                                Update
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => { setEditingDeadlineId(null); setDeadlineDate(''); }}
+                              >
+                                Cancel
+                              </Button>
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </Card>
               ))}
               {sharedLinks.length > 3 && (
