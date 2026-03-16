@@ -314,8 +314,8 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, is
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ invite_id: inviteId, expires_at: new Date(newExpiresAt + 'T00:00:00').toISOString() }),
       });
-      if (!res.ok) throw new Error((await res.json()).error || 'Failed to update deadline');
       const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to update deadline');
       setSharedLinks(prev => prev.map(l => l.id === inviteId ? { ...l, expires_at: data.expires_at } : l));
       toast.success('Deadline updated');
       setEditingDeadlineId(null);

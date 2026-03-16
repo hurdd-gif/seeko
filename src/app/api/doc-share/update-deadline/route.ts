@@ -32,9 +32,14 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: 'Can only update active invites' }, { status: 400 });
   }
 
-  await (service.from('external_signing_invites') as any)
+  const { error: updateError } = await (service.from('external_signing_invites') as any)
     .update({ expires_at: newDate.toISOString() })
     .eq('id', invite_id);
+
+  if (updateError) {
+    console.error('[doc-share/update-deadline] update failed:', updateError);
+    return NextResponse.json({ error: 'Failed to update deadline' }, { status: 500 });
+  }
 
   return NextResponse.json({ success: true, expires_at: newDate.toISOString() });
 }
