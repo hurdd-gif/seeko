@@ -129,9 +129,9 @@ export function SigningPageClient({ token, initialData }: SigningPageClientProps
 
   // Signing phase — reuse AgreementForm
   return (
-    <div className="min-h-dvh bg-background pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
-      <div className="mx-auto max-w-2xl px-4 py-8">
-        <div className="flex items-center justify-center mb-8">
+    <div className="flex min-h-dvh flex-col items-center justify-center bg-background px-4 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+      <div className="w-full max-w-2xl py-6">
+        <div className="flex items-center justify-center mb-6">
           <Logo />
         </div>
         <AgreementForm
