@@ -5,6 +5,7 @@ import { motion } from 'motion/react';
 import { FileCheck, Clock, Ban, FileText } from 'lucide-react';
 import { VerificationForm } from '@/components/external-signing/VerificationForm';
 import { AgreementForm } from '@/components/agreement/AgreementForm';
+import { withGuardianSection } from '@/lib/external-agreement-templates';
 
 const SPRING = { type: 'spring' as const, stiffness: 300, damping: 25 };
 
@@ -16,13 +17,18 @@ interface SigningPageClientProps {
     templateName?: string;
     personalNote?: string;
     sections?: { number: number; title: string; content: string }[];
+    isGuardianSigning?: boolean;
   };
 }
 
 export function SigningPageClient({ token, initialData }: SigningPageClientProps) {
   const alreadyVerified = initialData.status === 'verified' && !!initialData.sections;
   const [verified, setVerified] = useState(alreadyVerified);
-  const [sections, setSections] = useState<{ number: number; title: string; content: string }[] | null>(initialData.sections || null);
+  const [sections, setSections] = useState<{ number: number; title: string; content: string }[] | null>(
+    initialData.sections
+      ? (initialData.isGuardianSigning ? withGuardianSection(initialData.sections) : initialData.sections)
+      : null
+  );
   const [title, setTitle] = useState(initialData.templateName || 'Agreement');
   const [personalNote, setPersonalNote] = useState(initialData.personalNote);
 
@@ -103,7 +109,7 @@ export function SigningPageClient({ token, initialData }: SigningPageClientProps
               maskedEmail={initialData.maskedEmail || '***'}
               onVerified={(data) => {
                 const d = data as { sections: { number: number; title: string; content: string }[]; title: string; personalNote?: string };
-                setSections(d.sections);
+                setSections(initialData.isGuardianSigning ? withGuardianSection(d.sections) : d.sections);
                 setTitle(d.title);
                 setPersonalNote(d.personalNote);
                 setVerified(true);
@@ -138,6 +144,7 @@ export function SigningPageClient({ token, initialData }: SigningPageClientProps
           signPayloadExtra={{ token }}
           successRedirect={null}
           personalNote={personalNote}
+          isGuardianSigning={initialData.isGuardianSigning}
         />
       </div>
     </div>
