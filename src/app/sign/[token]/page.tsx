@@ -20,7 +20,7 @@ export default async function ExternalSignPage({ params }: Props) {
 
   const { data: invite } = await service
     .from('external_signing_invites')
-    .select('id, recipient_email, status, expires_at, template_type, template_id, custom_title, custom_sections, personal_note')
+    .select('id, recipient_email, status, expires_at, template_type, template_id, custom_title, custom_sections, personal_note, is_guardian_signing')
     .eq('token', token)
     .single() as { data: ExternalSigningInvite | null };
 
@@ -74,6 +74,7 @@ export default async function ExternalSignPage({ params }: Props) {
         maskedEmail,
         templateName,
         personalNote: invite.personal_note ?? undefined,
+        isGuardianSigning: invite.is_guardian_signing ?? false,
         ...(sections ? { sections } : {}),
       }}
     />
