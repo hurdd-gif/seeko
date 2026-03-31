@@ -16,18 +16,15 @@ interface MobileNotificationSheetProps {
   onClose: () => void;
   onMarkAllRead: () => void;
   onTap: (notif: DisplayNotification) => void;
-  onDismiss: (ids: string[]) => void;
-  onMarkRead?: (ids: string[]) => void;
 }
 
 export const MobileNotificationSheet = forwardRef<HTMLDivElement, MobileNotificationSheetProps>(
   function MobileNotificationSheet(
-    { open, grouped, isEmpty, unreadCount, onClose, onMarkAllRead, onTap, onDismiss, onMarkRead },
+    { open, grouped, isEmpty, unreadCount, onClose, onMarkAllRead, onTap },
     ref
   ) {
     let rowIndex = 0;
 
-    // Lock scroll when sheet is open
     useEffect(() => {
       if (!open) return;
       acquireScrollLock();
@@ -38,7 +35,6 @@ export const MobileNotificationSheet = forwardRef<HTMLDivElement, MobileNotifica
       <AnimatePresence>
         {open && (
           <>
-            {/* Backdrop */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -48,7 +44,6 @@ export const MobileNotificationSheet = forwardRef<HTMLDivElement, MobileNotifica
               style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}
               onClick={onClose}
             />
-            {/* Sheet */}
             <motion.div
               ref={ref}
               initial={{ y: '100%' }}
@@ -59,7 +54,6 @@ export const MobileNotificationSheet = forwardRef<HTMLDivElement, MobileNotifica
               style={{
                 backgroundColor: '#1a1a1a',
                 maxHeight: '85dvh',
-                paddingTop: 'env(safe-area-inset-top)',
                 paddingBottom: 'env(safe-area-inset-bottom)',
               }}
               drag="y"
@@ -69,13 +63,11 @@ export const MobileNotificationSheet = forwardRef<HTMLDivElement, MobileNotifica
                 if (info.offset.y > 100 || info.velocity.y > 300) onClose();
               }}
             >
-              {/* Drag handle */}
               <div className="flex justify-center pt-2 pb-1">
                 <div className="w-9 h-1 rounded-full bg-white/20" />
               </div>
 
-              {/* Header */}
-              <div className="flex items-center justify-between px-5 py-3">
+              <div className="flex items-center justify-between px-5 py-3 border-b border-white/[0.06]">
                 <h3 className="text-base font-semibold text-foreground">Notifications</h3>
                 <div className="flex items-center gap-3">
                   {unreadCount > 0 && (
@@ -96,9 +88,8 @@ export const MobileNotificationSheet = forwardRef<HTMLDivElement, MobileNotifica
                 </div>
               </div>
 
-              {/* Notification list */}
               <div
-                className="flex-1 overflow-y-auto overscroll-contain touch-auto px-2"
+                className="flex-1 overflow-y-auto overscroll-contain touch-auto p-1.5"
                 onPointerDown={(e) => e.stopPropagation()}
               >
                 {isEmpty ? (
@@ -107,30 +98,26 @@ export const MobileNotificationSheet = forwardRef<HTMLDivElement, MobileNotifica
                     <p className="mt-3 text-sm text-muted-foreground">You&apos;re all caught up</p>
                   </div>
                 ) : (
-                  <AnimatePresence mode="popLayout">
-                    {grouped.map((group, gi) => (
-                      <div key={group.label} className={gi > 0 ? 'mt-2' : ''}>
-                        <div className="px-5 pt-3 pb-1.5 text-[10px] font-medium uppercase tracking-widest text-muted-foreground/40">
-                          {group.label}
-                        </div>
-                        {group.items.map(notif => {
-                          const idx = rowIndex++;
-                          return (
-                            <NotificationStack
-                              key={notif.id}
-                              notification={notif}
-                              group={group.label}
-                              index={idx}
-                              stagger={MOBILE_ROW_STAGGER}
-                              onTap={onTap}
-                              onDismiss={onDismiss}
-                              onMarkRead={onMarkRead}
-                            />
-                          );
-                        })}
+                  grouped.map((group, gi) => (
+                    <div key={group.label} className={gi > 0 ? 'mt-1' : ''}>
+                      <div className="px-4 pt-3 pb-1 text-[10px] font-medium uppercase tracking-widest text-muted-foreground/40">
+                        {group.label}
                       </div>
-                    ))}
-                  </AnimatePresence>
+                      {group.items.map(notif => {
+                        const idx = rowIndex++;
+                        return (
+                          <NotificationStack
+                            key={notif.id}
+                            notification={notif}
+                            group={group.label}
+                            index={idx}
+                            stagger={MOBILE_ROW_STAGGER}
+                            onTap={onTap}
+                          />
+                        );
+                      })}
+                    </div>
+                  ))
                 )}
               </div>
             </motion.div>
