@@ -58,23 +58,26 @@ export const DesktopNotificationPanel = forwardRef<HTMLDivElement, DesktopNotifi
                 </div>
               ) : (
                 grouped.map((group, gi) => (
-                  <div key={group.label} className={gi > 0 ? 'mt-1' : ''}>
-                    <div className="px-3 pt-3 pb-1 text-[10px] font-medium uppercase tracking-widest text-muted-foreground/50">
+                  <div key={group.label}>
+                    {gi > 0 && <div className="mx-3 my-1 h-px bg-white/[0.04]" />}
+                    <div className="px-3 pt-2.5 pb-1 text-[10px] font-medium uppercase tracking-widest text-muted-foreground/40">
                       {group.label}
                     </div>
-                    {group.items.map(notif => {
-                      const idx = rowIndex++;
-                      return (
-                        <NotificationStack
-                          key={notif.id}
-                          notification={notif}
-                          group={group.label}
-                          index={idx}
-                          stagger={ROW_STAGGER}
-                          onTap={onTap}
-                        />
-                      );
-                    })}
+                    <div className="divide-y divide-white/[0.03]">
+                      {group.items.map(notif => {
+                        const idx = rowIndex++;
+                        return (
+                          <NotificationStack
+                            key={notif.id}
+                            notification={notif}
+                            group={group.label}
+                            index={idx}
+                            stagger={ROW_STAGGER}
+                            onTap={onTap}
+                          />
+                        );
+                      })}
+                    </div>
                   </div>
                 ))
               )}

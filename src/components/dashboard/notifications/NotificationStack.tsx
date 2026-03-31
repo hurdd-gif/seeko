@@ -58,7 +58,7 @@ export function NotificationStack({
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ ...SMOOTH, duration: 0.25 }}
-            className="overflow-hidden ml-5 border-l border-white/[0.06]"
+            className="overflow-hidden ml-8 pl-1 border-l border-white/[0.04]"
           >
             {children.map((child, i) => (
               <NotificationCard
