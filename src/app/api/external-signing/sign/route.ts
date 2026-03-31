@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceClient } from '@/lib/supabase/service';
-import { getTemplateById } from '@/lib/external-agreement-templates';
+import { getTemplateById, withGuardianSection } from '@/lib/external-agreement-templates';
 import { generateAgreementPdf } from '@/lib/agreement-pdf';
 import { sendAgreementEmail } from '@/lib/email';
 import type { ExternalSigningInvite } from '@/lib/types';
@@ -26,7 +26,7 @@ function isSignRateLimited(ip: string): boolean {
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
-  const { token, full_name, address } = body;
+  const { token, full_name, address, minor_name } = body;
 
   if (!token) return NextResponse.json({ error: 'Token required' }, { status: 400 });
 
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
 
   const { data: invite } = await service
     .from('external_signing_invites')
-    .select('id, token, status, expires_at, recipient_email, template_type, template_id, custom_sections, custom_title, personal_note')
+    .select('id, token, status, expires_at, recipient_email, template_type, template_id, custom_sections, custom_title, personal_note, is_guardian_signing')
     .eq('token', token)
     .single() as { data: ExternalSigningInvite | null };
 
@@ -62,6 +62,12 @@ export async function POST(request: NextRequest) {
   if (new Date(invite.expires_at) < new Date()) {
     await (service.from('external_signing_invites') as any).update({ status: 'expired' }).eq('id', invite.id);
     return NextResponse.json({ error: 'Invite has expired' }, { status: 400 });
+  }
+
+  if (invite.is_guardian_signing) {
+    if (!minor_name || typeof minor_name !== 'string' || !minor_name.trim()) {
+      return NextResponse.json({ error: "Minor's full name is required for guardian signing" }, { status: 400 });
+    }
   }
 
   // Capture IP + user agent
@@ -82,6 +88,10 @@ export async function POST(request: NextRequest) {
     title = invite.custom_title || 'Agreement';
   }
 
+  if (invite.is_guardian_signing) {
+    sections = withGuardianSection(sections);
+  }
+
   // Generate PDF
   const pdfBytes = await generateAgreementPdf({
     title,
@@ -91,6 +101,7 @@ export async function POST(request: NextRequest) {
       address: address.trim(),
       email: invite.recipient_email,
       signedAt: new Date(),
+      minorName: invite.is_guardian_signing ? minor_name.trim() : undefined,
     },
   });
 
@@ -113,6 +124,7 @@ export async function POST(request: NextRequest) {
       status: 'signed',
       signer_name: full_name.trim(),
       signer_address: address.trim(),
+      minor_name: invite.is_guardian_signing ? minor_name.trim() : null,
       signer_ip: ip,
       signer_user_agent: userAgent,
       signed_at: new Date().toISOString(),
