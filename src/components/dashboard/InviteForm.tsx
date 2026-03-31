@@ -8,10 +8,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
+import { springs } from '@/lib/motion';
 
 const DEPARTMENTS = ['Coding', 'Visual Art', 'UI/UX', 'Animation', 'Asset Creation'];
-
-const COLLAPSE_SPRING = { type: 'spring' as const, stiffness: 360, damping: 39, mass: 2.4 };
 
 export function InviteForm() {
   const [email, setEmail] = useState('');
@@ -80,7 +79,7 @@ export function InviteForm() {
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={COLLAPSE_SPRING}
+            transition={springs.heavy}
             className="overflow-hidden"
           >
             <CardContent className="pt-0">

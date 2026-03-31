@@ -7,8 +7,7 @@ import { Bug, ImagePlus, Loader2, X } from 'lucide-react';
 import { Dialog, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-
-const SPRING = { type: 'spring' as const, stiffness: 400, damping: 28 };
+import { springs } from '@/lib/motion';
 
 const HIDDEN_PATHS = ['/login', '/set-password', '/agreement', '/onboarding'];
 
@@ -88,7 +87,7 @@ export function BugReportFAB({ displayName, email }: BugReportFABProps) {
       <motion.button
         initial={{ opacity: 0, scale: 0.8 }}
         animate={{ opacity: 1, scale: 1 }}
-        transition={{ ...SPRING, delay: 1 }}
+        transition={{ ...springs.firm, delay: 1 }}
         onClick={() => setOpen(true)}
         className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4 md:bottom-6 md:right-6 z-40 flex size-11 items-center justify-center rounded-full bg-muted border border-border shadow-lg text-muted-foreground hover:text-foreground hover:border-foreground/20 transition-colors"
         title="Report a bug"

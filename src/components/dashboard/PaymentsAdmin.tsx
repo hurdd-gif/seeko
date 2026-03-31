@@ -392,7 +392,7 @@ export function PaymentsAdmin({ team }: PaymentsAdminProps) {
                       className={cn(
                         'rounded-full px-2.5 py-1 text-xs font-medium transition-all duration-200',
                         filter === opt.value
-                          ? 'bg-seeko-accent/15 text-seeko-accent shadow-[inset_0_0_0_1px_rgba(110,231,183,0.2)]'
+                          ? 'bg-seeko-accent/15 text-seeko-accent shadow-[var(--shadow-accent-inset)]'
                           : 'text-muted-foreground hover:text-foreground hover:bg-white/[0.06]'
                       )}
                     >

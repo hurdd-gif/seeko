@@ -3,6 +3,7 @@
 import { motion, useReducedMotion } from 'motion/react';
 import { Activity, UserPlus, CheckSquare, FileText, Pencil, MessageSquare, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { springs } from '@/lib/motion';
 
 const ICON_MAP: Record<string, typeof Activity> = {
   assigned: UserPlus,
@@ -25,8 +26,6 @@ interface ActivityFeedItemProps {
   iconBg: string;
 }
 
-const SPRING = { type: 'spring' as const, stiffness: 500, damping: 30 };
-
 export function ActivityFeedItem({ name, action, target, time, actionKey, iconClassName, iconBg }: ActivityFeedItemProps) {
   const shouldReduce = useReducedMotion();
   const Icon = ICON_MAP[actionKey] ?? Activity;
@@ -34,7 +33,7 @@ export function ActivityFeedItem({ name, action, target, time, actionKey, iconCl
   return (
     <motion.div
       whileHover={shouldReduce ? undefined : { backgroundColor: 'rgba(255,255,255,0.03)' }}
-      transition={SPRING}
+      transition={springs.snappy}
       className="flex items-start gap-2.5 rounded-lg px-2 py-2 -mx-2 cursor-default"
     >
       <div className={cn('mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full', iconBg, iconClassName)}>

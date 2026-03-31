@@ -6,8 +6,7 @@ import { Lock, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-
-const SPRING = { type: 'spring' as const, stiffness: 500, damping: 30 };
+import { springs } from '@/lib/motion';
 
 interface PaymentsPasswordGateProps {
   onAuthenticated: () => void;
@@ -51,7 +50,7 @@ export function PaymentsPasswordGate({ onAuthenticated }: PaymentsPasswordGatePr
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        transition={SPRING}
+        transition={springs.snappy}
       >
         <Card className="w-full max-w-sm">
           <CardHeader className="text-center">

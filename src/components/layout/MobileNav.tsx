@@ -24,9 +24,10 @@ import { TOUR_STEP_IDS_MOBILE } from '@/lib/tour-constants';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import Image from 'next/image';
 import { useHaptics } from '@/components/HapticsProvider';
+import { springs } from '@/lib/motion';
 
 const BOTTOM_NAV = {
-  tapSpring: { type: 'spring' as const, stiffness: 450, damping: 28 },
+  tapSpring: springs.snappy,
   tapScale: 0.92,
 };
 
@@ -227,7 +228,7 @@ export function MobileNav({
                   initial={{ opacity: 0, y: 60 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 60 }}
-                  transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                  transition={springs.firm}
                   className="md:hidden fixed bottom-0 left-0 right-0 z-[61] rounded-t-2xl border-t border-border/50 overflow-hidden"
                   style={{
                     background: 'rgba(26, 26, 26, 0.98)',

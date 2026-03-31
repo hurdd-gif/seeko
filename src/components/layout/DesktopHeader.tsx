@@ -12,9 +12,10 @@ import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'motion/react';
 import { PageHeaderUser } from './PageHeaderUser';
 import { Notification } from '@/lib/types';
+import { springs } from '@/lib/motion';
 
-const SMOOTH = { type: 'spring' as const, stiffness: 300, damping: 25 };
-const SNAPPY = { type: 'spring' as const, stiffness: 500, damping: 30 };
+const SMOOTH = springs.smooth;
+const SNAPPY = springs.snappy;
 
 const PAGE_TITLES: Record<string, string> = {
   '/': 'Overview',

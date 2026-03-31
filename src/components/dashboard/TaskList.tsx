@@ -39,6 +39,7 @@ import { HandoffDialog } from '@/components/dashboard/HandoffDialog';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { formatDeadline } from '@/lib/format-deadline';
 import { acquireScrollLock, releaseScrollLock } from '@/lib/scroll-lock';
+import { springs } from '@/lib/motion';
 
 /* ------------------------------------------------------------------ */
 /*  FilterPill                                                         */
@@ -143,7 +144,7 @@ const STATUS_BADGE_ICON: Record<string, typeof Circle> = {
 
 const TASK_DIALS = {
   row: {
-    spring: { type: 'spring' as const, stiffness: 500, damping: 30 },
+    spring: springs.snappy,
     hoverX: 2,
     entranceY: 16,
     exitY: -12,
@@ -151,12 +152,12 @@ const TASK_DIALS = {
     stagger: 0.05,
   },
   status: {
-    spring: { type: 'spring' as const, stiffness: 500, damping: 30 },
+    spring: springs.snappy,
     hoverScale: 1.05,
     tapScale: 0.95,
   },
   filter: {
-    spring: { type: 'spring' as const, stiffness: 300, damping: 25 },
+    spring: springs.smooth,
   },
 };
 
@@ -1088,7 +1089,7 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
               initial={{ opacity: 0, y: 200 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 200 }}
-              transition={{ type: 'spring', stiffness: 400, damping: 32 }}
+              transition={springs.firm}
               className="fixed bottom-0 left-0 right-0 z-[51] rounded-t-2xl border-t border-border/50"
               style={{
                 background: 'rgba(34, 34, 34, 0.98)',

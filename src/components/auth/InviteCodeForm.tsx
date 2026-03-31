@@ -7,8 +7,9 @@ import { Loader2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useHaptics } from '@/components/HapticsProvider';
 import { SegmentedCodeInput } from './SegmentedCodeInput';
+import { springs } from '@/lib/motion';
 
-const SPRING = { type: 'spring' as const, stiffness: 300, damping: 25 };
+const SPRING = springs.smooth;
 
 export function InviteCodeForm() {
   const router = useRouter();

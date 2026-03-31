@@ -17,6 +17,7 @@ import { KIND_CONFIG } from './constants';
 import { formatTime } from './utils';
 import type { LiveToast } from './LiveToastContext';
 import { AUTO_DISMISS_MS } from './LiveToastContext';
+import { springs } from '@/lib/motion';
 
 const SWIPE_THRESHOLD = 60;
 const VELOCITY_THRESHOLD = 300;
@@ -61,7 +62,7 @@ export function LiveToastCard({
           onDismiss(toast.id);
         });
       } else {
-        animate(y, 0, { type: 'spring', stiffness: 500, damping: 30 });
+        animate(y, 0, springs.snappy);
       }
     },
     [y, onDismiss, toast.id]
@@ -105,7 +106,7 @@ export function LiveToastCard({
       initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 40, scale: 0.95 }}
       animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }}
       exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 20, scale: 0.95 }}
-      transition={prefersReducedMotion ? { duration: 0.15 } : { type: 'spring', stiffness: 300, damping: 25 }}
+      transition={prefersReducedMotion ? { duration: 0.15 } : springs.smooth}
       style={{ y }}
       drag="y"
       dragConstraints={{ top: 0, bottom: 0 }}
@@ -160,7 +161,7 @@ export function LiveToastCard({
             opacity: hovered ? 1 : 0,
             scale: hovered ? 1 : 0.8,
           }}
-          transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+          transition={springs.snappy}
           onClick={(e) => {
             e.stopPropagation();
             onDismiss(toast.id);

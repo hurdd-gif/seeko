@@ -3,9 +3,10 @@ import {
   ArrowRightLeft, Receipt, CircleCheck, CircleX, Clock, AlertCircle, UserPlus,
 } from 'lucide-react';
 import { NotificationKind } from '@/lib/types';
+import { springs } from '@/lib/motion';
 
-export const SMOOTH = { type: 'spring' as const, stiffness: 300, damping: 25 };
-export const SNAPPY = { type: 'spring' as const, stiffness: 500, damping: 30 };
+export const SMOOTH = springs.smooth;
+export const SNAPPY = springs.snappy;
 export const SHEET_SPRING = { type: 'spring' as const, visualDuration: 0.35, bounce: 0.05 };
 export const ROW_STAGGER = 0.03;
 export const MOBILE_ROW_STAGGER = 0.02;

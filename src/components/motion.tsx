@@ -1,14 +1,11 @@
 'use client';
 
-import { motion, useReducedMotion, type Transition } from 'motion/react';
+import { motion, useReducedMotion } from 'motion/react';
 import { type ReactNode } from 'react';
+import { springs } from '@/lib/motion';
 
-// ── Spring configs ──────────────────────────────────────────────
-export const springs = {
-  snappy: { type: 'spring', stiffness: 500, damping: 30 } as Transition,
-  smooth: { type: 'spring', stiffness: 300, damping: 25 } as Transition,
-  gentle: { type: 'spring', stiffness: 200, damping: 20 } as Transition,
-};
+// Re-export so existing imports from '@/components/motion' keep working
+export { springs };
 
 // ── Stagger variants ────────────────────────────────────────────
 const staggerContainer = {

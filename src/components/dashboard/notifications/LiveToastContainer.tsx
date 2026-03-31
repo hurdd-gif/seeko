@@ -6,6 +6,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { useLiveToast, MAX_VISIBLE } from './LiveToastContext';
 import { LiveToastCard } from './LiveToastCard';
 import type { LiveToast } from './LiveToastContext';
+import { springs } from '@/lib/motion';
 
 interface LiveToastContainerProps {
   onTapToast: (toast: LiveToast) => void;
@@ -40,7 +41,7 @@ export function LiveToastContainer({ onTapToast, onOpenPanel }: LiveToastContain
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.8 }}
-            transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+            transition={springs.snappy}
             onClick={onOpenPanel}
             className="pointer-events-auto mb-2 px-3 py-1.5 rounded-full bg-card border border-border/50 text-xs font-medium text-muted-foreground hover:text-foreground hover:border-border transition-colors shadow-lg shadow-black/20 cursor-pointer"
           >

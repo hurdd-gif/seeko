@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { motion } from 'motion/react';
 import { cn } from '@/lib/utils';
+import { springs } from '@/lib/motion';
 import {
   Activity,
   CheckCircle2,
@@ -50,7 +51,7 @@ export function EmptyState({ icon: iconName, title, description, action, classNa
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+      transition={springs.smooth}
       className={cn(
         'flex flex-col items-center justify-center py-14 text-center',
         className

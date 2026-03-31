@@ -22,6 +22,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { createClient } from '@/lib/supabase/client';
 import { InviteCodeForm } from '@/components/auth/InviteCodeForm';
 import { useHaptics } from '@/components/HapticsProvider';
+import { springs } from '@/lib/motion';
 
 /* ─── Timing (ms after mount) ───────────────────────────── */
 const TIMING = {
@@ -37,21 +38,21 @@ const TIMING = {
 /* ─── Element configs ────────────────────────────────────── */
 const CARD = {
   offsetY:  20,    // px card starts below resting position
-  spring:   { type: 'spring' as const, stiffness: 320, damping: 28 },
+  spring:   springs.smooth,
 };
 
 const LOGO = {
   offsetY:  8,     // px logo starts below resting position
-  spring:   { type: 'spring' as const, stiffness: 400, damping: 30 },
+  spring:   springs.firm,
 };
 
 const FIELD = {
   offsetY:  10,    // px each field slides up from
-  spring:   { type: 'spring' as const, stiffness: 350, damping: 28 },
+  spring:   springs.smooth,
 };
 
 const FADE = {
-  spring: { type: 'spring' as const, stiffness: 300, damping: 30 },
+  spring: springs.smooth,
 };
 
 export default function LoginPage() {
@@ -165,7 +166,7 @@ export default function LoginPage() {
                   layoutId="tab-pill"
                   className="absolute inset-0 rounded-md bg-seeko-accent"
                   style={{ zIndex: -1 }}
-                  transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                  transition={springs.firm}
                 />
               )}
               <span className={tab === t ? 'text-[#1a1a1a] font-semibold' : 'text-muted-foreground'}>
@@ -185,7 +186,7 @@ export default function LoginPage() {
               initial={{ opacity: 0, x: -8 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 8 }}
-              transition={{ type: 'spring', stiffness: 350, damping: 30 }}
+              transition={springs.smooth}
             >
               {/* Email field */}
               <motion.div
@@ -256,7 +257,7 @@ export default function LoginPage() {
               initial={{ opacity: 0, x: 8 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -8 }}
-              transition={{ type: 'spring', stiffness: 350, damping: 30 }}
+              transition={springs.smooth}
             >
               <InviteCodeForm />
             </motion.div>
