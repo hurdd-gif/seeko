@@ -298,7 +298,7 @@ export function AgreementForm({
                     <div
                       ref={scrollRef}
                       onScroll={handleScroll}
-                      className="max-h-[min(28rem,55dvh)] overflow-y-auto rounded-lg border border-border bg-muted/30 p-4 sm:p-5 prose prose-sm prose-invert max-w-none
+                      className="max-h-[min(32rem,60dvh)] overflow-y-auto rounded-md bg-muted/20 p-4 sm:p-5 prose prose-sm prose-invert max-w-none
                         [scrollbar-width:thin]
                         [&_h3]:text-base [&_h3]:font-semibold [&_h3]:text-foreground [&_h3]:mt-6 [&_h3]:mb-2
                         [&_p]:text-sm [&_p]:text-muted-foreground [&_p]:leading-relaxed [&_p]:mb-3

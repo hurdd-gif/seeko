@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Send, Upload, FileText, Loader2, X, Eye, ChevronDown, ChevronUp, AlertCircle, Calendar } from 'lucide-react';
+import { Send, Upload, FileText, Loader2, X, Eye, ChevronDown, ChevronUp, AlertCircle, Calendar, ShieldCheck } from 'lucide-react';
 import { acquireScrollLock, releaseScrollLock } from '@/lib/scroll-lock';
 import { EXTERNAL_TEMPLATES } from '@/lib/external-agreement-templates';
 import { Button } from '@/components/ui/button';
@@ -277,18 +277,36 @@ export function SendInviteForm({ onInviteSent }: SendInviteFormProps) {
           </div>
 
           {/* ── Guardian toggle ── */}
-          <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-border px-4 py-3 transition-colors hover:bg-muted/30">
-            <input
-              type="checkbox"
-              checked={isGuardianSigning}
-              onChange={(e) => setIsGuardianSigning(e.target.checked)}
-              className="size-4 accent-seeko-accent rounded"
-            />
-            <div>
+          <button
+            type="button"
+            onClick={() => setIsGuardianSigning(!isGuardianSigning)}
+            className={`flex w-full cursor-pointer items-center gap-3 rounded-lg px-4 py-3 text-left transition-all ${
+              isGuardianSigning
+                ? 'bg-seeko-accent/8 ring-1 ring-seeko-accent/25'
+                : 'bg-muted/30 hover:bg-muted/50'
+            }`}
+          >
+            <div className={`flex size-8 shrink-0 items-center justify-center rounded-lg transition-colors ${
+              isGuardianSigning ? 'bg-seeko-accent/15 text-seeko-accent' : 'bg-muted text-muted-foreground'
+            }`}>
+              <ShieldCheck className="size-4" />
+            </div>
+            <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-foreground">Guardian signing for a minor</p>
               <p className="text-xs text-muted-foreground">A parent or legal guardian will sign on behalf of someone under 18</p>
             </div>
-          </label>
+            <div className={`flex size-5 shrink-0 items-center justify-center rounded-full border-2 transition-all ${
+              isGuardianSigning
+                ? 'border-seeko-accent bg-seeko-accent'
+                : 'border-muted-foreground/30'
+            }`}>
+              {isGuardianSigning && (
+                <svg viewBox="0 0 12 12" className="size-3 text-background" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M2.5 6L5 8.5L9.5 3.5" />
+                </svg>
+              )}
+            </div>
+          </button>
 
           {/* ── Options toggle ── */}
           <button
