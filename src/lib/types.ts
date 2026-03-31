@@ -229,4 +229,6 @@ export type ExternalSigningInvite = {
   signed_at?: string;
   created_by: string;
   created_at: string;
+  is_guardian_signing?: boolean;
+  minor_name?: string;
 };
