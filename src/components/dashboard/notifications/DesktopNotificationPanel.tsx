@@ -36,8 +36,8 @@ export const DesktopNotificationPanel = forwardRef<HTMLDivElement, DesktopNotifi
             style={{ transformOrigin: 'top right' }}
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06]">
-              <h3 className="text-sm font-semibold text-foreground">Notifications</h3>
+            <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/[0.06]">
+              <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Notifications</h3>
               {unreadCount > 0 && (
                 <button
                   onClick={onMarkAllRead}
@@ -50,7 +50,7 @@ export const DesktopNotificationPanel = forwardRef<HTMLDivElement, DesktopNotifi
             </div>
 
             {/* Content */}
-            <div className="max-h-[min(480px,70vh)] overflow-y-auto [scrollbar-width:thin] p-1.5">
+            <div className="max-h-[min(480px,70vh)] overflow-y-auto [scrollbar-width:thin] p-1">
               {isEmpty ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
                   <CheckCircle2 className="size-8 text-muted-foreground/20" />
@@ -60,7 +60,7 @@ export const DesktopNotificationPanel = forwardRef<HTMLDivElement, DesktopNotifi
                 grouped.map((group, gi) => (
                   <div key={group.label}>
                     {gi > 0 && <div className="mx-3 my-1 h-px bg-white/[0.04]" />}
-                    <div className="px-3 pt-2.5 pb-1 text-[10px] font-medium uppercase tracking-widest text-muted-foreground/40">
+                    <div className="px-2.5 pt-2 pb-0.5 text-[10px] font-medium uppercase tracking-widest text-muted-foreground/35">
                       {group.label}
                     </div>
                     <div className="divide-y divide-white/[0.03]">

@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ChevronDown } from 'lucide-react';
 import { NotificationCard } from './NotificationCard';
 import { DisplayNotification } from './types';
 import { SMOOTH } from './constants';
@@ -24,7 +23,6 @@ export function NotificationStack({
 }: NotificationStackProps) {
   const [expanded, setExpanded] = useState(false);
 
-  // Single notification — render directly
   if (notification.count <= 1) {
     return (
       <NotificationCard
@@ -41,7 +39,6 @@ export function NotificationStack({
 
   return (
     <div>
-      {/* Summary row — click to expand/collapse */}
       <NotificationCard
         notification={notification}
         group={group}
@@ -50,27 +47,28 @@ export function NotificationStack({
         onTap={() => setExpanded(v => !v)}
       />
 
-      {/* Expanded children */}
       <AnimatePresence>
         {expanded && children.length > 0 && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ ...SMOOTH, duration: 0.25 }}
-            className="overflow-hidden ml-8 pl-1 border-l border-white/[0.04]"
+            transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+            className="overflow-hidden ml-10 mb-1"
           >
-            {children.map((child, i) => (
-              <NotificationCard
-                key={child.id}
-                notification={child}
-                group={group}
-                index={i}
-                stagger={0.02}
-                onTap={onTap}
-                compact
-              />
-            ))}
+            <div className="border-l border-white/[0.06] pl-2 py-0.5">
+              {children.map((child, i) => (
+                <NotificationCard
+                  key={child.id}
+                  notification={child}
+                  group={group}
+                  index={i}
+                  stagger={0.02}
+                  onTap={onTap}
+                  compact
+                />
+              ))}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

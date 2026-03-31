@@ -27,6 +27,27 @@ export function NotificationCard({
   const Icon = cfg.icon;
   const isUnread = !notification.read;
 
+  // Compact child row — no icon, text only
+  if (compact) {
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ ...SMOOTH, delay: index * stagger }}
+      >
+        <button
+          onClick={() => onTap(notification)}
+          className="flex w-full items-baseline justify-between gap-3 rounded-md px-3 py-1.5 text-left transition-colors hover:bg-white/[0.04]"
+        >
+          <p className="text-xs text-foreground/60 truncate">{notification.title}</p>
+          <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground/30">
+            {formatTime(notification.created_at, group)}
+          </span>
+        </button>
+      </motion.div>
+    );
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 6 }}
@@ -36,58 +57,55 @@ export function NotificationCard({
       <button
         onClick={() => onTap(notification)}
         className={[
-          'relative flex w-full items-center gap-3 rounded-lg px-3 text-left transition-colors',
-          compact ? 'py-2' : 'py-2.5',
+          'relative flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors',
           isUnread
             ? 'hover:bg-white/[0.05]'
             : 'hover:bg-white/[0.03]',
         ].join(' ')}
       >
-        {/* Unread dot — small, to the left of icon */}
-        {isUnread && !compact && (
-          <div className="absolute left-1.5 top-1/2 -translate-y-1/2 size-1.5 rounded-full bg-seeko-accent" />
-        )}
-
-        {/* Icon */}
-        <div
-          className={`flex shrink-0 items-center justify-center rounded-lg ${
-            compact ? 'size-6' : 'size-8'
-          } ${
-            isUnread
-              ? `${cfg.bg} ${cfg.className}`
-              : 'bg-white/[0.05] text-muted-foreground/50'
-          }`}
-        >
-          <Icon className={compact ? 'size-3' : 'size-4'} />
+        {/* Icon with optional unread badge */}
+        <div className="relative shrink-0">
+          <div
+            className={`flex size-8 items-center justify-center rounded-lg ${
+              isUnread
+                ? `${cfg.bg} ${cfg.className}`
+                : 'bg-white/[0.05] text-muted-foreground/50'
+            }`}
+          >
+            <Icon className="size-4" />
+          </div>
+          {isUnread && (
+            <div className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-seeko-accent ring-2 ring-[#1a1a1a]" />
+          )}
         </div>
 
         {/* Content */}
         <div className="flex-1 min-w-0">
           <div className="flex items-baseline justify-between gap-2">
             <p
-              className={`text-[13px] leading-snug truncate ${
+              className={`text-[13px] leading-tight truncate ${
                 isUnread
                   ? 'font-medium text-foreground'
-                  : 'text-foreground/60'
+                  : 'text-foreground/55'
               }`}
             >
               {notification.title}
               {notification.count > 1 && (
-                <span className="ml-1.5 inline-flex items-center rounded-md px-1.5 py-px text-[10px] font-medium bg-white/[0.08] text-muted-foreground/70">
+                <span className="ml-1.5 inline-flex items-center rounded-md px-1.5 py-px text-[10px] font-medium bg-white/[0.08] text-muted-foreground/60 align-middle">
                   {notification.count}
                 </span>
               )}
             </p>
-            <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground/35">
+            <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground/30">
               {formatTime(notification.created_at, group)}
             </span>
           </div>
           {notification.body && (
             <p
-              className={`text-xs mt-0.5 line-clamp-1 ${
+              className={`text-[11px] mt-0.5 line-clamp-1 ${
                 isUnread
-                  ? 'text-muted-foreground/55'
-                  : 'text-muted-foreground/35'
+                  ? 'text-muted-foreground/50'
+                  : 'text-muted-foreground/30'
               }`}
             >
               {notification.body}
