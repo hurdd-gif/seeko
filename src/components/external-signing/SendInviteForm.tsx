@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Send, Upload, FileText, Loader2, X, Eye, ChevronDown, ChevronUp, AlertCircle, Calendar } from 'lucide-react';
+import { Send, Upload, FileText, Loader2, X, Eye, ChevronDown, ChevronUp, AlertCircle, Calendar, ShieldCheck } from 'lucide-react';
 import { acquireScrollLock, releaseScrollLock } from '@/lib/scroll-lock';
 import { EXTERNAL_TEMPLATES } from '@/lib/external-agreement-templates';
 import { Button } from '@/components/ui/button';
@@ -33,6 +33,7 @@ export function SendInviteForm({ onInviteSent }: SendInviteFormProps) {
   const [showPreview, setShowPreview] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [showOptions, setShowOptions] = useState(false);
+  const [isGuardianSigning, setIsGuardianSigning] = useState(false);
 
   async function handlePdfUpload(file: File) {
     setParsing(true);
@@ -88,6 +89,10 @@ export function SendInviteForm({ onInviteSent }: SendInviteFormProps) {
         payload.custom_title = customTitle;
       }
 
+      if (isGuardianSigning) {
+        payload.is_guardian_signing = true;
+      }
+
       const res = await fetch('/api/external-signing/invite', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -106,6 +111,7 @@ export function SendInviteForm({ onInviteSent }: SendInviteFormProps) {
       setCustomTitle('');
       setTemplateMode('preset');
       setShowOptions(false);
+      setIsGuardianSigning(false);
       onInviteSent();
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Failed to send invite');
@@ -270,6 +276,38 @@ export function SendInviteForm({ onInviteSent }: SendInviteFormProps) {
             )}
           </div>
 
+          {/* ── Guardian toggle ── */}
+          <button
+            type="button"
+            onClick={() => setIsGuardianSigning(!isGuardianSigning)}
+            className={`flex w-full cursor-pointer items-center gap-3 rounded-lg px-4 py-3 text-left transition-all ${
+              isGuardianSigning
+                ? 'bg-seeko-accent/8 ring-1 ring-seeko-accent/25'
+                : 'bg-muted/30 hover:bg-muted/50'
+            }`}
+          >
+            <div className={`flex size-8 shrink-0 items-center justify-center rounded-lg transition-colors ${
+              isGuardianSigning ? 'bg-seeko-accent/15 text-seeko-accent' : 'bg-muted text-muted-foreground'
+            }`}>
+              <ShieldCheck className="size-4" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-foreground">Guardian signing for a minor</p>
+              <p className="text-xs text-muted-foreground">A parent or legal guardian will sign on behalf of someone under 18</p>
+            </div>
+            <div className={`flex size-5 shrink-0 items-center justify-center rounded-full border-2 transition-all ${
+              isGuardianSigning
+                ? 'border-seeko-accent bg-seeko-accent'
+                : 'border-muted-foreground/30'
+            }`}>
+              {isGuardianSigning && (
+                <svg viewBox="0 0 12 12" className="size-3 text-background" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M2.5 6L5 8.5L9.5 3.5" />
+                </svg>
+              )}
+            </div>
+          </button>
+
           {/* ── Options toggle ── */}
           <button
             type="button"
@@ -367,15 +405,16 @@ export function SendInviteForm({ onInviteSent }: SendInviteFormProps) {
           customTitle={customTitle}
           expiration={expiration}
           customDate={customDate}
+          isGuardianSigning={isGuardianSigning}
         />
       </CardContent>
     </Card>
   );
 }
 
-function ConfirmDialog({ show, onClose, onConfirm, email, templateMode, templateName, customTitle: title, expiration, customDate }: {
+function ConfirmDialog({ show, onClose, onConfirm, email, templateMode, templateName, customTitle: title, expiration, customDate, isGuardianSigning }: {
   show: boolean; onClose: () => void; onConfirm: () => void;
-  email: string; templateMode: string; templateName: string; customTitle: string; expiration: string; customDate: string;
+  email: string; templateMode: string; templateName: string; customTitle: string; expiration: string; customDate: string; isGuardianSigning: boolean;
 }) {
   useEffect(() => {
     if (!show) return;
@@ -421,6 +460,12 @@ function ConfirmDialog({ show, onClose, onConfirm, email, templateMode, template
                           : title || 'Custom PDF'}
                       </span>
                     </div>
+                    {isGuardianSigning && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Signing type</span>
+                        <span className="text-foreground text-xs">Guardian (for a minor)</span>
+                      </div>
+                    )}
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Expires</span>
                       <span className="text-foreground text-xs">

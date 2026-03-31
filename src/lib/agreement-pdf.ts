@@ -8,6 +8,7 @@ interface PdfSigner {
   department?: string;
   role?: string;
   engagementType?: 'team_member' | 'contractor';
+  minorName?: string;
 }
 
 interface PdfInput {
@@ -164,10 +165,18 @@ export async function generateAgreementPdf(input: PdfInput): Promise<Uint8Array>
   const signerLabel = input.signer.engagementType === 'contractor'
     ? '"Contractor" or "Receiving Party"'
     : '"Receiving Party"';
-  drawWrapped(
-    `${input.signer.fullName}, ${input.signer.address}, ${input.signer.email} (${signerLabel}).`,
-    10, timesBold, 14, 24
-  );
+  const isGuardian = !!input.signer.minorName;
+  if (isGuardian) {
+    drawWrapped(
+      `${input.signer.fullName}, ${input.signer.address}, ${input.signer.email}, acting as parent/legal guardian on behalf of ${input.signer.minorName} (${signerLabel}).`,
+      10, timesBold, 14, 24
+    );
+  } else {
+    drawWrapped(
+      `${input.signer.fullName}, ${input.signer.address}, ${input.signer.email} (${signerLabel}).`,
+      10, timesBold, 14, 24
+    );
+  }
   y -= 6;
 
   drawWrapped(
@@ -275,6 +284,18 @@ export async function generateAgreementPdf(input: PdfInput): Promise<Uint8Array>
     color: BLACK,
   });
   y -= 24;
+
+  // Minor's name (guardian signing)
+  if (input.signer.minorName) {
+    page.drawText(`Signing on behalf of:  ${input.signer.minorName}`, {
+      x: MARGIN,
+      y,
+      size: 10,
+      font: timesRoman,
+      color: BLACK,
+    });
+    y -= 24;
+  }
 
   // Electronic notice
   page.drawText('This document was signed electronically via SEEKO Studio.', {

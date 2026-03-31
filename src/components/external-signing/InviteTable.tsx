@@ -29,7 +29,7 @@ export function InviteTable({ refreshKey }: InviteTableProps) {
     const supabase = createClient();
     const { data } = await supabase
       .from('external_signing_invites')
-      .select('id, token, recipient_email, status, template_type, template_id, custom_title, personal_note, expires_at, signed_at, created_at, verification_attempts, created_by, signer_name')
+      .select('id, token, recipient_email, status, template_type, template_id, custom_title, personal_note, expires_at, signed_at, created_at, verification_attempts, created_by, signer_name, is_guardian_signing')
       .order('created_at', { ascending: false });
     setInvites((data as ExternalSigningInvite[]) || []);
     setLoading(false);
@@ -124,7 +124,12 @@ export function InviteTable({ refreshKey }: InviteTableProps) {
           <tbody>
             {invites.map((invite) => (
               <tr key={invite.id} className="border-b border-border/50 transition-colors hover:bg-muted/20">
-                <td className="px-4 py-3 text-foreground font-mono text-xs">{invite.recipient_email}</td>
+                <td className="px-4 py-3 text-foreground font-mono text-xs">
+                  {invite.recipient_email}
+                  {invite.is_guardian_signing && (
+                    <Badge variant="outline" className="ml-2 text-[10px]">Guardian</Badge>
+                  )}
+                </td>
                 <td className="px-4 py-3 text-muted-foreground text-xs">
                   {invite.template_type === 'preset' ? invite.template_id : invite.custom_title || 'Custom'}
                 </td>

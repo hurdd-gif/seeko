@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
 
   // 2. Validate body
   const body = await request.json();
-  const { recipient_email, template_type, template_id, custom_sections, custom_title, personal_note, expires_at } = body;
+  const { recipient_email, template_type, template_id, custom_sections, custom_title, personal_note, expires_at, is_guardian_signing } = body;
 
   if (!recipient_email || typeof recipient_email !== 'string' || recipient_email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient_email)) {
     return NextResponse.json({ error: 'Valid email required' }, { status: 400 });
@@ -85,6 +85,7 @@ export async function POST(request: NextRequest) {
       custom_sections: template_type === 'custom' ? custom_sections : null,
       custom_title: template_type === 'custom' ? custom_title : null,
       personal_note: personal_note || null,
+      is_guardian_signing: !!is_guardian_signing,
       expires_at: expiresDate.toISOString(),
       verification_code: hashedCode,
       status: 'pending',

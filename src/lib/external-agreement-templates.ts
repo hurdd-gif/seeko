@@ -104,3 +104,27 @@ export const EXTERNAL_TEMPLATES: ExternalTemplate[] = [
 export function getTemplateById(id: string): ExternalTemplate | undefined {
   return EXTERNAL_TEMPLATES.find((t) => t.id === id);
 }
+
+export const GUARDIAN_AUTHORIZATION_SECTION: ExternalAgreementSection = {
+  number: 0,
+  title: 'Guardian Authorization',
+  content: `<p>The undersigned ("Guardian") represents and warrants that they are the parent or legal guardian of the minor identified in the signature block below ("Minor"), and that they have full legal authority to enter into this Agreement on behalf of the Minor.</p>
+<p>By signing this Agreement, the Guardian:</p>
+<ul>
+<li>Consents to the Minor's engagement with SEEKO Studios under the terms set forth herein</li>
+<li>Accepts responsibility for ensuring the Minor's compliance with all obligations under this Agreement</li>
+<li>Agrees to be bound by and liable for the Minor's performance of this Agreement</li>
+<li>Acknowledges that this Agreement shall remain in effect as to the Minor for the full term stated herein</li>
+</ul>
+<p>The Guardian further represents that they have read and understand all terms of this Agreement and have had the opportunity to seek independent legal counsel prior to signing.</p>`,
+};
+
+/** Append the Guardian Authorization section to a list of agreement sections */
+export function withGuardianSection(
+  sections: ExternalAgreementSection[]
+): ExternalAgreementSection[] {
+  return [
+    ...sections,
+    { ...GUARDIAN_AUTHORIZATION_SECTION, number: sections.length + 1 },
+  ];
+}

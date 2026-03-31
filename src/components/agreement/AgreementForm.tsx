@@ -59,6 +59,8 @@ interface AgreementFormProps {
   successRedirect?: string | null;
   // Optional personal note to display
   personalNote?: string;
+  // Guardian signing for a minor
+  isGuardianSigning?: boolean;
 }
 
 export function AgreementForm({
@@ -75,6 +77,7 @@ export function AgreementForm({
   signPayloadExtra,
   successRedirect,
   personalNote,
+  isGuardianSigning = false,
 }: AgreementFormProps) {
   const router = useRouter();
   const { trigger } = useHaptics();
@@ -92,6 +95,7 @@ export function AgreementForm({
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [minorName, setMinorName] = useState('');
 
   // Signature animation: plays inline, then pops up confirmation dialog
   const [signed, setSigned] = useState(false);
@@ -127,7 +131,7 @@ export function AgreementForm({
     }
   }, []);
 
-  const canSubmit = fullName.trim().length > 0 && address.trim().length > 0;
+  const canSubmit = fullName.trim().length > 0 && address.trim().length > 0 && (!isGuardianSigning || minorName.trim().length > 0);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -144,6 +148,7 @@ export function AgreementForm({
           full_name: fullName.trim(),
           address: address.trim(),
           ...(showEngagementType ? { engagement_type: engagementType } : {}),
+          ...(isGuardianSigning ? { minor_name: minorName.trim() } : {}),
           ...signPayloadExtra,
         }),
       });
@@ -293,7 +298,7 @@ export function AgreementForm({
                     <div
                       ref={scrollRef}
                       onScroll={handleScroll}
-                      className="max-h-[min(28rem,55dvh)] overflow-y-auto rounded-lg border border-border bg-muted/30 p-4 sm:p-5 prose prose-sm prose-invert max-w-none
+                      className="max-h-[min(32rem,60dvh)] overflow-y-auto rounded-md bg-muted/20 p-4 sm:p-5 prose prose-sm prose-invert max-w-none
                         [scrollbar-width:thin]
                         [&_h3]:text-base [&_h3]:font-semibold [&_h3]:text-foreground [&_h3]:mt-6 [&_h3]:mb-2
                         [&_p]:text-sm [&_p]:text-muted-foreground [&_p]:leading-relaxed [&_p]:mb-3
@@ -382,10 +387,14 @@ export function AgreementForm({
                     <Separator />
 
                     <div className="text-center">
-                      <p className="text-sm font-medium text-foreground">Sign the Agreement</p>
+                      <p className="text-sm font-medium text-foreground">
+                        {isGuardianSigning ? 'Sign as Guardian' : 'Sign the Agreement'}
+                      </p>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        By signing below, you agree to all terms outlined above.
-                        A signed PDF will be emailed to you for your records.
+                        {isGuardianSigning
+                          ? 'By signing below, you agree as the legal guardian of the named minor to all terms outlined above.'
+                          : 'By signing below, you agree to all terms outlined above.'}
+                        {' '}A signed PDF will be emailed to you for your records.
                       </p>
                     </div>
 
@@ -454,6 +463,28 @@ export function AgreementForm({
                         required
                       />
                     </motion.div>
+
+                    {/* Minor's name (guardian signing only) */}
+                    {isGuardianSigning && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ ...SPRING, delay: 0.45 }}
+                        className="space-y-2"
+                      >
+                        <Label htmlFor="minor-name">Minor&apos;s Full Legal Name</Label>
+                        <Input
+                          id="minor-name"
+                          value={minorName}
+                          onChange={(e) => setMinorName(e.target.value)}
+                          placeholder="Full legal name of the minor"
+                          required
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          The person under 18 you are signing on behalf of
+                        </p>
+                      </motion.div>
+                    )}
 
                     {/* Signature preview — SVG path drawing animation */}
                     {fullName.trim() && (
