@@ -15,6 +15,9 @@ import {
   DialogClose,
 } from '@/components/ui/dialog';
 import type { Area } from '@/lib/types';
+import { springs } from '@/lib/motion';
+import { ProgressBar } from '@/components/ui/progress';
+import { MonoBadge } from '@/components/ui/mono-badge';
 
 const PHASES = ['Alpha', 'Beta', 'Launch'] as const;
 const STATUSES = ['Active', 'Planned', 'Complete'] as const;
@@ -77,9 +80,7 @@ export function DashboardAreaCard({ area, isAdmin }: DashboardAreaCardProps) {
       <div className="flex items-start justify-between gap-2">
         <p className="text-sm font-medium text-foreground">{area.name}</p>
         {area.phase && (
-          <span className="shrink-0 rounded-md border border-white/[0.08] px-1.5 py-0.5 text-xs text-muted-foreground font-mono">
-            {area.phase}
-          </span>
+          <MonoBadge className="shrink-0">{area.phase}</MonoBadge>
         )}
       </div>
       {area.description && (
@@ -94,15 +95,7 @@ export function DashboardAreaCard({ area, isAdmin }: DashboardAreaCardProps) {
             {area.progress}%
           </span>
         </div>
-        <div className="w-full h-2.5 rounded-full bg-secondary overflow-hidden">
-          <motion.div
-            initial={{ width: 0 }}
-            animate={{ width: `${area.progress}%` }}
-            transition={{ type: 'spring', stiffness: 200, damping: 25, delay: 0.3 }}
-            className="h-full rounded-full"
-            style={{ backgroundColor: 'var(--color-seeko-accent)' }}
-          />
-        </div>
+        <ProgressBar value={area.progress} size="lg" delay={0.3} />
       </div>
     </div>
   );
@@ -115,7 +108,7 @@ export function DashboardAreaCard({ area, isAdmin }: DashboardAreaCardProps) {
             <button
               type="button"
               onClick={handleOpen}
-              className="w-full text-left rounded-lg bg-white/[0.03] border border-transparent transition-all hover:bg-white/[0.06] hover:border-seeko-accent/10 hover:shadow-[0_0_12px_rgba(110,231,183,0.04)] focus:outline-none focus:ring-2 focus:ring-seeko-accent/30"
+              className="w-full text-left rounded-lg interactive-surface focus:outline-none focus:ring-2 focus:ring-seeko-accent/30"
             >
               {cardContent}
             </button>
@@ -133,9 +126,7 @@ export function DashboardAreaCard({ area, isAdmin }: DashboardAreaCardProps) {
           <div className="flex items-center gap-2.5">
             <DialogTitle>{area.name}</DialogTitle>
             {phase && (
-              <span className="rounded-md border border-white/[0.08] px-1.5 py-0.5 text-xs text-muted-foreground font-mono">
-                {phase || area.phase}
-              </span>
+              <MonoBadge>{phase || area.phase}</MonoBadge>
             )}
           </div>
         </DialogHeader>
@@ -156,14 +147,7 @@ export function DashboardAreaCard({ area, isAdmin }: DashboardAreaCardProps) {
               <span className="text-xs text-muted-foreground">%</span>
             </div>
           </div>
-          <div className="w-full h-2 rounded-full bg-secondary overflow-hidden">
-            <motion.div
-              animate={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
-              transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-              className="h-full rounded-full"
-              style={{ backgroundColor: 'var(--color-seeko-accent)' }}
-            />
-          </div>
+          <ProgressBar value={progress} />
         </div>
 
         {/* Status + Phase — side by side */}

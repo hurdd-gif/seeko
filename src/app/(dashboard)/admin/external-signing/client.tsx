@@ -5,8 +5,9 @@ import { motion } from 'motion/react';
 import { FileSignature } from 'lucide-react';
 import { SendInviteForm } from '@/components/external-signing/SendInviteForm';
 import { InviteTable } from '@/components/external-signing/InviteTable';
+import { springs } from '@/lib/motion';
 
-const SPRING = { type: 'spring' as const, stiffness: 300, damping: 25 };
+const SPRING = springs.smooth;
 
 export function ExternalSigningAdmin() {
   const [refreshKey, setRefreshKey] = useState(0);

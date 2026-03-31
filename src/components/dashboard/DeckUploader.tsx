@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { FileUp, Loader2, Upload, X } from 'lucide-react';
+import { ProgressBar } from '@/components/ui/progress';
 
 interface Slide {
   url: string;
@@ -135,12 +136,7 @@ export function DeckUploader({ deckId, getDeckId, existingSlides = [], onSlidesC
           <p className="text-sm text-muted-foreground">
             Processing slide {progress.current} of {progress.total}...
           </p>
-          <div className="w-full h-2 rounded-full bg-secondary overflow-hidden">
-            <div
-              className="h-full rounded-full bg-seeko-accent transition-all duration-300"
-              style={{ width: `${progress.total > 0 ? (progress.current / progress.total) * 100 : 0}%` }}
-            />
-          </div>
+          <ProgressBar value={progress.total > 0 ? (progress.current / progress.total) * 100 : 0} animated={false} />
         </div>
       )}
 

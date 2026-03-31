@@ -6,8 +6,9 @@ import { FileCheck, Clock, Ban, FileText } from 'lucide-react';
 import { VerificationForm } from '@/components/external-signing/VerificationForm';
 import { AgreementForm } from '@/components/agreement/AgreementForm';
 import { withGuardianSection } from '@/lib/external-agreement-templates';
+import { springs } from '@/lib/motion';
 
-const SPRING = { type: 'spring' as const, stiffness: 300, damping: 25 };
+const SPRING = springs.smooth;
 
 interface SigningPageClientProps {
   token: string;

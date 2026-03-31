@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { Badge } from '@/components/ui/badge';
+import { ProgressBar } from '@/components/ui/progress';
 import { StaggerItem, HoverCard } from '@/components/motion';
 import {
   Dialog,
@@ -288,12 +289,7 @@ export function InvestorAreaCard({ area, tasksInArea, isAdmin = false }: Investo
               <span className="text-xs text-muted-foreground/50 font-medium uppercase tracking-wider">Not started</span>
             </div>
           ) : (
-            <div className="w-full h-2 rounded-full bg-secondary overflow-hidden">
-              <div
-                className="h-full rounded-full transition-all"
-                style={{ width: `${area.progress}%`, backgroundColor: 'var(--color-seeko-accent)' }}
-              />
-            </div>
+            <ProgressBar value={area.progress} animated={false} />
           )}
         </div>
 

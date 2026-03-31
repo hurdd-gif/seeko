@@ -4,6 +4,7 @@ import { motion, useReducedMotion } from 'motion/react';
 import { CheckSquare } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
+import { springs } from '@/lib/motion';
 
 interface Pill {
   label: string;
@@ -18,7 +19,6 @@ const VARIANT_STYLES = {
   muted: 'border-border text-muted-foreground',
 } as const;
 
-const SPRING = { type: 'spring' as const, stiffness: 500, damping: 30 };
 
 export function StatPills({
   pills,
@@ -50,7 +50,7 @@ export function StatPills({
         const motionProps = shouldReduce ? {} : {
           initial: { opacity: 0, scale: 0.8, y: 8 },
           animate: { opacity: 1, scale: 1, y: 0 },
-          transition: { ...SPRING, delay: delayMs + i * staggerMs },
+          transition: { ...springs.snappy, delay: delayMs + i * staggerMs },
         };
 
         if (pill.href) {

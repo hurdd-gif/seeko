@@ -10,8 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Camera, Loader2, ArrowRight } from 'lucide-react';
-import { springs } from '@/components/motion';
-import { DURATION_STATE_MS } from '@/lib/motion';
+import { springs, DURATION_STATE_MS } from '@/lib/motion';
 import { useHaptics } from '@/components/HapticsProvider';
 
 const COMMON_TIMEZONES = [
@@ -246,7 +245,7 @@ export function OnboardingForm({
             className="inline-flex w-full items-center justify-center gap-2 whitespace-nowrap rounded-md bg-primary text-primary-foreground text-sm font-medium h-9 px-4 py-2 transition-colors transition-[box-shadow_var(--focus-ring-duration)_ease-out] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+            transition={springs.snappy}
           >
             <AnimatePresence mode="wait">
               <motion.span

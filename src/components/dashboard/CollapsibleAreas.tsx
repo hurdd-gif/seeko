@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { DashboardAreaCard } from '@/components/dashboard/DashboardAreaCard';
 import { Stagger } from '@/components/motion';
 import type { Area } from '@/lib/types';
+import { springs } from '@/lib/motion';
 
 interface CollapsibleAreasProps {
   areas: Area[];
@@ -31,7 +32,7 @@ export function CollapsibleAreas({ areas, isAdmin, subtitle }: CollapsibleAreasP
             </div>
             <motion.div
               animate={{ rotate: open ? 180 : 0 }}
-              transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+              transition={springs.smooth}
             >
               <ChevronDown className="size-4 text-muted-foreground" />
             </motion.div>
@@ -45,7 +46,7 @@ export function CollapsibleAreas({ areas, isAdmin, subtitle }: CollapsibleAreasP
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 28 }}
+            transition={springs.smooth}
             className="overflow-hidden"
           >
             <CardContent>

@@ -24,9 +24,10 @@ import {
 } from 'lucide-react';
 import { TOUR_STEP_IDS } from '@/lib/tour-constants';
 import { useHaptics } from '@/components/HapticsProvider';
+import { springs } from '@/lib/motion';
 
-const SMOOTH = { type: 'spring' as const, stiffness: 300, damping: 25 };
-const SNAPPY = { type: 'spring' as const, stiffness: 500, damping: 30 };
+const SMOOTH = springs.smooth;
+const SNAPPY = springs.snappy;
 
 const TOOLTIP = {
   initialX: -4,

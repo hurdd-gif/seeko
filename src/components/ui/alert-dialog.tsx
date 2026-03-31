@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { acquireScrollLock, releaseScrollLock } from '@/lib/scroll-lock';
+import { springs } from '@/lib/motion';
 
 interface AlertDialogProps {
   open: boolean;
@@ -65,7 +66,7 @@ function AlertDialogContent({
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
-      transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+      transition={springs.firm}
       onClick={e => e.stopPropagation()}
     >
       {children}

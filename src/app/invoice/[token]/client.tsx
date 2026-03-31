@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { VerificationForm } from '@/components/external-signing/VerificationForm';
 import { toast } from 'sonner';
+import { springs } from '@/lib/motion';
 
 /* ─────────────────────────────────────────────────────────
  * ANIMATION STORYBOARD
@@ -17,7 +18,7 @@ import { toast } from 'sonner';
  *  ---     total animates smoothly on amount change
  * ───────────────────────────────────────────────────────── */
 
-const SPRING = { type: 'spring' as const, stiffness: 400, damping: 28 };
+const SPRING = springs.firm;
 
 interface LineItem {
   label: string;

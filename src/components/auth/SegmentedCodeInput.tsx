@@ -13,9 +13,10 @@
 import React, { useState, useRef, useCallback, useEffect, type KeyboardEvent, type ClipboardEvent } from 'react';
 import { motion } from 'motion/react';
 import { cn } from '@/lib/utils';
+import { springs } from '@/lib/motion';
 
 const CELL_COUNT = 8;
-const SPRING = { type: 'spring' as const, stiffness: 300, damping: 25 };
+const SPRING = springs.smooth;
 
 interface SegmentedCodeInputProps {
   value: string;
@@ -84,7 +85,7 @@ export function SegmentedCodeInput({ value, onChange, disabled }: SegmentedCodeI
   return (
     <motion.div
       animate={{ scale: filledCount > 0 ? 1.05 : 1 }}
-      transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+      transition={springs.firm}
       className="flex items-center justify-center gap-1 sm:gap-1.5 w-full max-w-sm mx-auto px-1.5"
     >
       {digits.map((digit, i) => (

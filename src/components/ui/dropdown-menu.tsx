@@ -16,9 +16,10 @@ import { createPortal } from "react-dom"
 import { motion, AnimatePresence } from "motion/react"
 import { Check } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { springs } from "@/lib/motion"
 
 const DROPDOWN = {
-  enter: { type: 'spring' as const, stiffness: 500, damping: 30 },
+  enter: springs.snappy,
   exit: { duration: 0.12, ease: 'easeOut' as const },
 }
 
@@ -269,7 +270,7 @@ const DropdownMenuItem = React.forwardRef<HTMLButtonElement, DropdownMenuItemPro
           <motion.span
             initial={false}
             animate={{ width: selected ? 16 : 0, opacity: selected ? 1 : 0 }}
-            transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+            transition={springs.snappy}
             className="flex items-center justify-center shrink-0 overflow-hidden"
           >
             <Check className="size-3.5 text-seeko-accent shrink-0" />

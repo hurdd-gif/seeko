@@ -6,9 +6,10 @@ import { FileText, Presentation, Clock, XCircle, AlertTriangle, Shield } from 'l
 import { VerificationForm } from '@/components/external-signing/VerificationForm';
 import { DocContent } from '@/components/dashboard/DocContent';
 import { DeckViewer } from '@/components/dashboard/DeckViewer';
+import { springs } from '@/lib/motion';
 
-const SPRING = { type: 'spring' as const, stiffness: 400, damping: 28 };
-const SMOOTH = { type: 'spring' as const, stiffness: 300, damping: 25 };
+const SPRING = springs.firm;
+const SMOOTH = springs.smooth;
 
 /* ─────────────────────────────────────────────────────────
  * ANIMATION STORYBOARD — Shared Viewer

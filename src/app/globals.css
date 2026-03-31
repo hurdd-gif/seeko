@@ -52,6 +52,31 @@
 
   /* Border radius */
   --radius: 0.5rem;
+
+  /* Surface opacity scale */
+  --opacity-subtle:   0.02;
+  --opacity-faint:    0.03;
+  --opacity-soft:     0.04;
+  --opacity-muted:    0.06;
+  --opacity-border:   0.08;
+  --opacity-visible:  0.15;
+
+  /* Accent shadows */
+  --shadow-accent-glow:  0 0 12px rgba(110, 231, 183, 0.04);
+  --shadow-accent-inset: inset 0 0 0 1px rgba(110, 231, 183, 0.2);
+}
+
+@layer utilities {
+  .interactive-surface {
+    background-color: rgb(255 255 255 / 0.03);
+    border: 1px solid transparent;
+    transition: background-color 150ms, border-color 150ms, box-shadow 150ms;
+  }
+  .interactive-surface:hover {
+    background-color: rgb(255 255 255 / 0.06);
+    border-color: rgb(110 231 183 / 0.1);
+    box-shadow: 0 0 12px rgba(110, 231, 183, 0.04);
+  }
 }
 
 body {

@@ -12,8 +12,9 @@ import { Card, CardContent } from '@/components/ui/card';
 import { DatePicker } from '@/components/ui/date-picker';
 import { toast } from 'sonner';
 import DOMPurify from 'dompurify';
+import { springs } from '@/lib/motion';
 
-const SPRING = { type: 'spring' as const, stiffness: 300, damping: 25 };
+const SPRING = springs.smooth;
 
 interface SendInviteFormProps {
   onInviteSent: () => void;
