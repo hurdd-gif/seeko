@@ -18,8 +18,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Bell, BellOff, AtSign, AlertTriangle, CheckSquare, FileText, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-const SPRING = { type: 'spring' as const, stiffness: 500, damping: 30 };
+import { springs } from '@/lib/motion';
 
 const channels = [
   {
@@ -91,7 +90,7 @@ export function NotificationsPanel() {
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ ...SPRING, delay: 0 }}
+        transition={{ ...springs.snappy, delay: 0 }}
       >
         <Card>
           <CardHeader>
@@ -106,7 +105,7 @@ export function NotificationsPanel() {
                   onClick={() => setSelectedLevel(level.id)}
                   animate={selectedLevel === level.id ? { scale: 1 } : { scale: 1 }}
                   whileTap={{ scale: 0.98 }}
-                  transition={SPRING}
+                  transition={springs.snappy}
                   className={cn(
                     'flex items-center gap-4 rounded-lg border p-4 text-left transition-colors',
                     selectedLevel === level.id
@@ -128,7 +127,7 @@ export function NotificationsPanel() {
                     <motion.div
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
-                      transition={SPRING}
+                      transition={springs.snappy}
                       className="size-2 rounded-full bg-seeko-accent shrink-0"
                     />
                   )}
@@ -142,7 +141,7 @@ export function NotificationsPanel() {
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ ...SPRING, delay: 0.1 }}
+        transition={{ ...springs.snappy, delay: 0.1 }}
       >
         <Card>
           <CardHeader>
@@ -185,7 +184,7 @@ export function NotificationsPanel() {
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ ...SPRING, delay: 0.2 }}
+        transition={{ ...springs.snappy, delay: 0.2 }}
         className="flex items-center justify-between"
       >
         <p className="text-xs text-muted-foreground">

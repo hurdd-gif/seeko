@@ -5,8 +5,7 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { ChevronDown, Check, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-const SELECT_SPRING = { type: 'spring' as const, stiffness: 500, damping: 30 };
+import { springs } from '@/lib/motion';
 
 interface SelectOption {
   value: string;
@@ -146,7 +145,7 @@ const Select = React.forwardRef<
         <span className="truncate">{selected?.label || 'Select...'}</span>
         <motion.span
           animate={{ rotate: open ? 180 : 0 }}
-          transition={SELECT_SPRING}
+          transition={springs.snappy}
           className="ml-2 flex shrink-0 items-center"
         >
           <ChevronDown className="size-3.5 text-muted-foreground" />
@@ -163,7 +162,7 @@ const Select = React.forwardRef<
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.97 }}
-                transition={SELECT_SPRING}
+                transition={springs.snappy}
                 style={{
                   position: 'fixed',
                   zIndex: 100,
@@ -212,7 +211,7 @@ const Select = React.forwardRef<
                           <motion.span
                             initial={false}
                             animate={{ width: isSelected ? 16 : 0, opacity: isSelected ? 1 : 0 }}
-                            transition={SELECT_SPRING}
+                            transition={springs.snappy}
                             className="flex items-center justify-center shrink-0 overflow-hidden"
                           >
                             <Check className="size-3 text-seeko-accent shrink-0" />

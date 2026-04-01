@@ -11,9 +11,10 @@ import { toast } from 'sonner';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { useHaptics } from '@/components/HapticsProvider';
+import { springs } from '@/lib/motion';
 
 const NAV_HIGHLIGHT = {
-  spring: { type: 'spring' as const, stiffness: 380, damping: 30 },
+  spring: springs.firm,
 };
 
 /* ─────────────────────────────────────────────────────────
@@ -25,7 +26,7 @@ const NAV_HIGHLIGHT = {
  * ───────────────────────────────────────────────────────── */
 
 const BOTTOM_NAV = {
-  tapSpring: { type: 'spring' as const, stiffness: 450, damping: 28 },
+  tapSpring: springs.snappy,
   tapScale: 0.92,
 };
 

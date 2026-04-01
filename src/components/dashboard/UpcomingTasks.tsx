@@ -9,6 +9,7 @@ import { formatDeadline } from '@/lib/format-deadline';
 import { Stagger, StaggerItem } from '@/components/motion';
 import { EmptyState } from '@/components/ui/empty-state';
 import { TaskDetail } from '@/components/dashboard/TaskDetail';
+import { springs } from '@/lib/motion';
 
 const STATUS_ICONS: Record<string, { icon: typeof Circle; className: string; bg: string }> = {
   'Complete':     { icon: CheckCircle2, className: 'text-[var(--color-status-complete)]', bg: 'bg-emerald-500/10' },
@@ -24,7 +25,6 @@ const PRIORITY_COLOR: Record<string, string> = {
   Low:    'text-muted-foreground/60',
 };
 
-const SPRING = { type: 'spring' as const, stiffness: 500, damping: 30 };
 
 interface UpcomingTasksProps {
   tasks: Task[];
@@ -64,7 +64,7 @@ export function UpcomingTasks({ tasks, team, docs, currentUserId, emptyAction, i
                 onClick={() => setSelectedTask(task)}
                 whileHover={shouldReduce ? undefined : { y: -1, backgroundColor: 'rgba(255,255,255,0.04)' }}
                 whileTap={shouldReduce ? undefined : { scale: 0.995 }}
-                transition={SPRING}
+                transition={springs.snappy}
                 className="flex w-full cursor-pointer items-center justify-between rounded-lg p-3 text-left"
               >
                 <div className="flex items-center gap-3 min-w-0 flex-1">

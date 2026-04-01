@@ -13,11 +13,13 @@ import { useState } from 'react';
 import { DollarSign, Users, Calendar, TrendingUp, ChevronDown, ChevronUp, ArrowUp, ArrowDown } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { FadeRise, Stagger, StaggerItem, HoverCard } from '@/components/motion';
+import { ProgressBar } from '@/components/ui/progress';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { motion, AnimatePresence } from 'motion/react';
 import type { Payment } from '@/lib/types';
+import { springs } from '@/lib/motion';
 
 /* ─── Helpers ────────────────────────────────────────────── */
 
@@ -199,15 +201,7 @@ export function PaymentsInvestor({ payments, stats, lastMonthTotal, monthCount =
                         </span>
                       </div>
                     </div>
-                    <div className="w-full h-2 rounded-full bg-secondary overflow-hidden">
-                      <div
-                        className="h-full rounded-full transition-all duration-500"
-                        style={{
-                          width: `${(month.total / maxMonthTotal) * 100}%`,
-                          backgroundColor: 'var(--color-seeko-accent)',
-                        }}
-                      />
-                    </div>
+                    <ProgressBar value={(month.total / maxMonthTotal) * 100} animated={false} />
                   </div>
                 ))}
               </div>
@@ -386,7 +380,7 @@ export function PaymentsInvestor({ payments, stats, lastMonthTotal, monthCount =
                             initial={{ height: 0, opacity: 0 }}
                             animate={{ height: 'auto', opacity: 1 }}
                             exit={{ height: 0, opacity: 0 }}
-                            transition={{ type: 'spring', stiffness: 300, damping: 28 }}
+                            transition={springs.smooth}
                             className="overflow-hidden"
                           >
                             <div className="pb-3 pl-11 pr-2">

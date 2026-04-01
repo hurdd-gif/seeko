@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
 import { X } from 'lucide-react';
 import { acquireScrollLock, releaseScrollLock } from '@/lib/scroll-lock';
+import { springs } from '@/lib/motion';
 
 export function ContractorToggle({ userId, isContractor }: { userId: string; isContractor: boolean }) {
   const [confirming, setConfirming] = useState(false);
@@ -67,7 +68,7 @@ export function ContractorToggle({ userId, isContractor }: { userId: string; isC
               initial={{ opacity: 0, scale: 0.95, y: 8 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.97, y: 6 }}
-              transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+              transition={springs.firm}
             >
               <button
                 onClick={() => setConfirming(false)}

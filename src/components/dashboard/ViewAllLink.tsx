@@ -4,6 +4,7 @@ import { motion, useReducedMotion } from 'motion/react';
 import { ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
+import { springs } from '@/lib/motion';
 
 interface ViewAllLinkProps {
   href: string;
@@ -26,7 +27,7 @@ export function ViewAllLink({ href, label, className }: ViewAllLinkProps) {
       <motion.span
         className="inline-flex"
         whileHover={shouldReduce ? undefined : { x: 3 }}
-        transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+        transition={springs.snappy}
       >
         <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
       </motion.span>

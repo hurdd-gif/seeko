@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { BUTTON_SPRING, DURATION_STATE_MS } from '@/lib/motion';
+import { springs, BUTTON_SPRING, DURATION_STATE_MS } from '@/lib/motion';
 
 export interface TourStep {
   content: ReactNode;
@@ -56,7 +56,7 @@ interface TourProviderProps {
 const TourContext = createContext<TourContextType | null>(null);
 
 /* ── Spring used for cutout + tooltip glide ── */
-const POSITION_SPRING = { type: 'spring' as const, stiffness: 280, damping: 30 };
+const POSITION_SPRING = springs.smooth;
 
 function TourOverlay({
   elementPosition,

@@ -19,8 +19,7 @@ import { useCommandPalette } from '@/lib/hooks/useCommandPalette';
 import { acquireScrollLock, releaseScrollLock } from '@/lib/scroll-lock';
 import type { Profile, Doc } from '@/lib/types';
 import { cn } from '@/lib/utils';
-
-const SPRING = { type: 'spring' as const, stiffness: 500, damping: 30 };
+import { springs } from '@/lib/motion';
 const ROW_STAGGER = 0.025;
 
 type CommandItem = {
@@ -176,7 +175,7 @@ export function CommandPalette({ team, docs, decks = [], isContractor = false, i
             initial={shouldReduce ? undefined : { opacity: 0, scale: 0.95, y: -8 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.97, y: -8 }}
-            transition={SPRING}
+            transition={springs.snappy}
           >
             <div
               id="tour-command-palette"
@@ -217,7 +216,7 @@ export function CommandPalette({ team, docs, decks = [], isContractor = false, i
                           data-selected={isSelected}
                           initial={shouldReduce ? undefined : { opacity: 0, x: -8 }}
                           animate={{ opacity: 1, x: 0 }}
-                          transition={{ ...SPRING, delay: currentIndex * ROW_STAGGER }}
+                          transition={{ ...springs.snappy, delay: currentIndex * ROW_STAGGER }}
                           onClick={() => item.action()}
                           onMouseEnter={() => setSelectedIndex(currentIndex)}
                           className={cn(

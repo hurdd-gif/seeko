@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Mail, Loader2, RotateCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { springs } from '@/lib/motion';
 
 interface VerificationFormProps {
   token: string;
@@ -13,7 +14,7 @@ interface VerificationFormProps {
   verifyEndpoint?: string;
 }
 
-const SPRING = { type: 'spring' as const, stiffness: 300, damping: 25 };
+const SPRING = springs.smooth;
 const CODE_LENGTH = 6;
 const COOLDOWN_SECONDS = 60;
 

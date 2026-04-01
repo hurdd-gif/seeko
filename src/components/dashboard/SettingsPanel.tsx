@@ -24,8 +24,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { formatCurrency } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { Switch } from '@/components/ui/switch';
-
-const COLLAPSE_SPRING = { type: 'spring' as const, stiffness: 360, damping: 39, mass: 2.4 };
+import { springs } from '@/lib/motion';
 
 const COMMON_TIMEZONES = [
   'America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles',
@@ -417,7 +416,7 @@ export function SettingsPanel({ profile, isAdmin, team, revalidate, completedTas
                   initial={{ height: 0, opacity: 0 }}
                   animate={{ height: 'auto', opacity: 1 }}
                   exit={{ height: 0, opacity: 0 }}
-                  transition={COLLAPSE_SPRING}
+                  transition={springs.heavy}
                   className="overflow-hidden"
                 >
                   <div className="flex flex-col gap-4">

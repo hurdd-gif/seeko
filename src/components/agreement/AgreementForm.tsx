@@ -36,9 +36,10 @@ import { AddressAutocomplete } from '@/components/agreement/AddressAutocomplete'
 import { SignatureDrawing } from '@/components/agreement/SignatureDrawing';
 import { useHaptics } from '@/components/HapticsProvider';
 import DOMPurify from 'dompurify';
+import { springs } from '@/lib/motion';
 
-const SPRING = { type: 'spring' as const, stiffness: 300, damping: 25 };
-const SPRING_SNAPPY = { type: 'spring' as const, stiffness: 400, damping: 30 };
+const SPRING = springs.smooth;
+const SPRING_SNAPPY = springs.firm;
 
 interface AgreementFormProps {
   userId: string;

@@ -26,6 +26,7 @@ import { createPortal } from 'react-dom';
 import { Maximize2, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { acquireScrollLock, releaseScrollLock } from '@/lib/scroll-lock';
+import { springs } from '@/lib/motion';
 
 interface Slide {
   url: string;
@@ -39,8 +40,8 @@ interface DeckViewerProps {
   orientation?: 'horizontal' | 'vertical';
 }
 
-const SNAPPY = { type: 'spring' as const, stiffness: 500, damping: 30 };
-const SMOOTH = { type: 'spring' as const, stiffness: 300, damping: 25 };
+const SNAPPY = springs.snappy;
+const SMOOTH = springs.smooth;
 
 export function DeckViewer({ slides, title, notes, orientation = 'horizontal' }: DeckViewerProps) {
   const sorted = [...slides].sort((a, b) => a.sort_order - b.sort_order);

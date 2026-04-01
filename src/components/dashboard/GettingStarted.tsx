@@ -6,7 +6,7 @@ import { createBrowserClient } from '@supabase/ssr';
 import { Check, X, ArrowRight, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { BUTTON_SPRING, DURATION_STATE_MS } from '@/lib/motion';
+import { springs, BUTTON_SPRING, DURATION_STATE_MS } from '@/lib/motion';
 
 const STEPS = [
   {
@@ -174,7 +174,7 @@ export function GettingStarted({ userId }: { userId: string }) {
                         <motion.span
                           initial={{ scale: 0, opacity: 0 }}
                           animate={{ scale: 1, opacity: 1 }}
-                          transition={{ type: 'spring', stiffness: 500, damping: 25 }}
+                          transition={springs.snappy}
                         >
                           <Check className="size-3" strokeWidth={3} />
                         </motion.span>

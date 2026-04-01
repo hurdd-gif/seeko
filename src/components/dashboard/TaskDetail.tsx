@@ -36,7 +36,7 @@ import { cn, uuid } from '@/lib/utils';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { DURATION_BACKDROP_MS, PANEL_SPRING, PANEL, SLIDEOUT, SLIDEOUT_SPRING } from '@/lib/motion';
+import { springs, DURATION_BACKDROP_MS, PANEL_SPRING, PANEL, SLIDEOUT, SLIDEOUT_SPRING } from '@/lib/motion';
 import { formatDeadline, formatDeadlineFull } from '@/lib/format-deadline';
 import { acquireScrollLock, releaseScrollLock } from '@/lib/scroll-lock';
 
@@ -259,9 +259,7 @@ function CommentItem({
       }}
       exit={{ opacity: 0, height: 0, marginBottom: 0, transition: { duration: 0.15 } }}
       transition={{
-        type: 'spring',
-        stiffness: 380,
-        damping: 28,
+        ...springs.firm,
         delay: Math.min(staggerIndex * 0.04, 0.5),
         backgroundColor: { duration: 2, delay: 0.5 },
       }}
@@ -439,7 +437,7 @@ function CommentItem({
                 initial={{ scale: 0.9, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.9, opacity: 0 }}
-                transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                transition={springs.firm}
                 className="relative max-w-[90vw] max-h-[90vh]"
                 onClick={e => e.stopPropagation()}
               >
@@ -561,7 +559,7 @@ function CommentItem({
                 initial={{ y: '100%' }}
                 animate={{ y: 0 }}
                 exit={{ y: '100%' }}
-                transition={{ type: 'spring', stiffness: 400, damping: 34 }}
+                transition={springs.firm}
                 className="relative w-full max-w-md rounded-t-2xl border-t border-border bg-card pb-[env(safe-area-inset-bottom)]"
                 drag="y"
                 dragConstraints={{ top: 0, bottom: 0 }}
@@ -2004,7 +2002,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
             <motion.div
               className="absolute inset-0 rounded-lg bg-muted"
               layoutId="tab-highlight"
-              transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+              transition={springs.firm}
             />
           )}
           <span className="relative">Details</span>
@@ -2020,7 +2018,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
             <motion.div
               className="absolute inset-0 rounded-lg bg-muted"
               layoutId="tab-highlight"
-              transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+              transition={springs.firm}
             />
           )}
           <span className="relative">Chat</span>
@@ -2065,7 +2063,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
               }}
               exit={{ opacity: 0, scale: 0.97, y: 8 }}
               transition={{
-                type: 'spring', stiffness: 400, damping: 34,
+                ...springs.firm,
                 opacity: { duration: 0.12 },
               }}
             >
@@ -2120,7 +2118,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
                     className={cn('flex flex-1 flex-col min-h-0 min-w-0', isDragging && 'ring-2 ring-inset ring-seeko-accent/50')}
                     initial={{ opacity: 0, x: 16 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ type: 'spring', stiffness: 300, damping: 28, delay: 0.1 }}
+                    transition={{ ...springs.smooth, delay: 0.1 }}
                     onDragOver={e => { e.preventDefault(); setIsDragging(true); }}
                     onDragLeave={e => {
                       if (!e.currentTarget.contains(e.relatedTarget as Node)) setIsDragging(false);
@@ -2164,7 +2162,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
                         active: { opacity: 1, x: 0 },
                         exit: (d: number) => ({ opacity: 0, x: d * -40 }),
                       }}
-                      transition={{ type: 'spring', stiffness: 400, damping: 32, opacity: { duration: 0.15 } }}
+                      transition={{ ...springs.firm, opacity: { duration: 0.15 } }}
                       onPointerDownCapture={(e) => e.stopPropagation()}
                     >
                       {detailsContent}
@@ -2183,7 +2181,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
                         active: { opacity: 1, x: 0 },
                         exit: (d: number) => ({ opacity: 0, x: d * -40 }),
                       }}
-                      transition={{ type: 'spring', stiffness: 400, damping: 32, opacity: { duration: 0.15 } }}
+                      transition={{ ...springs.firm, opacity: { duration: 0.15 } }}
                       onDragOver={e => { e.preventDefault(); setIsDragging(true); }}
                       onDragLeave={e => {
                         if (!e.currentTarget.contains(e.relatedTarget as Node)) setIsDragging(false);

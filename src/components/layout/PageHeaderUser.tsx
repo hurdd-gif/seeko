@@ -24,14 +24,15 @@ import { Notification } from '@/lib/types';
 import { getInitials } from '@/lib/utils';
 import dynamic from 'next/dynamic';
 import { useHaptics } from '@/components/HapticsProvider';
+import { springs } from '@/lib/motion';
 
 const NotificationBell = dynamic(
   () => import('@/components/dashboard/NotificationBell').then(m => m.NotificationBell),
   { ssr: false }
 );
 
-const SMOOTH = { type: 'spring' as const, stiffness: 300, damping: 25 };
-const SNAPPY = { type: 'spring' as const, stiffness: 500, damping: 30 };
+const SMOOTH = springs.smooth;
+const SNAPPY = springs.snappy;
 
 interface PageHeaderUserProps {
   email: string;
@@ -191,7 +192,7 @@ export function PageHeaderUser({
   );
 }
 
-const LINK_SNAPPY = { type: 'spring' as const, stiffness: 500, damping: 30 };
+const LINK_SNAPPY = springs.snappy;
 
 function PopoverLink({ href, icon: Icon, label, onClick }: { href: string; icon: React.ElementType; label: string; onClick: () => void }) {
   return (
