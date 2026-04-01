@@ -64,9 +64,19 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invite has expired' }, { status: 400 });
   }
 
+  if (typeof full_name === 'string' && full_name.length > 200) {
+    return NextResponse.json({ error: 'Full name must be under 200 characters' }, { status: 400 });
+  }
+  if (typeof address === 'string' && address.length > 500) {
+    return NextResponse.json({ error: 'Address must be under 500 characters' }, { status: 400 });
+  }
+
   if (invite.is_guardian_signing) {
     if (!minor_name || typeof minor_name !== 'string' || !minor_name.trim()) {
       return NextResponse.json({ error: "Minor's full name is required for guardian signing" }, { status: 400 });
+    }
+    if (minor_name.length > 200) {
+      return NextResponse.json({ error: "Minor's full name must be under 200 characters" }, { status: 400 });
     }
   }
 
@@ -108,7 +118,7 @@ export async function POST(request: NextRequest) {
   // Upload to storage
   const { error: uploadError } = await service.storage
     .from('agreements')
-    .upload(`external/${invite.id}/${crypto.randomUUID()}.pdf`, pdfBytes, {
+    .upload(`external/${invite.id}/agreement.pdf`, pdfBytes, {
       contentType: 'application/pdf',
       upsert: true,
     });
