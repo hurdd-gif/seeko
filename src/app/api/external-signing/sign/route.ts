@@ -90,8 +90,9 @@ export async function POST(request: NextRequest) {
   let title;
   if (invite.template_type === 'preset') {
     const template = getTemplateById(invite.template_id!);
-    sections = template!.sections;
-    title = template!.name;
+    if (!template) return NextResponse.json({ error: 'Template not found' }, { status: 400 });
+    sections = template.sections;
+    title = template.name;
   } else {
     sections = invite.custom_sections || [];
     title = invite.custom_title || 'Agreement';
