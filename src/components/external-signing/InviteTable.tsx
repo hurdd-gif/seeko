@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
 import { createClient } from '@/lib/supabase/client';
 import { RotateCw, Ban, Download, Loader2, Send, Search } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -172,10 +173,19 @@ export function InviteTable({ refreshKey }: InviteTableProps) {
             </tr>
           </thead>
           <tbody>
-            {filtered.map((invite) => {
+            <AnimatePresence initial={false} mode="popLayout">
+            {filtered.map((invite, index) => {
               const { label: typeLabel, doc } = getTypeTag(invite);
               return (
-                <tr key={invite.id} className="border-b border-border/50 transition-[background-color] hover:bg-muted/20">
+                <motion.tr
+                  key={invite.id}
+                  layout
+                  initial={{ opacity: 0, y: 8, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  transition={{ type: 'spring', duration: 0.3, bounce: 0, delay: Math.min(index, 10) * 0.03 }}
+                  className="border-b border-border/50 transition-[background-color] hover:bg-muted/20"
+                >
                   <td className="px-4 py-3 text-foreground font-mono text-xs">
                     {invite.recipient_email}
                     {invite.is_guardian_signing && (
@@ -231,9 +241,10 @@ export function InviteTable({ refreshKey }: InviteTableProps) {
                       )}
                     </div>
                   </td>
-                </tr>
+                </motion.tr>
               );
             })}
+            </AnimatePresence>
           </tbody>
         </table>
       </div>
