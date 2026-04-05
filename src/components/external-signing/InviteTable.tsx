@@ -4,7 +4,6 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { createClient } from '@/lib/supabase/client';
 import { RotateCw, Ban, Download, Loader2, Send, Search, Users, ChevronRight } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import type { ExternalSigningInvite } from '@/lib/types';
 import {
@@ -19,12 +18,14 @@ import {
 
 interface InviteTableProps { refreshKey: number; }
 
-const STATUS_VARIANT: Record<string, 'default' | 'secondary' | 'outline' | 'destructive'> = {
-  pending: 'outline',
-  verified: 'secondary',
-  signed: 'default',
-  expired: 'secondary',
-  revoked: 'destructive',
+// Solid variants for statuses that need attention; outline/muted for completed.
+// Pending is the loudest because it blocks an external party; signed is quiet because it's done.
+const STATUS_CLASSES: Record<string, string> = {
+  pending: 'bg-seeko-accent/15 text-seeko-accent ring-1 ring-inset ring-seeko-accent/30',
+  verified: 'bg-blue-400/15 text-blue-300 ring-1 ring-inset ring-blue-400/30',
+  signed: 'border border-border text-muted-foreground',
+  expired: 'border border-border text-muted-foreground',
+  revoked: 'bg-red-400/15 text-red-300 ring-1 ring-inset ring-red-400/30',
 };
 
 const STATUS_CHIPS: { value: FilterStatus; label: string }[] = [
@@ -35,12 +36,32 @@ const STATUS_CHIPS: { value: FilterStatus; label: string }[] = [
   { value: 'archive', label: 'Archive' },
 ];
 
-function getTypeTag(invite: ExternalSigningInvite): { label: string; doc: string } {
-  const type = invite.template_type as string;
-  if (type === 'invoice') return { label: 'Invoice', doc: invite.custom_title || 'Invoice request' };
-  if (type === 'preset') return { label: 'Signing', doc: invite.template_id || 'Preset' };
-  return { label: 'Signing', doc: invite.custom_title || 'Custom' };
+// Humanize DB-style template ids like "vendor_agreement" → "Vendor Agreement".
+function humanizeDoc(raw: string): string {
+  return raw
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (c) => c.toUpperCase())
+    .replace(/\bNda\b/g, 'NDA')
+    .replace(/\bPdf\b/g, 'PDF');
 }
+
+type TypeTag = { label: 'Signing' | 'Invoice'; doc: string; tone: 'signing' | 'invoice' };
+
+function getTypeTag(invite: ExternalSigningInvite): TypeTag {
+  const type = invite.template_type as string;
+  if (type === 'invoice') {
+    // Custom titles carry signal; the default "Invoice request" label repeats the Type tag — elide it.
+    const custom = invite.custom_title?.trim();
+    return { label: 'Invoice', doc: custom || '—', tone: 'invoice' };
+  }
+  if (type === 'preset') return { label: 'Signing', doc: humanizeDoc(invite.template_id || 'Preset'), tone: 'signing' };
+  return { label: 'Signing', doc: invite.custom_title || 'Custom', tone: 'signing' };
+}
+
+const TYPE_TAG_CLASSES: Record<'signing' | 'invoice', string> = {
+  signing: 'bg-muted/40 text-muted-foreground',
+  invoice: 'bg-amber-400/8 text-amber-300/80 ring-1 ring-inset ring-amber-400/15',
+};
 
 export function InviteTable({ refreshKey }: InviteTableProps) {
   const [invites, setInvites] = useState<ExternalSigningInvite[]>([]);
@@ -128,7 +149,7 @@ export function InviteTable({ refreshKey }: InviteTableProps) {
   }, [signingInvites, debouncedSearch]);
 
   const renderInviteRow = (invite: ExternalSigningInvite, index: number, indent: boolean = false) => {
-    const { label: typeLabel, doc } = getTypeTag(invite);
+    const { label: typeLabel, doc, tone } = getTypeTag(invite);
     return (
       <motion.tr
         key={invite.id}
@@ -139,28 +160,39 @@ export function InviteTable({ refreshKey }: InviteTableProps) {
         transition={{ type: 'spring', duration: 0.3, bounce: 0, delay: Math.min(index, 10) * 0.03 }}
         className="border-b border-border/50 transition-[background-color] hover:bg-muted/20"
       >
-        <td className={`px-4 py-3 text-foreground font-mono text-xs ${indent ? 'pl-10' : ''}`}>
-          {invite.recipient_email}
-          {invite.is_guardian_signing && (
-            <Badge variant="outline" className="ml-2 text-[10px]">Guardian</Badge>
-          )}
+        <td className={`px-4 py-3 align-middle text-foreground font-mono text-xs ${indent ? 'pl-10' : ''}`}>
+          <div className="flex items-center gap-2 max-w-[240px]">
+            <span className="truncate" title={invite.recipient_email}>{invite.recipient_email}</span>
+            {invite.is_guardian_signing && (
+              <span
+                title="Guardian signing for a minor"
+                className="shrink-0 inline-flex items-center rounded-full bg-muted/40 px-1.5 py-0.5 text-[9px] font-medium text-muted-foreground"
+              >
+                Guardian
+              </span>
+            )}
+          </div>
         </td>
-        <td className="px-4 py-3">
-          <span className="rounded-full bg-muted/40 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+        <td className="px-4 py-3 align-middle">
+          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${TYPE_TAG_CLASSES[tone]}`}>
             {typeLabel}
           </span>
         </td>
-        <td className="px-4 py-3 text-muted-foreground text-xs text-pretty">{doc}</td>
-        <td className="px-4 py-3">
-          <Badge variant={STATUS_VARIANT[invite.status] || 'secondary'}>{invite.status}</Badge>
+        <td className="px-4 py-3 align-middle text-muted-foreground text-xs">
+          <span className="block max-w-[160px] truncate" title={doc}>{doc}</span>
         </td>
-        <td className="px-4 py-3 text-muted-foreground text-xs tabular-nums">
+        <td className="px-4 py-3 align-middle">
+          <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ${STATUS_CLASSES[invite.status] || 'border border-border text-muted-foreground'}`}>
+            {invite.status}
+          </span>
+        </td>
+        <td className="px-4 py-3 align-middle text-muted-foreground text-xs tabular-nums">
           {new Date(invite.created_at).toLocaleDateString()}
         </td>
-        <td className="px-4 py-3 text-muted-foreground text-xs tabular-nums">
+        <td className="px-4 py-3 align-middle text-muted-foreground text-xs tabular-nums">
           {new Date(invite.expires_at).toLocaleDateString()}
         </td>
-        <td className="px-4 py-3">
+        <td className="px-4 py-3 align-middle">
           <div className="flex gap-1">
             {(invite.status === 'pending' || invite.status === 'verified') && (
               <>
@@ -321,7 +353,7 @@ export function InviteTable({ refreshKey }: InviteTableProps) {
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        <Badge variant={STATUS_VARIANT[latest.status] || 'secondary'}>{latest.status}</Badge>
+                        <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ${STATUS_CLASSES[latest.status] || 'border border-border text-muted-foreground'}`}>{latest.status}</span>
                       </td>
                       <td className="px-4 py-3 text-muted-foreground text-xs tabular-nums">
                         {new Date(latest.created_at).toLocaleDateString()}
