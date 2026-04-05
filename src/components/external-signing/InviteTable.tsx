@@ -330,25 +330,20 @@ export function InviteTable({ refreshKey }: InviteTableProps) {
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, transition: { duration: 0.12 } }}
                       transition={{ type: 'spring', duration: 0.3, bounce: 0, delay: Math.min(gIndex, 10) * 0.03 }}
-                      onClick={() => toggleGroup(group.email)}
-                      tabIndex={0}
-                      role="button"
-                      aria-expanded={expanded}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          toggleGroup(group.email);
-                        }
-                      }}
-                      className="border-b border-border/50 cursor-pointer transition-[background-color] hover:bg-muted/20 focus-visible:outline-none focus-visible:bg-muted/30"
+                      className="border-b border-border/50 transition-[background-color] hover:bg-muted/20"
                     >
                       <td className="px-4 py-3 text-foreground font-mono text-xs">
-                        <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          aria-expanded={expanded}
+                          onClick={() => toggleGroup(group.email)}
+                          className="flex items-center gap-2 rounded-sm focus-visible:outline-none focus-visible:bg-muted/30"
+                        >
                           <ChevronRight
                             className={`size-3.5 text-muted-foreground transition-transform ${expanded ? 'rotate-90' : ''}`}
                           />
                           {group.email}
-                        </div>
+                        </button>
                       </td>
                       <td className="px-4 py-3" colSpan={2}>
                         <span className="text-xs text-muted-foreground tabular-nums">
