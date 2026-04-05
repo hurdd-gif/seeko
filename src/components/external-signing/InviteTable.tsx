@@ -262,6 +262,7 @@ export function InviteTable({ refreshKey }: InviteTableProps) {
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              aria-label="Search recipient"
               placeholder="Search recipient…"
               className="h-8 w-full rounded-md border border-border bg-muted/20 pl-8 pr-3 text-xs text-foreground placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-seeko-accent/40 focus:outline-none"
             />
