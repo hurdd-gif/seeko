@@ -75,9 +75,9 @@ describe('excludeDocShare', () => {
     const invites = [
       makeInvite({ id: '1', template_type: 'preset' }),
       makeInvite({ id: '2', template_type: 'custom' }),
-      { ...makeInvite({ id: '3' }), template_type: 'invoice' },
-      { ...makeInvite({ id: '4' }), template_type: 'doc_share' },
-    ] as unknown as ExternalSigningInvite[];
+      makeInvite({ id: '3', template_type: 'invoice' }),
+      makeInvite({ id: '4', template_type: 'doc_share' }),
+    ];
     expect(excludeDocShare(invites).map(i => i.id)).toEqual(['1', '2', '3']);
   });
 });

@@ -24,7 +24,7 @@ export function filterBySearch(
 }
 
 export function excludeDocShare(invites: ExternalSigningInvite[]): ExternalSigningInvite[] {
-  return invites.filter(i => (i.template_type as string) !== 'doc_share');
+  return invites.filter(i => i.template_type !== 'doc_share');
 }
 
 export type InviteGroup = {

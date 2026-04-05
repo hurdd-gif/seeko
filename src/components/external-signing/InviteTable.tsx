@@ -46,11 +46,8 @@ function humanizeDoc(raw: string): string {
 }
 
 type TypeTag = { label: 'Signing' | 'Invoice'; doc: string; tone: 'signing' | 'invoice' };
-type InviteTableInvite = Omit<ExternalSigningInvite, 'template_type'> & {
-  template_type: ExternalSigningInvite['template_type'] | 'invoice';
-};
 
-function getTypeTag(invite: InviteTableInvite): TypeTag {
+function getTypeTag(invite: ExternalSigningInvite): TypeTag {
   if (invite.template_type === 'invoice') {
     // Custom titles carry signal; the default "Invoice request" label repeats the Type tag — elide it.
     const custom = invite.custom_title?.trim();
