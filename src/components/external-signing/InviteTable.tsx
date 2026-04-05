@@ -132,9 +132,10 @@ export function InviteTable({ refreshKey }: InviteTableProps) {
     return (
       <motion.tr
         key={invite.id}
+        layout
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0 }}
+        exit={{ opacity: 0, transition: { duration: 0.12 } }}
         transition={{ type: 'spring', duration: 0.3, bounce: 0, delay: Math.min(index, 10) * 0.03 }}
         className="border-b border-border/50 transition-[background-color] hover:bg-muted/20"
       >
@@ -289,9 +290,10 @@ export function InviteTable({ refreshKey }: InviteTableProps) {
                   const rows = [
                     <motion.tr
                       key={`group-${group.email}`}
+                      layout
                       initial={{ opacity: 0, y: 8 }}
                       animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0 }}
+                      exit={{ opacity: 0, transition: { duration: 0.12 } }}
                       transition={{ type: 'spring', duration: 0.3, bounce: 0, delay: Math.min(gIndex, 10) * 0.03 }}
                       onClick={() => toggleGroup(group.email)}
                       tabIndex={0}
