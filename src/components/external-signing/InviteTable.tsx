@@ -44,6 +44,11 @@ export function InviteTable({ refreshKey }: InviteTableProps) {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 150);
+    return () => clearTimeout(t);
+  }, [search]);
   const [status, setStatus] = useState<FilterStatus>('all');
 
   const fetchInvites = useCallback(async () => {
@@ -93,9 +98,9 @@ export function InviteTable({ refreshKey }: InviteTableProps) {
   const signingInvites = useMemo(() => excludeDocShare(invites), [invites]);
   const filtered = useMemo(() => {
     const byStatus = filterByStatus(signingInvites, status);
-    const bySearch = filterBySearch(byStatus, search);
+    const bySearch = filterBySearch(byStatus, debouncedSearch);
     return status === 'all' ? sortByActivePriority(bySearch) : bySearch;
-  }, [signingInvites, status, search]);
+  }, [signingInvites, status, debouncedSearch]);
 
   if (loading) {
     return <div className="flex justify-center py-12"><Loader2 className="size-5 animate-spin text-muted-foreground" /></div>;
