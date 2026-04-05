@@ -29,6 +29,7 @@ export type Area = {
   progress: number;
   description?: string;
   phase?: string;
+  sort_order?: number;
 };
 
 export type Profile = {
