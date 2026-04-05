@@ -271,6 +271,8 @@ export function InviteTable({ refreshKey }: InviteTableProps) {
           </div>
           <button
             onClick={() => setGrouped(g => !g)}
+            aria-label={grouped ? 'Ungroup recipients' : 'Group by recipient'}
+            aria-pressed={grouped}
             title={grouped ? 'Ungroup' : 'Group by recipient'}
             className={`relative flex size-8 items-center justify-center rounded-md border transition-[background-color,color,border-color,transform] active:scale-[0.96] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-seeko-accent/40 before:absolute before:inset-0 before:-m-1 before:content-[''] ${
               grouped
