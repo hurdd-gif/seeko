@@ -46,15 +46,17 @@ function humanizeDoc(raw: string): string {
 }
 
 type TypeTag = { label: 'Signing' | 'Invoice'; doc: string; tone: 'signing' | 'invoice' };
+type InviteTableInvite = Omit<ExternalSigningInvite, 'template_type'> & {
+  template_type: ExternalSigningInvite['template_type'] | 'invoice';
+};
 
-function getTypeTag(invite: ExternalSigningInvite): TypeTag {
-  const type = invite.template_type as string;
-  if (type === 'invoice') {
+function getTypeTag(invite: InviteTableInvite): TypeTag {
+  if (invite.template_type === 'invoice') {
     // Custom titles carry signal; the default "Invoice request" label repeats the Type tag — elide it.
     const custom = invite.custom_title?.trim();
     return { label: 'Invoice', doc: custom || '—', tone: 'invoice' };
   }
-  if (type === 'preset') return { label: 'Signing', doc: humanizeDoc(invite.template_id || 'Preset'), tone: 'signing' };
+  if (invite.template_type === 'preset') return { label: 'Signing', doc: humanizeDoc(invite.template_id || 'Preset'), tone: 'signing' };
   return { label: 'Signing', doc: invite.custom_title || 'Custom', tone: 'signing' };
 }
 
