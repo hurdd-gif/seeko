@@ -288,7 +288,16 @@ export function InviteTable({ refreshKey }: InviteTableProps) {
                       exit={{ opacity: 0, y: -4 }}
                       transition={{ type: 'spring', duration: 0.3, bounce: 0, delay: Math.min(gIndex, 10) * 0.03 }}
                       onClick={() => toggleGroup(group.email)}
-                      className="border-b border-border/50 cursor-pointer transition-[background-color] hover:bg-muted/20"
+                      tabIndex={0}
+                      role="button"
+                      aria-expanded={expanded}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          toggleGroup(group.email);
+                        }
+                      }}
+                      className="border-b border-border/50 cursor-pointer transition-[background-color] hover:bg-muted/20 focus-visible:outline-none focus-visible:bg-muted/30"
                     >
                       <td className="px-4 py-3 text-foreground font-mono text-xs">
                         <div className="flex items-center gap-2">
