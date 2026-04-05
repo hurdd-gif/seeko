@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { createClient } from '@/lib/supabase/client';
-import { RotateCw, Ban, Download, Loader2, Send, Search } from 'lucide-react';
+import { RotateCw, Ban, Download, Loader2, Send, Search, Users, ChevronRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import type { ExternalSigningInvite } from '@/lib/types';
@@ -12,7 +12,9 @@ import {
   filterBySearch,
   excludeDocShare,
   sortByActivePriority,
+  groupByRecipient,
   type FilterStatus,
+  type InviteGroup,
 } from '@/lib/invite-filters';
 
 interface InviteTableProps { refreshKey: number; }
@@ -51,6 +53,16 @@ export function InviteTable({ refreshKey }: InviteTableProps) {
     return () => clearTimeout(t);
   }, [search]);
   const [status, setStatus] = useState<FilterStatus>('all');
+  const [grouped, setGrouped] = useState(false);
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+
+  function toggleGroup(email: string) {
+    setExpandedGroups(prev => {
+      const next = new Set(prev);
+      if (next.has(email)) next.delete(email); else next.add(email);
+      return next;
+    });
+  }
 
   const fetchInvites = useCallback(async () => {
     setLoading(true);
@@ -103,6 +115,11 @@ export function InviteTable({ refreshKey }: InviteTableProps) {
     return status === 'all' ? sortByActivePriority(bySearch) : bySearch;
   }, [signingInvites, status, debouncedSearch]);
 
+  const groupedData = useMemo<InviteGroup[] | null>(
+    () => (grouped ? groupByRecipient(filtered) : null),
+    [grouped, filtered],
+  );
+
   if (loading) {
     return <div className="flex justify-center py-12"><Loader2 className="size-5 animate-spin text-muted-foreground" /></div>;
   }
@@ -128,15 +145,28 @@ export function InviteTable({ refreshKey }: InviteTableProps) {
           Sent Invites
           <span className="ml-2 text-xs text-muted-foreground/60 tabular-nums">({filtered.length})</span>
         </h2>
-        <div className="relative w-64">
-          <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground/60" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search recipient…"
-            className="h-8 w-full rounded-md border border-border bg-muted/20 pl-8 pr-3 text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-seeko-accent/40"
-          />
+        <div className="flex items-center gap-2">
+          <div className="relative w-64">
+            <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground/60" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search recipient…"
+              className="h-8 w-full rounded-md border border-border bg-muted/20 pl-8 pr-3 text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-seeko-accent/40"
+            />
+          </div>
+          <button
+            onClick={() => setGrouped(g => !g)}
+            title={grouped ? 'Ungroup' : 'Group by recipient'}
+            className={`flex size-8 items-center justify-center rounded-md border transition-[background-color,color,border-color,transform] active:scale-[0.96] ${
+              grouped
+                ? 'border-seeko-accent/40 bg-seeko-accent/10 text-seeko-accent'
+                : 'border-border bg-muted/20 text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Users className="size-3.5" />
+          </button>
         </div>
       </div>
 
@@ -174,9 +204,10 @@ export function InviteTable({ refreshKey }: InviteTableProps) {
           </thead>
           <tbody>
             <AnimatePresence initial={false} mode="popLayout">
-            {filtered.map((invite, index) => {
-              const { label: typeLabel, doc } = getTypeTag(invite);
-              return (
+            {(() => {
+              const renderInviteRow = (invite: ExternalSigningInvite, index: number, indent: boolean = false) => {
+                const { label: typeLabel, doc } = getTypeTag(invite);
+                return (
                 <motion.tr
                   key={invite.id}
                   layout
@@ -186,7 +217,7 @@ export function InviteTable({ refreshKey }: InviteTableProps) {
                   transition={{ type: 'spring', duration: 0.3, bounce: 0, delay: Math.min(index, 10) * 0.03 }}
                   className="border-b border-border/50 transition-[background-color] hover:bg-muted/20"
                 >
-                  <td className="px-4 py-3 text-foreground font-mono text-xs">
+                  <td className={`px-4 py-3 text-foreground font-mono text-xs ${indent ? 'pl-10' : ''}`}>
                     {invite.recipient_email}
                     {invite.is_guardian_signing && (
                       <Badge variant="outline" className="ml-2 text-[10px]">Guardian</Badge>
@@ -242,8 +273,56 @@ export function InviteTable({ refreshKey }: InviteTableProps) {
                     </div>
                   </td>
                 </motion.tr>
-              );
-            })}
+                );
+              };
+              if (groupedData) {
+                return groupedData.flatMap((group, gIndex) => {
+                  const expanded = expandedGroups.has(group.email);
+                  const latest = group.invites[0];
+                  const rows = [
+                    <motion.tr
+                      key={`group-${group.email}`}
+                      layout
+                      initial={{ opacity: 0, y: 8, scale: 0.98 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -4 }}
+                      transition={{ type: 'spring', duration: 0.3, bounce: 0, delay: Math.min(gIndex, 10) * 0.03 }}
+                      onClick={() => toggleGroup(group.email)}
+                      className="border-b border-border/50 cursor-pointer transition-[background-color] hover:bg-muted/20"
+                    >
+                      <td className="px-4 py-3 text-foreground font-mono text-xs">
+                        <div className="flex items-center gap-2">
+                          <ChevronRight
+                            className={`size-3.5 text-muted-foreground transition-transform ${expanded ? 'rotate-90' : ''}`}
+                          />
+                          {group.email}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3" colSpan={2}>
+                        <span className="text-xs text-muted-foreground tabular-nums">
+                          {group.invites.length} {group.invites.length === 1 ? 'invite' : 'invites'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <Badge variant={STATUS_VARIANT[latest.status] || 'secondary'}>{latest.status}</Badge>
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground text-xs tabular-nums">
+                        {new Date(latest.created_at).toLocaleDateString()}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground text-xs tabular-nums">
+                        {new Date(latest.expires_at).toLocaleDateString()}
+                      </td>
+                      <td className="px-4 py-3" />
+                    </motion.tr>,
+                  ];
+                  if (expanded) {
+                    group.invites.forEach((inv, i) => rows.push(renderInviteRow(inv, i, true)));
+                  }
+                  return rows;
+                });
+              }
+              return filtered.map((invite, index) => renderInviteRow(invite, index));
+            })()}
             </AnimatePresence>
           </tbody>
         </table>
