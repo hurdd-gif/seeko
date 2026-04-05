@@ -132,10 +132,9 @@ export function InviteTable({ refreshKey }: InviteTableProps) {
     return (
       <motion.tr
         key={invite.id}
-        layout
-        initial={{ opacity: 0, y: 8, scale: 0.98 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={{ opacity: 0, y: -4 }}
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0 }}
         transition={{ type: 'spring', duration: 0.3, bounce: 0, delay: Math.min(index, 10) * 0.03 }}
         className="border-b border-border/50 transition-[background-color] hover:bg-muted/20"
       >
@@ -281,7 +280,7 @@ export function InviteTable({ refreshKey }: InviteTableProps) {
             </tr>
           </thead>
           <tbody>
-            <AnimatePresence initial={false} mode="popLayout">
+            <AnimatePresence initial={false}>
             {(() => {
               if (groupedData) {
                 return groupedData.flatMap((group, gIndex) => {
@@ -290,10 +289,9 @@ export function InviteTable({ refreshKey }: InviteTableProps) {
                   const rows = [
                     <motion.tr
                       key={`group-${group.email}`}
-                      layout
-                      initial={{ opacity: 0, y: 8, scale: 0.98 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: -4 }}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0 }}
                       transition={{ type: 'spring', duration: 0.3, bounce: 0, delay: Math.min(gIndex, 10) * 0.03 }}
                       onClick={() => toggleGroup(group.email)}
                       tabIndex={0}
@@ -366,7 +364,7 @@ export function InviteTable({ refreshKey }: InviteTableProps) {
                 <div className="overflow-x-auto rounded-xl border border-border opacity-60">
                   <table className="w-full text-left text-sm">
                     <tbody>
-                      <AnimatePresence initial={false} mode="popLayout">
+                      <AnimatePresence initial={false}>
                         {archiveInvites.map((invite, index) => renderInviteRow(invite, index))}
                       </AnimatePresence>
                     </tbody>
