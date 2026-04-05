@@ -213,7 +213,7 @@ export type ExternalSigningInvite = {
   id: string;
   token: string;
   recipient_email: string;
-  template_type: 'preset' | 'custom';
+  template_type: 'preset' | 'custom' | 'invoice' | 'doc_share';
   template_id?: string;
   custom_sections?: ExternalAgreementSection[];
   custom_title?: string;
