@@ -65,7 +65,7 @@ Every authenticated user gets a profile row automatically on signup. This double
 | phase       | area_phase enum   | Alpha, Beta, Launch                      |
 | created_at  | timestamptz       |                                          |
 
-**Rows:** Dojo, Battleground, Fighting Club
+**Rows:** Main Game, Fighting Club
 
 ---
 
@@ -125,7 +125,7 @@ Every authenticated user gets a profile row automatically on signup. This double
 ```
 Supabase (seeko-studio project)
 ├── tasks          ← area_id → areas, assignee_id → profiles
-├── areas          ← Dojo, Battleground, Fighting Club
+├── areas          ← Main Game, Fighting Club
 ├── profiles       ← auto-created from auth.users (= team roster)
 ├── payments       ← recipient_id → profiles, created_by → profiles
 │   └── payment_items ← task_id → tasks (optional)
@@ -141,7 +141,7 @@ Supabase (seeko-studio project)
 **Departments:** Coding · Visual Art · UI/UX · Animation · Asset Creation
 **Statuses:** Complete · In Progress · In Review · Blocked
 **Priorities:** High · Medium · Low
-**Game Areas:** Dojo · Battleground · Fighting Club
+**Game Areas:** Main Game · Fighting Club
 
 ---
 

@@ -197,7 +197,7 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
 
   /* --- filter state --- */
   const [filterAssignee, setFilterAssignee] = useState('All');
-  const [filterStatus, setFilterStatus] = useState('All');
+  const [filterStatus, setFilterStatus] = useState<string>('In Progress');
   const [filterPriority, setFilterPriority] = useState('All');
 
   /* --- task mutation state --- */

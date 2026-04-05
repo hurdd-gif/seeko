@@ -281,9 +281,11 @@ export default async function OverviewPage() {
                 <p className="text-xs text-muted-foreground">{areasSubtitle}</p>
               </div>
               <div className="p-6 pt-0">
-                <Stagger className="grid grid-cols-1 md:grid-cols-3 gap-4" delayMs={delay(TIMING.areasInner)}>
+                <Stagger className="flex flex-col gap-4 md:flex-row md:flex-wrap md:justify-center" delayMs={delay(TIMING.areasInner)}>
                   {areas.map(area => (
-                    <DashboardAreaCard key={area.id} area={area} isAdmin={isAdmin} />
+                    <div key={area.id} className="w-full md:w-[calc(33.333%-0.667rem)]">
+                      <DashboardAreaCard area={area} isAdmin={isAdmin} />
+                    </div>
                   ))}
                 </Stagger>
               </div>

@@ -7,7 +7,7 @@ const LINE_X = 8;
 
 const TREE = [
   {
-    title: 'Battleground (UBAKU GROUND)',
+    title: 'Main Game (UBAKU GROUND)',
     items: [
       'Embed combat & movement system',
       'Quest + Achievement system',
