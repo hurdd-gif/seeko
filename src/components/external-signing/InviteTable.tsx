@@ -120,6 +120,84 @@ export function InviteTable({ refreshKey }: InviteTableProps) {
     [grouped, filtered],
   );
 
+  const [showArchive, setShowArchive] = useState(false);
+
+  const archiveInvites = useMemo(() => {
+    const byStatus = filterByStatus(signingInvites, 'archive');
+    return filterBySearch(byStatus, debouncedSearch);
+  }, [signingInvites, debouncedSearch]);
+
+  const renderInviteRow = (invite: ExternalSigningInvite, index: number, indent: boolean = false) => {
+    const { label: typeLabel, doc } = getTypeTag(invite);
+    return (
+      <motion.tr
+        key={invite.id}
+        layout
+        initial={{ opacity: 0, y: 8, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: -4 }}
+        transition={{ type: 'spring', duration: 0.3, bounce: 0, delay: Math.min(index, 10) * 0.03 }}
+        className="border-b border-border/50 transition-[background-color] hover:bg-muted/20"
+      >
+        <td className={`px-4 py-3 text-foreground font-mono text-xs ${indent ? 'pl-10' : ''}`}>
+          {invite.recipient_email}
+          {invite.is_guardian_signing && (
+            <Badge variant="outline" className="ml-2 text-[10px]">Guardian</Badge>
+          )}
+        </td>
+        <td className="px-4 py-3">
+          <span className="rounded-full bg-muted/40 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+            {typeLabel}
+          </span>
+        </td>
+        <td className="px-4 py-3 text-muted-foreground text-xs" style={{ textWrap: 'pretty' }}>{doc}</td>
+        <td className="px-4 py-3">
+          <Badge variant={STATUS_VARIANT[invite.status] || 'secondary'}>{invite.status}</Badge>
+        </td>
+        <td className="px-4 py-3 text-muted-foreground text-xs tabular-nums">
+          {new Date(invite.created_at).toLocaleDateString()}
+        </td>
+        <td className="px-4 py-3 text-muted-foreground text-xs tabular-nums">
+          {new Date(invite.expires_at).toLocaleDateString()}
+        </td>
+        <td className="px-4 py-3">
+          <div className="flex gap-1">
+            {(invite.status === 'pending' || invite.status === 'verified') && (
+              <>
+                <button
+                  onClick={() => handleAction(invite.id, 'resend')}
+                  disabled={actionLoading === invite.id}
+                  title="Resend invite"
+                  className="relative rounded p-1.5 transition-[background-color,transform] hover:bg-muted active:scale-[0.96] group before:absolute before:inset-0 before:-m-2 before:content-['']"
+                >
+                  <RotateCw className="size-3.5 text-muted-foreground group-hover:text-foreground transition-[color]" />
+                </button>
+                <button
+                  onClick={() => handleAction(invite.id, 'revoke')}
+                  disabled={actionLoading === invite.id}
+                  title="Revoke invite"
+                  className="relative rounded p-1.5 transition-[background-color,transform] hover:bg-destructive/10 active:scale-[0.96] group before:absolute before:inset-0 before:-m-2 before:content-['']"
+                >
+                  <Ban className="size-3.5 text-muted-foreground group-hover:text-destructive transition-[color]" />
+                </button>
+              </>
+            )}
+            {invite.status === 'signed' && (
+              <button
+                onClick={() => handleDownload(invite.id)}
+                disabled={actionLoading === invite.id}
+                title="Download signed PDF"
+                className="relative rounded p-1.5 transition-[background-color,transform] hover:bg-seeko-accent/10 active:scale-[0.96] group before:absolute before:inset-0 before:-m-2 before:content-['']"
+              >
+                <Download className="size-3.5 text-muted-foreground group-hover:text-seeko-accent transition-[color]" />
+              </button>
+            )}
+          </div>
+        </td>
+      </motion.tr>
+    );
+  };
+
   if (loading) {
     return <div className="flex justify-center py-12"><Loader2 className="size-5 animate-spin text-muted-foreground" /></div>;
   }
@@ -205,76 +283,6 @@ export function InviteTable({ refreshKey }: InviteTableProps) {
           <tbody>
             <AnimatePresence initial={false} mode="popLayout">
             {(() => {
-              const renderInviteRow = (invite: ExternalSigningInvite, index: number, indent: boolean = false) => {
-                const { label: typeLabel, doc } = getTypeTag(invite);
-                return (
-                <motion.tr
-                  key={invite.id}
-                  layout
-                  initial={{ opacity: 0, y: 8, scale: 0.98 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: -4 }}
-                  transition={{ type: 'spring', duration: 0.3, bounce: 0, delay: Math.min(index, 10) * 0.03 }}
-                  className="border-b border-border/50 transition-[background-color] hover:bg-muted/20"
-                >
-                  <td className={`px-4 py-3 text-foreground font-mono text-xs ${indent ? 'pl-10' : ''}`}>
-                    {invite.recipient_email}
-                    {invite.is_guardian_signing && (
-                      <Badge variant="outline" className="ml-2 text-[10px]">Guardian</Badge>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className="rounded-full bg-muted/40 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
-                      {typeLabel}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground text-xs" style={{ textWrap: 'pretty' }}>{doc}</td>
-                  <td className="px-4 py-3">
-                    <Badge variant={STATUS_VARIANT[invite.status] || 'secondary'}>{invite.status}</Badge>
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground text-xs tabular-nums">
-                    {new Date(invite.created_at).toLocaleDateString()}
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground text-xs tabular-nums">
-                    {new Date(invite.expires_at).toLocaleDateString()}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex gap-1">
-                      {(invite.status === 'pending' || invite.status === 'verified') && (
-                        <>
-                          <button
-                            onClick={() => handleAction(invite.id, 'resend')}
-                            disabled={actionLoading === invite.id}
-                            title="Resend invite"
-                            className="relative rounded p-1.5 transition-[background-color,transform] hover:bg-muted active:scale-[0.96] group before:absolute before:inset-0 before:-m-2 before:content-['']"
-                          >
-                            <RotateCw className="size-3.5 text-muted-foreground group-hover:text-foreground transition-[color]" />
-                          </button>
-                          <button
-                            onClick={() => handleAction(invite.id, 'revoke')}
-                            disabled={actionLoading === invite.id}
-                            title="Revoke invite"
-                            className="relative rounded p-1.5 transition-[background-color,transform] hover:bg-destructive/10 active:scale-[0.96] group before:absolute before:inset-0 before:-m-2 before:content-['']"
-                          >
-                            <Ban className="size-3.5 text-muted-foreground group-hover:text-destructive transition-[color]" />
-                          </button>
-                        </>
-                      )}
-                      {invite.status === 'signed' && (
-                        <button
-                          onClick={() => handleDownload(invite.id)}
-                          disabled={actionLoading === invite.id}
-                          title="Download signed PDF"
-                          className="relative rounded p-1.5 transition-[background-color,transform] hover:bg-seeko-accent/10 active:scale-[0.96] group before:absolute before:inset-0 before:-m-2 before:content-['']"
-                        >
-                          <Download className="size-3.5 text-muted-foreground group-hover:text-seeko-accent transition-[color]" />
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </motion.tr>
-                );
-              };
               if (groupedData) {
                 return groupedData.flatMap((group, gIndex) => {
                   const expanded = expandedGroups.has(group.email);
@@ -336,6 +344,39 @@ export function InviteTable({ refreshKey }: InviteTableProps) {
           </tbody>
         </table>
       </div>
+
+      {status !== 'archive' && archiveInvites.length > 0 && (
+        <div className="space-y-2">
+          <button
+            onClick={() => setShowArchive(s => !s)}
+            className="flex w-full items-center justify-center gap-1.5 rounded-lg py-2 text-xs text-muted-foreground hover:text-foreground transition-[color]"
+          >
+            {showArchive ? 'Hide archived' : `Show archived (${archiveInvites.length})`}
+          </button>
+          <AnimatePresence initial={false}>
+            {showArchive && (
+              <motion.div
+                key="archive-panel"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ type: 'spring', duration: 0.35, bounce: 0 }}
+                className="overflow-hidden"
+              >
+                <div className="overflow-x-auto rounded-xl border border-border opacity-60">
+                  <table className="w-full text-left text-sm">
+                    <tbody>
+                      <AnimatePresence initial={false} mode="popLayout">
+                        {archiveInvites.map((invite, index) => renderInviteRow(invite, index))}
+                      </AnimatePresence>
+                    </tbody>
+                  </table>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      )}
     </div>
   );
 }
