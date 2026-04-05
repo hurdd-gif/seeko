@@ -150,7 +150,7 @@ export function InviteTable({ refreshKey }: InviteTableProps) {
             {typeLabel}
           </span>
         </td>
-        <td className="px-4 py-3 text-muted-foreground text-xs" style={{ textWrap: 'pretty' }}>{doc}</td>
+        <td className="px-4 py-3 text-muted-foreground text-xs text-pretty">{doc}</td>
         <td className="px-4 py-3">
           <Badge variant={STATUS_VARIANT[invite.status] || 'secondary'}>{invite.status}</Badge>
         </td>
@@ -231,13 +231,13 @@ export function InviteTable({ refreshKey }: InviteTableProps) {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search recipient…"
-              className="h-8 w-full rounded-md border border-border bg-muted/20 pl-8 pr-3 text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-seeko-accent/40"
+              className="h-8 w-full rounded-md border border-border bg-muted/20 pl-8 pr-3 text-xs text-foreground placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-seeko-accent/40 focus:outline-none"
             />
           </div>
           <button
             onClick={() => setGrouped(g => !g)}
             title={grouped ? 'Ungroup' : 'Group by recipient'}
-            className={`flex size-8 items-center justify-center rounded-md border transition-[background-color,color,border-color,transform] active:scale-[0.96] ${
+            className={`relative flex size-8 items-center justify-center rounded-md border transition-[background-color,color,border-color,transform] active:scale-[0.96] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-seeko-accent/40 before:absolute before:inset-0 before:-m-1 before:content-[''] ${
               grouped
                 ? 'border-seeko-accent/40 bg-seeko-accent/10 text-seeko-accent'
                 : 'border-border bg-muted/20 text-muted-foreground hover:text-foreground'
@@ -255,7 +255,7 @@ export function InviteTable({ refreshKey }: InviteTableProps) {
             <button
               key={chip.value}
               onClick={() => setStatus(chip.value)}
-              className={`rounded-full px-3 py-1 text-xs font-medium transition-[background-color,color,transform] active:scale-[0.96] ${
+              className={`rounded-full px-3 py-1 text-xs font-medium transition-[background-color,color,transform] active:scale-[0.96] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-seeko-accent/40 ${
                 active
                   ? 'bg-foreground text-background'
                   : 'bg-muted/40 text-muted-foreground hover:bg-muted/70 hover:text-foreground'
