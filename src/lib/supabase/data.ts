@@ -34,11 +34,18 @@ export async function fetchAreas(): Promise<Area[]> {
 
   const { data, error } = await supabase
     .from('areas')
-    .select('id, name, status, progress, description, phase, created_at')
+    .select('id, name, status, progress, description, phase, created_at, sort_order, sections:area_sections(id, area_id, name, progress, sort_order, created_at)')
+    .order('sort_order', { ascending: true })
     .order('name', { ascending: true });
 
   if (error) throw error;
-  return (data ?? []) as Area[];
+
+  // Supabase returns nested arrays in insertion order; sort sections by sort_order here.
+  const areas = (data ?? []) as Area[];
+  for (const area of areas) {
+    if (area.sections) area.sections.sort((a, b) => a.sort_order - b.sort_order);
+  }
+  return areas;
 }
 
 export async function fetchTeam(): Promise<Profile[]> {
