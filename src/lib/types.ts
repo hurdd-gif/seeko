@@ -29,6 +29,17 @@ export type Area = {
   progress: number;
   description?: string;
   phase?: string;
+  sort_order?: number;
+  sections?: AreaSection[];
+};
+
+export type AreaSection = {
+  id: string;
+  area_id: string;
+  name: string;
+  progress: number;
+  sort_order: number;
+  created_at: string;
 };
 
 export type Profile = {
