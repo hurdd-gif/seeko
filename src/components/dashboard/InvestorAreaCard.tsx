@@ -307,6 +307,27 @@ export function InvestorAreaCard({ area, tasksInArea, isAdmin = false }: Investo
           </div>
         )}
 
+        {/* ── Sections (read-only) ───────────────────────── */}
+        {area.sections && area.sections.length > 0 && (
+          <div className="mb-5">
+            <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground mb-2 block">Sections</span>
+            <ul className="space-y-2">
+              {area.sections.map((section) => (
+                <li key={section.id} className="flex items-center gap-3">
+                  <span className="flex-1 text-xs text-foreground">{section.name}</span>
+                  <span className="text-xs font-mono tabular-nums text-muted-foreground w-10 text-right">{section.progress}%</span>
+                  <div className="w-24 h-1 rounded-full bg-muted overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-seeko-accent"
+                      style={{ width: `${section.progress}%` }}
+                    />
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         {/* ── Tasks list ─────────────────────────────────── */}
         <div>
           <h3 className="text-sm font-medium text-foreground mb-2">
