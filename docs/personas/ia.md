@@ -69,6 +69,23 @@ Every authenticated user gets a profile row automatically on signup. This double
 
 ---
 
+### 3b. area_sections
+
+| Column     | Type       | Notes                                 |
+|------------|------------|---------------------------------------|
+| id         | uuid (PK)  | Auto-generated                        |
+| area_id    | uuid (FK)  | → areas.id, cascade delete            |
+| name       | text       | e.g., "Map Design"                    |
+| progress   | int        | 0–100, CHECK constrained              |
+| sort_order | int        | Display order within an area          |
+| created_at | timestamptz|                                       |
+
+**Trigger:** `area_sections_progress_trigger` recalculates `areas.progress`
+as the rounded AVG of its sections on INSERT/UPDATE/DELETE. If an area
+has zero sections, `areas.progress` is not touched (manual value preserved).
+
+---
+
 ### 4. docs
 
 | Column     | Type        | Notes                                    |
@@ -126,6 +143,7 @@ Every authenticated user gets a profile row automatically on signup. This double
 Supabase (seeko-studio project)
 ├── tasks          ← area_id → areas, assignee_id → profiles
 ├── areas          ← Dojo, Battleground, Fighting Club
+│   └── area_sections ← Map Design, Programming, UI/UX, etc.
 ├── profiles       ← auto-created from auth.users (= team roster)
 ├── payments       ← recipient_id → profiles, created_by → profiles
 │   └── payment_items ← task_id → tasks (optional)
