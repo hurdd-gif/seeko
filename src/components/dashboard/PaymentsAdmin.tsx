@@ -167,6 +167,14 @@ export function PaymentsAdmin({ team }: PaymentsAdminProps) {
     .filter(p => p.status === 'paid')
     .slice(0, 10);
 
+  // Map: payment.id → paypal_email submitted on the linked invoice request
+  const paypalEmailByPaymentId = new Map<string, string>();
+  for (const inv of invoiceRequests) {
+    if (inv.submitted_payment_id && inv.paypal_email) {
+      paypalEmailByPaymentId.set(inv.submitted_payment_id, inv.paypal_email);
+    }
+  }
+
   const handlePay = (member: TeamMember) => {
     setSelectedRecipient(member);
     setCreateDialogOpen(true);
@@ -499,7 +507,11 @@ export function PaymentsAdmin({ team }: PaymentsAdminProps) {
             ) : (
               <div className="divide-y divide-border/50">
                 {recentPaid.map(payment => (
-                  <PaidPaymentRow key={payment.id} payment={payment} />
+                  <PaidPaymentRow
+                    key={payment.id}
+                    payment={payment}
+                    externalPaypalEmail={paypalEmailByPaymentId.get(payment.id) ?? null}
+                  />
                 ))}
               </div>
             )}
@@ -525,8 +537,13 @@ export function PaymentsAdmin({ team }: PaymentsAdminProps) {
 }
 
 /* ── Paid Payment Row (expandable) ── */
-function PaidPaymentRow({ payment }: { payment: Payment }) {
+function PaidPaymentRow({ payment, externalPaypalEmail }: { payment: Payment; externalPaypalEmail: string | null }) {
   const [expanded, setExpanded] = useState(false);
+  const paypalEmail = payment.recipient?.paypal_email ?? externalPaypalEmail;
+  const title = payment.recipient?.display_name ?? payment.recipient_email ?? 'External';
+  const fallbackInitials = payment.recipient?.display_name
+    ? getInitials(payment.recipient.display_name)
+    : (payment.recipient_email ?? '?').slice(0, 2).toUpperCase();
 
   return (
     <div>
@@ -541,11 +558,11 @@ function PaidPaymentRow({ payment }: { payment: Payment }) {
           <Avatar className="size-8 ring-1 ring-white/[0.06]">
             <AvatarImage src={payment.recipient?.avatar_url ?? undefined} />
             <AvatarFallback className="bg-secondary text-foreground text-[10px]">
-              {getInitials(payment.recipient?.display_name ?? '?')}
+              {fallbackInitials}
             </AvatarFallback>
           </Avatar>
           <div className="min-w-0">
-            <p className="text-sm font-medium text-foreground truncate">{payment.recipient?.display_name}</p>
+            <p className="text-sm font-medium text-foreground truncate">{title}</p>
             <p className="text-[11px] text-muted-foreground">
               {payment.items?.length ?? 0} item{(payment.items?.length ?? 0) !== 1 ? 's' : ''}
               {payment.description && <span className="ml-1.5 text-muted-foreground/50">· {payment.description}</span>}
@@ -574,7 +591,28 @@ function PaidPaymentRow({ payment }: { payment: Payment }) {
             transition={{ duration: 0.2, ease: 'easeInOut' }}
             className="overflow-hidden"
           >
-            <div className="pb-3 px-1 pt-1">
+            <div className="pb-3 px-1 pt-1 space-y-2">
+              {paypalEmail && (
+                <div className="flex items-center justify-between gap-3 rounded-lg bg-white/[0.02] px-3 py-2 text-xs">
+                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground">PayPal</span>
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigator.clipboard.writeText(paypalEmail);
+                      toast.success('PayPal email copied');
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') { e.stopPropagation(); navigator.clipboard.writeText(paypalEmail); toast.success('PayPal email copied'); }
+                    }}
+                    className="font-mono text-foreground/90 truncate hover:text-seeko-accent transition-colors cursor-copy"
+                    title="Click to copy"
+                  >
+                    {paypalEmail}
+                  </span>
+                </div>
+              )}
               {payment.items && payment.items.length > 0 && (
                 <div className="rounded-lg bg-white/[0.02] p-3 space-y-2">
                   {payment.items.map(item => (
@@ -809,6 +847,27 @@ function InvoiceRequestRow({ invite, index, onAction }: { invite: InvoiceRequest
               </>
             )}
           </div>
+          {invite.paypal_email && (
+            <div className="flex items-center gap-1.5 mt-0.5 text-[11px] text-muted-foreground/70">
+              <span className="text-[9px] uppercase tracking-wider text-muted-foreground/50">PayPal</span>
+              <span
+                role="button"
+                tabIndex={0}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigator.clipboard.writeText(invite.paypal_email!);
+                  toast.success('PayPal email copied');
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') { e.stopPropagation(); navigator.clipboard.writeText(invite.paypal_email!); toast.success('PayPal email copied'); }
+                }}
+                className="font-mono truncate hover:text-seeko-accent transition-colors cursor-copy"
+                title="Click to copy"
+              >
+                {invite.paypal_email}
+              </span>
+            </div>
+          )}
         </div>
       </div>
       <div className="flex items-center gap-2.5 shrink-0">
