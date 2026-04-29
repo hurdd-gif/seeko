@@ -123,7 +123,7 @@ export default function NorthStarTaskRowPage() {
             tasks.
           </h1>
           <p className="mt-4 font-sans text-[0.875rem] text-ink/55 tabular-nums">
-            {activeCount} active &mdash; {MOCK_TASKS.length - activeCount} done
+            {activeCount === 0 ? 'all clear.' : `${activeCount} in motion.`}
           </p>
         </div>
 
