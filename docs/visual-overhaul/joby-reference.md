@@ -52,7 +52,7 @@
 | Section header | 32–40px | 400–500 | sentence or Title Case |
 | Body copy | 16–18px | 400 | line-height ~1.6–1.8 (generous) |
 | Metadata / dates | 12–14px | 400 | light gray color |
-| Labels / badges | 12px | 500–600 | UPPERCASE, sparingly |
+| Labels / badges | 12px | 500–600 | sparingly — see SEEKO override below |
 
 ### SEEKO translation (already locked in `tokens.md`)
 - **Outfit** as the single family — geometric humanist, OK to carry editorial register
@@ -188,7 +188,7 @@ For PR0 sign-in: **Path A.**
 | Periods on headlines | yes ("Skip traffic.") | Already do |
 | Quotes | absent or sparing | Avoid |
 | Italics | not detected | Avoid |
-| All-caps | tiny labels only ("Coming soon", weight 500–600) | Match — uppercase only for 11–12px metadata, 500–600 weight, 0.16–0.18em tracking |
+| All-caps | tiny labels only ("Coming soon", weight 500–600) | **SEEKO override: BANNED.** Uppercase-tracked eyebrows / metadata read as generic AI chrome ("STUDIO · LEDGER", "TEAM SIGN-IN"). Use sentence case for all metadata, including dept tags, dates, status labels. Acronyms (UI, API) keep their case. |
 
 ---
 

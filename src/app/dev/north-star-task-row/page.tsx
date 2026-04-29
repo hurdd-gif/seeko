@@ -9,7 +9,7 @@
  *   • Hairline rule between rows, never around them.
  *   • Status reads via type weight + opacity, not color.
  *   • The single amber dot appears only for needs-attention.
- *   • Department is a small uppercase Outfit tag — no chroma, no badge fill.
+ *   • Department is a small uppercase Geist tag — no chroma, no badge fill.
  *   • Dates right-aligned, tabular nums.
  *   • Assignee is a hairline-ring monogram circle, no fill, no avatar URL.
  *
@@ -44,9 +44,20 @@ const MOCK_TASKS: MockTask[] = [
   { id: 'T-047', title: 'Telemetry dashboard — first cut', status: 'In Progress', assignee: 'YK', department: 'Coding', deadline: '2026-05-30' },
 ];
 
+// Department abbreviations to keep the column rhythm tight at data density.
+// Sentence case (not uppercase) — uppercase-tracked metadata reads as
+// generic AI chrome. Acronyms (UI/UX) keep their case.
+const DEPT_LABEL: Record<string, string> = {
+  'Coding': 'Code',
+  'Visual Art': 'Art',
+  'UI/UX': 'UI',
+  'Animation': 'Anim',
+  'Asset Creation': 'Assets',
+};
+
 function formatDate(iso: string): string {
   const [, m, d] = iso.split('-');
-  const month = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'][Number(m) - 1];
+  const month = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][Number(m) - 1];
   return `${month} ${d}`;
 }
 
@@ -57,46 +68,48 @@ function TaskRow({ task }: { task: MockTask }) {
   return (
     <a
       href={`#${task.id}`}
-      className="group grid grid-cols-[auto_1fr_auto_auto_auto] items-center gap-6 px-2 -mx-2 py-5 rounded-md transition-[background-color] duration-150 ease-out hover:bg-ink/[0.03]"
+      className="group grid grid-cols-[1rem_1fr_auto_auto_4rem] items-center gap-6 px-3 -mx-3 py-4 rounded-md transition-[background-color] duration-150 ease-out hover:bg-ink/[0.035]"
     >
       {/* Status dot — only renders when needs-attention.
-          Sized to read as data, not decoration. */}
-      <span
-        aria-hidden
-        aria-label={needsAttention ? 'needs attention' : undefined}
-        className={
-          'h-2 w-2 rounded-full ' +
-          (needsAttention ? 'bg-status-warning' : 'bg-transparent')
-        }
-      />
+          Sized to read as data, not decoration. Centered in fixed column. */}
+      <span className="flex justify-center">
+        <span
+          aria-hidden={!needsAttention}
+          aria-label={needsAttention ? 'needs attention' : undefined}
+          className={
+            'h-[7px] w-[7px] rounded-full ' +
+            (needsAttention ? 'bg-status-warning' : 'bg-transparent')
+          }
+        />
+      </span>
 
       {/* Title — type weight + opacity carry the status */}
       <span
         className={
           'font-sans text-[0.9375rem] leading-[1.4] truncate ' +
           (isDone
-            ? 'text-ink/45 font-normal'
+            ? 'text-ink/40 font-normal'
             : 'text-ink font-medium')
         }
       >
         {task.title}
       </span>
 
-      {/* Department — uppercase Outfit, tracked, muted */}
-      <span className="font-sans text-[0.6875rem] font-medium uppercase tracking-[0.16em] text-ink/45 hidden md:inline">
-        {task.department}
+      {/* Department — sentence-case ledger code, muted */}
+      <span className="font-sans text-[0.8125rem] text-ink/45 hidden md:inline">
+        {DEPT_LABEL[task.department] ?? task.department}
       </span>
 
       {/* Assignee — hairline-ring monogram, no fill */}
       <span
         aria-label={`Assigned to ${task.assignee}`}
-        className="inline-flex h-6 w-6 items-center justify-center rounded-full ring-1 ring-inset ring-border font-sans text-[0.625rem] font-medium tracking-[0.04em] text-ink/70 tabular-nums"
+        className="inline-flex h-7 w-7 items-center justify-center rounded-full ring-1 ring-inset ring-border font-sans text-[0.625rem] font-medium tracking-[0.04em] text-ink/65"
       >
         {task.assignee}
       </span>
 
-      {/* Deadline — right-aligned, tabular nums */}
-      <span className="font-sans text-[0.8125rem] text-ink/55 tabular-nums whitespace-nowrap">
+      {/* Deadline — right-aligned, tabular nums, fixed width column */}
+      <span className="font-sans text-[0.8125rem] text-ink/55 tabular-nums whitespace-nowrap text-right">
         {formatDate(task.deadline)}
       </span>
     </a>
@@ -113,20 +126,23 @@ export default function NorthStarTaskRowPage() {
   });
 
   const activeCount = MOCK_TASKS.filter((t) => t.status !== 'Complete').length;
+  const doneCount = MOCK_TASKS.length - activeCount;
 
   return (
     <main className="bg-paper text-ink min-h-dvh">
       <div className="mx-auto max-w-[64rem] px-8 sm:px-12 lg:px-16 pt-16 sm:pt-20 pb-24">
-        {/* Headline — editorial register, lowercase */}
-        <div className="mb-12">
+        {/* Headline — editorial register, lowercase, sized as signage not poster */}
+        <div className="mb-10">
           <h1
-            className="font-sans font-medium text-ink text-[clamp(2.5rem,5.5vw,4rem)] leading-[1.05] tracking-[-0.02em]"
-            style={{ textIndent: '-0.04em' }}
+            className="font-sans font-medium text-ink text-[clamp(2rem,4vw,2.75rem)] leading-[1.05] tracking-[-0.02em]"
+            style={{ textIndent: '-0.02em' }}
           >
             tasks.
           </h1>
-          <p className="mt-4 font-sans text-[0.875rem] text-ink/55 tabular-nums">
-            {activeCount === 0 ? 'all clear.' : `${activeCount} in motion.`}
+          <p className="mt-3 font-sans text-[0.875rem] text-ink/55 tabular-nums">
+            {activeCount === 0
+              ? 'all clear.'
+              : `${activeCount} in motion — ${doneCount} done.`}
           </p>
         </div>
 

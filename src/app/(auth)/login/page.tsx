@@ -52,7 +52,7 @@ function SignInForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
+    <form onSubmit={handleSubmit} className="space-y-6">
       <div className="space-y-2">
         <label
           htmlFor="email"
@@ -111,53 +111,55 @@ export default function LoginPage() {
 
   return (
     <main className="bg-paper text-ink min-h-dvh flex flex-col">
-      {/* Wordmark — top-left, small, deliberate */}
+      {/* Wordmark — top-left, sized to anchor the page without shouting */}
       <header className="px-8 sm:px-12 lg:px-16 pt-8 sm:pt-10">
         <Image
           src="/branding/wordmark-light.png"
           alt="SEEKO"
-          width={280}
-          height={84}
+          width={384}
+          height={239}
           priority
-          className="h-9 sm:h-10 w-auto object-contain object-left dark:hidden select-none"
+          className="h-16 sm:h-20 w-auto object-contain object-left dark:hidden select-none"
           draggable={false}
         />
         <Image
           src="/branding/wordmark-dark.png"
           alt="SEEKO"
-          width={280}
-          height={84}
+          width={384}
+          height={239}
           priority
-          className="h-9 sm:h-10 w-auto object-contain object-left hidden dark:block select-none"
+          className="h-16 sm:h-20 w-auto object-contain object-left hidden dark:block select-none"
           draggable={false}
         />
       </header>
 
-      {/* Form column — constrained, sat in upper third */}
-      <div className="flex-1 px-8 sm:px-12 lg:px-16 pt-24 sm:pt-32">
-        <div className="max-w-[22rem]">
+      {/* Form column — flush-left to share the wordmark's axis; the spine of the page */}
+      <div className="flex-1 px-8 sm:px-12 lg:px-16 pt-20 sm:pt-24">
+        <div className="w-full max-w-[26rem]">
           <h1
-            className="font-sans font-medium text-ink text-[clamp(2.5rem,5.5vw,4rem)] leading-[1.05] tracking-[-0.02em] mb-12"
-            style={{ textIndent: '-0.04em' }}
+            className="font-sans font-medium text-ink text-[clamp(2.25rem,4.5vw,3rem)] leading-[1.05] tracking-[-0.02em] mb-10"
+            style={{ textIndent: '-0.02em' }}
           >
             {mode === 'signin' ? 'welcome back.' : 'join the team.'}
           </h1>
 
           {mode === 'signin' ? <SignInForm /> : <InviteCodeForm />}
 
-          <div className="mt-8">
+          <p className="mt-10 font-sans text-[0.875rem] text-ink/50">
+            {mode === 'signin' ? 'new here? ' : 'returning? '}
             <button
               type="button"
               onClick={() => setMode(mode === 'signin' ? 'invite' : 'signin')}
-              className="font-sans text-[0.875rem] text-ink/55 hover:text-ink transition-[color] duration-150 ease-out"
+              className="font-sans text-ink underline underline-offset-[5px] decoration-ink/30 hover:decoration-ink decoration-[1px] transition-[text-decoration-color] duration-150 ease-out"
             >
               {mode === 'signin'
-                ? 'have an invite code?'
-                : 'already a member?'}
+                ? 'enter an invite code'
+                : 'sign in instead'}
             </button>
-          </div>
+          </p>
         </div>
       </div>
+
     </main>
   );
 }
