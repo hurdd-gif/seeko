@@ -36,9 +36,11 @@ export async function proxy(request: NextRequest) {
   const isAgreementRoute = pathname.startsWith('/agreement') || pathname.startsWith('/api/agreement');
   const isPublicAsset =
     pathname.startsWith('/_next') || pathname.startsWith('/favicon');
+  // /dev/* are preview routes for visual references — public in dev only.
+  const isDevPreview = pathname.startsWith('/dev/') && process.env.NODE_ENV === 'development';
   const isExternalSigningRoute = pathname.startsWith('/sign') || pathname.startsWith('/api/external-signing') || pathname.startsWith('/api/geocode') || pathname.startsWith('/invoice') || pathname.startsWith('/api/invoice-request') || pathname.startsWith('/shared') || pathname.startsWith('/api/doc-share');
 
-  if (!user && !isAuthRoute && !isPublicAsset && !isExternalSigningRoute) {
+  if (!user && !isAuthRoute && !isPublicAsset && !isExternalSigningRoute && !isDevPreview) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
     return NextResponse.redirect(url);
