@@ -117,12 +117,9 @@ export default function NorthStarTaskRowPage() {
   return (
     <main className="bg-paper text-ink min-h-dvh">
       <div className="mx-auto max-w-[64rem] px-8 sm:px-12 lg:px-16 pt-16 sm:pt-20 pb-24">
-        {/* Section eyebrow + headline — editorial register, lowercase */}
+        {/* Headline — editorial register, lowercase */}
         <div className="mb-12">
-          <span className="font-sans text-[0.6875rem] font-medium uppercase tracking-[0.18em] text-ink/45">
-            Studio
-          </span>
-          <h1 className="mt-3 font-sans font-medium text-ink text-[clamp(1.875rem,3.4vw,2.5rem)] leading-[1.1] tracking-[-0.015em]">
+          <h1 className="font-sans font-medium text-ink text-[clamp(1.875rem,3.4vw,2.5rem)] leading-[1.1] tracking-[-0.015em]">
             tasks.
           </h1>
           <p className="mt-3 font-sans text-[0.9375rem] text-ink/55 tabular-nums">
