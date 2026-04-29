@@ -136,7 +136,10 @@ export default function LoginPage() {
       {/* Form column — constrained, sat in upper third */}
       <div className="flex-1 px-8 sm:px-12 lg:px-16 pt-24 sm:pt-32">
         <div className="max-w-[22rem]">
-          <h1 className="font-sans font-medium text-ink text-[clamp(2.5rem,5.5vw,4rem)] leading-[1.05] tracking-[-0.02em] mb-12">
+          <h1
+            className="font-sans font-medium text-ink text-[clamp(2.5rem,5.5vw,4rem)] leading-[1.05] tracking-[-0.02em] mb-12"
+            style={{ textIndent: '-0.04em' }}
+          >
             {mode === 'signin' ? 'welcome back.' : 'join the team.'}
           </h1>
 

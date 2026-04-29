@@ -119,7 +119,10 @@ export default function NorthStarTaskRowPage() {
       <div className="mx-auto max-w-[64rem] px-8 sm:px-12 lg:px-16 pt-16 sm:pt-20 pb-24">
         {/* Headline — editorial register, lowercase */}
         <div className="mb-12">
-          <h1 className="font-sans font-medium text-ink text-[clamp(2.5rem,5.5vw,4rem)] leading-[1.05] tracking-[-0.02em]">
+          <h1
+            className="font-sans font-medium text-ink text-[clamp(2.5rem,5.5vw,4rem)] leading-[1.05] tracking-[-0.02em]"
+            style={{ textIndent: '-0.04em' }}
+          >
             tasks.
           </h1>
           <p className="mt-4 font-sans text-[0.875rem] text-ink/55 tabular-nums">
