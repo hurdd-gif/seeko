@@ -57,7 +57,7 @@ function TaskRow({ task }: { task: MockTask }) {
   return (
     <a
       href={`#${task.id}`}
-      className="group grid grid-cols-[auto_1fr_auto_auto_auto] items-center gap-6 px-2 -mx-2 py-4 rounded-md transition-[background-color] duration-150 ease-out hover:bg-ink/[0.03]"
+      className="group grid grid-cols-[auto_1fr_auto_auto_auto] items-center gap-6 px-2 -mx-2 py-5 rounded-md transition-[background-color] duration-150 ease-out hover:bg-ink/[0.03]"
     >
       {/* Status dot — only renders when needs-attention.
           Sized to read as data, not decoration. */}
@@ -83,7 +83,7 @@ function TaskRow({ task }: { task: MockTask }) {
       </span>
 
       {/* Department — uppercase Outfit, tracked, muted */}
-      <span className="font-sans text-[0.6875rem] font-medium uppercase tracking-[0.14em] text-ink/45 hidden md:inline">
+      <span className="font-sans text-[0.6875rem] font-medium uppercase tracking-[0.16em] text-ink/45 hidden md:inline">
         {task.department}
       </span>
 
@@ -119,10 +119,10 @@ export default function NorthStarTaskRowPage() {
       <div className="mx-auto max-w-[64rem] px-8 sm:px-12 lg:px-16 pt-16 sm:pt-20 pb-24">
         {/* Headline — editorial register, lowercase */}
         <div className="mb-12">
-          <h1 className="font-sans font-medium text-ink text-[clamp(1.875rem,3.4vw,2.5rem)] leading-[1.1] tracking-[-0.015em]">
+          <h1 className="font-sans font-medium text-ink text-[clamp(2.5rem,5.5vw,4rem)] leading-[1.05] tracking-[-0.02em]">
             tasks.
           </h1>
-          <p className="mt-3 font-sans text-[0.9375rem] text-ink/55 tabular-nums">
+          <p className="mt-4 font-sans text-[0.875rem] text-ink/55 tabular-nums">
             {activeCount} active &middot; {MOCK_TASKS.length - activeCount} done
           </p>
         </div>

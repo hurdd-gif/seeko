@@ -58,7 +58,7 @@ function SignInForm() {
           htmlFor="email"
           className="block font-sans text-[0.875rem] text-ink/70"
         >
-          Email
+          email
         </label>
         <Input
           id="email"
@@ -75,7 +75,7 @@ function SignInForm() {
           htmlFor="password"
           className="block font-sans text-[0.875rem] text-ink/70"
         >
-          Password
+          password
         </label>
         <Input
           id="password"
@@ -98,7 +98,7 @@ function SignInForm() {
 
       <div className="pt-2">
         <Button type="submit" variant="link" size="lg" disabled={loading}>
-          {loading ? 'signing in…' : 'continue →'}
+          {loading ? 'signing in…' : 'continue'}
         </Button>
       </div>
     </form>
@@ -135,7 +135,7 @@ export default function LoginPage() {
       {/* Form column — constrained, sat in upper third */}
       <div className="flex-1 px-8 sm:px-12 lg:px-16 pt-24 sm:pt-32">
         <div className="max-w-[22rem]">
-          <h1 className="font-sans font-medium text-ink text-[clamp(2rem,4vw,3rem)] leading-[1.05] tracking-[-0.02em] mb-12">
+          <h1 className="font-sans font-medium text-ink text-[clamp(2.5rem,5.5vw,4rem)] leading-[1.05] tracking-[-0.02em] mb-12">
             {mode === 'signin' ? 'welcome back.' : 'join the team.'}
           </h1>
 
