@@ -8,8 +8,6 @@ import { useHaptics } from '@/components/HapticsProvider';
 import { Button, Input, Tabs } from '@/components/seeko-ui';
 import { InviteCodeForm } from '@/components/auth/InviteCodeForm';
 
-const BUILD_VERSION = process.env.NEXT_PUBLIC_BUILD_VERSION ?? 'dev';
-
 function SignInForm() {
   const router = useRouter();
   const { trigger } = useHaptics();
@@ -147,15 +145,6 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* Metadata — bottom corner */}
-      <footer className="px-6 sm:px-8 pb-6 flex justify-between items-end">
-        <span className="font-sans text-[0.6875rem] font-medium uppercase tracking-[0.18em] text-ink/45">
-          SEEKO Studio
-        </span>
-        <span className="font-sans text-[0.6875rem] font-medium uppercase tracking-[0.18em] text-ink/45 tabular-nums">
-          v {BUILD_VERSION}
-        </span>
-      </footer>
     </main>
   );
 }
