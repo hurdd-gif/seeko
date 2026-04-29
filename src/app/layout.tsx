@@ -1,17 +1,13 @@
 import type { Metadata, Viewport } from "next";
 import { Toaster } from "sonner";
-import { Outfit, JetBrains_Mono } from "next/font/google";
+import { Outfit } from "next/font/google";
 import { HapticsProvider } from "@/components/HapticsProvider";
 import { DevAgentation } from "@/components/dev/agentation";
+import { InterfaceKitProvider } from "@/components/dev/InterfaceKitProvider";
 import "./globals.css";
 
 const outfit = Outfit({
   variable: "--font-outfit",
-  subsets: ["latin"],
-});
-
-const jetbrainsMono = JetBrains_Mono({
-  variable: "--font-jetbrains-mono",
   subsets: ["latin"],
 });
 
@@ -46,7 +42,7 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
       </head>
       <body
-        className={`${outfit.variable} ${jetbrainsMono.variable} antialiased bg-paper text-ink`}
+        className={`${outfit.variable} antialiased bg-paper text-ink`}
       >
         <HapticsProvider>
           {children}
@@ -59,7 +55,7 @@ export default function RootLayout({
             }}
           />
           <DevAgentation />
-
+          <InterfaceKitProvider />
         </HapticsProvider>
       </body>
     </html>

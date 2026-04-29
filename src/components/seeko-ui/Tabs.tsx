@@ -30,7 +30,7 @@ export function Tabs({ items, defaultKey, className, onChange }: TabsProps) {
     <div className={cn('w-full', className)}>
       <div
         role="tablist"
-        className="flex items-center gap-6 border-b border-ink/10"
+        className="flex items-center gap-6 border-b border-border"
       >
         {items.map((item) => {
           const isActive = item.key === active;
@@ -55,7 +55,7 @@ export function Tabs({ items, defaultKey, className, onChange }: TabsProps) {
               {isActive && (
                 <span
                   aria-hidden
-                  className="absolute left-0 right-0 -bottom-px h-px bg-ink"
+                  className="absolute left-0 right-0 -bottom-[1.5px] h-[1.5px] bg-ink rounded-full"
                 />
               )}
             </button>

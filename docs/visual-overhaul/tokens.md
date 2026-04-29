@@ -10,10 +10,11 @@
 
 | Token | Value | Role |
 |---|---|---|
-| `--font-sans` | `var(--font-outfit)` | UI + editorial body/headings |
-| `--font-mono` | `var(--font-jetbrains-mono)` | code, IDs, dates, metadata |
+| `--font-sans` | `var(--font-outfit)` | **Single brand face** — display, body, metadata, all UI text |
 
-**Killed:** `--font-handwriting` (Caveat) — eliminated. No third family.
+**Single family.** Outfit only. No mono brand face. Code blocks (`<code>`, `<pre>`) fall back to system `ui-monospace` — a structural necessity, not a brand face.
+
+**Killed:** `--font-handwriting` (Caveat), `--font-mono` (JetBrains Mono). No second loaded family.
 
 ---
 
@@ -38,17 +39,22 @@
 | `--text-body-compressed` | `0.875rem` (14px) | `1.45` | `0` | 400 |
 | `--text-small-compressed` | `0.75rem` (12px) | `1.4` | `0.005em` | 400 |
 
-### Mono (single scale, both registers)
+### Metadata (Outfit, tracked uppercase — replaces the old mono role)
 
-| Token | Size | Line-height | Tracking |
-|---|---|---|---|
-| `--text-mono` | `0.8125rem` (13px) | `1.5` | `0` |
-| `--text-mono-compressed` | `0.6875rem` (11px) | `1.4` | `0.01em` |
+| Token | Size | Line-height | Tracking | Treatment |
+|---|---|---|---|---|
+| `--text-meta` | `0.75rem` (12px) | `1.4` | `0.14em` | uppercase, font-weight 500 |
+| `--text-meta-compressed` | `0.6875rem` (11px) | `1.4` | `0.18em` | uppercase, font-weight 500 |
 
-**Mono usage rules:**
-- Always `font-variant-numeric: tabular-nums` when displaying numbers (per `/make-interfaces-feel-better` #9)
-- Uppercase for tags/labels; sentence-case for IDs and code
-- Lower opacity (`text-ink/60`) for metadata, full opacity for IDs/code
+**Metadata usage rules:**
+- Always `font-variant-numeric: tabular-nums` when displaying numbers (per `/make-interfaces-feel-better` #9). Outfit supports tabular nums via the CSS property.
+- Uppercase for labels (EMAIL, PASSWORD, status badges, footer chrome).
+- Lower opacity (`text-ink/45` to `text-ink/60`) — metadata is supportive, never primary.
+- Generous tracking (0.14–0.18em) — uppercase reads well only with letter-spacing.
+
+**Code/data display (system mono fallback only):**
+- `<code>` and `<pre>` inside `.doc-content` use `ui-monospace, SFMono-Regular, Menlo, monospace` — system stack, no loaded face.
+- Tabular numbers in dense data tables: use `tabular-nums` on Outfit, NOT a custom mono.
 
 ---
 
@@ -82,9 +88,9 @@
 
 ## Decisions log
 
-- **Sans (Decision 2):** Option A — keep Outfit. Already loaded via `next/font`. Editorial register is carried by scale + weight contrast + line-height, not family identity. If the north-stars prove Outfit visibly insufficient at display sizes, revisit with Söhne or GT America (paid) as a Wave-5+ upgrade.
+- **Sans (Decision 2):** Option A — keep Outfit. Already loaded via `next/font`. Editorial register is carried by scale + weight contrast + line-height, not family identity.
+- **Single family — no mono brand face.** JetBrains Mono dropped 2026-04-28 after seeing it rendered: it imported a "code editor" register that fought the editorial cream/ink language. Replaced with Outfit at metadata size, uppercase, tracked. Code blocks fall back to system `ui-monospace` — structural necessity for `<code>`/`<pre>` only, not a brand face.
 - **Two scales not three.** Editorial for sparse surfaces, compressed for dense data surfaces. No "marketing scale" — that's just editorial display sizing.
 - **Compressed weights are heavier (600 on headings).** Smaller type needs more weight to read as hierarchy at distance.
 - **Pill CTAs only on primary actions.** Secondary actions use `--radius-input` to avoid pill-overuse cliché.
 - **No `--radius-button` token.** Primary buttons use `--radius-pill`, secondary buttons use `--radius-input`. Naming says intent, not shape.
-- **Mono compressed has positive tracking (`0.01em`).** Tabular nums at 11px crowd; tracking restores legibility without bumping size.

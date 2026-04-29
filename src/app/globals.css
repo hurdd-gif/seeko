@@ -43,9 +43,11 @@
   --color-sidebar-accent:       var(--color-paper-elevated);
   --color-sidebar-border:       var(--color-border);
 
-  /* ---------- Typography ---------- */
+  /* ---------- Typography (single family — Outfit) ---------- */
   --font-sans: var(--font-outfit);
-  --font-mono: var(--font-jetbrains-mono);
+  /* No --font-mono. Code blocks use system ui-monospace as a structural
+     fallback only (not a brand face). Numeric data uses
+     font-variant-numeric: tabular-nums on Outfit. */
 
   /* Editorial scale — sparse surfaces */
   --text-display:    4rem;       /* 64px */
@@ -62,9 +64,9 @@
   --text-body-compressed:  0.875rem;   /* 14px */
   --text-small-compressed: 0.75rem;    /* 12px */
 
-  /* Mono */
-  --text-mono:             0.8125rem;  /* 13px */
-  --text-mono-compressed:  0.6875rem;  /* 11px */
+  /* Metadata scale — tracked, uppercase, Outfit only */
+  --text-meta:             0.75rem;    /* 12px */
+  --text-meta-compressed:  0.6875rem;  /* 11px */
 
   /* ---------- Spacing (4-based) ---------- */
   --space-1:  0.25rem;   /* 4 */
@@ -255,7 +257,7 @@ body.tour-cmd-k-active #command-palette-container * {
   border-radius: 0.25rem;
   background: var(--color-paper-elevated);
   border: 1px solid var(--color-border);
-  font-family: var(--font-mono), monospace;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 .doc-content a,
 .doc-read-body .doc-content a {
@@ -279,7 +281,7 @@ body.tour-cmd-k-active #command-palette-container * {
   border-radius: var(--radius-input);
   background: var(--color-paper-elevated);
   border: 1px solid var(--color-border);
-  font-family: var(--font-mono), monospace;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 0.875em;
   overflow-x: auto;
 }
