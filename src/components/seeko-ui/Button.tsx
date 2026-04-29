@@ -18,8 +18,12 @@ const buttonVariants = cva(
       variant: {
         primary: 'bg-ink text-paper hover:bg-ink/90 rounded-full',
         secondary:
-          'bg-transparent text-ink ring-1 ring-inset ring-ink/15 hover:bg-ink/[0.04] rounded-lg',
+          'bg-transparent text-ink ring-1 ring-inset ring-border hover:bg-ink/[0.04] rounded-lg',
         ghost: 'bg-transparent text-ink hover:bg-ink/[0.04] rounded-lg',
+        // Joby-register editorial CTA: text only, animated underline.
+        // No fill, no border, no radius. The type carries the action.
+        link:
+          'bg-transparent text-ink rounded-none px-0 underline underline-offset-[6px] decoration-ink/30 hover:decoration-ink decoration-[1px]',
       },
       size: {
         sm: 'h-9 px-4',
@@ -27,6 +31,11 @@ const buttonVariants = cva(
         lg: 'h-12 px-8',
       },
     },
+    compoundVariants: [
+      { variant: 'link', size: 'sm', className: 'h-auto px-0' },
+      { variant: 'link', size: 'md', className: 'h-auto px-0' },
+      { variant: 'link', size: 'lg', className: 'h-auto px-0 text-[1.0625rem]' },
+    ],
     defaultVariants: { variant: 'primary', size: 'md' },
   }
 );
