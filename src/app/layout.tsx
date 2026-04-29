@@ -1,13 +1,13 @@
 import type { Metadata, Viewport } from "next";
 import { Toaster } from "sonner";
-import { Outfit } from "next/font/google";
+import { Geist } from "next/font/google";
 import { HapticsProvider } from "@/components/HapticsProvider";
 import { DevAgentation } from "@/components/dev/agentation";
 import { InterfaceKitProvider } from "@/components/dev/InterfaceKitProvider";
 import "./globals.css";
 
-const outfit = Outfit({
-  variable: "--font-outfit",
+const geist = Geist({
+  variable: "--font-geist",
   subsets: ["latin"],
 });
 
@@ -42,7 +42,7 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
       </head>
       <body
-        className={`${outfit.variable} antialiased bg-paper text-ink`}
+        className={`${geist.variable} antialiased bg-paper text-ink`}
       >
         <HapticsProvider>
           {children}

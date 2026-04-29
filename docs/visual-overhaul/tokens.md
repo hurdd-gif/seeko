@@ -10,11 +10,11 @@
 
 | Token | Value | Role |
 |---|---|---|
-| `--font-sans` | `var(--font-outfit)` | **Single brand face** — display, body, metadata, all UI text |
+| `--font-sans` | `var(--font-geist)` | **Single brand face** — display, body, metadata, all UI text |
 
-**Single family.** Outfit only. No mono brand face. Code blocks (`<code>`, `<pre>`) fall back to system `ui-monospace` — a structural necessity, not a brand face.
+**Single family.** Geist only. No mono brand face. Code blocks (`<code>`, `<pre>`) fall back to system `ui-monospace` — a structural necessity, not a brand face.
 
-**Killed:** `--font-handwriting` (Caveat), `--font-mono` (JetBrains Mono). No second loaded family.
+**Killed:** `--font-handwriting` (Caveat), `--font-mono` (JetBrains Mono), `--font-outfit` (Outfit). No second loaded family.
 
 ---
 
@@ -88,7 +88,7 @@
 
 ## Decisions log
 
-- **Sans (Decision 2):** Option A — keep Outfit. Already loaded via `next/font`. Editorial register is carried by scale + weight contrast + line-height, not family identity.
+- **Sans (Decision 2 — revised 2026-04-29):** Geist (Vercel, free, via `next/font/google`). Originally locked Outfit ("editorial register is carried by scale + weight contrast, not family identity"), but Outfit's geometric-humanist personality (curled "a", quirky "k", soft terminals) read as "design-y" against the Joby register. Confirmed Joby uses a custom proprietary face (JobySans Display + Text variable cuts) — see `joby-reference.md`. Geist is the closest free analog: neutral grotesque, variable, well-engineered, and ships with `next/font/google`. Switched 2026-04-29.
 - **Single family — no mono brand face.** JetBrains Mono dropped 2026-04-28 after seeing it rendered: it imported a "code editor" register that fought the editorial cream/ink language. Replaced with Outfit at metadata size, uppercase, tracked. Code blocks fall back to system `ui-monospace` — structural necessity for `<code>`/`<pre>` only, not a brand face.
 - **Two scales not three.** Editorial for sparse surfaces, compressed for dense data surfaces. No "marketing scale" — that's just editorial display sizing.
 - **Compressed weights are heavier (600 on headings).** Smaller type needs more weight to read as hierarchy at distance.

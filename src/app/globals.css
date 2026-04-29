@@ -43,11 +43,14 @@
   --color-sidebar-accent:       var(--color-paper-elevated);
   --color-sidebar-border:       var(--color-border);
 
-  /* ---------- Typography (single family — Outfit) ---------- */
-  --font-sans: var(--font-outfit);
-  /* No --font-mono. Code blocks use system ui-monospace as a structural
+  /* ---------- Typography (single family — Geist) ---------- */
+  --font-sans: var(--font-geist);
+  /* Geist is the closest free analog to JobySans, our editorial anchor.
+     Neutral grotesque, variable, well-engineered for both display and
+     body. See docs/visual-overhaul/joby-reference.md.
+     No --font-mono. Code blocks use system ui-monospace as a structural
      fallback only (not a brand face). Numeric data uses
-     font-variant-numeric: tabular-nums on Outfit. */
+     font-variant-numeric: tabular-nums on Geist. */
 
   /* Editorial scale — sparse surfaces */
   --text-display:    4rem;       /* 64px */
@@ -64,7 +67,7 @@
   --text-body-compressed:  0.875rem;   /* 14px */
   --text-small-compressed: 0.75rem;    /* 12px */
 
-  /* Metadata scale — tracked, uppercase, Outfit only */
+  /* Metadata scale — tracked, uppercase, Geist only */
   --text-meta:             0.75rem;    /* 12px */
   --text-meta-compressed:  0.6875rem;  /* 11px */
 
