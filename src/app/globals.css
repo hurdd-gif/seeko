@@ -8,8 +8,13 @@
    Light mode is default. [data-theme="dark"] flips to mirror.
    ============================================================ */
 
-@theme inline {
-  /* ---------- Canonical SEEKO color tokens (light mode default) ---------- */
+@theme {
+  /* ---------- Canonical SEEKO color tokens (light mode default) ----------
+     Note: NO `inline` — we want utilities to reference var(--color-*)
+     so that the [data-theme="dark"] override below actually flips
+     bg-paper, text-ink, etc. With `@theme inline`, utility values
+     are inlined at build time and dark-mode overrides become no-ops.
+  */
   --color-paper:               oklch(0.970 0.012 85);
   --color-paper-elevated:      oklch(0.985 0.008 85);
   --color-ink:                 oklch(0.200 0.015 60);
