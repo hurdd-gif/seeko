@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Toaster } from "sonner";
-import { Outfit, JetBrains_Mono, Caveat } from "next/font/google";
+import { Outfit, JetBrains_Mono } from "next/font/google";
 import { HapticsProvider } from "@/components/HapticsProvider";
 import { DevAgentation } from "@/components/dev/agentation";
 import "./globals.css";
@@ -15,11 +15,6 @@ const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
 });
 
-const caveat = Caveat({
-  variable: "--font-caveat",
-  subsets: ["latin"],
-});
-
 export const metadata: Metadata = {
   title: "SEEKO Studio",
   description: "SEEKO Game Studio Platform",
@@ -30,7 +25,10 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: '#1a1a1a',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: 'oklch(0.970 0.012 85)' },
+    { media: '(prefers-color-scheme: dark)', color: 'oklch(0.180 0.012 60)' },
+  ],
   viewportFit: 'cover',
 };
 
@@ -40,18 +38,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning>
       <head>
-        <meta name="theme-color" content="#1a1a1a" />
-        <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#1a1a1a" />
-        <meta name="theme-color" media="(prefers-color-scheme: light)" content="#1a1a1a" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="SEEKO Studio" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
       </head>
       <body
-        className={`${outfit.variable} ${jetbrainsMono.variable} ${caveat.variable} antialiased bg-background text-foreground`}
+        className={`${outfit.variable} ${jetbrainsMono.variable} antialiased bg-paper text-ink`}
       >
         <HapticsProvider>
           {children}
