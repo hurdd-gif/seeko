@@ -42,6 +42,40 @@ next-env.d.ts
 
 # worktrees
 .worktrees
+.claude/worktrees
+
+# skills CLI: only commit .agents/skills (source of truth) and
+# .claude/skills (this project's primary AI tool). Other platform
+# directories are auto-generated symlinks that vary by user setup.
+.adal/
+.augment/
+.codebuddy/
+.commandcode/
+.continue/
+.cortex/
+.crush/
+.cursor/
+.factory/
+.goose/
+.iflow/
+.junie/
+.kilocode/
+.kiro/
+.kode/
+/skills/
+.mcpjam/
+.mux/
+.neovate/
+.openhands/
+.pi/
+.pochi/
+.qoder/
+.qwen/
+.roo/
+.trae/
+.vibe/
+.windsurf/
+.zencoder/
 
 # local MCP config (may contain API tokens)
 .mcp.json

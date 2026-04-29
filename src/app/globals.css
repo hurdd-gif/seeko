@@ -1,104 +1,146 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
-@theme inline {
-  /* Surfaces — calibrated to #1a1a1a background */
-  --color-background:        #1a1a1a;
-  --color-foreground:        #f0f0f0;
-  --color-card:              #222222;
-  --color-card-foreground:   #f0f0f0;
-  --color-popover:             #262626;
-  --color-popover-foreground:  #f0f0f0;
-  --color-border:            #2e2e2e;
-  --color-input:             #2e2e2e;
-  --color-muted:             #262626;
-  --color-muted-foreground:  #808080;
-  --color-secondary:         #262626;
-  --color-secondary-foreground: #f0f0f0;
-  --color-accent:            #333333;
-  --color-accent-foreground: #f0f0f0;
-  --color-primary:           #f0f0f0;
-  --color-primary-foreground: #1a1a1a;
-  --color-destructive:       #ef4444;
-  --color-destructive-foreground: #f0f0f0;
-  --color-ring:              rgba(240, 240, 240, 0.18);
+/* ============================================================
+   SEEKO Visual Overhaul — PR0 token contract
+   Source of truth: docs/visual-overhaul/palette.md
+                    docs/visual-overhaul/tokens.md
+   Light mode is default. [data-theme="dark"] flips to mirror.
+   ============================================================ */
 
-  /* Sidebar — darker than background for depth */
-  --color-sidebar:           #151515;
-  --color-sidebar-foreground: #f0f0f0;
-  --color-sidebar-accent:    #262626;
-  --color-sidebar-border:    #2a2a2a;
+@theme {
+  /* ---------- Canonical SEEKO color tokens (light mode default) ----------
+     Note: NO `inline` — we want utilities to reference var(--color-*)
+     so that the [data-theme="dark"] override below actually flips
+     bg-paper, text-ink, etc. With `@theme inline`, utility values
+     are inlined at build time and dark-mode overrides become no-ops.
+  */
+  --color-paper:               oklch(0.970 0.012 85);
+  --color-paper-elevated:      oklch(0.985 0.008 85);
+  --color-ink:                 oklch(0.200 0.015 60);
+  --color-muted:               oklch(0.500 0.012 60);
+  --color-border:              oklch(0.880 0.010 70);
+  --color-accent:              oklch(0.380 0.040 50);
+  --color-accent-foreground:   oklch(0.970 0.012 85);
+  --color-status-warning:      oklch(0.750 0.150 75);
+  --color-status-foreground:   oklch(0.200 0.015 60);
 
-  /* Seeko accent */
-  --color-seeko-accent:      #6ee7b7;
+  /* ---------- shadcn/ui-shape mapping (legacy compat for unmigrated surfaces) ---------- */
+  --color-background:           var(--color-paper);
+  --color-foreground:           var(--color-ink);
+  --color-card:                 var(--color-paper);
+  --color-card-foreground:      var(--color-ink);
+  --color-popover:              var(--color-paper-elevated);
+  --color-popover-foreground:   var(--color-ink);
+  --color-input:                var(--color-border);
+  --color-muted-foreground:     var(--color-muted);
+  --color-secondary:            var(--color-paper-elevated);
+  --color-secondary-foreground: var(--color-ink);
+  --color-primary:              var(--color-ink);
+  --color-primary-foreground:   var(--color-paper);
+  --color-destructive:          var(--color-status-warning);
+  --color-destructive-foreground: var(--color-status-foreground);
+  --color-ring:                 oklch(0.200 0.015 60 / 0.18);
 
-  /* Status dots (used inline, not as badges) */
-  --color-status-complete:   #6ee7b7;
-  --color-status-progress:   #fbbf24;
-  --color-status-review:     #93c5fd;
-  --color-status-blocked:    #f87171;
+  /* Sidebar (legacy compat) */
+  --color-sidebar:              var(--color-paper);
+  --color-sidebar-foreground:   var(--color-ink);
+  --color-sidebar-accent:       var(--color-paper-elevated);
+  --color-sidebar-border:       var(--color-border);
 
-  /* Department colors (UX persona — filters, tags, labels) */
-  --color-dept-coding:         #6ee7b7;
-  --color-dept-visual-art:     #93c5fd;
-  --color-dept-ui-ux:          #c4b5fd;
-  --color-dept-animation:      #fbbf24;
-  --color-dept-asset-creation: #f9a8d4;
+  /* ---------- Typography (single family — Geist) ---------- */
+  --font-sans: var(--font-geist);
+  /* Geist is the closest free analog to JobySans, our editorial anchor.
+     Neutral grotesque, variable, well-engineered for both display and
+     body. See docs/visual-overhaul/joby-reference.md.
+     No --font-mono. Code blocks use system ui-monospace as a structural
+     fallback only (not a brand face). Numeric data uses
+     font-variant-numeric: tabular-nums on Geist. */
 
-  /* Fonts */
-  --font-sans: var(--font-outfit);
-  --font-mono: var(--font-jetbrains-mono);
-  --font-handwriting: var(--font-caveat);
+  /* Editorial scale — sparse surfaces */
+  --text-display:    4rem;       /* 64px */
+  --text-h1:         3rem;       /* 48px */
+  --text-h2:         2.25rem;    /* 36px */
+  --text-h3:         1.5rem;     /* 24px */
+  --text-body:       1rem;       /* 16px */
+  --text-small:      0.875rem;   /* 14px */
 
-  /* Border radius */
-  --radius: 0.5rem;
+  /* Compressed scale — dense surfaces */
+  --text-h1-compressed:    1.625rem;   /* 26px */
+  --text-h2-compressed:    1.25rem;    /* 20px */
+  --text-h3-compressed:    1rem;       /* 16px */
+  --text-body-compressed:  0.875rem;   /* 14px */
+  --text-small-compressed: 0.75rem;    /* 12px */
 
-  /* Surface opacity scale */
-  --opacity-subtle:   0.02;
-  --opacity-faint:    0.03;
-  --opacity-soft:     0.04;
-  --opacity-muted:    0.06;
-  --opacity-border:   0.08;
-  --opacity-visible:  0.15;
+  /* Metadata scale — tracked, uppercase, Geist only */
+  --text-meta:             0.75rem;    /* 12px */
+  --text-meta-compressed:  0.6875rem;  /* 11px */
 
-  /* Accent shadows */
-  --shadow-accent-glow:  0 0 12px rgba(110, 231, 183, 0.04);
-  --shadow-accent-inset: inset 0 0 0 1px rgba(110, 231, 183, 0.2);
+  /* ---------- Spacing (4-based) ---------- */
+  --space-1:  0.25rem;   /* 4 */
+  --space-2:  0.5rem;    /* 8 */
+  --space-3:  0.75rem;   /* 12 */
+  --space-4:  1rem;      /* 16 */
+  --space-6:  1.5rem;    /* 24 */
+  --space-8:  2rem;      /* 32 */
+  --space-12: 3rem;      /* 48 */
+  --space-16: 4rem;      /* 64 */
+  --space-24: 6rem;      /* 96 */
+
+  /* ---------- Radius ---------- */
+  --radius-input: 0.5rem;
+  --radius-card:  0.75rem;
+  --radius-pill:  9999px;
+  --radius:       0.5rem; /* legacy default */
 }
 
-@layer utilities {
-  .interactive-surface {
-    background-color: rgb(255 255 255 / 0.03);
-    border: 1px solid transparent;
-    transition: background-color 150ms, border-color 150ms, box-shadow 150ms;
-  }
-  .interactive-surface:hover {
-    background-color: rgb(255 255 255 / 0.06);
-    border-color: rgb(110 231 183 / 0.1);
-    box-shadow: 0 0 12px rgba(110, 231, 183, 0.04);
-  }
+/* ---------- Dark-mode mirror ---------- */
+[data-theme="dark"] {
+  --color-paper:              oklch(0.180 0.012 60);
+  --color-paper-elevated:     oklch(0.220 0.012 60);
+  --color-ink:                oklch(0.940 0.012 85);
+  --color-muted:              oklch(0.650 0.010 70);
+  --color-border:             oklch(0.280 0.010 60);
+  --color-accent:             oklch(0.780 0.040 50);
+  --color-accent-foreground:  oklch(0.180 0.012 60);
+  --color-ring:               oklch(0.940 0.012 85 / 0.18);
 }
+
+/* ============================================================
+   Base
+   ============================================================ */
 
 body {
-  background-color: var(--color-background);
-  color: var(--color-foreground);
-  color-scheme: dark;
+  background-color: var(--color-paper);
+  color: var(--color-ink);
   font-family: var(--font-sans), Arial, sans-serif;
   min-height: 100dvh;
   min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 html {
-  background-color: var(--color-background);
+  background-color: var(--color-paper);
+  color-scheme: light;
 }
 
-/* Focus ring — subtle, fades in for all users (admins and non-admins).
- * Storyboard: 0ms no ring → 200ms ring fades in (ease-out). */
+[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+/* Numeric data: tabular nums on dates, IDs, prices */
+.tabular-nums,
+[data-tabular] {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Focus ring — fades in for all users */
 :root {
   --focus-ring-duration: 200ms;
 }
 
-/* Tour: when Cmd+K step is active, lower palette z-index so tour overlay frames it */
+/* Tour: when Cmd+K step is active, lower palette z-index */
 body.tour-cmd-k-active #command-palette-backdrop,
 body.tour-cmd-k-active #command-palette-container {
   z-index: 99 !important;
@@ -107,15 +149,13 @@ body.tour-cmd-k-active #command-palette-container * {
   pointer-events: none !important;
 }
 
-/* Toast timer fill: grows from bottom to top over AUTO_DISMISS_MS.
-   Paused on hover via animationPlayState. */
+/* Toast timer fill */
 @keyframes toast-fill {
   from { transform: scaleY(0); }
   to { transform: scaleY(1); }
 }
 
-/* Confetti burst: see TourConfetti.tsx CONFETTI/BURST storyboard.
-   Duration via --confetti-duration on container. */
+/* Confetti burst */
 @keyframes confetti-burst {
   0% {
     opacity: 1;
@@ -140,30 +180,32 @@ body.tour-cmd-k-active #command-palette-container * {
   animation-delay: var(--delay, 0s);
 }
 
-/* Document read view: single source of truth so admin and non-admin look identical.
-   Scoped under .doc-read-body so dialog content always gets these styles regardless of parent. */
+/* ============================================================
+   .doc-read-body — Tiptap prose, re-derived from new tokens
+   ============================================================ */
+
 .doc-content,
 .doc-read-body .doc-content {
-  color: var(--color-foreground);
+  color: var(--color-ink);
 }
 .doc-content-body,
 .doc-content article,
 .doc-read-body .doc-content-body,
 .doc-read-body .doc-content article {
-  color: var(--color-foreground);
+  color: color-mix(in oklch, var(--color-ink) 88%, transparent);
   line-height: 1.7;
   max-width: none;
-  font-size: 0.9375rem;
+  font-size: var(--text-body);
 }
 .doc-content strong,
 .doc-read-body .doc-content strong {
-  color: var(--color-foreground);
+  color: var(--color-ink);
   font-weight: 600;
 }
 .doc-content p,
 .doc-read-body .doc-content p {
   margin-bottom: 0.875rem;
-  color: rgba(240, 240, 240, 0.85);
+  color: color-mix(in oklch, var(--color-ink) 88%, transparent);
 }
 .doc-content p:last-child,
 .doc-read-body .doc-content p:last-child {
@@ -171,12 +213,13 @@ body.tour-cmd-k-active #command-palette-container * {
 }
 .doc-content h1,
 .doc-read-body .doc-content h1 {
-  font-size: 1.75rem;
-  font-weight: 700;
+  font-size: var(--text-h2);
+  font-weight: 600;
   margin-top: 2rem;
   margin-bottom: 0.75rem;
-  line-height: 1.25;
-  color: var(--color-foreground);
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  color: var(--color-ink);
 }
 .doc-content h1:first-child,
 .doc-read-body .doc-content h1:first-child {
@@ -184,12 +227,12 @@ body.tour-cmd-k-active #command-palette-container * {
 }
 .doc-content h2,
 .doc-read-body .doc-content h2 {
-  font-size: 1.375rem;
+  font-size: var(--text-h3);
   font-weight: 600;
   margin-top: 1.75rem;
   margin-bottom: 0.5rem;
-  line-height: 1.3;
-  color: var(--color-foreground);
+  line-height: 1.25;
+  color: var(--color-ink);
 }
 .doc-content h3,
 .doc-read-body .doc-content h3 {
@@ -197,7 +240,7 @@ body.tour-cmd-k-active #command-palette-container * {
   font-weight: 600;
   margin-top: 1.5rem;
   margin-bottom: 0.5rem;
-  color: var(--color-foreground);
+  color: var(--color-ink);
 }
 .doc-content ul,
 .doc-content ol,
@@ -213,32 +256,49 @@ body.tour-cmd-k-active #command-palette-container * {
 }
 .doc-content li::marker,
 .doc-read-body .doc-content li::marker {
-  color: var(--color-muted-foreground);
+  color: var(--color-muted);
 }
 .doc-content code,
 .doc-read-body .doc-content code {
   font-size: 0.875em;
-  padding: 0.125rem 0.25rem;
+  padding: 0.125rem 0.3rem;
   border-radius: 0.25rem;
-  background: var(--color-muted);
-  font-family: var(--font-mono), monospace;
+  background: var(--color-paper-elevated);
+  border: 1px solid var(--color-border);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 .doc-content a,
 .doc-read-body .doc-content a {
-  color: var(--color-seeko-accent);
+  color: var(--color-accent);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
 }
 .doc-content blockquote,
+.doc-read-body .doc-content blockquote {
+  margin: 1rem 0;
+  padding-left: 1rem;
+  border-left: 1px solid var(--color-border);
+  color: color-mix(in oklch, var(--color-ink) 75%, transparent);
+  font-style: italic;
+}
 .doc-content pre,
-.doc-read-body .doc-content blockquote,
 .doc-read-body .doc-content pre {
-  margin-top: 0.75rem;
-  margin-bottom: 0.75rem;
+  margin: 1rem 0;
+  padding: 1rem;
+  border-radius: var(--radius-input);
+  background: var(--color-paper-elevated);
+  border: 1px solid var(--color-border);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.875em;
+  overflow-x: auto;
 }
 .doc-content hr,
 .doc-read-body .doc-content hr {
   margin-top: 1.5rem;
   margin-bottom: 1.5rem;
-  border-color: var(--color-border);
+  border: none;
+  border-top: 1px solid var(--color-border);
 }
 
 /* Tables — read view and editor */
@@ -250,16 +310,16 @@ body.tour-cmd-k-active #command-palette-container * {
   border-spacing: 0;
   margin-top: 1rem;
   margin-bottom: 1rem;
-  font-size: 0.875rem;
+  font-size: var(--text-small);
   border: 1px solid var(--color-border);
-  border-radius: 0.5rem;
+  border-radius: var(--radius-input);
   overflow: hidden;
 }
 .doc-content th,
 .doc-read-body .doc-content th,
 .ProseMirror th {
-  background: var(--color-muted);
-  color: var(--color-foreground);
+  background: var(--color-paper-elevated);
+  color: var(--color-ink);
   font-weight: 600;
   text-align: left;
   padding: 0.625rem 1rem;
@@ -278,7 +338,7 @@ body.tour-cmd-k-active #command-palette-container * {
   padding: 0.625rem 1rem;
   border-bottom: 1px solid var(--color-border);
   border-right: 1px solid var(--color-border);
-  color: rgba(240, 240, 240, 0.85);
+  color: color-mix(in oklch, var(--color-ink) 88%, transparent);
   vertical-align: top;
   min-width: 120px;
 }
@@ -293,11 +353,12 @@ body.tour-cmd-k-active #command-palette-container * {
   border-bottom: none;
 }
 .ProseMirror .selectedCell {
-  background: var(--color-muted);
-  outline: 2px solid var(--color-seeko-accent);
+  background: color-mix(in oklch, var(--color-ink) 5%, transparent);
+  outline: 2px solid color-mix(in oklch, var(--color-ink) 30%, transparent);
   outline-offset: -1px;
 }
-/* Column resize handle — Tiptap injects this div; we show the I► icon */
+
+/* Tiptap column resize handle — restyled with ink at low opacity */
 .ProseMirror .column-resize-handle {
   position: absolute;
   right: -10px;
@@ -308,11 +369,11 @@ body.tour-cmd-k-active #command-palette-container * {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--color-seeko-accent);
+  color: color-mix(in oklch, var(--color-ink) 50%, transparent);
   opacity: 0;
   cursor: col-resize;
   pointer-events: all;
-  transition: opacity 0.12s;
+  transition: opacity 120ms ease-out;
   z-index: 20;
   border-radius: 3px;
 }
@@ -324,22 +385,22 @@ body.tour-cmd-k-active #command-palette-container * {
   cursor: col-resize;
 }
 
-/* Sonner toast overrides */
+/* ============================================================
+   Sonner toast overrides — neutral hairline, no glow
+   ============================================================ */
 [data-sonner-toaster][data-y-position="top"] {
   top: calc(1rem + env(safe-area-inset-top, 0px)) !important;
 }
 
 [data-sonner-toaster] [data-sonner-toast] {
-  --normal-bg: rgba(34, 34, 34, 0.85);
+  --normal-bg: var(--color-paper-elevated);
   --normal-border: var(--color-border);
-  --normal-text: var(--color-foreground);
-  backdrop-filter: blur(16px) saturate(180%);
-  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  --normal-text: var(--color-ink);
   border: 1px solid var(--color-border);
   font-family: var(--font-sans);
 }
 
-/* Mobile fixed chrome: promote to own layer so it stays fixed during scroll (iOS) */
+/* Mobile fixed chrome */
 .mobile-fixed-layer {
   transform: translateZ(0);
   -webkit-backface-visibility: hidden;
@@ -351,7 +412,7 @@ body.tour-cmd-k-active #command-palette-container * {
   display: none !important;
 }
 
-/* Lock ALL scroll containers when a dialog/drawer is open */
+/* Lock scroll containers when a dialog/drawer is open */
 :root[data-modal-open] body,
 :root[data-modal-open] #dashboard-scroll,
 :root[data-modal-open] #tour-main {
@@ -365,7 +426,7 @@ body.tour-cmd-k-active #command-palette-container * {
   overscroll-behavior: none !important;
 }
 
-/* Kill paragraph margin inside table cells so rows aren't bloated */
+/* Kill paragraph margin inside table cells */
 .doc-content td p,
 .doc-content th p,
 .doc-read-body .doc-content td p,

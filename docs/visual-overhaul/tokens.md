@@ -1,0 +1,96 @@
+# SEEKO Tokens — Type, Spacing, Radius
+
+> Companion to `palette.md`. Locked 2026-04-28 as part of PR0. Tokens here mirror what's compiled into `globals.css` `@theme inline {}`.
+
+---
+
+## Typography
+
+### Families
+
+| Token | Value | Role |
+|---|---|---|
+| `--font-sans` | `var(--font-geist)` | **Single brand face** — display, body, metadata, all UI text |
+
+**Single family.** Geist only. No mono brand face. Code blocks (`<code>`, `<pre>`) fall back to system `ui-monospace` — a structural necessity, not a brand face.
+
+**Killed:** `--font-handwriting` (Caveat), `--font-mono` (JetBrains Mono), `--font-outfit` (Outfit). No second loaded family.
+
+---
+
+### Editorial scale (sparse surfaces — sign-in, marketing, doc pages)
+
+| Token | Size | Line-height | Tracking | Weight |
+|---|---|---|---|---|
+| `--text-display` | `4rem` (64px) | `1.05` | `-0.02em` | 500 |
+| `--text-h1` | `3rem` (48px) | `1.1` | `-0.015em` | 500 |
+| `--text-h2` | `2.25rem` (36px) | `1.15` | `-0.01em` | 500 |
+| `--text-h3` | `1.5rem` (24px) | `1.25` | `-0.005em` | 500 |
+| `--text-body` | `1rem` (16px) | `1.55` | `0` | 400 |
+| `--text-small` | `0.875rem` (14px) | `1.5` | `0` | 400 |
+
+### Compressed scale (dense surfaces — task rows, dashboards, tables)
+
+| Token | Size | Line-height | Tracking | Weight |
+|---|---|---|---|---|
+| `--text-h1-compressed` | `1.625rem` (26px) | `1.2` | `-0.01em` | 600 |
+| `--text-h2-compressed` | `1.25rem` (20px) | `1.25` | `-0.005em` | 600 |
+| `--text-h3-compressed` | `1rem` (16px) | `1.3` | `0` | 600 |
+| `--text-body-compressed` | `0.875rem` (14px) | `1.45` | `0` | 400 |
+| `--text-small-compressed` | `0.75rem` (12px) | `1.4` | `0.005em` | 400 |
+
+### Metadata (Outfit, tracked uppercase — replaces the old mono role)
+
+| Token | Size | Line-height | Tracking | Treatment |
+|---|---|---|---|---|
+| `--text-meta` | `0.75rem` (12px) | `1.4` | `0.14em` | uppercase, font-weight 500 |
+| `--text-meta-compressed` | `0.6875rem` (11px) | `1.4` | `0.18em` | uppercase, font-weight 500 |
+
+**Metadata usage rules:**
+- Always `font-variant-numeric: tabular-nums` when displaying numbers (per `/make-interfaces-feel-better` #9). Outfit supports tabular nums via the CSS property.
+- Uppercase for labels (EMAIL, PASSWORD, status badges, footer chrome).
+- Lower opacity (`text-ink/45` to `text-ink/60`) — metadata is supportive, never primary.
+- Generous tracking (0.14–0.18em) — uppercase reads well only with letter-spacing.
+
+**Code/data display (system mono fallback only):**
+- `<code>` and `<pre>` inside `.doc-content` use `ui-monospace, SFMono-Regular, Menlo, monospace` — system stack, no loaded face.
+- Tabular numbers in dense data tables: use `tabular-nums` on Outfit, NOT a custom mono.
+
+---
+
+## Spacing (4-based)
+
+| Token | Value | Common use |
+|---|---|---|
+| `--space-1` | `4px` | tight inline gaps |
+| `--space-2` | `8px` | input padding y, badge gap |
+| `--space-3` | `12px` | input padding x, row gap (compressed) |
+| `--space-4` | `16px` | row gap (editorial), card padding sm |
+| `--space-6` | `24px` | section spacing (compressed) |
+| `--space-8` | `32px` | section spacing (editorial), card padding lg |
+| `--space-12` | `48px` | page padding x (mobile), section gap |
+| `--space-16` | `64px` | page padding x (desktop) |
+| `--space-24` | `96px` | hero spacing, editorial section |
+
+---
+
+## Border radius
+
+| Token | Value | Role |
+|---|---|---|
+| `--radius-input` | `0.5rem` (8px) | inputs, selects, dropdowns |
+| `--radius-card` | `0.75rem` (12px) | cards, modals, popovers |
+| `--radius-pill` | `9999px` | primary CTAs, status pills |
+
+**Concentric rule:** when nesting, child radius = `parent radius - parent padding`. Card with `--radius-card` (12px) and 16px padding → child input should use 8px (which lines up with `--radius-input`).
+
+---
+
+## Decisions log
+
+- **Sans (Decision 2 — revised 2026-04-29):** Geist (Vercel, free, via `next/font/google`). Originally locked Outfit ("editorial register is carried by scale + weight contrast, not family identity"), but Outfit's geometric-humanist personality (curled "a", quirky "k", soft terminals) read as "design-y" against the Joby register. Confirmed Joby uses a custom proprietary face (JobySans Display + Text variable cuts) — see `joby-reference.md`. Geist is the closest free analog: neutral grotesque, variable, well-engineered, and ships with `next/font/google`. Switched 2026-04-29.
+- **Single family — no mono brand face.** JetBrains Mono dropped 2026-04-28 after seeing it rendered: it imported a "code editor" register that fought the editorial cream/ink language. Replaced with Outfit at metadata size, uppercase, tracked. Code blocks fall back to system `ui-monospace` — structural necessity for `<code>`/`<pre>` only, not a brand face.
+- **Two scales not three.** Editorial for sparse surfaces, compressed for dense data surfaces. No "marketing scale" — that's just editorial display sizing.
+- **Compressed weights are heavier (600 on headings).** Smaller type needs more weight to read as hierarchy at distance.
+- **Pill CTAs only on primary actions.** Secondary actions use `--radius-input` to avoid pill-overuse cliché.
+- **No `--radius-button` token.** Primary buttons use `--radius-pill`, secondary buttons use `--radius-input`. Naming says intent, not shape.

@@ -80,7 +80,7 @@ export function SignatureDrawing({
                 }}
                 className="inline-block leading-tight text-foreground"
                 style={{
-                  fontFamily: 'var(--font-caveat), cursive',
+                  fontFamily: '"Snell Roundhand", "Apple Chancery", cursive',
                   fontSize,
                   whiteSpace: 'pre',
                 }}
