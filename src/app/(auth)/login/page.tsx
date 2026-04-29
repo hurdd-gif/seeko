@@ -52,11 +52,11 @@ function SignInForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-5">
       <div className="space-y-2">
         <label
           htmlFor="email"
-          className="block font-sans text-[0.875rem] text-ink/70"
+          className="block font-sans text-[0.875rem] font-medium text-ink/65"
         >
           email
         </label>
@@ -67,13 +67,14 @@ function SignInForm() {
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          placeholder="you@seeko.studio"
         />
       </div>
 
       <div className="space-y-2">
         <label
           htmlFor="password"
-          className="block font-sans text-[0.875rem] text-ink/70"
+          className="block font-sans text-[0.875rem] font-medium text-ink/65"
         >
           password
         </label>
@@ -141,7 +142,7 @@ export default function LoginPage() {
 
           {mode === 'signin' ? <SignInForm /> : <InviteCodeForm />}
 
-          <div className="mt-10">
+          <div className="mt-8">
             <button
               type="button"
               onClick={() => setMode(mode === 'signin' ? 'invite' : 'signin')}
