@@ -105,6 +105,37 @@ Every authenticated user gets a profile row automatically on signup. This double
 | label      | text             | Description                            |
 | amount     | decimal          | Line item amount                       |
 
+### 7. passkey_credentials
+
+One row per registered WebAuthn device. Gates `/payments` instead of a shared password.
+
+| Column        | Type           | Notes                                                |
+|---------------|----------------|------------------------------------------------------|
+| id            | uuid (PK)      | Auto-generated                                       |
+| user_id       | uuid (FK)      | → profiles.id (cascade delete)                       |
+| credential_id | text (unique)  | WebAuthn credential ID (base64url)                   |
+| public_key    | text           | Credential public key, base64url-encoded             |
+| counter       | bigint         | Signature counter (clone detection)                  |
+| transports    | text[]         | usb, nfc, ble, internal, hybrid                      |
+| device_name   | text           | Human-readable device label (derived from UA)        |
+| created_at    | timestamptz    |                                                      |
+| last_used_at  | timestamptz    | Updated on successful auth-verify                    |
+
+RLS: owner can `select` and `delete`. Inserts/updates go through API routes using the service role.
+
+### 8. passkey_challenges
+
+Short-lived registration/authentication challenges. One row per `(user_id, kind)`.
+
+| Column     | Type           | Notes                                              |
+|------------|----------------|----------------------------------------------------|
+| user_id    | uuid (FK, PK)  | → profiles.id (cascade delete)                     |
+| challenge  | text           | Base64url-encoded random challenge                 |
+| kind       | text (PK)      | `register` or `auth` (check constraint)            |
+| expires_at | timestamptz    | Defaults to `now() + interval '5 minutes'`         |
+
+RLS: enabled, no client policies — service-role-only.
+
 ---
 
 ## Enum Types (dropdowns in Table Editor)
@@ -129,6 +160,8 @@ Supabase (seeko-studio project)
 ├── profiles       ← auto-created from auth.users (= team roster)
 ├── payments       ← recipient_id → profiles, created_by → profiles
 │   └── payment_items ← task_id → tasks (optional)
+├── passkey_credentials ← user_id → profiles (WebAuthn devices for /payments gate)
+├── passkey_challenges  ← user_id → profiles (short-lived ceremony challenges)
 └── docs           ← self-referencing tree (parent_id)
     ├── Game Design Doc
     └── Onboarding
@@ -164,6 +197,8 @@ const docs  = await fetchDocs(parentId);  // optional parent filter, null = top-
 
 - `profiles`: any authenticated user can read all profiles (needed for team page)
 - `tasks`, `areas`, `docs`: any authenticated user can read
+- `passkey_credentials`: owner can `select` and `delete`; inserts/updates only via service role
+- `passkey_challenges`: RLS enabled, no client policies — service-role only
 
 Doc visibility is enforced in app logic: a doc is locked for a user unless they are admin, their department is in `restricted_department`, or their user id is in `granted_user_ids` (granted access despite department restriction).
 
