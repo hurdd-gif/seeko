@@ -1,3 +1,4 @@
+import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { jwtVerify } from 'jose';
@@ -49,4 +50,39 @@ export async function getPaymentsAuth(tokenHeader?: string | null) {
   }
 
   return { supabase, user, isAdmin, isInvestor, tokenValid };
+}
+
+type PaymentsAuth = Awaited<ReturnType<typeof getPaymentsAuth>>;
+
+// Admin endpoints that mutate payments. Requires Supabase admin + valid payments token.
+export async function requirePaymentsAdminToken(
+  req: NextRequest
+): Promise<{ error: NextResponse } | { auth: PaymentsAuth & { user: NonNullable<PaymentsAuth['user']> } }> {
+  const token = req.headers.get('x-payments-token');
+  const auth = await getPaymentsAuth(token);
+  if (!auth.user) {
+    return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) };
+  }
+  if (!auth.isAdmin || !auth.tokenValid) {
+    return { error: NextResponse.json({ error: 'Admin + payments token required' }, { status: 403 }) };
+  }
+  return { auth: auth as PaymentsAuth & { user: NonNullable<PaymentsAuth['user']> } };
+}
+
+// Read-only endpoints. Admin needs a valid payments token; investors don't.
+export async function requirePaymentsViewerToken(
+  req: NextRequest
+): Promise<{ error: NextResponse } | { auth: PaymentsAuth & { user: NonNullable<PaymentsAuth['user']> } }> {
+  const token = req.headers.get('x-payments-token');
+  const auth = await getPaymentsAuth(token);
+  if (!auth.user) {
+    return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) };
+  }
+  if (!auth.isAdmin && !auth.isInvestor) {
+    return { error: NextResponse.json({ error: 'Forbidden' }, { status: 403 }) };
+  }
+  if (auth.isAdmin && !auth.tokenValid) {
+    return { error: NextResponse.json({ error: 'Payments token required' }, { status: 401 }) };
+  }
+  return { auth: auth as PaymentsAuth & { user: NonNullable<PaymentsAuth['user']> } };
 }

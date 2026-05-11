@@ -1,17 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
-import { getPaymentsAuth } from '@/lib/payments-auth';
+import { requirePaymentsAdminToken } from '@/lib/payments-auth';
 import { formatCurrency } from '@/lib/format';
 
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const token = req.headers.get('x-payments-token');
-  const { supabase, user, isAdmin, tokenValid } = await getPaymentsAuth(token);
-
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  if (!isAdmin || !tokenValid) return NextResponse.json({ error: 'Admin + payments token required' }, { status: 403 });
+  const guard = await requirePaymentsAdminToken(req);
+  if ('error' in guard) return guard.error;
+  const { supabase, user } = guard.auth;
 
   const { id } = await params;
 
@@ -88,11 +86,9 @@ export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const token = req.headers.get('x-payments-token');
-  const { supabase, user, isAdmin, tokenValid } = await getPaymentsAuth(token);
-
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  if (!isAdmin || !tokenValid) return NextResponse.json({ error: 'Admin + payments token required' }, { status: 403 });
+  const guard = await requirePaymentsAdminToken(req);
+  if ('error' in guard) return guard.error;
+  const { supabase } = guard.auth;
 
   const { id } = await params;
 

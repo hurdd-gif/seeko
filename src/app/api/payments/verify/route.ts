@@ -4,6 +4,24 @@ import { cookies } from 'next/headers';
 import bcrypt from 'bcryptjs';
 import { issuePaymentsCookie } from '@/lib/payments-passkey';
 
+const RATE_LIMIT_MAX = 5;
+const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
+const attemptLog = new Map<string, number[]>();
+
+function recordAttempt(userId: string): { ok: true } | { ok: false; retryAfterSec: number } {
+  const now = Date.now();
+  const cutoff = now - RATE_LIMIT_WINDOW_MS;
+  const recent = (attemptLog.get(userId) ?? []).filter((t) => t > cutoff);
+  if (recent.length >= RATE_LIMIT_MAX) {
+    attemptLog.set(userId, recent);
+    const earliest = recent[0];
+    return { ok: false, retryAfterSec: Math.max(1, Math.ceil((earliest + RATE_LIMIT_WINDOW_MS - now) / 1000)) };
+  }
+  recent.push(now);
+  attemptLog.set(userId, recent);
+  return { ok: true };
+}
+
 async function getSupabaseAndUser() {
   const cookieStore = await cookies();
   const supabase = createServerClient(
@@ -32,6 +50,14 @@ export async function POST(req: NextRequest) {
 
   if (!profile?.is_admin) {
     return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+  }
+
+  const rate = recordAttempt(user.id);
+  if (!rate.ok) {
+    return NextResponse.json(
+      { error: 'Too many attempts. Try again later.' },
+      { status: 429, headers: { 'Retry-After': String(rate.retryAfterSec) } }
+    );
   }
 
   let body: { password: string };

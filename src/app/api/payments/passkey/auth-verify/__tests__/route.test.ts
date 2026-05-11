@@ -33,6 +33,10 @@ vi.mock('@simplewebauthn/server', () => ({
   verifyAuthenticationResponse: mockVerifyAuthenticationResponse,
 }));
 
+vi.mock('@/lib/supabase/service', () => ({
+  getServiceClient: () => ({ from: mockFrom }),
+}));
+
 type CredentialRow = {
   id: string;
   credential_id: string;

@@ -4,6 +4,7 @@ import { cookies } from 'next/headers';
 import { generateAuthenticationOptions } from '@simplewebauthn/server';
 import type { AuthenticatorTransportFuture } from '@simplewebauthn/server';
 import { getRpConfig } from '@/lib/payments-passkey';
+import { getServiceClient } from '@/lib/supabase/service';
 
 export async function POST(req: NextRequest) {
   const cookieStore = await cookies();
@@ -25,7 +26,9 @@ export async function POST(req: NextRequest) {
     .from('profiles').select('is_admin').eq('id', user.id).single();
   if (!profile?.is_admin) return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
 
-  const { data: creds } = await supabase
+  const service = getServiceClient();
+
+  const { data: creds } = await service
     .from('passkey_credentials')
     .select('credential_id, transports')
     .eq('user_id', user.id);
@@ -35,14 +38,14 @@ export async function POST(req: NextRequest) {
 
   const options = await generateAuthenticationOptions({
     rpID: rpId,
-    userVerification: 'preferred',
+    userVerification: 'required',
     allowCredentials: (creds ?? []).map((c: { credential_id: string; transports: string[] | null }) => ({
       id: c.credential_id,
       transports: (c.transports ?? undefined) as AuthenticatorTransportFuture[] | undefined,
     })),
   });
 
-  const { error: chErr } = await supabase.from('passkey_challenges').upsert({
+  const { error: chErr } = await service.from('passkey_challenges').upsert({
     user_id: user.id,
     kind: 'auth',
     challenge: options.challenge,

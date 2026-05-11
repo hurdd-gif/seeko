@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { verifyAuthenticationResponse } from '@simplewebauthn/server';
+import type { AuthenticatorTransportFuture } from '@simplewebauthn/server';
 import { getRpConfig, issuePaymentsCookie } from '@/lib/payments-passkey';
+import { getServiceClient } from '@/lib/supabase/service';
 
 type Assertion = {
   id?: string;
@@ -39,7 +41,9 @@ export async function POST(req: NextRequest) {
   }
   if (!body.assertion?.id) return NextResponse.json({ error: 'assertion required' }, { status: 400 });
 
-  const { data: ch } = await supabase
+  const service = getServiceClient();
+
+  const { data: ch } = await service
     .from('passkey_challenges')
     .select('challenge, expires_at')
     .eq('user_id', user.id).eq('kind', 'auth')
@@ -48,7 +52,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Challenge missing or expired' }, { status: 400 });
   }
 
-  const { data: cred } = await supabase
+  const { data: cred } = await service
     .from('passkey_credentials')
     .select('id, credential_id, public_key, counter, transports')
     .eq('user_id', user.id).eq('credential_id', body.assertion.id)
@@ -67,12 +71,12 @@ export async function POST(req: NextRequest) {
       expectedChallenge: ch.challenge,
       expectedOrigin,
       expectedRPID: rpId,
-      requireUserVerification: false,
+      requireUserVerification: true,
       credential: {
         id: cred.credential_id,
         publicKey: publicKeyBytes,
         counter: Number(cred.counter),
-        transports: cred.transports ?? undefined,
+        transports: (cred.transports as AuthenticatorTransportFuture[] | null) ?? undefined,
       },
     });
   } catch {
@@ -85,15 +89,15 @@ export async function POST(req: NextRequest) {
 
   const newCounter = verification.authenticationInfo.newCounter;
   if (newCounter !== 0 && newCounter <= Number(cred.counter)) {
-    await supabase.from('passkey_credentials').delete().eq('id', cred.id);
+    await service.from('passkey_credentials').delete().eq('id', cred.id);
     return NextResponse.json({ error: 'untrusted-device' }, { status: 401 });
   }
 
-  await supabase.from('passkey_credentials')
+  await service.from('passkey_credentials')
     .update({ counter: newCounter, last_used_at: new Date().toISOString() })
     .eq('id', cred.id);
 
-  await supabase.from('passkey_challenges')
+  await service.from('passkey_challenges')
     .delete().eq('user_id', user.id).eq('kind', 'auth');
 
   const cookie = await issuePaymentsCookie(user.id);

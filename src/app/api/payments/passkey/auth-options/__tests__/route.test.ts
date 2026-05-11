@@ -28,6 +28,10 @@ vi.mock('@simplewebauthn/server', () => ({
   generateAuthenticationOptions: mockGenerateAuthenticationOptions,
 }));
 
+vi.mock('@/lib/supabase/service', () => ({
+  getServiceClient: () => ({ from: mockFrom }),
+}));
+
 function makeFromImpl({
   profile,
   creds,

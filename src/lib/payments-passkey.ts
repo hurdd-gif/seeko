@@ -37,7 +37,7 @@ export async function issuePaymentsCookie(userId: string): Promise<IssuedCookie>
     value: token,
     options: {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: process.env.NODE_ENV !== 'development',
       sameSite: 'strict',
       path: '/api/payments',
       maxAge: PAYMENTS_COOKIE_MAX_AGE,
