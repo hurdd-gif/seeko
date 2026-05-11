@@ -126,15 +126,7 @@ export function PaymentsAdmin({ team }: PaymentsAdminProps) {
   }, [authenticated, fetchData]);
 
   if (!authenticated) {
-    return (
-      <div className="flex flex-col gap-6">
-        <FadeRise delay={0}>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground text-balance">Payments</h1>
-          <p className="text-sm text-muted-foreground">Track and manage team payments.</p>
-        </FadeRise>
-        <PaymentsPasskeyGate onAuthenticated={() => setAuthenticated(true)} />
-      </div>
-    );
+    return <PaymentsPasskeyGate onAuthenticated={() => setAuthenticated(true)} />;
   }
 
   /* ── Derived data ── */

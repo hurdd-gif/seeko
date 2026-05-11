@@ -19,6 +19,7 @@ import { Profile, UserEvent, Task, Payment } from '@/lib/types';
 import { useHaptics } from '@/components/HapticsProvider';
 import { useTourMaybe } from '@/components/ui/tour';
 import { PaymentRequestDialog } from '@/components/dashboard/PaymentRequestDialog';
+import { SecurityKeysPanel } from '@/components/dashboard/SecurityKeysPanel';
 import { Dialog, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/ui/empty-state';
 import { formatCurrency } from '@/lib/format';
@@ -740,6 +741,8 @@ export function SettingsPanel({ profile, isAdmin, team, revalidate, completedTas
               )}
             </CardContent>
           </Card>
+
+          <SecurityKeysPanel />
         </section>
       )}
 
