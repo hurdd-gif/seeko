@@ -2,9 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import bcrypt from 'bcryptjs';
-import { SignJWT } from 'jose';
-
-const PAYMENTS_COOKIE = 'payments-token';
+import { issuePaymentsCookie } from '@/lib/payments-passkey';
 
 async function getSupabaseAndUser() {
   const cookieStore = await cookies();
@@ -58,27 +56,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid password' }, { status: 401 });
   }
 
-  const jwtSecret = process.env.PAYMENTS_JWT_SECRET;
-  if (!jwtSecret) {
-    return NextResponse.json({ error: 'Payments not configured' }, { status: 500 });
-  }
-  const secret = new TextEncoder().encode(jwtSecret);
-  const token = await new SignJWT({ sub: user.id, scope: 'payments' })
-    .setProtectedHeader({ alg: 'HS256' })
-    .setExpirationTime('24h')
-    .setIssuedAt()
-    .sign(secret);
-
-  const isProduction = process.env.NODE_ENV === 'production';
-
-  const response = NextResponse.json({ success: true });
-  response.cookies.set(PAYMENTS_COOKIE, token, {
-    httpOnly: true,
-    secure: isProduction,
-    sameSite: 'strict',
-    path: '/api/payments',
-    maxAge: 24 * 60 * 60, // 24 hours
-  });
+  const cookie = await issuePaymentsCookie(user.id);
+  const response = NextResponse.json({ success: true, recovered: true });
+  response.cookies.set(cookie.name, cookie.value, cookie.options);
 
   return response;
 }
