@@ -116,7 +116,7 @@ describe('POST /api/payments/passkey/register-options', () => {
     expect(res.status).toBe(200);
     expect(mockGenerateRegistrationOptions).toHaveBeenCalledTimes(1);
     expect(upsertSpy).toHaveBeenCalledTimes(1);
-    const upsertArg = upsertSpy.mock.calls[0][0];
+    const upsertArg = (upsertSpy as any).mock.calls[0][0];
     expect(upsertArg.user_id).toBe('admin-1');
     expect(upsertArg.kind).toBe('register');
     expect(upsertArg.challenge).toBe('challenge-base64url');

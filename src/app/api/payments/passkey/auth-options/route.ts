@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { generateAuthenticationOptions } from '@simplewebauthn/server';
+import type { AuthenticatorTransportFuture } from '@simplewebauthn/server';
 import { getRpConfig } from '@/lib/payments-passkey';
 
 export async function POST(req: NextRequest) {
@@ -37,7 +38,7 @@ export async function POST(req: NextRequest) {
     userVerification: 'preferred',
     allowCredentials: (creds ?? []).map((c: { credential_id: string; transports: string[] | null }) => ({
       id: c.credential_id,
-      transports: c.transports ?? undefined,
+      transports: (c.transports ?? undefined) as AuthenticatorTransportFuture[] | undefined,
     })),
   });
 

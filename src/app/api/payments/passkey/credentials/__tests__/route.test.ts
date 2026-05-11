@@ -64,7 +64,7 @@ describe('GET /api/payments/passkey/credentials', () => {
 
     expect(res.status).toBe(200);
     expect(eqSpy).toHaveBeenCalledWith('user_id', 'admin-1');
-    expect((res.body as { credentials: unknown[] }).credentials).toHaveLength(2);
+    expect((res.body as unknown as { credentials: unknown[] }).credentials).toHaveLength(2);
   });
 });
 

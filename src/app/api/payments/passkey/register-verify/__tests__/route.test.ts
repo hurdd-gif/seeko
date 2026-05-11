@@ -199,7 +199,7 @@ describe('POST /api/payments/passkey/register-verify', () => {
 
     expect(res.status).toBe(200);
     expect(insertSpy).toHaveBeenCalledTimes(1);
-    const inserted = insertSpy.mock.calls[0][0];
+    const inserted = (insertSpy as any).mock.calls[0][0];
     expect(inserted.user_id).toBe('admin-1');
     expect(inserted.credential_id).toBe('cred-id-from-server');
     expect(typeof inserted.public_key).toBe('string'); // base64url-encoded
@@ -209,7 +209,7 @@ describe('POST /api/payments/passkey/register-verify', () => {
 
     expect(deleteSpy).toHaveBeenCalledTimes(1);
     expect(mockCookieSet).toHaveBeenCalledTimes(1);
-    expect(mockCookieSet.mock.calls[0][0]).toBe('payments-token');
+    expect((mockCookieSet as any).mock.calls[0][0]).toBe('payments-token');
   });
 
   it('uses provided deviceName when set', async () => {
@@ -224,6 +224,6 @@ describe('POST /api/payments/passkey/register-verify', () => {
     const { POST } = await import('../route');
     await POST(makeReq({ body: { attestation: validAttestation, deviceName: 'Karti Laptop' } }) as any);
 
-    expect(insertSpy.mock.calls[0][0].device_name).toBe('Karti Laptop');
+    expect((insertSpy as any).mock.calls[0][0].device_name).toBe('Karti Laptop');
   });
 });

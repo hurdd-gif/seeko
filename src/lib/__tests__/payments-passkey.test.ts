@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { jwtVerify } from 'jose';
 import {
   getRpConfig,
@@ -66,7 +66,11 @@ describe('issuePaymentsCookie', () => {
 
   beforeEach(() => {
     process.env.PAYMENTS_JWT_SECRET = SECRET;
-    process.env.NODE_ENV = 'test';
+    vi.stubEnv('NODE_ENV', 'test');
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
   });
 
   it('returns a cookie with httpOnly, sameSite=strict, scoped to /api/payments', async () => {

@@ -238,7 +238,7 @@ describe('POST /api/payments/passkey/auth-verify', () => {
     expect(res.status).toBe(200);
 
     expect(credentialUpdateSpy).toHaveBeenCalledTimes(1);
-    const updatePayload = credentialUpdateSpy.mock.calls[0][0];
+    const updatePayload = (credentialUpdateSpy as any).mock.calls[0][0];
     expect(updatePayload.counter).toBe(6);
     expect(typeof updatePayload.last_used_at).toBe('string');
 

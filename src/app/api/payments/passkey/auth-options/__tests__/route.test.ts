@@ -119,7 +119,7 @@ describe('POST /api/payments/passkey/auth-options', () => {
 
     expect(res.status).toBe(200);
     expect(mockGenerateAuthenticationOptions).toHaveBeenCalledTimes(1);
-    const args = mockGenerateAuthenticationOptions.mock.calls[0][0];
+    const args = (mockGenerateAuthenticationOptions as any).mock.calls[0][0];
     expect(args.rpID).toBe('localhost');
     expect(args.allowCredentials).toEqual([
       { id: 'cred-a', transports: ['internal'] },
@@ -127,7 +127,7 @@ describe('POST /api/payments/passkey/auth-options', () => {
     ]);
 
     expect(upsertSpy).toHaveBeenCalledTimes(1);
-    const upsertArg = upsertSpy.mock.calls[0][0];
+    const upsertArg = (upsertSpy as any).mock.calls[0][0];
     expect(upsertArg.user_id).toBe('admin-1');
     expect(upsertArg.kind).toBe('auth');
     expect(upsertArg.challenge).toBe('auth-challenge');
