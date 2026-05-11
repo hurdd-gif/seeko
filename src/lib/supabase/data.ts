@@ -1,5 +1,5 @@
 import { createClient } from './server';
-import type { Task, Area, Profile, Doc, TaskHandoff } from '../types';
+import type { Task, Area, Profile, Doc, TaskHandoff, Note, NoteSource, Priority } from '../types';
 
 export type ActivityItem = {
   id: string;
@@ -188,4 +188,65 @@ export async function fetchTeamWithPaypalEmails(): Promise<(Profile & { paypal_e
 
   if (error) throw error;
   return (data ?? []) as (Profile & { paypal_email?: string })[];
+}
+
+export async function fetchInboxNotes(): Promise<Note[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('notes')
+    .select('*')
+    .eq('status', 'open')
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as Note[];
+}
+
+export async function fetchArchivedNotes(limit = 50): Promise<Note[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('notes')
+    .select('*')
+    .eq('status', 'archived')
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return (data ?? []) as Note[];
+}
+
+export async function archiveNote(id: string): Promise<void> {
+  const supabase = await createClient();
+  const { error } = await supabase.from('notes').update({ status: 'archived' }).eq('id', id);
+  if (error) throw error;
+}
+
+export async function createNote(body: string, source: NoteSource = 'web'): Promise<Note> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Unauthenticated');
+  const { data, error } = await supabase
+    .from('notes')
+    .insert({ body, source, created_by: user.id })
+    .select('*')
+    .single();
+  if (error) throw error;
+  return data as Note;
+}
+
+export async function convertNoteToTask(
+  noteId: string,
+  task: { name: string; department: string; description?: string; assignee_id?: string; deadline?: string; priority?: Priority }
+): Promise<Task> {
+  const supabase = await createClient();
+  const { data: created, error: insertErr } = await supabase
+    .from('tasks')
+    .insert({ ...task, status: 'In Progress', priority: task.priority ?? 'Medium' })
+    .select('*')
+    .single();
+  if (insertErr) throw insertErr;
+  const { error: updateErr } = await supabase
+    .from('notes')
+    .update({ status: 'archived', converted_to_task_id: created.id })
+    .eq('id', noteId);
+  if (updateErr) throw updateErr;
+  return created as Task;
 }
