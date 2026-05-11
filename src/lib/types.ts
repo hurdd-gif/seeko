@@ -233,3 +233,16 @@ export type ExternalSigningInvite = {
   is_guardian_signing?: boolean;
   minor_name?: string;
 };
+
+export type NoteStatus = 'open' | 'archived';
+export type NoteSource = 'web' | 'telegram';
+
+export type Note = {
+  id: string;
+  body: string;
+  status: NoteStatus;
+  source: NoteSource | string;
+  created_by: string;
+  created_at: string;
+  converted_to_task_id?: string;
+};
