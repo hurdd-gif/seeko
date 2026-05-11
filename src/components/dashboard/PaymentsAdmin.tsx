@@ -25,7 +25,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { FadeRise, Stagger, StaggerItem, HoverCard, springs } from '@/components/motion';
 import { EmptyState } from '@/components/ui/empty-state';
-import { PaymentsPasswordGate } from '@/components/dashboard/PaymentsPasswordGate';
+import { PaymentsPasskeyGate } from '@/components/dashboard/PaymentsPasskeyGate';
 import { PaymentCreateDialog } from '@/components/dashboard/PaymentCreateDialog';
 import { InvoiceRequestForm } from '@/components/dashboard/InvoiceRequestForm';
 import type { Profile, Payment } from '@/lib/types';
@@ -132,7 +132,7 @@ export function PaymentsAdmin({ team }: PaymentsAdminProps) {
           <h1 className="text-2xl font-semibold tracking-tight text-foreground text-balance">Payments</h1>
           <p className="text-sm text-muted-foreground">Track and manage team payments.</p>
         </FadeRise>
-        <PaymentsPasswordGate onAuthenticated={() => setAuthenticated(true)} />
+        <PaymentsPasskeyGate onAuthenticated={() => setAuthenticated(true)} />
       </div>
     );
   }
