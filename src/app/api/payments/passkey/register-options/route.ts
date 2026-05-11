@@ -1,31 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
 import { generateRegistrationOptions } from '@simplewebauthn/server';
+import type { AuthenticatorTransportFuture } from '@simplewebauthn/server';
 import { getRpConfig } from '@/lib/payments-passkey';
+import { getPaymentsAuth } from '@/lib/payments-auth';
+import { getServiceClient } from '@/lib/supabase/service';
 
 export async function POST(req: NextRequest) {
-  const cookieStore = await cookies();
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll: () => cookieStore.getAll(),
-        setAll: (c) => c.forEach(({ name, value, options }) => cookieStore.set(name, value, options)),
-      },
-    }
-  );
-
-  const { data: { user } } = await supabase.auth.getUser();
+  const token = req.headers.get('x-payments-token');
+  const { user, isAdmin, tokenValid } = await getPaymentsAuth(token);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!isAdmin) return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
 
-  const { data: profile } = await supabase
-    .from('profiles').select('is_admin').eq('id', user.id).single();
-  if (!profile?.is_admin) return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+  // Enrolling any passkey — including the very first one — requires a valid payments token
+  // (held passkey or recovery password). Prevents a hijacked Supabase session from bootstrapping
+  // a passkey and bypassing the gate. Recovery password is the only path to bootstrap.
+  if (!tokenValid) {
+    return NextResponse.json({ error: 'Payments token required to enroll a device' }, { status: 401 });
+  }
 
-  const { data: existing } = await supabase
-    .from('passkey_credentials').select('credential_id').eq('user_id', user.id);
+  const service = getServiceClient();
+
+  const { data: existing } = await service
+    .from('passkey_credentials').select('credential_id, transports').eq('user_id', user.id);
 
   const origin = req.headers.get('origin') ?? new URL(req.url).origin;
   const { rpId, rpName } = getRpConfig(origin);
@@ -36,11 +32,14 @@ export async function POST(req: NextRequest) {
     userName: user.email ?? user.id,
     userDisplayName: user.email ?? 'admin',
     attestationType: 'none',
-    excludeCredentials: (existing ?? []).map((c: { credential_id: string }) => ({ id: c.credential_id })),
-    authenticatorSelection: { residentKey: 'preferred', userVerification: 'preferred' },
+    excludeCredentials: (existing ?? []).map((c: { credential_id: string; transports: string[] | null }) => ({
+      id: c.credential_id,
+      transports: (c.transports ?? undefined) as AuthenticatorTransportFuture[] | undefined,
+    })),
+    authenticatorSelection: { residentKey: 'preferred', userVerification: 'required' },
   });
 
-  const { error: chErr } = await supabase.from('passkey_challenges').upsert({
+  const { error: chErr } = await service.from('passkey_challenges').upsert({
     user_id: user.id,
     kind: 'register',
     challenge: options.challenge,

@@ -8,47 +8,31 @@ vi.mock('next/server', () => ({
   },
 }));
 
-const mockGetAll = vi.fn(() => []);
-const mockSet = vi.fn();
-vi.mock('next/headers', () => ({
-  cookies: async () => ({ getAll: mockGetAll, set: mockSet }),
+const mockGetPaymentsAuth = vi.fn();
+vi.mock('@/lib/payments-auth', () => ({
+  getPaymentsAuth: mockGetPaymentsAuth,
 }));
 
-const mockGetUser = vi.fn();
 const mockFrom = vi.fn();
-vi.mock('@supabase/ssr', () => ({
-  createServerClient: vi.fn(() => ({
-    auth: { getUser: mockGetUser },
-    from: mockFrom,
-  })),
-}));
-
 const mockGenerateRegistrationOptions = vi.fn();
 vi.mock('@simplewebauthn/server', () => ({
   generateRegistrationOptions: mockGenerateRegistrationOptions,
 }));
 
+vi.mock('@/lib/supabase/service', () => ({
+  getServiceClient: () => ({ from: mockFrom }),
+}));
+
 function makeFromImpl({
-  profile,
   existing,
   upsertResult,
   upsertSpy,
 }: {
-  profile?: { is_admin: boolean } | null;
-  existing?: Array<{ credential_id: string }>;
+  existing?: Array<{ credential_id: string; transports?: string[] | null }>;
   upsertResult?: { error: unknown };
   upsertSpy?: ReturnType<typeof vi.fn>;
 }) {
   return (table: string) => {
-    if (table === 'profiles') {
-      return {
-        select: () => ({
-          eq: () => ({
-            single: async () => ({ data: profile ?? null }),
-          }),
-        }),
-      };
-    }
     if (table === 'passkey_credentials') {
       return {
         select: () => ({
@@ -75,8 +59,6 @@ function makeReq(origin = 'http://localhost:3000') {
 describe('POST /api/payments/passkey/register-options', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://test.supabase.co';
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'test-anon-key';
     mockGenerateRegistrationOptions.mockResolvedValue({
       challenge: 'challenge-base64url',
       rp: { name: 'SEEKO Studio', id: 'localhost' },
@@ -86,7 +68,7 @@ describe('POST /api/payments/passkey/register-options', () => {
   });
 
   it('returns 401 when not signed in', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: null } });
+    mockGetPaymentsAuth.mockResolvedValue({ user: null, isAdmin: false, tokenValid: false });
     mockFrom.mockImplementation(makeFromImpl({}));
     const { POST } = await import('../route');
     const res = await POST(makeReq() as any);
@@ -94,21 +76,40 @@ describe('POST /api/payments/passkey/register-options', () => {
   });
 
   it('returns 403 when signed-in user is not admin', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1', email: 'u1@seeko.studio' } } });
-    mockFrom.mockImplementation(makeFromImpl({ profile: { is_admin: false } }));
+    mockGetPaymentsAuth.mockResolvedValue({
+      user: { id: 'u1', email: 'u1@seeko.studio' },
+      isAdmin: false,
+      tokenValid: false,
+    });
+    mockFrom.mockImplementation(makeFromImpl({}));
     const { POST } = await import('../route');
     const res = await POST(makeReq() as any);
     expect(res.status).toBe(403);
   });
 
-  it('returns 200 and upserts a register challenge for admin', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: 'admin-1', email: 'karti@seeko.studio' } } });
+  it('returns 401 when no valid payments token (blocks first-device bootstrap)', async () => {
+    mockGetPaymentsAuth.mockResolvedValue({
+      user: { id: 'admin-1', email: 'karti@seeko.studio' },
+      isAdmin: true,
+      tokenValid: false,
+    });
+    mockFrom.mockImplementation(makeFromImpl({ existing: [] }));
+
+    const { POST } = await import('../route');
+    const res = await POST(makeReq() as any);
+
+    expect(res.status).toBe(401);
+    expect(mockGenerateRegistrationOptions).not.toHaveBeenCalled();
+  });
+
+  it('returns 200 and upserts a register challenge when token is valid', async () => {
+    mockGetPaymentsAuth.mockResolvedValue({
+      user: { id: 'admin-1', email: 'karti@seeko.studio' },
+      isAdmin: true,
+      tokenValid: true,
+    });
     const upsertSpy = vi.fn(async () => ({ error: null }));
-    mockFrom.mockImplementation(makeFromImpl({
-      profile: { is_admin: true },
-      existing: [],
-      upsertSpy,
-    }));
+    mockFrom.mockImplementation(makeFromImpl({ existing: [], upsertSpy }));
 
     const { POST } = await import('../route');
     const res = await POST(makeReq() as any);
@@ -123,11 +124,17 @@ describe('POST /api/payments/passkey/register-options', () => {
     expect(typeof upsertArg.expires_at).toBe('string');
   });
 
-  it('passes existing credentials as excludeCredentials', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: 'admin-1', email: 'karti@seeko.studio' } } });
+  it('passes existing credentials with transports as excludeCredentials when token valid', async () => {
+    mockGetPaymentsAuth.mockResolvedValue({
+      user: { id: 'admin-1', email: 'karti@seeko.studio' },
+      isAdmin: true,
+      tokenValid: true,
+    });
     mockFrom.mockImplementation(makeFromImpl({
-      profile: { is_admin: true },
-      existing: [{ credential_id: 'cred-a' }, { credential_id: 'cred-b' }],
+      existing: [
+        { credential_id: 'cred-a', transports: ['internal'] },
+        { credential_id: 'cred-b', transports: null },
+      ],
     }));
 
     const { POST } = await import('../route');
@@ -136,11 +143,12 @@ describe('POST /api/payments/passkey/register-options', () => {
     expect(mockGenerateRegistrationOptions).toHaveBeenCalledTimes(1);
     const args = mockGenerateRegistrationOptions.mock.calls[0][0];
     expect(args.excludeCredentials).toEqual([
-      { id: 'cred-a' },
+      { id: 'cred-a', transports: ['internal'] },
       { id: 'cred-b' },
     ]);
     expect(args.rpName).toBe('SEEKO Studio');
     expect(args.rpID).toBe('localhost');
     expect(args.userName).toBe('karti@seeko.studio');
+    expect(args.authenticatorSelection.userVerification).toBe('required');
   });
 });

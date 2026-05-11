@@ -2,14 +2,14 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'motion/react';
-import { Lock, Fingerprint, KeyRound, Loader2 } from 'lucide-react';
+import { Lock, KeyRound, Loader2 } from 'lucide-react';
 import { startRegistration, startAuthentication } from '@simplewebauthn/browser';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { springs } from '@/lib/motion';
 
-type Mode = 'loading' | 'register' | 'unlock' | 'unsupported' | 'recovery';
+type Mode = 'loading' | 'first-time-setup' | 'unlock' | 'unsupported' | 'recovery';
 
 interface PaymentsPasskeyGateProps {
   onAuthenticated: () => void;
@@ -32,38 +32,49 @@ export function PaymentsPasskeyGate({ onAuthenticated }: PaymentsPasskeyGateProp
       try {
         const res = await fetch('/api/payments/passkey/auth-options', { method: 'POST' });
         if (!res.ok) {
-          setMode('register');
+          setMode('first-time-setup');
           return;
         }
         const opts = await res.json();
-        setMode((opts.allowCredentials?.length ?? 0) > 0 ? 'unlock' : 'register');
+        setMode((opts.allowCredentials?.length ?? 0) > 0 ? 'unlock' : 'first-time-setup');
       } catch {
-        setMode('register');
+        setMode('first-time-setup');
       }
     })();
   }, []);
 
-  const doRegister = useCallback(async () => {
-    setBusy(true);
-    setError('');
-    try {
-      const optsRes = await fetch('/api/payments/passkey/register-options', { method: 'POST' });
-      if (!optsRes.ok) throw new Error((await optsRes.json()).error || 'Failed to start');
-      const options = await optsRes.json();
-      const attestation = await startRegistration({ optionsJSON: options });
-      const verifyRes = await fetch('/api/payments/passkey/register-verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ attestation }),
-      });
-      if (!verifyRes.ok) throw new Error((await verifyRes.json()).error || 'Registration failed');
-      onAuthenticated();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not register device');
-    } finally {
-      setBusy(false);
-    }
-  }, [onAuthenticated]);
+  const doFirstTimeSetup = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      setBusy(true);
+      setError('');
+      try {
+        const verifyRes = await fetch('/api/payments/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password: recoveryPw }),
+        });
+        if (!verifyRes.ok) throw new Error((await verifyRes.json()).error || 'Invalid password');
+
+        const optsRes = await fetch('/api/payments/passkey/register-options', { method: 'POST' });
+        if (!optsRes.ok) throw new Error((await optsRes.json()).error || 'Failed to start enrollment');
+        const options = await optsRes.json();
+        const attestation = await startRegistration({ optionsJSON: options });
+        const regRes = await fetch('/api/payments/passkey/register-verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ attestation }),
+        });
+        if (!regRes.ok) throw new Error((await regRes.json()).error || 'Registration failed');
+        onAuthenticated();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Setup failed');
+      } finally {
+        setBusy(false);
+      }
+    },
+    [onAuthenticated, recoveryPw]
+  );
 
   const doUnlock = useCallback(async () => {
     setBusy(true);
@@ -117,58 +128,68 @@ export function PaymentsPasskeyGate({ onAuthenticated }: PaymentsPasskeyGateProp
   );
 
   const icon =
-    mode === 'recovery' ? <KeyRound className="size-5 text-seeko-accent" />
-    : mode === 'register' ? <Fingerprint className="size-5 text-seeko-accent" />
-    : <Lock className="size-5 text-seeko-accent" />;
+    mode === 'recovery' || mode === 'first-time-setup'
+      ? <KeyRound className="size-5 text-seeko-accent" />
+      : <Lock className="size-5 text-seeko-accent" />;
 
   const title =
-    mode === 'recovery' ? 'Recovery access'
-    : mode === 'register' ? 'Register this device'
+    mode === 'first-time-setup' ? 'Set up payments access'
+    : mode === 'recovery' ? 'Recovery access'
     : mode === 'unsupported' ? 'Passkeys unavailable'
     : 'Payments access';
 
   const description =
-    mode === 'recovery' ? 'Use your recovery password.'
-    : mode === 'register' ? 'Use Touch ID, Face ID, or a security key to enroll this device. Unlocks payments for 1 hour.'
+    mode === 'first-time-setup' ? 'Enter your recovery password to authorize this device. After verification you’ll be asked to enroll Touch ID, Face ID, or a security key.'
+    : mode === 'recovery' ? 'Use your recovery password.'
     : mode === 'unsupported' ? 'Your browser does not support passkeys. Use recovery instead.'
     : mode === 'loading' ? ''
     : 'Approve with Touch ID, Face ID, or a security key. Unlocks payments for 1 hour.';
 
   return (
-    <div className="flex items-center justify-center min-h-[60vh]">
+    <div className="flex items-center justify-center min-h-[calc(100vh-8rem)] -my-6">
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={springs.snappy}
+        className="w-full max-w-[440px]"
       >
-        <Card className="w-full max-w-sm">
-          <CardHeader className="text-center">
+        <Card className="w-full border-0 shadow-elevated">
+          <CardHeader className="text-center p-8 pb-5">
             <div className="mx-auto mb-3 flex size-12 items-center justify-center rounded-full bg-seeko-accent/10">
               {icon}
             </div>
             <CardTitle>{title}</CardTitle>
             <CardDescription>{description}</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-4 p-8 pt-0">
             {mode === 'loading' && (
               <div className="flex justify-center py-4 text-muted-foreground">
                 <Loader2 className="size-4 animate-spin" />
               </div>
             )}
-            {mode === 'register' && (
-              <Button onClick={doRegister} disabled={busy} className="w-full">
-                {busy ? (
-                  <span className="inline-flex items-center gap-2">
-                    <Loader2 className="size-4 animate-spin" />
-                    Awaiting browser…
-                  </span>
-                ) : (
-                  'Register this device'
-                )}
-              </Button>
+            {mode === 'first-time-setup' && (
+              <form onSubmit={doFirstTimeSetup} className="space-y-3">
+                <Input
+                  type="password"
+                  value={recoveryPw}
+                  onChange={e => setRecoveryPw(e.target.value)}
+                  placeholder="Recovery password"
+                  autoFocus
+                />
+                <Button type="submit" disabled={busy || !recoveryPw} className="w-full active:scale-[0.98] transition-transform">
+                  {busy ? (
+                    <span className="inline-flex items-center gap-2">
+                      <Loader2 className="size-4 animate-spin" />
+                      Setting up…
+                    </span>
+                  ) : (
+                    'Set up device'
+                  )}
+                </Button>
+              </form>
             )}
             {mode === 'unlock' && (
-              <Button onClick={doUnlock} disabled={busy} className="w-full">
+              <Button onClick={doUnlock} disabled={busy} className="w-full active:scale-[0.98] transition-transform">
                 {busy ? (
                   <span className="inline-flex items-center gap-2">
                     <Loader2 className="size-4 animate-spin" />
@@ -188,7 +209,7 @@ export function PaymentsPasskeyGate({ onAuthenticated }: PaymentsPasskeyGateProp
                   placeholder="Recovery password"
                   autoFocus
                 />
-                <Button type="submit" disabled={busy || !recoveryPw} className="w-full">
+                <Button type="submit" disabled={busy || !recoveryPw} className="w-full active:scale-[0.98] transition-transform">
                   {busy ? (
                     <span className="inline-flex items-center gap-2">
                       <Loader2 className="size-4 animate-spin" />
@@ -210,7 +231,7 @@ export function PaymentsPasskeyGate({ onAuthenticated }: PaymentsPasskeyGateProp
                 }}
                 className="block w-full text-center text-xs text-muted-foreground hover:text-foreground transition-colors"
               >
-                Lost your devices? Use recovery
+                {mode === 'first-time-setup' ? 'Skip enrollment — use recovery only' : 'Lost your devices? Use recovery'}
               </button>
             )}
             {mode === 'recovery' && (

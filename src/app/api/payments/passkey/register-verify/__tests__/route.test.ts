@@ -13,19 +13,14 @@ vi.mock('next/server', () => ({
   },
 }));
 
-const mockGetAll = vi.fn(() => []);
-const mockSet = vi.fn();
-vi.mock('next/headers', () => ({
-  cookies: async () => ({ getAll: mockGetAll, set: mockSet }),
+const mockGetPaymentsAuth = vi.fn();
+vi.mock('@/lib/payments-auth', () => ({
+  getPaymentsAuth: mockGetPaymentsAuth,
 }));
 
-const mockGetUser = vi.fn();
 const mockFrom = vi.fn();
-vi.mock('@supabase/ssr', () => ({
-  createServerClient: vi.fn(() => ({
-    auth: { getUser: mockGetUser },
-    from: mockFrom,
-  })),
+vi.mock('@/lib/supabase/service', () => ({
+  getServiceClient: () => ({ from: mockFrom }),
 }));
 
 const mockVerifyRegistrationResponse = vi.fn();
@@ -34,7 +29,7 @@ vi.mock('@simplewebauthn/server', () => ({
 }));
 
 type FromOpts = {
-  profile?: { is_admin: boolean } | null;
+  existing?: Array<{ id: string }>;
   challenge?: { challenge: string; expires_at: string } | null;
   insertResult?: { error: { code?: string } | null };
   insertSpy?: ReturnType<typeof vi.fn>;
@@ -43,13 +38,13 @@ type FromOpts = {
 
 function makeFromImpl(opts: FromOpts) {
   return (table: string) => {
-    if (table === 'profiles') {
+    if (table === 'passkey_credentials') {
+      const insert = opts.insertSpy ?? vi.fn(async () => opts.insertResult ?? { error: null });
       return {
         select: () => ({
-          eq: () => ({
-            single: async () => ({ data: opts.profile ?? null }),
-          }),
+          eq: async () => ({ data: opts.existing ?? [] }),
         }),
+        insert,
       };
     }
     if (table === 'passkey_challenges') {
@@ -67,10 +62,6 @@ function makeFromImpl(opts: FromOpts) {
           }),
         }),
       };
-    }
-    if (table === 'passkey_credentials') {
-      const insert = opts.insertSpy ?? vi.fn(async () => opts.insertResult ?? { error: null });
-      return { insert };
     }
     throw new Error(`Unexpected table: ${table}`);
   };
@@ -101,8 +92,6 @@ const pastExpiry = () => new Date(Date.now() - 60_000).toISOString();
 describe('POST /api/payments/passkey/register-verify', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://test.supabase.co';
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'test-anon-key';
     process.env.PAYMENTS_JWT_SECRET = 'a'.repeat(48);
     mockVerifyRegistrationResponse.mockResolvedValue({
       verified: true,
@@ -117,7 +106,7 @@ describe('POST /api/payments/passkey/register-verify', () => {
   });
 
   it('returns 401 when not signed in', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: null } });
+    mockGetPaymentsAuth.mockResolvedValue({ user: null, isAdmin: false, tokenValid: false });
     mockFrom.mockImplementation(makeFromImpl({}));
     const { POST } = await import('../route');
     const res = await POST(makeReq({ body: { attestation: validAttestation } }) as any);
@@ -125,33 +114,61 @@ describe('POST /api/payments/passkey/register-verify', () => {
   });
 
   it('returns 403 when not admin', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } });
-    mockFrom.mockImplementation(makeFromImpl({ profile: { is_admin: false } }));
+    mockGetPaymentsAuth.mockResolvedValue({
+      user: { id: 'u1', email: 'u1@seeko.studio' },
+      isAdmin: false,
+      tokenValid: false,
+    });
+    mockFrom.mockImplementation(makeFromImpl({}));
     const { POST } = await import('../route');
     const res = await POST(makeReq({ body: { attestation: validAttestation } }) as any);
     expect(res.status).toBe(403);
   });
 
+  it('returns 401 when no valid payments token (blocks first-device bootstrap)', async () => {
+    mockGetPaymentsAuth.mockResolvedValue({
+      user: { id: 'admin-1', email: 'karti@seeko.studio' },
+      isAdmin: true,
+      tokenValid: false,
+    });
+    mockFrom.mockImplementation(makeFromImpl({}));
+    const { POST } = await import('../route');
+    const res = await POST(makeReq({ body: { attestation: validAttestation } }) as any);
+    expect(res.status).toBe(401);
+    expect(mockVerifyRegistrationResponse).not.toHaveBeenCalled();
+  });
+
   it('returns 400 when attestation is missing', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: 'admin-1' } } });
-    mockFrom.mockImplementation(makeFromImpl({ profile: { is_admin: true } }));
+    mockGetPaymentsAuth.mockResolvedValue({
+      user: { id: 'admin-1', email: 'karti@seeko.studio' },
+      isAdmin: true,
+      tokenValid: true,
+    });
+    mockFrom.mockImplementation(makeFromImpl({}));
     const { POST } = await import('../route');
     const res = await POST(makeReq({ body: {} }) as any);
     expect(res.status).toBe(400);
   });
 
   it('returns 400 when challenge row is missing', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: 'admin-1' } } });
-    mockFrom.mockImplementation(makeFromImpl({ profile: { is_admin: true }, challenge: null }));
+    mockGetPaymentsAuth.mockResolvedValue({
+      user: { id: 'admin-1', email: 'karti@seeko.studio' },
+      isAdmin: true,
+      tokenValid: true,
+    });
+    mockFrom.mockImplementation(makeFromImpl({ challenge: null }));
     const { POST } = await import('../route');
     const res = await POST(makeReq({ body: { attestation: validAttestation } }) as any);
     expect(res.status).toBe(400);
   });
 
   it('returns 400 when challenge is expired', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: 'admin-1' } } });
+    mockGetPaymentsAuth.mockResolvedValue({
+      user: { id: 'admin-1', email: 'karti@seeko.studio' },
+      isAdmin: true,
+      tokenValid: true,
+    });
     mockFrom.mockImplementation(makeFromImpl({
-      profile: { is_admin: true },
       challenge: { challenge: 'c', expires_at: pastExpiry() },
     }));
     const { POST } = await import('../route');
@@ -161,9 +178,12 @@ describe('POST /api/payments/passkey/register-verify', () => {
 
   it('returns 400 when verifyRegistrationResponse throws', async () => {
     mockVerifyRegistrationResponse.mockRejectedValueOnce(new Error('boom'));
-    mockGetUser.mockResolvedValue({ data: { user: { id: 'admin-1' } } });
+    mockGetPaymentsAuth.mockResolvedValue({
+      user: { id: 'admin-1', email: 'karti@seeko.studio' },
+      isAdmin: true,
+      tokenValid: true,
+    });
     mockFrom.mockImplementation(makeFromImpl({
-      profile: { is_admin: true },
       challenge: { challenge: 'c', expires_at: futureExpiry() },
     }));
     const { POST } = await import('../route');
@@ -172,9 +192,12 @@ describe('POST /api/payments/passkey/register-verify', () => {
   });
 
   it('returns 409 when credential already exists (Postgres 23505)', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: 'admin-1' } } });
+    mockGetPaymentsAuth.mockResolvedValue({
+      user: { id: 'admin-1', email: 'karti@seeko.studio' },
+      isAdmin: true,
+      tokenValid: true,
+    });
     mockFrom.mockImplementation(makeFromImpl({
-      profile: { is_admin: true },
       challenge: { challenge: 'c', expires_at: futureExpiry() },
       insertResult: { error: { code: '23505' } },
     }));
@@ -186,9 +209,12 @@ describe('POST /api/payments/passkey/register-verify', () => {
   it('returns 200 with cookie, inserts credential, deletes challenge', async () => {
     const insertSpy = vi.fn(async () => ({ error: null }));
     const deleteSpy = vi.fn(async () => ({ error: null }));
-    mockGetUser.mockResolvedValue({ data: { user: { id: 'admin-1', email: 'k@s.studio' } } });
+    mockGetPaymentsAuth.mockResolvedValue({
+      user: { id: 'admin-1', email: 'k@s.studio' },
+      isAdmin: true,
+      tokenValid: true,
+    });
     mockFrom.mockImplementation(makeFromImpl({
-      profile: { is_admin: true },
       challenge: { challenge: 'c', expires_at: futureExpiry() },
       insertSpy,
       deleteSpy,
@@ -206,6 +232,7 @@ describe('POST /api/payments/passkey/register-verify', () => {
     expect(inserted.public_key.length).toBeGreaterThan(0);
     expect(inserted.counter).toBe(0);
     expect(inserted.device_name).toBe('Mac');
+    expect(inserted.transports).toEqual(['internal']);
 
     expect(deleteSpy).toHaveBeenCalledTimes(1);
     expect(mockCookieSet).toHaveBeenCalledTimes(1);
@@ -214,9 +241,12 @@ describe('POST /api/payments/passkey/register-verify', () => {
 
   it('uses provided deviceName when set', async () => {
     const insertSpy = vi.fn(async () => ({ error: null }));
-    mockGetUser.mockResolvedValue({ data: { user: { id: 'admin-1' } } });
+    mockGetPaymentsAuth.mockResolvedValue({
+      user: { id: 'admin-1', email: 'k@s.studio' },
+      isAdmin: true,
+      tokenValid: true,
+    });
     mockFrom.mockImplementation(makeFromImpl({
-      profile: { is_admin: true },
       challenge: { challenge: 'c', expires_at: futureExpiry() },
       insertSpy,
     }));
