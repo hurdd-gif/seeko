@@ -1,5 +1,13 @@
-import { describe, it, expect } from 'vitest';
-import { getRpConfig, deriveDeviceName } from '../payments-passkey';
+// @vitest-environment node
+import { describe, it, expect, beforeEach } from 'vitest';
+import { jwtVerify } from 'jose';
+import {
+  getRpConfig,
+  deriveDeviceName,
+  issuePaymentsCookie,
+  PAYMENTS_COOKIE,
+  PAYMENTS_COOKIE_MAX_AGE,
+} from '../payments-passkey';
 
 describe('getRpConfig', () => {
   it('uses localhost in dev', () => {
@@ -50,5 +58,36 @@ describe('deriveDeviceName', () => {
     expect(deriveDeviceName(null)).toBe('Unknown device');
     expect(deriveDeviceName(undefined)).toBe('Unknown device');
     expect(deriveDeviceName('')).toBe('Unknown device');
+  });
+});
+
+describe('issuePaymentsCookie', () => {
+  const SECRET = 'a'.repeat(48);
+
+  beforeEach(() => {
+    process.env.PAYMENTS_JWT_SECRET = SECRET;
+    process.env.NODE_ENV = 'test';
+  });
+
+  it('returns a cookie with httpOnly, sameSite=strict, scoped to /api/payments', async () => {
+    const cookie = await issuePaymentsCookie('user-123');
+    expect(cookie.name).toBe(PAYMENTS_COOKIE);
+    expect(cookie.options.httpOnly).toBe(true);
+    expect(cookie.options.sameSite).toBe('strict');
+    expect(cookie.options.path).toBe('/api/payments');
+    expect(cookie.options.maxAge).toBe(PAYMENTS_COOKIE_MAX_AGE);
+    expect(PAYMENTS_COOKIE_MAX_AGE).toBe(60 * 60);
+  });
+
+  it('signs a JWT bound to the user with scope=payments', async () => {
+    const cookie = await issuePaymentsCookie('user-123');
+    const { payload } = await jwtVerify(cookie.value, new TextEncoder().encode(SECRET));
+    expect(payload.sub).toBe('user-123');
+    expect(payload.scope).toBe('payments');
+  });
+
+  it('throws if PAYMENTS_JWT_SECRET is missing', async () => {
+    delete process.env.PAYMENTS_JWT_SECRET;
+    await expect(issuePaymentsCookie('user-123')).rejects.toThrow(/PAYMENTS_JWT_SECRET/);
   });
 });

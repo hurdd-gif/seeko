@@ -1,3 +1,5 @@
+import { SignJWT } from 'jose';
+
 export type RpConfig = {
   rpId: string;
   rpName: string;
@@ -5,6 +7,43 @@ export type RpConfig = {
 };
 
 export const RP_NAME = 'SEEKO Studio';
+export const PAYMENTS_COOKIE = 'payments-token';
+export const PAYMENTS_COOKIE_MAX_AGE = 60 * 60;
+
+export type IssuedCookie = {
+  name: string;
+  value: string;
+  options: {
+    httpOnly: true;
+    secure: boolean;
+    sameSite: 'strict';
+    path: string;
+    maxAge: number;
+  };
+};
+
+export async function issuePaymentsCookie(userId: string): Promise<IssuedCookie> {
+  const secret = process.env.PAYMENTS_JWT_SECRET;
+  if (!secret) throw new Error('PAYMENTS_JWT_SECRET is not configured');
+
+  const token = await new SignJWT({ sub: userId, scope: 'payments' })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setExpirationTime(`${PAYMENTS_COOKIE_MAX_AGE}s`)
+    .setIssuedAt()
+    .sign(new TextEncoder().encode(secret));
+
+  return {
+    name: PAYMENTS_COOKIE,
+    value: token,
+    options: {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      path: '/api/payments',
+      maxAge: PAYMENTS_COOKIE_MAX_AGE,
+    },
+  };
+}
 
 export function getRpConfig(origin: string): RpConfig {
   const url = new URL(origin);
