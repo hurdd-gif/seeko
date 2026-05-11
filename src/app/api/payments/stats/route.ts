@@ -1,13 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getPaymentsAuth } from '@/lib/payments-auth';
+import { requirePaymentsViewerToken } from '@/lib/payments-auth';
 
 export async function GET(req: NextRequest) {
-  const token = req.headers.get('x-payments-token');
-  const { supabase, user, isAdmin, isInvestor, tokenValid } = await getPaymentsAuth(token);
-
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  if (!isAdmin && !isInvestor) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  if (isAdmin && !tokenValid) return NextResponse.json({ error: 'Payments token required' }, { status: 401 });
+  const guard = await requirePaymentsViewerToken(req);
+  if ('error' in guard) return guard.error;
+  const { supabase, isAdmin } = guard.auth;
 
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
