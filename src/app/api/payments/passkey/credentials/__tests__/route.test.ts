@@ -23,6 +23,11 @@ vi.mock('@supabase/ssr', () => ({
   })),
 }));
 
+const mockGetPaymentsAuth = vi.fn();
+vi.mock('@/lib/payments-auth', () => ({
+  getPaymentsAuth: mockGetPaymentsAuth,
+}));
+
 function makeReq(url = 'http://localhost:3000/api/payments/passkey/credentials') {
   return { url, headers: new Headers() };
 }
@@ -76,27 +81,44 @@ describe('DELETE /api/payments/passkey/credentials', () => {
   });
 
   it('returns 401 when not signed in', async () => {
+    mockGetPaymentsAuth.mockResolvedValue({ user: null, tokenValid: false });
     mockGetUser.mockResolvedValue({ data: { user: null } });
     const { DELETE } = await import('../route');
     const res = await DELETE(makeReq('http://localhost:3000/api/payments/passkey/credentials?id=abc') as any);
     expect(res.status).toBe(401);
   });
 
+  it('returns 401 when payments token is missing or invalid (defense-in-depth against hijacked sessions)', async () => {
+    mockGetPaymentsAuth.mockResolvedValue({ user: { id: 'admin-1' }, tokenValid: false });
+    const { DELETE } = await import('../route');
+    const res = await DELETE(makeReq('http://localhost:3000/api/payments/passkey/credentials?id=row-uuid') as any);
+    expect(res.status).toBe(401);
+    expect((res.body as { error?: string }).error).toMatch(/payments token/i);
+  });
+
   it('returns 400 when id is missing', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: 'admin-1' } } });
+    mockGetPaymentsAuth.mockResolvedValue({
+      supabase: { from: mockFrom },
+      user: { id: 'admin-1' },
+      tokenValid: true,
+    });
     const { DELETE } = await import('../route');
     const res = await DELETE(makeReq() as any);
     expect(res.status).toBe(400);
   });
 
   it('deletes the credential and returns 200 on success', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: 'admin-1' } } });
     const finalEq = vi.fn(async () => ({ error: null, count: 1 }));
     const firstEq = vi.fn(() => ({ eq: finalEq }));
     const deleteSpy = vi.fn(() => ({ eq: firstEq }));
     mockFrom.mockImplementation((table: string) => {
       if (table === 'passkey_credentials') return { delete: deleteSpy };
       throw new Error(`Unexpected table: ${table}`);
+    });
+    mockGetPaymentsAuth.mockResolvedValue({
+      supabase: { from: mockFrom },
+      user: { id: 'admin-1' },
+      tokenValid: true,
     });
 
     const { DELETE } = await import('../route');
@@ -109,12 +131,16 @@ describe('DELETE /api/payments/passkey/credentials', () => {
   });
 
   it('returns 404 when the row belongs to another user (count: 0)', async () => {
-    mockGetUser.mockResolvedValue({ data: { user: { id: 'admin-1' } } });
     const finalEq = vi.fn(async () => ({ error: null, count: 0 }));
     const firstEq = vi.fn(() => ({ eq: finalEq }));
     mockFrom.mockImplementation((table: string) => {
       if (table === 'passkey_credentials') return { delete: () => ({ eq: firstEq }) };
       throw new Error(`Unexpected table: ${table}`);
+    });
+    mockGetPaymentsAuth.mockResolvedValue({
+      supabase: { from: mockFrom },
+      user: { id: 'admin-1' },
+      tokenValid: true,
     });
 
     const { DELETE } = await import('../route');

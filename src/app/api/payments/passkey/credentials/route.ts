@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import { getPaymentsAuth } from '@/lib/payments-auth';
 
 async function client() {
   const cookieStore = await cookies();
@@ -31,9 +32,15 @@ export async function GET() {
 }
 
 export async function DELETE(req: NextRequest) {
-  const supabase = await client();
-  const { data: { user } } = await supabase.auth.getUser();
+  // Revoking a passkey requires proof of payments access (held passkey or recovery password),
+  // matching the gate on register-options/register-verify. Prevents a hijacked Supabase
+  // session from wiping the legitimate admin's enrolled devices.
+  const token = req.headers.get('x-payments-token');
+  const { supabase, user, tokenValid } = await getPaymentsAuth(token);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!tokenValid) {
+    return NextResponse.json({ error: 'Payments token required to revoke a device' }, { status: 401 });
+  }
 
   const id = new URL(req.url).searchParams.get('id');
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
