@@ -241,7 +241,7 @@ export type Note = {
   id: string;
   body: string;
   status: NoteStatus;
-  source: NoteSource | string;
+  source: NoteSource;
   created_by: string;
   created_at: string;
   converted_to_task_id?: string;
