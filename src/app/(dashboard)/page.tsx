@@ -184,7 +184,7 @@ export default async function OverviewPage() {
         <FadeRise delay={delay(TIMING.tasks)} y={SECTION_Y}>
           <section>
             <header className="mb-3">
-              <h3 className="text-lg font-semibold text-foreground">Your Tasks</h3>
+              <h3 className="text-base font-semibold text-foreground">Your Tasks</h3>
               {earliestDeadline && upcoming.length > 0 && (
                 <p className={cn('text-xs tabular-nums mt-0.5', new Date(earliestDeadline + 'T23:59:59') < new Date() ? 'text-[color:var(--color-status-blocked)]' : 'text-muted-foreground')}>
                   {new Date(earliestDeadline + 'T23:59:59') < new Date()
@@ -202,7 +202,7 @@ export default async function OverviewPage() {
                 </div>
                 <Link
                   href="/docs"
-                  className="inline-flex items-center gap-1.5 border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                  className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-[color,background-color,transform] duration-150 ease-out hover:text-foreground hover:bg-muted active:scale-[0.97]"
                 >
                   <FileText className="size-3" />
                   Browse docs

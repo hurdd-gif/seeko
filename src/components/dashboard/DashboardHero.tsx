@@ -26,14 +26,16 @@ export function DashboardHero({
   const name = firstName ?? 'there';
   const prefix = greetingPrefix(now.getHours());
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col">
       <div>
         <h1 className="text-balance text-4xl font-medium tracking-tight text-foreground md:text-5xl">
           {prefix}, {name}
         </h1>
         {subline && <p className="mt-1 text-sm text-muted-foreground">{subline}</p>}
       </div>
-      <StatPills pills={pills} delayMs={pillDelayMs} staggerMs={pillStaggerMs} />
+      <div className="mt-4">
+        <StatPills pills={pills} delayMs={pillDelayMs} staggerMs={pillStaggerMs} />
+      </div>
     </div>
   );
 }
