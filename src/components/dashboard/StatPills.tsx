@@ -5,6 +5,7 @@ import { CheckSquare } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { springs } from '@/lib/motion';
+import { StatPillCount } from './StatPillCount';
 
 interface Pill {
   label: string;
@@ -38,7 +39,7 @@ export function StatPills({
         const inner = (
           <>
             {pill.variant === 'accent' && <CheckSquare className="size-3" />}
-            {pill.count} {pill.label}
+            <StatPillCount value={pill.count} /> {pill.label}
           </>
         );
         const className = cn(
