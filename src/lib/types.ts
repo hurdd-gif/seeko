@@ -30,6 +30,7 @@ export type Area = {
   description?: string;
   phase?: string;
   sort_order?: number;
+  target_date?: string;
 };
 
 export type Profile = {
