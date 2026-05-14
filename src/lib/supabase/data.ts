@@ -34,7 +34,7 @@ export async function fetchAreas(): Promise<Area[]> {
 
   const { data, error } = await supabase
     .from('areas')
-    .select('id, name, status, progress, description, phase, created_at, sort_order')
+    .select('id, name, status, progress, description, phase, created_at, sort_order, target_date')
     .order('sort_order', { ascending: true })
     .order('name', { ascending: true });
 
