@@ -293,3 +293,14 @@ export async function fetchRecentItems(_userId: string, limit = 6): Promise<Rece
     .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
     .slice(0, limit);
 }
+
+export async function fetchTodayTasks(limit = 5): Promise<Task[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from('tasks')
+    .select('*')
+    .in('status', ['In Progress', 'In Review'])
+    .order('priority', { ascending: false })
+    .limit(limit);
+  return (data ?? []) as Task[];
+}
