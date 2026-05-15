@@ -32,6 +32,10 @@
   /* Seeko accent */
   --color-seeko-accent:      #6ee7b7;
 
+  /* Paper redesign — glass surface + eyebrow gray */
+  --color-glass:             rgba(32, 32, 32, 0.9);
+  --color-eyebrow:           #ADA9A3;
+
   /* Status dots (used inline, not as badges) */
   --color-status-complete:   #6ee7b7;
   --color-status-progress:   #fbbf24;
@@ -89,7 +93,9 @@
 }
 
 body {
-  background-color: var(--color-background);
+  background:
+    radial-gradient(circle at 50% 0%, oklch(0.14 0 0), oklch(0.10 0 0) 60%)
+    var(--color-background);
   color: var(--color-foreground);
   color-scheme: dark;
   font-family: var(--font-sans), Arial, sans-serif;
