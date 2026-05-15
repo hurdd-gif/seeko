@@ -250,3 +250,46 @@ export async function convertNoteToTask(
   if (updateErr) throw updateErr;
   return created as Task;
 }
+
+export type RecentItem = {
+  id: string;
+  kind: 'task' | 'doc' | 'area';
+  title: string;
+  updated_at: string;
+  href: string;
+};
+
+export async function fetchRecentItems(_userId: string, limit = 6): Promise<RecentItem[]> {
+  const supabase = await createClient();
+  const [{ data: tasks }, { data: docs }, { data: areas }] = await Promise.all([
+    supabase.from('tasks').select('id, name, updated_at').order('updated_at', { ascending: false }).limit(limit),
+    supabase.from('docs').select('id, title, updated_at').order('updated_at', { ascending: false }).limit(limit),
+    supabase.from('areas').select('id, name, updated_at').order('updated_at', { ascending: false }).limit(limit),
+  ]);
+  const items: RecentItem[] = [
+    ...((tasks ?? []) as { id: string; name: string; updated_at: string }[]).map((t) => ({
+      id: t.id,
+      kind: 'task' as const,
+      title: t.name,
+      updated_at: t.updated_at,
+      href: `/tasks/${t.id}`,
+    })),
+    ...((docs ?? []) as { id: string; title: string; updated_at: string }[]).map((d) => ({
+      id: d.id,
+      kind: 'doc' as const,
+      title: d.title,
+      updated_at: d.updated_at,
+      href: `/docs/${d.id}`,
+    })),
+    ...((areas ?? []) as { id: string; name: string; updated_at: string }[]).map((a) => ({
+      id: a.id,
+      kind: 'area' as const,
+      title: a.name,
+      updated_at: a.updated_at,
+      href: `/areas/${a.id}`,
+    })),
+  ];
+  return items
+    .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+    .slice(0, limit);
+}
