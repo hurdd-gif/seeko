@@ -573,7 +573,7 @@ export function SettingsPanel({ profile, isAdmin, team, revalidate, completedTas
                           }
                           className={cn(
                             "text-[10px] py-0 px-1.5",
-                            payment.status === 'paid' && "bg-emerald-500/15 text-emerald-400 border-emerald-500/20"
+                            payment.status === 'paid' && "bg-sky-500/15 text-sky-400 border-sky-500/20"
                           )}
                         >
                           {payment.status === 'paid' ? 'Approved'
