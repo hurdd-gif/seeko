@@ -17,7 +17,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { motion } from 'motion/react';
 
 /**
@@ -45,18 +44,8 @@ import { BoardDisplayPopover } from './BoardDisplayPopover';
 import { TaskDeleteUndoToastSlot, UNDO_WINDOW_MS } from './TaskDeleteUndoToast';
 import { CreateTaskComposer } from './CreateTaskComposer';
 import { TasksIssueList } from './TasksIssueList';
-import { FadeRise } from '@/components/motion';
+import { LightShell } from '@/components/dashboard/LightShell';
 import { createClient } from '@/lib/supabase/client';
-
-// Canonical nav set — same three tabs on every light page (Overview · Issues ·
-// Docs). Activity now lives in the account dropdown, not the pill.
-const TABS = [
-  { id: 'overview', label: 'Overview', href: '/' },
-  { id: 'issues', label: 'Issues', href: '/tasks' },
-  { id: 'docs', label: 'Docs', href: '/docs' },
-] as const;
-
-const ACTIVE_TAB = 'issues';
 
 type ViewMode = 'board' | 'list';
 
@@ -353,87 +342,55 @@ export function TasksBoard({
     });
   }
 
+  const boardActions = (
+    <div className="flex items-center gap-1">
+      {isAdmin && (
+        <button
+          type="button"
+          aria-label="New issue"
+          onClick={() => openComposer()}
+          className="mr-1 inline-flex size-9 items-center justify-center rounded-full bg-[#f4f4f4] text-[#2a2a2a] transition hover:bg-[#ececec] active:scale-[0.98]"
+        >
+          <Plus className="size-4" strokeWidth={2.25} />
+        </button>
+      )}
+      <BoardFilterPopover filter={filter} onChange={setFilter} team={team} />
+      <BoardDisplayPopover
+        pinnedVisible={pinnedVisible}
+        onTogglePinned={togglePinned}
+        countsByStatus={countsByStatus}
+      />
+      <button
+        type="button"
+        aria-label={viewMode === 'board' ? 'Switch to list view' : 'Switch to board view'}
+        aria-pressed={viewMode === 'list'}
+        onClick={() => setViewMode((v) => (v === 'board' ? 'list' : 'board'))}
+        className={
+          viewMode === 'list'
+            ? 'flex size-9 items-center justify-center rounded-full bg-black/[0.05] text-[#3a3a3a] transition'
+            : 'flex size-9 items-center justify-center rounded-full text-[#9a9a9a] transition hover:bg-black/[0.04] hover:text-[#505050]'
+        }
+      >
+        {viewMode === 'board' ? <Rows3 className="size-4" /> : <LayoutGrid className="size-4" />}
+      </button>
+      <button
+        type="button"
+        aria-label={railOpen ? 'Close right rail' : 'Open right rail'}
+        aria-pressed={railOpen}
+        onClick={() => setRailOpen((v) => !v)}
+        className={
+          railOpen
+            ? 'flex size-9 items-center justify-center rounded-full bg-black/[0.05] text-[#3a3a3a] transition'
+            : 'flex size-9 items-center justify-center rounded-full text-[#9a9a9a] transition hover:bg-black/[0.04] hover:text-[#505050]'
+        }
+      >
+        <PanelRight className="size-4" />
+      </button>
+    </div>
+  );
+
   return (
-    <div className="overview-light fixed inset-0 z-40 flex flex-col overflow-hidden bg-[var(--ov-bg)] antialiased">
-      {/* ── Top chrome: tabs · right-side icons — compact pill spec
-           (h-44 gap-1 px-1.5). Overview's pill matches this. Shared
-           px-[52px] gutter + pt-6 keeps placement aligned across pages. ───── */}
-      <header className="shrink-0 border-b border-black/[0.06] bg-[var(--ov-bg)]">
-        <div className="flex w-full items-center justify-between gap-3 px-[52px] pt-6 pb-3">
-          <FadeRise y={6} delay={0.04}>
-            <nav
-              aria-label="Project sections"
-              className="flex h-[44px] items-center gap-1 rounded-full bg-white px-1.5 shadow-seeko"
-            >
-              {TABS.map((t) => {
-                const active = t.id === ACTIVE_TAB;
-                return (
-                  <Link
-                    key={t.id}
-                    href={t.href}
-                    aria-current={active ? 'page' : undefined}
-                    className={
-                      active
-                        ? 'flex h-[32px] items-center rounded-full bg-[#0000000d] px-3 text-[13.5px] font-medium leading-[18px] tracking-[-0.27px] text-[#626262]'
-                        : 'flex h-[32px] items-center rounded-full px-3 text-[13.5px] font-medium leading-[18px] tracking-[-0.27px] text-[#c5c5c5] transition-colors duration-150 ease-out hover:text-[#808080]'
-                    }
-                  >
-                    {t.label}
-                  </Link>
-                );
-              })}
-            </nav>
-          </FadeRise>
-
-          <FadeRise y={6} delay={0.08}>
-            <div className="flex items-center gap-1">
-              {isAdmin && (
-                <button
-                  type="button"
-                  aria-label="New issue"
-                  onClick={() => openComposer()}
-                  className="mr-1 inline-flex size-9 items-center justify-center rounded-full bg-[#f4f4f4] text-[#2a2a2a] transition hover:bg-[#ececec] active:scale-[0.98]"
-                >
-                  <Plus className="size-4" strokeWidth={2.25} />
-                </button>
-              )}
-              <BoardFilterPopover filter={filter} onChange={setFilter} team={team} />
-              <BoardDisplayPopover
-                pinnedVisible={pinnedVisible}
-                onTogglePinned={togglePinned}
-                countsByStatus={countsByStatus}
-              />
-              <button
-                type="button"
-                aria-label={viewMode === 'board' ? 'Switch to list view' : 'Switch to board view'}
-                aria-pressed={viewMode === 'list'}
-                onClick={() => setViewMode((v) => (v === 'board' ? 'list' : 'board'))}
-                className={
-                  viewMode === 'list'
-                    ? 'flex size-9 items-center justify-center rounded-full bg-black/[0.05] text-[#3a3a3a] transition'
-                    : 'flex size-9 items-center justify-center rounded-full text-[#9a9a9a] transition hover:bg-black/[0.04] hover:text-[#505050]'
-                }
-              >
-                {viewMode === 'board' ? <Rows3 className="size-4" /> : <LayoutGrid className="size-4" />}
-              </button>
-              <button
-                type="button"
-                aria-label={railOpen ? 'Close right rail' : 'Open right rail'}
-                aria-pressed={railOpen}
-                onClick={() => setRailOpen((v) => !v)}
-                className={
-                  railOpen
-                    ? 'flex size-9 items-center justify-center rounded-full bg-black/[0.05] text-[#3a3a3a] transition'
-                    : 'flex size-9 items-center justify-center rounded-full text-[#9a9a9a] transition hover:bg-black/[0.04] hover:text-[#505050]'
-                }
-              >
-                <PanelRight className="size-4" />
-              </button>
-            </div>
-          </FadeRise>
-        </div>
-      </header>
-
+    <LightShell activeTab="issues" navLabel="Project sections" fill bordered actions={boardActions}>
       {/* ── Board area + right rail ────────────────────────────── */}
       <div className="flex min-h-0 flex-1">
         <main className="min-h-0 flex-1 overflow-x-auto overflow-y-hidden">
@@ -524,6 +481,6 @@ export function TasksBoard({
         defaultStatus={composerStatus}
         onCreated={handleTaskCreated}
       />
-    </div>
+    </LightShell>
   );
 }
