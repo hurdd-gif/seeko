@@ -104,7 +104,7 @@ const tabSlideTransition = {
 
 const SHARE_STATUS_COLORS: Record<string, string> = {
   pending: 'border-yellow-500/30 text-yellow-400',
-  verified: 'border-emerald-500/30 text-emerald-400',
+  verified: 'border-sky-500/30 text-sky-400',
   expired: 'border-muted-foreground/30 text-muted-foreground',
   revoked: 'border-red-500/30 text-red-400',
 };
