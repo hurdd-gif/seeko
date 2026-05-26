@@ -6,6 +6,7 @@ import { Department } from '@/lib/types';
 import { Select } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { useHaptics } from '@/components/HapticsProvider';
+import { LIGHT_DEPT_COLOR } from './lightKit';
 
 const DEPARTMENTS: Department[] = ['Coding', 'Visual Art', 'UI/UX', 'Animation', 'Asset Creation'];
 
@@ -20,9 +21,11 @@ const DEPT_COLOR: Record<string, string> = {
 interface Props {
   userId: string;
   department?: string;
+  /** Opt-in light theme (light dropdown + AA-on-white dept colors). Defaults dark. */
+  light?: boolean;
 }
 
-export function DepartmentSelect({ userId, department }: Props) {
+export function DepartmentSelect({ userId, department, light = false }: Props) {
   const [value, setValue] = useState(department ?? '');
   const { trigger } = useHaptics();
   const [isPending, startTransition] = useTransition();
@@ -49,13 +52,17 @@ export function DepartmentSelect({ userId, department }: Props) {
 
   return (
     <Select
+      light={light}
       value={value}
       onChange={e => handleChange(e.target.value)}
       disabled={isPending}
       className={cn(
-        'h-auto py-0.5 px-1.5 text-xs bg-transparent border border-transparent hover:border-border hover:bg-muted',
+        'h-auto py-0.5 px-1.5 text-xs bg-transparent border border-transparent',
+        light
+          ? 'hover:border-black/15 hover:bg-black/[0.04]'
+          : 'hover:border-border hover:bg-muted',
         isPending && 'opacity-50',
-        DEPT_COLOR[value] ?? 'text-muted-foreground',
+        (light ? LIGHT_DEPT_COLOR[value] : DEPT_COLOR[value]) ?? (light ? 'text-[#808080]' : 'text-muted-foreground'),
       )}
     >
       {!value && <option value="">No department</option>}
