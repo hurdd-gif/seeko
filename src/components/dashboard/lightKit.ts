@@ -11,3 +11,7 @@ export const BTN_SECONDARY = `${BTN_BASE} bg-[#f4f4f4] text-[#2a2a2a] hover:bg-[
 export const CARD_TITLE = 'text-[15px] font-semibold text-[#111]';
 export const CARD_DESC = 'text-[13px] text-[#808080]';
 export const HAIRLINE = 'h-px bg-black/[0.06]';
+/* Dialog footer/action buttons in the light theme: black primary, subtle ghost.
+ * Appended to shadcn <Button> className so twMerge recolors them last-wins. */
+export const DIALOG_SAVE = 'bg-[#111] text-white hover:bg-[#2a2a2a]';
+export const DIALOG_CANCEL = 'text-[#505050] hover:bg-black/[0.04] hover:text-[#111]';

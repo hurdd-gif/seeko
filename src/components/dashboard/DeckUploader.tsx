@@ -121,10 +121,10 @@ export function DeckUploader({ deckId, getDeckId, existingSlides = [], onSlidesC
         <label
           onDragOver={e => e.preventDefault()}
           onDrop={handleDrop}
-          className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-border rounded-lg p-8 cursor-pointer hover:border-seeko-accent/50 transition-colors"
+          className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-black/[0.12] rounded-lg p-8 cursor-pointer hover:border-[#0d7aff]/50 transition-colors"
         >
-          <FileUp className="size-8 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">Drop a PDF here or click to upload</p>
+          <FileUp className="size-8 text-[#9a9a9a]" />
+          <p className="text-sm text-[#808080]">Drop a PDF here or click to upload</p>
           <input type="file" accept=".pdf" onChange={handleFileChange} className="hidden" />
         </label>
       )}
@@ -133,7 +133,7 @@ export function DeckUploader({ deckId, getDeckId, existingSlides = [], onSlidesC
       {uploading && (
         <div className="flex flex-col items-center gap-2 py-6">
           <Loader2 className="size-6 text-seeko-accent animate-spin" />
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-[#808080]">
             Processing slide {progress.current} of {progress.total}...
           </p>
           <ProgressBar value={progress.total > 0 ? (progress.current / progress.total) * 100 : 0} animated={false} />
@@ -147,8 +147,8 @@ export function DeckUploader({ deckId, getDeckId, existingSlides = [], onSlidesC
       {slides.length > 0 && !uploading && (
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">{slides.length} slide{slides.length !== 1 ? 's' : ''}</p>
-            <label className="text-xs text-seeko-accent hover:text-seeko-accent/80 cursor-pointer transition-colors">
+            <p className="text-sm text-[#808080]">{slides.length} slide{slides.length !== 1 ? 's' : ''}</p>
+            <label className="text-xs text-[#0d7aff] hover:text-[#0a63cc] cursor-pointer transition-colors">
               <Upload className="size-3 inline mr-1" />
               Replace PDF
               <input type="file" accept=".pdf" onChange={handleFileChange} className="hidden" />
@@ -156,7 +156,7 @@ export function DeckUploader({ deckId, getDeckId, existingSlides = [], onSlidesC
           </div>
           <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
             {slides.map((slide, i) => (
-              <div key={i} className="relative group aspect-[16/9] rounded-md overflow-hidden bg-secondary">
+              <div key={i} className="relative group aspect-[16/9] rounded-md overflow-hidden bg-[#f4f4f4] outline outline-1 -outline-offset-1 outline-black/[0.06]">
                 <img src={slide.url} alt={`Slide ${i + 1}`} className="w-full h-full object-cover" />
                 <span className="absolute bottom-1 left-1 text-[10px] font-mono text-white/80 bg-black/50 px-1 rounded">
                   {i + 1}
