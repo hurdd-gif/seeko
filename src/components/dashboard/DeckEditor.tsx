@@ -10,6 +10,7 @@ import type { Doc, Profile } from '@/lib/types';
 import { useHaptics } from '@/components/HapticsProvider';
 import { useDialogFooter } from '@/components/ui/dialog';
 import { DeckUploader } from './DeckUploader';
+import { LIGHT_INPUT, DIALOG_SAVE, DIALOG_CANCEL } from './lightKit';
 
 const DEPARTMENTS = ['Coding', 'Visual Art', 'UI/UX', 'Animation', 'Asset Creation'] as const;
 
@@ -164,7 +165,7 @@ export function DeckEditor({ doc, onSave, onCancel, team = [] }: DeckEditorProps
           size="sm"
           onClick={() => { trigger('selection'); onCancel(); }}
           disabled={saving}
-          className="min-w-[4.5rem] min-h-[2.5rem] touch-manipulation"
+          className={cn('min-w-[4.5rem] min-h-[2.5rem] touch-manipulation', DIALOG_CANCEL)}
         >
           Cancel
         </Button>
@@ -173,7 +174,7 @@ export function DeckEditor({ doc, onSave, onCancel, team = [] }: DeckEditorProps
           size="sm"
           onClick={stableHandleSave}
           disabled={saving}
-          className="min-w-[7rem] min-h-[2.5rem] touch-manipulation"
+          className={cn('min-w-[7rem] min-h-[2.5rem] touch-manipulation', DIALOG_SAVE)}
         >
           {saving ? 'Saving…' : doc ? 'Save changes' : 'Create deck'}
         </Button>
@@ -190,7 +191,7 @@ export function DeckEditor({ doc, onSave, onCancel, team = [] }: DeckEditorProps
         value={title}
         onChange={e => setTitle(e.target.value)}
         placeholder="Deck title"
-        className="text-base font-semibold h-10"
+        className={cn(LIGHT_INPUT, 'h-10 text-base font-semibold text-[#1a1a1a]')}
       />
 
       {/* Description */}
@@ -199,12 +200,12 @@ export function DeckEditor({ doc, onSave, onCancel, team = [] }: DeckEditorProps
         onChange={e => setDescription(e.target.value)}
         placeholder="Description (optional)"
         rows={3}
-        className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring resize-none"
+        className="w-full rounded-lg border border-black/[0.08] bg-white px-3 py-2 text-sm text-[#2a2a2a] placeholder:text-[#b3b3b3] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0d7aff]/30 resize-none"
       />
 
       {/* Department restrict */}
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs text-muted-foreground whitespace-nowrap">Restrict to:</span>
+        <span className="text-xs text-[#808080] whitespace-nowrap">Restrict to:</span>
         {DEPARTMENTS.map(dept => (
           <button
             key={dept}
@@ -213,8 +214,8 @@ export function DeckEditor({ doc, onSave, onCancel, team = [] }: DeckEditorProps
             className={cn(
               'rounded-full border px-2.5 py-0.5 text-xs transition-colors',
               departments.includes(dept)
-                ? 'border-seeko-accent bg-seeko-accent/10 text-seeko-accent'
-                : 'border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground'
+                ? 'border-[#0d7aff]/30 bg-[#0d7aff]/10 text-[#0d7aff]'
+                : 'border-black/[0.1] text-[#808080] hover:border-black/20 hover:text-[#111]'
             )}
           >
             {dept}
@@ -224,7 +225,7 @@ export function DeckEditor({ doc, onSave, onCancel, team = [] }: DeckEditorProps
           <button
             type="button"
             onClick={() => setDepartments([])}
-            className="text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors"
+            className="text-xs text-[#9a9a9a] hover:text-[#505050] transition-colors"
           >
             Clear
           </button>
@@ -234,8 +235,9 @@ export function DeckEditor({ doc, onSave, onCancel, team = [] }: DeckEditorProps
       {/* Granted users */}
       {team.length > 0 && (
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs text-muted-foreground whitespace-nowrap">Also allow access:</span>
+          <span className="text-xs text-[#808080] whitespace-nowrap">Also allow access:</span>
           <Select
+            light
             value={addUserValue}
             onChange={e => {
               const val = e.target.value;
@@ -256,13 +258,13 @@ export function DeckEditor({ doc, onSave, onCancel, team = [] }: DeckEditorProps
             return (
               <span
                 key={id}
-                className="inline-flex items-center gap-1 rounded-full border border-border bg-secondary/50 px-2.5 py-0.5 text-xs text-foreground"
+                className="inline-flex items-center gap-1 rounded-full border border-black/[0.08] bg-black/[0.03] px-2.5 py-0.5 text-xs text-[#2a2a2a]"
               >
                 @{p?.display_name ?? 'Unknown'}
                 <button
                   type="button"
                   onClick={() => setGrantedIds(prev => prev.filter(x => x !== id))}
-                  className="rounded p-0.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+                  className="rounded p-0.5 text-[#9a9a9a] hover:bg-[#d4503e]/10 hover:text-[#d4503e] transition-colors"
                   aria-label={`Remove ${p?.display_name ?? id}`}
                 >
                   <Trash2 className="size-3" />
@@ -275,16 +277,16 @@ export function DeckEditor({ doc, onSave, onCancel, team = [] }: DeckEditorProps
 
       {/* Orientation toggle */}
       <div className="flex items-center gap-3">
-        <span className="text-xs text-muted-foreground whitespace-nowrap">Layout:</span>
-        <div className="flex rounded-lg border border-border overflow-hidden">
+        <span className="text-xs text-[#808080] whitespace-nowrap">Layout:</span>
+        <div className="flex rounded-lg border border-black/[0.08] overflow-hidden">
           <button
             type="button"
             onClick={() => setOrientation('horizontal')}
             className={cn(
               'px-3 py-1.5 text-xs font-medium transition-colors',
               orientation === 'horizontal'
-                ? 'bg-seeko-accent/10 text-seeko-accent'
-                : 'text-muted-foreground hover:text-foreground'
+                ? 'bg-[#0d7aff]/10 text-[#0d7aff]'
+                : 'text-[#808080] hover:text-[#111]'
             )}
           >
             Slides
@@ -293,10 +295,10 @@ export function DeckEditor({ doc, onSave, onCancel, team = [] }: DeckEditorProps
             type="button"
             onClick={() => setOrientation('vertical')}
             className={cn(
-              'px-3 py-1.5 text-xs font-medium transition-colors border-l border-border',
+              'px-3 py-1.5 text-xs font-medium transition-colors border-l border-black/[0.08]',
               orientation === 'vertical'
-                ? 'bg-seeko-accent/10 text-seeko-accent'
-                : 'text-muted-foreground hover:text-foreground'
+                ? 'bg-[#0d7aff]/10 text-[#0d7aff]'
+                : 'text-[#808080] hover:text-[#111]'
             )}
           >
             Document
@@ -317,7 +319,7 @@ export function DeckEditor({ doc, onSave, onCancel, team = [] }: DeckEditorProps
 
       {/* Note about needing to upload PDF before deckId exists */}
       {!deckId && !doc && slides.length === 0 && (
-        <p className="text-xs text-muted-foreground/60">
+        <p className="text-xs text-[#9a9a9a]">
           The deck will be created when you upload a PDF or click &ldquo;Create deck&rdquo;.
         </p>
       )}
@@ -326,14 +328,14 @@ export function DeckEditor({ doc, onSave, onCancel, team = [] }: DeckEditorProps
 
       {/* Inline actions when not in dialog */}
       {!setDialogFooter && (
-        <div className="sticky bottom-0 left-0 right-0 z-10 flex flex-shrink-0 items-center justify-end gap-3 border-t border-border bg-card pt-4 pb-2 -mx-6 px-6 mt-4">
+        <div className="sticky bottom-0 left-0 right-0 z-10 flex flex-shrink-0 items-center justify-end gap-3 border-t border-black/[0.06] bg-white pt-4 pb-2 -mx-6 px-6 mt-4">
           <Button
             type="button"
             variant="ghost"
             size="sm"
             onClick={() => { trigger('selection'); onCancel(); }}
             disabled={saving}
-            className="min-w-[4.5rem] min-h-[2.5rem] touch-manipulation"
+            className={cn('min-w-[4.5rem] min-h-[2.5rem] touch-manipulation', DIALOG_CANCEL)}
           >
             Cancel
           </Button>
@@ -342,7 +344,7 @@ export function DeckEditor({ doc, onSave, onCancel, team = [] }: DeckEditorProps
             size="sm"
             onClick={handleSave}
             disabled={saving}
-            className="min-w-[7rem] min-h-[2.5rem] touch-manipulation"
+            className={cn('min-w-[7rem] min-h-[2.5rem] touch-manipulation', DIALOG_SAVE)}
           >
             {saving ? 'Saving…' : doc ? 'Save changes' : 'Create deck'}
           </Button>

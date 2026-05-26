@@ -385,49 +385,55 @@ body.tour-cmd-k-active #command-palette-container * {
   border-bottom: none;
 }
 
-/* ── Light read-dialog prose ────────────────────────────────────────────────
- * The read dialog renders inline inside the `.overview-light` shell, so these
- * dark-on-light overrides apply there only. Specificity (0,3,x) beats the dark
- * base rules (0,2,x) regardless of source order. External /invoice and /sign
- * viewers live outside `.overview-light` and keep the dark base untouched. */
-.overview-light .doc-read-body .doc-content,
-.overview-light .doc-read-body .doc-content-body,
-.overview-light .doc-read-body .doc-content article {
+/* ── Light doc prose (read dialog AND editor) ───────────────────────────────
+ * Both the read dialog and the desktop editor (.doc-content / .ProseMirror)
+ * render inline inside the `.overview-light` shell, so these dark-on-light
+ * overrides apply there only. `.overview-light .doc-content` (0,2,x) subsumes
+ * the read view's `.doc-read-body .doc-content` and wins over the dark base
+ * rules by source order. External /invoice and /sign viewers live outside
+ * `.overview-light` and keep the dark base untouched. */
+.overview-light .doc-content,
+.overview-light .doc-content-body,
+.overview-light .doc-content article {
   color: #2a2a2a;
 }
-.overview-light .doc-read-body .doc-content strong,
-.overview-light .doc-read-body .doc-content h1,
-.overview-light .doc-read-body .doc-content h2,
-.overview-light .doc-read-body .doc-content h3 {
+.overview-light .doc-content strong,
+.overview-light .doc-content h1,
+.overview-light .doc-content h2,
+.overview-light .doc-content h3 {
   color: #111111;
 }
-.overview-light .doc-read-body .doc-content p {
+.overview-light .doc-content p {
   color: #3a3a3a;
 }
-.overview-light .doc-read-body .doc-content li::marker {
+.overview-light .doc-content li::marker {
   color: #9a9a9a;
 }
-.overview-light .doc-read-body .doc-content code {
+.overview-light .doc-content code {
   background: rgba(0, 0, 0, 0.05);
   color: #2a2a2a;
 }
-.overview-light .doc-read-body .doc-content a {
+.overview-light .doc-content a {
   color: #0d7aff;
 }
-.overview-light .doc-read-body .doc-content hr {
+.overview-light .doc-content hr {
   border-color: rgba(0, 0, 0, 0.08);
 }
-.overview-light .doc-read-body .doc-content table,
-.overview-light .doc-read-body .doc-content th,
-.overview-light .doc-read-body .doc-content td {
+.overview-light .doc-content table,
+.overview-light .doc-content th,
+.overview-light .doc-content td {
   border-color: rgba(0, 0, 0, 0.08);
 }
-.overview-light .doc-read-body .doc-content th {
+.overview-light .doc-content th {
   background: #f4f4f4;
   color: #111111;
 }
-.overview-light .doc-read-body .doc-content td {
+.overview-light .doc-content td {
   color: #3a3a3a;
+}
+/* Editor table cell selection highlight (light) */
+.overview-light .ProseMirror .selectedCell {
+  background: rgba(13, 122, 255, 0.08);
 }
 .ProseMirror .selectedCell {
   background: var(--color-muted);
