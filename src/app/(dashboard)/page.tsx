@@ -4,28 +4,26 @@
  *    0ms   hero
  *  120ms   recently worked on
  *  240ms   today's tasks
- *  320ms   next milestone
- *  400ms   studio progress
- *  480ms   game areas
- *  560ms   quick notes
+ *  320ms   studio overview
  * ───────────────────────────────────────────────────────── */
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import {
   fetchAreas,
+  fetchNotifications,
   fetchProfile,
   fetchRecentItems,
   fetchTasks,
+  fetchTeam,
   fetchTodayTasks,
+  fetchUnreadNotificationCount,
 } from '@/lib/supabase/data';
 import { FadeRise } from '@/components/motion';
 import { DashboardHero } from '@/components/dashboard/DashboardHero';
 import { RecentItemsRow } from '@/components/dashboard/RecentItemsRow';
 import { TodaysTasksPanel } from '@/components/dashboard/TodaysTasksPanel';
-import { NextMilestonePanel } from '@/components/dashboard/NextMilestonePanel';
-import { StudioProgressPanel } from '@/components/dashboard/StudioProgressPanel';
-import { AreaTileRow } from '@/components/dashboard/AreaTileRow';
-import { QuickNotesRow } from '@/components/dashboard/QuickNotesRow';
+import { StudioOverviewPanel } from '@/components/dashboard/StudioOverviewPanel';
+import { LightShell } from '@/components/dashboard/LightShell';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,10 +31,7 @@ const TIMING = {
   hero: 0,
   recent: 120,
   todaysTasks: 240,
-  milestone: 320,
-  progress: 400,
-  areas: 480,
-  quickNotes: 560,
+  studio: 320,
 } as const;
 
 const ms = (n: number) => n / 1000;
@@ -47,16 +42,11 @@ function greetingPrefix(hour: number): 'Good morning' | 'Good afternoon' | 'Good
   return 'Good evening';
 }
 
-async function fetchAdminQuickNotes(userId: string) {
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from('notes')
-    .select('id, body, created_at')
-    .eq('status', 'open')
-    .eq('created_by', userId)
-    .order('created_at', { ascending: false })
-    .limit(6);
-  return (data ?? []) as { id: string; body: string; created_at: string }[];
+function initialsOf(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return 'U';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
 export default async function OverviewPage() {
@@ -67,52 +57,64 @@ export default async function OverviewPage() {
   if (!user) redirect('/login');
 
   const profile = await fetchProfile(user.id);
-  const admin = profile?.is_admin ?? false;
+  const isAdmin = profile?.is_admin ?? false;
 
-  const [recent, todayTasks, totalOpen, areas, quickNotes] = await Promise.all([
-    fetchRecentItems(user.id, 6).catch(() => []),
-    fetchTodayTasks(5).catch(() => []),
-    fetchTasks(user.id)
-      .catch(() => [])
-      .then((t) => t.filter((task) => task.status !== 'Complete').length),
-    fetchAreas().catch(() => []),
-    admin ? fetchAdminQuickNotes(user.id).catch(() => []) : Promise.resolve([]),
-  ]);
+  const [recent, todayTasks, totalOpen, areas, notifications, unreadCount, team] =
+    await Promise.all([
+      fetchRecentItems(user.id, 6).catch(() => []),
+      fetchTodayTasks(5).catch(() => []),
+      fetchTasks(user.id)
+        .catch(() => [])
+        .then((t) => t.filter((task) => task.status !== 'Done').length),
+      fetchAreas().catch(() => []),
+      fetchNotifications(user.id, 20).catch(() => []),
+      fetchUnreadNotificationCount(user.id).catch(() => 0),
+      fetchTeam().catch(() => []),
+    ]);
 
   const greeting = greetingPrefix(new Date().getHours());
-  const name = profile?.display_name?.split(' ')[0] ?? 'there';
+  const fullName = profile?.display_name ?? 'there';
+  const name = fullName.split(' ')[0] ?? 'there';
+  const initials = initialsOf(profile?.display_name ?? user.email ?? 'U');
 
   return (
-    <main className="mx-auto flex max-w-[900px] flex-col gap-10 px-6 py-20">
-      <FadeRise delay={ms(TIMING.hero)} y={20}>
-        <DashboardHero greeting={greeting} name={name} />
-      </FadeRise>
+    <LightShell
+      activeTab="overview"
+      animatePill={false}
+      account={{
+        email: user.email ?? '',
+        initials,
+        displayName: profile?.display_name ?? undefined,
+        avatarUrl: profile?.avatar_url ?? undefined,
+        userId: user.id,
+        isAdmin,
+        unreadCount,
+        notifications,
+        team: team.map((m) => ({ id: m.id, display_name: m.display_name })),
+        areas: areas.map((a) => ({ id: a.id, name: a.name })),
+      }}
+    >
+      <main className="flex w-full flex-col items-center px-[52px] pt-[199px] pb-[102px]">
+        <div className="flex w-full max-w-[1100px] flex-col gap-[62px]">
+          <FadeRise delay={ms(TIMING.hero)} y={20}>
+            <DashboardHero greeting={greeting} name={name} />
+          </FadeRise>
 
-      <FadeRise delay={ms(TIMING.recent)}>
-        <RecentItemsRow items={recent} />
-      </FadeRise>
+          <FadeRise delay={ms(TIMING.recent)}>
+            <RecentItemsRow items={recent} />
+          </FadeRise>
 
-      <FadeRise delay={ms(TIMING.todaysTasks)}>
-        <TodaysTasksPanel tasks={todayTasks} totalOpen={totalOpen} />
-      </FadeRise>
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
+            <FadeRise delay={ms(TIMING.todaysTasks)} className="flex lg:flex-1">
+              <TodaysTasksPanel tasks={todayTasks} totalOpen={totalOpen} />
+            </FadeRise>
 
-      <FadeRise delay={ms(TIMING.milestone)}>
-        <NextMilestonePanel areas={areas} />
-      </FadeRise>
-
-      <FadeRise delay={ms(TIMING.progress)}>
-        <StudioProgressPanel areas={areas} />
-      </FadeRise>
-
-      <FadeRise delay={ms(TIMING.areas)}>
-        <AreaTileRow areas={areas} />
-      </FadeRise>
-
-      {admin && (
-        <FadeRise delay={ms(TIMING.quickNotes)}>
-          <QuickNotesRow notes={quickNotes} />
-        </FadeRise>
-      )}
-    </main>
+            <FadeRise delay={ms(TIMING.studio)} className="flex lg:flex-1">
+              <StudioOverviewPanel areas={areas} />
+            </FadeRise>
+          </div>
+        </div>
+      </main>
+    </LightShell>
   );
 }
