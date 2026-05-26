@@ -42,6 +42,10 @@ export function useDialogFooter() {
   return ctx?.setFooter ?? (() => {})
 }
 
+// Lets DialogHeader/DialogTitle (separate components) pick up the light variant
+// without threading a prop through every call site.
+const DialogLightContext = React.createContext(false)
+
 interface DialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -54,9 +58,12 @@ interface DialogProps {
   className?: string
   /** Extra action buttons rendered in the top-right toolbar (before expand/close) */
   actions?: React.ReactNode
+  /** Opt-in light variant — relights backdrop, panel, toolbar buttons, drag handle,
+   * scrollbar, footer, and (via context) DialogHeader/DialogTitle. Defaults to dark. */
+  light?: boolean
 }
 
-function Dialog({ open, onOpenChange, children, resizable = false, contentClassName, className, actions }: DialogProps) {
+function Dialog({ open, onOpenChange, children, resizable = false, contentClassName, className, actions, light = false }: DialogProps) {
   const [footer, setFooter] = React.useState<React.ReactNode>(null)
   const [size, setSize] = React.useState({ w: DEFAULT_MAX_W, h: 600 });
   const [maximized, setMaximized] = React.useState(false)
@@ -173,7 +180,7 @@ function Dialog({ open, onOpenChange, children, resizable = false, contentClassN
       {open && (
         <div className={cn("fixed inset-0 z-[60] flex items-end sm:items-center justify-center touch-none", className)}>
           <motion.div
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm touch-none"
+            className={cn("fixed inset-0 backdrop-blur-sm touch-none", light ? "bg-black/20" : "bg-black/50")}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -183,7 +190,10 @@ function Dialog({ open, onOpenChange, children, resizable = false, contentClassN
           <motion.div
             ref={panelRef}
             className={cn(
-              "relative z-50 flex flex-col rounded-t-2xl sm:rounded-xl border border-white/[0.08] bg-popover backdrop-blur-xl backdrop-saturate-150 shadow-xl mx-0 sm:mx-4 pb-[env(safe-area-inset-bottom)] sm:pb-0",
+              "relative z-50 flex flex-col rounded-t-2xl sm:rounded-xl border shadow-xl mx-0 sm:mx-4 pb-[env(safe-area-inset-bottom)] sm:pb-0",
+              light
+                ? "border-black/[0.06] bg-white"
+                : "border-white/[0.08] bg-popover backdrop-blur-xl backdrop-saturate-150",
               !resizable && "w-full max-w-[900px] max-h-[90vh] sm:max-h-[88vh]",
               !resizable && footer != null && "h-[90vh] sm:h-[88vh]",
               contentClassName
@@ -205,7 +215,7 @@ function Dialog({ open, onOpenChange, children, resizable = false, contentClassN
           >
             {/* Mobile drag handle */}
             <div className="sm:hidden flex justify-center pt-3 pb-2 shrink-0 cursor-grab active:cursor-grabbing select-none">
-              <div className="w-9 h-1 rounded-full bg-white/20" />
+              <div className={cn("w-9 h-1 rounded-full", light ? "bg-black/15" : "bg-white/20")} />
             </div>
             {/* Action toolbar — consolidated top-right button row */}
             <div className="absolute right-3 top-3 sm:top-4 flex items-center gap-0.5 z-10">
@@ -215,7 +225,10 @@ function Dialog({ open, onOpenChange, children, resizable = false, contentClassN
                   type="button"
                   onClick={toggleMaximize}
                   title={maximized ? 'Restore size' : 'Expand'}
-                  className="flex size-8 items-center justify-center rounded-md opacity-60 transition-opacity hover:opacity-100 hover:bg-white/[0.06] focus:outline-none"
+                  className={cn(
+                    "flex size-8 items-center justify-center rounded-md opacity-60 transition-opacity hover:opacity-100 focus:outline-none",
+                    light ? "text-[#505050] hover:bg-black/[0.04]" : "hover:bg-white/[0.06]"
+                  )}
                 >
                   {maximized
                     ? <Minimize2 className="size-3.5" />
@@ -227,27 +240,37 @@ function Dialog({ open, onOpenChange, children, resizable = false, contentClassN
               <button
                 type="button"
                 onClick={() => onOpenChange(false)}
-                className="flex size-8 items-center justify-center rounded-md opacity-60 transition-opacity hover:opacity-100 hover:bg-white/[0.06] focus:outline-none"
+                className={cn(
+                  "flex size-8 items-center justify-center rounded-md opacity-60 transition-opacity hover:opacity-100 focus:outline-none",
+                  light ? "text-[#505050] hover:bg-black/[0.04]" : "hover:bg-white/[0.06]"
+                )}
               >
                 <X className="size-3.5" />
                 <span className="sr-only">Close</span>
               </button>
             </div>
-            <DialogFooterContext.Provider value={{ setFooter }}>
-              <div className="flex min-h-0 flex-1 flex-col">
-                <div
-                  className="flex-1 min-h-0 overflow-y-auto touch-auto p-6 pt-2 sm:pt-6 [scrollbar-width:thin] [scrollbar-color:theme(colors.white/0.08)_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-white/10"
-                  onPointerDownCapture={(e) => e.stopPropagation()}
-                >
-                  {children}
-                </div>
-                {footer != null ? (
-                  <div className="shrink-0 border-t border-white/[0.06] px-6 py-4 flex flex-wrap items-center justify-end gap-3">
-                    {footer}
+            <DialogLightContext.Provider value={light}>
+              <DialogFooterContext.Provider value={{ setFooter }}>
+                <div className="flex min-h-0 flex-1 flex-col">
+                  <div
+                    className={cn(
+                      "flex-1 min-h-0 overflow-y-auto touch-auto p-6 pt-2 sm:pt-6 [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:transparent [&::-webkit-scrollbar-thumb]:rounded-full",
+                      light
+                        ? "[scrollbar-color:theme(colors.black/0.08)_transparent] [&::-webkit-scrollbar-thumb]:bg-black/10"
+                        : "[scrollbar-color:theme(colors.white/0.08)_transparent] [&::-webkit-scrollbar-thumb]:bg-white/10"
+                    )}
+                    onPointerDownCapture={(e) => e.stopPropagation()}
+                  >
+                    {children}
                   </div>
-                ) : null}
-              </div>
-            </DialogFooterContext.Provider>
+                  {footer != null ? (
+                    <div className={cn("shrink-0 border-t px-6 py-4 flex flex-wrap items-center justify-end gap-3", light ? "border-black/[0.06]" : "border-white/[0.06]")}>
+                      {footer}
+                    </div>
+                  ) : null}
+                </div>
+              </DialogFooterContext.Provider>
+            </DialogLightContext.Provider>
             {resizable && (
               <div
                 role="separator"
@@ -277,11 +300,13 @@ function Dialog({ open, onOpenChange, children, resizable = false, contentClassN
 }
 
 function DialogHeader({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("flex flex-col gap-1.5 pb-4 mb-2 border-b border-white/[0.06]", className)} {...props} />
+  const light = React.useContext(DialogLightContext)
+  return <div className={cn("flex flex-col gap-1.5 pb-4 mb-2 border-b", light ? "border-black/[0.06]" : "border-white/[0.06]", className)} {...props} />
 }
 
 function DialogTitle({ className, ...props }: React.HTMLAttributes<HTMLHeadingElement>) {
-  return <h2 className={cn("text-lg font-semibold text-foreground", className)} {...props} />
+  const light = React.useContext(DialogLightContext)
+  return <h2 className={cn("text-lg font-semibold", light ? "text-[#111]" : "text-foreground", className)} {...props} />
 }
 
 /** @deprecated Close button is now built into the Dialog toolbar. This is a no-op for backwards compat. */
