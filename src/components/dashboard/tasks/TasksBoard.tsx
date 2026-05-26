@@ -3,9 +3,7 @@
  *
  * ANIMATION STORYBOARD
  *
- *    0ms   page surface fades in (light overview-light treatment)
- *   40ms   tabs pill cluster fades up (matches Overview header spec)
- *   80ms   right-side icon cluster fades up
+ *          header chrome (surface + pill @40ms + actions @80ms) is owned by <LightShell>
  *  200ms   first visible column header rises (8px)
  *  250ms   +50ms per subsequent column header
  *   …      cards inside each column stagger at +25ms each (handled in TaskCard)
