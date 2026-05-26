@@ -14,11 +14,13 @@ export interface DatePickerProps {
   dateLabel?: string;
   /** Whether to animate mount. Defaults to false. */
   animated?: boolean;
+  /** Opt-in light theme (dark-on-white). Defaults to the dark base theme. */
+  light?: boolean;
 }
 
 const DAYS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 
-export function DatePicker({ value, onChange, minDate, dateLabel, animated = false }: DatePickerProps) {
+export function DatePicker({ value, onChange, minDate, dateLabel, animated = false, light = false }: DatePickerProps) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const min = minDate === null ? null : (minDate ?? today);
@@ -65,32 +67,61 @@ export function DatePicker({ value, onChange, minDate, dateLabel, animated = fal
     ? new Date(value + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
     : '';
 
+  /* Theme fragments — opt-in light flips dark tokens to dark-on-white. */
+  const t = light
+    ? {
+        panel: 'border-black/[0.08] bg-white',
+        navBtn: 'hover:bg-black/[0.05]',
+        navIcon: 'text-[#808080]',
+        monthLabel: 'text-[#111]',
+        dayHeader: 'text-[#9a9a9a]',
+        cellDisabled: 'text-[#c8c8c8] cursor-not-allowed',
+        cellHover: 'hover:bg-black/[0.05] cursor-pointer',
+        cellSelected: 'bg-[#0d7aff] text-white font-semibold hover:bg-[#0a63cc]',
+        cellToday: 'ring-1 ring-[#0d7aff]/40 text-[#0d7aff] font-medium',
+        cellDefault: 'text-[#2a2a2a]',
+        footer: 'text-[#808080] border-black/[0.08]',
+      }
+    : {
+        panel: 'border-border bg-background',
+        navBtn: 'hover:bg-muted',
+        navIcon: 'text-muted-foreground',
+        monthLabel: 'text-foreground',
+        dayHeader: 'text-muted-foreground/60',
+        cellDisabled: 'text-muted-foreground/30 cursor-not-allowed',
+        cellHover: 'hover:bg-muted cursor-pointer',
+        cellSelected: 'bg-seeko-accent text-background font-semibold hover:bg-seeko-accent/90',
+        cellToday: 'ring-1 ring-seeko-accent/40 text-seeko-accent font-medium',
+        cellDefault: 'text-foreground',
+        footer: 'text-muted-foreground border-border/50',
+      };
+
   const content = (
-    <div className="rounded-lg border border-border bg-background p-3 w-fit">
+    <div className={`rounded-lg border p-3 w-fit ${t.panel}`}>
       {/* Month nav */}
       <div className="flex items-center justify-between mb-2">
         <button
           type="button"
           onClick={prevMonth}
           disabled={!canGoPrev}
-          className="rounded p-1 hover:bg-muted transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+          className={`rounded p-1 transition-colors disabled:opacity-30 disabled:cursor-not-allowed ${t.navBtn}`}
         >
-          <ChevronLeft className="size-4 text-muted-foreground" />
+          <ChevronLeft className={`size-4 ${t.navIcon}`} />
         </button>
-        <span className="text-xs font-medium text-foreground">{monthLabel}</span>
+        <span className={`text-xs font-medium ${t.monthLabel}`}>{monthLabel}</span>
         <button
           type="button"
           onClick={nextMonth}
-          className="rounded p-1 hover:bg-muted transition-colors"
+          className={`rounded p-1 transition-colors ${t.navBtn}`}
         >
-          <ChevronRight className="size-4 text-muted-foreground" />
+          <ChevronRight className={`size-4 ${t.navIcon}`} />
         </button>
       </div>
 
       {/* Day headers */}
       <div className="grid grid-cols-7 gap-0.5 mb-1">
         {DAYS.map((d) => (
-          <div key={d} className="flex size-8 items-center justify-center text-[10px] font-medium text-muted-foreground/60">
+          <div key={d} className={`flex size-8 items-center justify-center text-[10px] font-medium ${t.dayHeader}`}>
             {d}
           </div>
         ))}
@@ -112,10 +143,10 @@ export function DatePicker({ value, onChange, minDate, dateLabel, animated = fal
               disabled={disabled}
               onClick={() => onChange(dateStr)}
               className={`flex size-8 items-center justify-center rounded-md text-xs transition-all
-                ${disabled ? 'text-muted-foreground/30 cursor-not-allowed' : 'hover:bg-muted cursor-pointer'}
-                ${isSelected ? 'bg-seeko-accent text-background font-semibold hover:bg-seeko-accent/90' : ''}
-                ${isToday && !isSelected ? 'ring-1 ring-seeko-accent/40 text-seeko-accent font-medium' : ''}
-                ${!isSelected && !isToday && !disabled ? 'text-foreground' : ''}
+                ${disabled ? t.cellDisabled : t.cellHover}
+                ${isSelected ? t.cellSelected : ''}
+                ${isToday && !isSelected ? t.cellToday : ''}
+                ${!isSelected && !isToday && !disabled ? t.cellDefault : ''}
               `}
             >
               {day}
@@ -126,7 +157,7 @@ export function DatePicker({ value, onChange, minDate, dateLabel, animated = fal
 
       {/* Selected date display */}
       {value && (
-        <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground border-t border-border/50 pt-2">
+        <p className={`mt-2 flex items-center gap-1.5 text-xs border-t pt-2 ${t.footer}`}>
           <Calendar className="size-3" />
           {dateLabel ? `${dateLabel} ${formattedValue}` : formattedValue}
         </p>
