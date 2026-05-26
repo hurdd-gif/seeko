@@ -17,6 +17,7 @@ interface LightShellProps {
   bordered?: boolean; // default false; true => header gets border-b
   animatePill?: boolean; // default true; wrap pill (and right cluster) in FadeRise
   headerPadding?: string; // default 'px-[52px] pt-6 pb-3'
+  leftSlot?: React.ReactNode; // when set, replaces the pill nav (for breadcrumb/back headers)
   children: React.ReactNode;
 }
 
@@ -40,6 +41,7 @@ export function LightShell({
   bordered = false,
   animatePill = true,
   headerPadding = 'px-[52px] pt-6 pb-3',
+  leftSlot,
   children,
 }: LightShellProps) {
   const pill = (
@@ -63,6 +65,8 @@ export function LightShell({
     </nav>
   );
 
+  const leftElement = leftSlot ?? pill;
+
   const rightCluster = account ? (
     <OverviewHeaderActions {...account} />
   ) : actions ? (
@@ -83,10 +87,10 @@ export function LightShell({
         <div className={`flex w-full items-center justify-between gap-3 ${headerPadding}`}>
           {animatePill ? (
             <FadeRise y={6} delay={0.04}>
-              {pill}
+              {leftElement}
             </FadeRise>
           ) : (
-            pill
+            leftElement
           )}
           {rightCluster &&
             (animatePill ? (
