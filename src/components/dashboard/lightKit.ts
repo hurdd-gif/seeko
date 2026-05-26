@@ -15,3 +15,24 @@ export const HAIRLINE = 'h-px bg-black/[0.06]';
  * Appended to shadcn <Button> className so twMerge recolors them last-wins. */
 export const DIALOG_SAVE = 'bg-[#111] text-white hover:bg-[#2a2a2a]';
 export const DIALOG_CANCEL = 'text-[#505050] hover:bg-black/[0.04] hover:text-[#111]';
+
+/* Restrained AA-on-white department label colors (see 2026-05-26 phase1-team
+ * plan; derived via /color-expert). Distinct dept identity, all ≥4.5:1 on white.
+ * `#0d7aff` is reserved for the online dot (graphic, 3:1) — Coding text uses the
+ * deepened `#0a63cc` to clear AA. */
+export const LIGHT_DEPT_COLOR: Record<string, string> = {
+  'Coding':         'text-[#0a63cc]',
+  'Visual Art':     'text-[#3f5fb5]',
+  'UI/UX':          'text-[#6e4fc4]',
+  'Animation':      'text-[#946a00]',
+  'Asset Creation': 'text-[#bd3f7c]',
+};
+/* Matching department badge backgrounds: hue/10 tint + label text. Amber uses
+ * the brighter `#b8801a` for the wash with the darker `#946a00` for the text. */
+export const LIGHT_DEPT_BADGE: Record<string, string> = {
+  'Coding':         'bg-[#0a63cc]/10 text-[#0a63cc]',
+  'Visual Art':     'bg-[#3f5fb5]/10 text-[#3f5fb5]',
+  'UI/UX':          'bg-[#6e4fc4]/10 text-[#6e4fc4]',
+  'Animation':      'bg-[#b8801a]/10 text-[#946a00]',
+  'Asset Creation': 'bg-[#bd3f7c]/10 text-[#bd3f7c]',
+};
