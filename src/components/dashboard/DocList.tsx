@@ -781,12 +781,13 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, is
         open={!!selected}
         onOpenChange={() => setSelected(null)}
         resizable
+        light
         actions={isAdmin && selected ? (
           <button
             type="button"
             title="Share externally"
             onClick={() => setShareDoc(selected)}
-            className="flex size-8 items-center justify-center rounded-md opacity-60 transition-opacity hover:opacity-100 hover:bg-white/[0.06] focus:outline-none"
+            className="flex size-8 items-center justify-center rounded-md text-[#505050] transition-[background-color,opacity] duration-150 hover:bg-black/[0.04] focus:outline-none"
           >
             <Share2 className="size-3.5" />
           </button>
@@ -797,8 +798,8 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, is
             <DialogClose onClose={() => setSelected(null)} />
             <DialogHeader>
               <div className="flex items-center gap-2 pr-20">
-                <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-secondary">
-                  {selected.type === 'deck' ? <Presentation className="size-4 text-foreground" /> : <FileText className="size-4 text-foreground" />}
+                <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-[#f4f4f4]">
+                  {selected.type === 'deck' ? <Presentation className="size-4 text-[#808080]" /> : <FileText className="size-4 text-[#808080]" />}
                 </div>
                 <DialogTitle>{selected.title}</DialogTitle>
               </div>
@@ -810,18 +811,18 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, is
                 <DocContent html={selected.content} />
               ) : (
                 <div className="flex flex-col items-center gap-3 py-16 text-center">
-                  <div className="flex size-12 items-center justify-center rounded-xl bg-secondary">
-                    <FileText className="size-5 text-muted-foreground" />
+                  <div className="flex size-12 items-center justify-center rounded-xl bg-[#f4f4f4]">
+                    <FileText className="size-5 text-[#9a9a9a]" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-foreground">No content yet</p>
-                    <p className="text-xs text-muted-foreground mt-1">Edit this document to add content.</p>
+                    <p className="text-sm font-medium text-[#111]">No content yet</p>
+                    <p className="text-xs text-[#808080] mt-1">Edit this document to add content.</p>
                   </div>
                   {isAdmin && (
                     <button
                       type="button"
                       onClick={() => { setSelected(null); setEditingDoc(selected); }}
-                      className="mt-2 text-xs font-medium text-seeko-accent hover:text-seeko-accent/80 transition-colors"
+                      className="mt-2 text-xs font-medium text-[#0d7aff] hover:text-[#0a63cc] transition-colors"
                     >
                       Edit document
                     </button>
@@ -834,7 +835,7 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, is
       </Dialog>
 
       {/* Edit / New document dialog */}
-      <Dialog open={editingDoc !== null} onOpenChange={() => setEditingDoc(null)} resizable>
+      <Dialog open={editingDoc !== null} onOpenChange={() => setEditingDoc(null)} resizable light>
         {editingDoc !== null && (
           <>
             <DialogClose onClose={() => setEditingDoc(null)} />
@@ -852,7 +853,7 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, is
       </Dialog>
 
       {/* Edit / New deck dialog */}
-      <Dialog open={editingDeck !== null} onOpenChange={() => setEditingDeck(null)} resizable>
+      <Dialog open={editingDeck !== null} onOpenChange={() => setEditingDeck(null)} resizable light>
         {editingDeck !== null && (
           <>
             <DialogClose onClose={() => setEditingDeck(null)} />
