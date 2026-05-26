@@ -6,8 +6,9 @@ import { toast } from 'sonner';
 import { X } from 'lucide-react';
 import { acquireScrollLock, releaseScrollLock } from '@/lib/scroll-lock';
 import { springs } from '@/lib/motion';
+import { cn } from '@/lib/utils';
 
-export function ContractorToggle({ userId, isContractor }: { userId: string; isContractor: boolean }) {
+export function ContractorToggle({ userId, isContractor, light = false }: { userId: string; isContractor: boolean; light?: boolean }) {
   const [confirming, setConfirming] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -48,7 +49,10 @@ export function ContractorToggle({ userId, isContractor }: { userId: string; isC
       <button
         type="button"
         onClick={() => setConfirming(true)}
-        className="text-[11px] text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap"
+        className={cn(
+          'text-[11px] transition-colors whitespace-nowrap',
+          light ? 'text-[#808080] hover:text-[#111]' : 'text-muted-foreground hover:text-foreground',
+        )}
       >
         {actionLabel}
       </button>
@@ -62,9 +66,12 @@ export function ContractorToggle({ userId, isContractor }: { userId: string; isC
             exit={{ opacity: 0 }}
             transition={{ duration: 0.12 }}
           >
-            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => !loading && setConfirming(false)} />
+            <div className={cn('absolute inset-0 backdrop-blur-sm', light ? 'bg-black/20' : 'bg-black/50')} onClick={() => !loading && setConfirming(false)} />
             <motion.div
-              className="relative w-full max-w-sm rounded-xl border border-border bg-card shadow-2xl p-5"
+              className={cn(
+                'relative w-full max-w-sm rounded-xl p-5',
+                light ? 'border border-black/[0.06] bg-white shadow-seeko' : 'border border-border bg-card shadow-2xl',
+              )}
               initial={{ opacity: 0, scale: 0.95, y: 8 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.97, y: 6 }}
@@ -72,12 +79,15 @@ export function ContractorToggle({ userId, isContractor }: { userId: string; isC
             >
               <button
                 onClick={() => setConfirming(false)}
-                className="absolute top-3 right-3 rounded-lg p-1 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                className={cn(
+                  'absolute top-3 right-3 rounded-lg p-1 transition-colors',
+                  light ? 'text-[#9a9a9a] hover:text-[#111] hover:bg-black/[0.04]' : 'text-muted-foreground hover:text-foreground hover:bg-muted',
+                )}
               >
                 <X className="size-4" />
               </button>
-              <h3 className="text-sm font-semibold text-foreground">{actionLabel}</h3>
-              <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
+              <h3 className={cn('text-sm font-semibold', light ? 'text-[#111]' : 'text-foreground')}>{actionLabel}</h3>
+              <p className={cn('text-xs mt-1.5 leading-relaxed', light ? 'text-[#808080]' : 'text-muted-foreground')}>
                 {next
                   ? 'This will move them to the Contractors section. Contractors cannot see the Activity page.'
                   : 'This will move them back to the Members section with full access.'}
@@ -86,14 +96,20 @@ export function ContractorToggle({ userId, isContractor }: { userId: string; isC
                 <button
                   onClick={handleConfirm}
                   disabled={loading}
-                  className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+                  className={cn(
+                    'rounded-lg px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50',
+                    light ? 'bg-[#111] text-white hover:bg-[#2a2a2a]' : 'bg-primary text-primary-foreground hover:bg-primary/90',
+                  )}
                 >
                   {loading ? 'Updating...' : 'Confirm'}
                 </button>
                 <button
                   onClick={() => setConfirming(false)}
                   disabled={loading}
-                  className="rounded-lg px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  className={cn(
+                    'rounded-lg px-3 py-1.5 text-xs transition-colors',
+                    light ? 'text-[#505050] hover:text-[#111] hover:bg-black/[0.04]' : 'text-muted-foreground hover:text-foreground',
+                  )}
                 >
                   Cancel
                 </button>
