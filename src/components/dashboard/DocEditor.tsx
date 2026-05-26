@@ -242,7 +242,7 @@ export function DocEditor({ doc, onSave, onCancel, team = [] }: DocEditorProps) 
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      color: '#6ee7b7',
+      color: '#0d7aff',
       width: '20px',
       height: '20px',
     });

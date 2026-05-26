@@ -10,7 +10,7 @@ import { useHaptics } from '@/components/HapticsProvider';
 const DEPARTMENTS: Department[] = ['Coding', 'Visual Art', 'UI/UX', 'Animation', 'Asset Creation'];
 
 const DEPT_COLOR: Record<string, string> = {
-  'Coding':         'text-emerald-400',
+  'Coding':         'text-sky-400',
   'Visual Art':     'text-blue-300',
   'UI/UX':          'text-violet-300',
   'Animation':      'text-amber-400',
