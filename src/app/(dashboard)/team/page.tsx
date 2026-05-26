@@ -32,7 +32,7 @@ const TIMING = {
 const delay = (ms: number) => ms / 1000;
 
 const DEPT_COLOR: Record<string, string> = {
-  'Coding':         'text-emerald-400',
+  'Coding':         'text-sky-400',
   'Visual Art':     'text-blue-300',
   'UI/UX':          'text-violet-300',
   'Animation':      'text-amber-400',
@@ -100,7 +100,7 @@ function NdaBadge({ member }: { member: Profile }) {
   }
   if (member.nda_accepted_at) {
     return (
-      <Badge variant="outline" className="text-[10px] py-0 px-1.5 shrink-0 border-emerald-500/50 text-emerald-400">
+      <Badge variant="outline" className="text-[10px] py-0 px-1.5 shrink-0 border-sky-500/50 text-sky-400">
         NDA ✓
       </Badge>
     );
