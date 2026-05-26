@@ -53,4 +53,17 @@ describe('LightShell', () => {
     render(<LightShell><p>page body</p></LightShell>);
     expect(screen.getByText('page body')).toBeInTheDocument();
   });
+
+  it('renders leftSlot in place of the pill nav when provided', () => {
+    render(<LightShell leftSlot={<a data-testid="crumb">‹ Settings</a>}>body</LightShell>);
+    expect(screen.getByTestId('crumb')).toBeInTheDocument();
+    expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Overview' })).not.toBeInTheDocument();
+  });
+
+  it('still renders the pill when leftSlot is omitted', () => {
+    render(<LightShell>body</LightShell>);
+    expect(screen.getByRole('navigation')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Overview' })).toBeInTheDocument();
+  });
 });
