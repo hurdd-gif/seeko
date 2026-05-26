@@ -12,56 +12,20 @@
  *  120ms   activity card rises
  * ───────────────────────────────────────────────────────── */
 
-import Link from 'next/link';
 import { fetchActivity } from '@/lib/supabase/data';
 import { FadeRise } from '@/components/motion';
+import { LightShell } from '@/components/dashboard/LightShell';
 import { ActivitySection } from '@/components/dashboard/tasks/ActivitySection';
 import type { TaskActivity } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
-
-// Canonical nav set — same three tabs on every light page (Overview · Issues ·
-// Docs). Activity reaches this page via the account dropdown, so none of the
-// pill tabs is active here.
-const TABS = [
-  { label: 'Overview', href: '/', active: false },
-  { label: 'Issues', href: '/tasks', active: false },
-  { label: 'Docs', href: '/docs', active: false },
-] as const;
 
 export default async function ActivityPage() {
   const activity = await fetchActivity(50).catch(() => []);
   const typedActivity = activity as unknown as TaskActivity[];
 
   return (
-    <div className="overview-light fixed inset-0 z-40 flex flex-col overflow-hidden bg-[var(--ov-bg)] antialiased">
-      {/* ── Top chrome ──────────────────────────────────────── */}
-      <header className="shrink-0 border-b border-black/[0.06] bg-[var(--ov-bg)]">
-        <FadeRise y={6} delay={0.04}>
-          <div className="flex items-center gap-3 px-6 py-4">
-            <nav
-              aria-label="Sections"
-              className="flex h-[44px] items-center gap-1 rounded-full bg-white px-1.5 shadow-seeko"
-            >
-              {TABS.map((t) => (
-                <Link
-                  key={t.label}
-                  href={t.href}
-                  aria-current={t.active ? 'page' : undefined}
-                  className={
-                    t.active
-                      ? 'flex h-[32px] items-center rounded-full bg-[#0000000d] px-3 text-[13.5px] font-medium leading-[18px] tracking-[-0.27px] text-[#626262]'
-                      : 'flex h-[32px] items-center rounded-full px-3 text-[13.5px] font-medium leading-[18px] tracking-[-0.27px] text-[#c5c5c5] transition-colors duration-150 ease-out hover:text-[#808080]'
-                  }
-                >
-                  {t.label}
-                </Link>
-              ))}
-            </nav>
-          </div>
-        </FadeRise>
-      </header>
-
+    <LightShell navLabel="Sections" fill bordered headerPadding="px-6 py-4">
       {/* ── Body ────────────────────────────────────────────── */}
       <main className="min-h-0 flex-1 overflow-y-auto">
         <div className="mx-auto max-w-3xl px-6 py-8">
@@ -89,6 +53,6 @@ export default async function ActivityPage() {
           </FadeRise>
         </div>
       </main>
-    </div>
+    </LightShell>
   );
 }
