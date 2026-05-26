@@ -19,26 +19,13 @@ import { PaymentRequestDialog } from '@/components/dashboard/PaymentRequestDialo
 import { SecurityKeysPanel } from '@/components/dashboard/SecurityKeysPanel';
 import { Dialog } from '@/components/ui/dialog';
 import { LightShell } from '@/components/dashboard/LightShell';
+import { LIGHT_INPUT, BTN_BASE, BTN_PRIMARY, BTN_SECONDARY, CARD_TITLE, CARD_DESC, HAIRLINE } from '@/components/dashboard/lightKit';
 import { FadeRise } from '@/components/motion';
 import { EmptyState } from '@/components/ui/empty-state';
 import { formatCurrency } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { Switch } from '@/components/ui/switch';
 import { springs } from '@/lib/motion';
-
-/* ── Light form-control class kits (shadcn primitives are dark-themed via
- * `@theme inline` tokens that bake literal hex into utilities at build time,
- * so a runtime token override can't relight them — we override per-element
- * via className, which twMerge resolves last-wins). ───────────────────── */
-const LIGHT_INPUT =
-  'border border-black/[0.08] bg-white text-[#2a2a2a] placeholder:text-[#b3b3b3] rounded-lg focus-visible:ring-2 focus-visible:ring-[#0d7aff]/30';
-const BTN_BASE =
-  'rounded-full px-4 h-9 text-[13px] font-medium transition-[background-color,transform] duration-150 ease-out active:scale-[0.98]';
-const BTN_PRIMARY = `${BTN_BASE} bg-[#111] text-white hover:bg-[#2a2a2a]`;
-const BTN_SECONDARY = `${BTN_BASE} bg-[#f4f4f4] text-[#2a2a2a] hover:bg-[#ececec]`;
-const CARD_TITLE = 'text-[15px] font-semibold text-[#111]';
-const CARD_DESC = 'text-[13px] text-[#808080]';
-const HAIRLINE = 'h-px bg-black/[0.06]';
 
 const COMMON_TIMEZONES = [
   'America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles',
