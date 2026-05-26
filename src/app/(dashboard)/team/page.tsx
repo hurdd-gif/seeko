@@ -8,6 +8,7 @@
  *  260ms   department sections stagger in (60ms apart)
  * ───────────────────────────────────────────────────────── */
 
+import Link from 'next/link';
 import { fetchTeam } from '@/lib/supabase/data';
 import { createClient } from '@/lib/supabase/server';
 import { Profile } from '@/lib/types';
@@ -15,11 +16,12 @@ import { FadeRise, Stagger, StaggerItem, InteractiveRow } from '@/components/mot
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { EmptyState } from '@/components/ui/empty-state';
-import { Globe, Clock } from 'lucide-react';
+import { Globe, Clock, Users, ChevronLeft } from 'lucide-react';
+import { LightShell } from '@/components/dashboard/LightShell';
 import { InviteForm } from '@/components/dashboard/InviteForm';
 import { DepartmentSelect } from '@/components/dashboard/DepartmentSelect';
 import { ContractorToggle } from '@/components/dashboard/ContractorToggle';
+import { LIGHT_DEPT_COLOR, LIGHT_DEPT_BADGE } from '@/components/dashboard/lightKit';
 
 const TIMING = {
   heading:    0,
@@ -30,14 +32,6 @@ const TIMING = {
 };
 
 const delay = (ms: number) => ms / 1000;
-
-const DEPT_COLOR: Record<string, string> = {
-  'Coding':         'text-sky-400',
-  'Visual Art':     'text-blue-300',
-  'UI/UX':          'text-violet-300',
-  'Animation':      'text-amber-400',
-  'Asset Creation': 'text-pink-300',
-};
 
 function getInitials(name: string): string {
   return name.split(' ').map(part => part[0]).join('').toUpperCase().slice(0, 2) || '?';
@@ -87,26 +81,54 @@ function tzAbbrev(tz?: string): string {
 }
 
 /* ─────────────────────────────────────────────────────────
+ * LightEmpty — local light-surface empty block
+ * (the shared <EmptyState> bakes a text-foreground title that
+ * is invisible on white; mirror DocList's local empty block)
+ * ───────────────────────────────────────────────────────── */
+
+function LightEmpty({
+  icon: Icon,
+  title,
+  description,
+}: {
+  icon: typeof Users;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-3 px-6 py-10 text-center">
+      <div className="flex size-11 items-center justify-center rounded-full bg-[#f4f4f4]">
+        <Icon className="size-5 text-[#808080]" />
+      </div>
+      <div className="space-y-0.5">
+        <p className="text-[14px] font-medium text-[#111]">{title}</p>
+        <p className="text-[13px] text-[#808080]">{description}</p>
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────
  * MemberRow — single team member
  * ───────────────────────────────────────────────────────── */
 
 function NdaBadge({ member }: { member: Profile }) {
   if (member.is_admin) {
     return (
-      <Badge variant="outline" className="text-[10px] py-0 px-1.5 shrink-0 border-muted-foreground/40 text-muted-foreground">
+      <Badge variant="outline" className="text-[10px] py-0 px-1.5 shrink-0 border-black/[0.08] text-[#808080]">
         Exempt
       </Badge>
     );
   }
   if (member.nda_accepted_at) {
     return (
-      <Badge variant="outline" className="text-[10px] py-0 px-1.5 shrink-0 border-sky-500/50 text-sky-400">
+      <Badge variant="outline" className="text-[10px] py-0 px-1.5 shrink-0 border-[#0a63cc]/30 text-[#0a63cc]">
         NDA ✓
       </Badge>
     );
   }
   return (
-    <Badge variant="outline" className="text-[10px] py-0 px-1.5 shrink-0 border-amber-500/50 text-amber-400">
+    <Badge variant="outline" className="text-[10px] py-0 px-1.5 shrink-0 border-[#b8801a]/40 text-[#946a00]">
       NDA Pending
     </Badge>
   );
@@ -118,17 +140,17 @@ function MemberRow({ member, isAdmin }: { member: Profile; isAdmin: boolean }) {
   const offset = tzAbbrev(member.timezone);
 
   return (
-    <InteractiveRow className="flex items-center gap-3 rounded-lg px-3 py-2.5 -mx-3 transition-colors">
+    <InteractiveRow light className="flex items-center gap-3 rounded-lg px-3 py-2.5 -mx-3 transition-colors">
       {/* Avatar */}
       <div className="relative shrink-0">
-        <Avatar className="size-10">
+        <Avatar className="size-10 outline outline-1 -outline-offset-1 outline-black/[0.06]">
           <AvatarImage src={member.avatar_url} alt={member.display_name ?? ''} />
-          <AvatarFallback className="bg-secondary text-foreground text-xs">
+          <AvatarFallback className="bg-[#f4f4f4] text-[#505050] text-xs">
             {getInitials(member.display_name ?? '?')}
           </AvatarFallback>
         </Avatar>
         <span
-          className={`absolute bottom-0 right-0 size-2.5 rounded-full ring-2 ring-card ${online ? 'bg-seeko-accent' : 'bg-muted-foreground/40'}`}
+          className={`absolute bottom-0 right-0 size-2.5 rounded-full ring-2 ring-white ${online ? 'bg-[#0d7aff]' : 'bg-[#c8c8c8]'}`}
           title={lastSeenLabel(member.last_seen_at, member.must_set_password)}
         />
       </div>
@@ -136,32 +158,32 @@ function MemberRow({ member, isAdmin }: { member: Profile; isAdmin: boolean }) {
       {/* Info */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <p className="text-sm font-medium text-foreground truncate">{member.display_name ?? 'Unknown'}</p>
+          <p className="text-sm font-medium text-[#111] truncate">{member.display_name ?? 'Unknown'}</p>
           {member.is_admin && (
-            <Badge variant="outline" className="text-[10px] py-0 px-1.5 shrink-0">Lead</Badge>
+            <Badge variant="outline" className="text-[10px] py-0 px-1.5 shrink-0 border-black/[0.08] text-[#808080]">Lead</Badge>
           )}
           {isAdmin && <NdaBadge member={member} />}
           {/* Status — mobile only */}
-          <span className={`md:hidden ml-auto text-[11px] shrink-0 ${online ? 'text-seeko-accent' : 'text-muted-foreground/60'}`}>
+          <span className={`md:hidden ml-auto text-[11px] shrink-0 ${online ? 'text-[#0a63cc]' : 'text-[#9a9a9a]'}`}>
             {lastSeenLabel(member.last_seen_at, member.must_set_password)}
           </span>
         </div>
 
         <div className="flex items-center gap-2 mt-0.5 flex-wrap">
           {member.role && (
-            <p className="text-xs text-muted-foreground">{member.role}</p>
+            <p className="text-xs text-[#808080]">{member.role}</p>
           )}
           {!isAdmin && member.department && (
-            <span className={`md:hidden text-xs font-medium ${DEPT_COLOR[member.department] ?? 'text-muted-foreground'}`}>
+            <span className={`md:hidden text-xs font-medium ${LIGHT_DEPT_COLOR[member.department] ?? 'text-[#808080]'}`}>
               {member.role && '· '}{member.department}
             </span>
           )}
           {member.timezone && (
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              {member.role && <span className="text-muted-foreground/30">·</span>}
+            <div className="flex items-center gap-1 text-xs text-[#808080]">
+              {member.role && <span className="text-[#c8c8c8]">·</span>}
               <Clock className="size-2.5" />
               <span>{localTime}</span>
-              <span className="text-muted-foreground/50 hidden sm:inline">{offset}</span>
+              <span className="text-[#c8c8c8] hidden sm:inline">{offset}</span>
             </div>
           )}
         </div>
@@ -169,8 +191,8 @@ function MemberRow({ member, isAdmin }: { member: Profile; isAdmin: boolean }) {
         {/* Dept select + contractor toggle — mobile only */}
         {isAdmin && (
           <div className="mt-2 md:hidden flex items-center gap-3">
-            <DepartmentSelect userId={member.id} department={member.department} />
-            <ContractorToggle userId={member.id} isContractor={member.is_contractor ?? false} />
+            <DepartmentSelect light userId={member.id} department={member.department} />
+            <ContractorToggle light userId={member.id} isContractor={member.is_contractor ?? false} />
           </div>
         )}
       </div>
@@ -178,17 +200,17 @@ function MemberRow({ member, isAdmin }: { member: Profile; isAdmin: boolean }) {
       {/* Right column — desktop only */}
       <div className="hidden md:flex items-center gap-2 shrink-0">
         {isAdmin && (
-          <ContractorToggle userId={member.id} isContractor={member.is_contractor ?? false} />
+          <ContractorToggle light userId={member.id} isContractor={member.is_contractor ?? false} />
         )}
         {isAdmin
-          ? <DepartmentSelect userId={member.id} department={member.department} />
+          ? <DepartmentSelect light userId={member.id} department={member.department} />
           : member.department && (
-              <Badge variant="secondary" className={`text-xs ${DEPT_COLOR[member.department] ?? 'text-muted-foreground'}`}>
+              <Badge variant="secondary" className={`text-xs ${LIGHT_DEPT_BADGE[member.department] ?? 'bg-black/[0.04] text-[#808080]'}`}>
                 {member.department}
               </Badge>
             )
         }
-        <span className={`text-[11px] w-16 text-right ${online ? 'text-seeko-accent' : 'text-muted-foreground/60'}`}>
+        <span className={`text-[11px] w-16 text-right ${online ? 'text-[#0a63cc]' : 'text-[#9a9a9a]'}`}>
           {lastSeenLabel(member.last_seen_at, member.must_set_password)}
         </span>
       </div>
@@ -208,20 +230,20 @@ function OnlineCluster({ members }: { members: Profile[] }) {
     <div className="flex items-center gap-2">
       <div className="flex items-center -space-x-2">
         {online.slice(0, 6).map(m => (
-          <Avatar key={m.id} className="size-7 ring-2 ring-background">
+          <Avatar key={m.id} className="size-7 ring-2 ring-white">
             <AvatarImage src={m.avatar_url} alt={m.display_name ?? ''} />
-            <AvatarFallback className="bg-secondary text-foreground text-[9px]">
+            <AvatarFallback className="bg-[#f4f4f4] text-[#505050] text-[9px]">
               {getInitials(m.display_name ?? '?')}
             </AvatarFallback>
           </Avatar>
         ))}
         {online.length > 6 && (
-          <div className="size-7 rounded-full bg-muted ring-2 ring-background flex items-center justify-center text-[10px] font-medium text-muted-foreground">
+          <div className="size-7 rounded-full bg-black/[0.04] ring-2 ring-white flex items-center justify-center text-[10px] font-medium text-[#808080]">
             +{online.length - 6}
           </div>
         )}
       </div>
-      <span className="text-xs text-seeko-accent font-medium">{online.length} online</span>
+      <span className="text-xs text-[#0a63cc] font-medium">{online.length} online</span>
     </div>
   );
 }
@@ -244,11 +266,11 @@ function DepartmentSection({
   return (
     <div>
       <div className="flex items-center gap-2 mb-1 px-3">
-        <p className={`text-xs font-semibold uppercase tracking-widest ${colorClass ?? 'text-muted-foreground/60'}`}>
+        <p className={`text-[13px] font-medium ${colorClass ?? 'text-[#9a9a9a]'}`}>
           {label}
         </p>
-        <div className="flex-1 h-px bg-border" />
-        <span className="text-xs tabular-nums text-muted-foreground/60">{members.length}</span>
+        <div className="flex-1 h-px bg-black/[0.06]" />
+        <span className="text-xs tabular-nums text-[#9a9a9a]">{members.length}</span>
       </div>
       <Stagger className="flex flex-col" staggerMs={0.04}>
         {members.map(member => (
@@ -291,92 +313,108 @@ export default async function TeamPage() {
   });
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <FadeRise delay={delay(TIMING.heading)}>
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground text-balance">Team</h1>
-          </FadeRise>
-          <FadeRise delay={delay(TIMING.subtitle)}>
-            <p className="text-sm text-muted-foreground mt-1">
-              {team.length} people
-            </p>
-          </FadeRise>
-        </div>
-        <FadeRise delay={delay(TIMING.subtitle)}>
-          <OnlineCluster members={team} />
-        </FadeRise>
-      </div>
-
-      {/* Invite form — admin only */}
-      {isAdmin && (
-        <FadeRise delay={delay(TIMING.invite)} y={12}>
-          <InviteForm />
-        </FadeRise>
-      )}
-
-      {/* Main team card */}
-      <FadeRise delay={delay(TIMING.card)} y={12}>
-        <Card>
-          <CardContent className="pt-5 pb-4">
-            {members.length === 0 ? (
-              <EmptyState
-                icon="Users"
-                title="No team members yet"
-                description="Invite people to get started."
-              />
-            ) : (
-              <div className="flex flex-col gap-5">
-                {sortedDeptGroups.map(([dept, deptMembers]) => (
-                  <DepartmentSection
-                    key={dept}
-                    label={dept}
-                    members={deptMembers}
-                    isAdmin={isAdmin}
-                    colorClass={dept !== 'Unassigned' ? DEPT_COLOR[dept]?.replace('text-', 'text-') : undefined}
-                  />
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </FadeRise>
-
-      {/* Contractors section */}
-      {(contractors.length > 0 || isAdmin) && (
-        <FadeRise delay={delay(TIMING.rows)} y={12}>
-          <Card>
-            <CardContent className="pt-5 pb-4">
-              <div className="flex items-center gap-2 mb-1 px-3">
-                <Globe className="size-3.5 text-muted-foreground/60" />
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/60">
-                  Contractors
+    <LightShell
+      fill
+      bordered
+      leftSlot={
+        <Link
+          href="/"
+          className="flex items-center gap-1 text-[13px] text-[#9a9a9a] transition-colors hover:text-[#3a3a3a]"
+        >
+          <ChevronLeft className="size-3.5" />
+          <span>Team</span>
+        </Link>
+      }
+    >
+      <main className="min-h-0 flex-1 overflow-y-auto">
+        <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-6 py-10">
+          {/* Header */}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <FadeRise delay={delay(TIMING.heading)}>
+                <h1 className="text-[22px] font-semibold tracking-tight text-[#111] text-balance">Team</h1>
+              </FadeRise>
+              <FadeRise delay={delay(TIMING.subtitle)}>
+                <p className="text-[13px] text-[#808080] mt-1">
+                  {team.length} people
                 </p>
-                <div className="flex-1 h-px bg-border" />
-                <span className="text-xs tabular-nums text-muted-foreground/60">{contractors.length}</span>
-              </div>
-              {contractors.length === 0 ? (
-                <EmptyState
-                  icon="Globe"
-                  title="No contractors yet"
-                  description={isAdmin
-                    ? 'Use the "Make Contractor" toggle on any member above to move them here.'
-                    : 'No contractors have been added to the team.'}
-                />
-              ) : (
-                <Stagger className="flex flex-col" staggerMs={0.04}>
-                  {contractors.map(member => (
-                    <StaggerItem key={member.id}>
-                      <MemberRow member={member} isAdmin={isAdmin} />
-                    </StaggerItem>
-                  ))}
-                </Stagger>
-              )}
-            </CardContent>
-          </Card>
-        </FadeRise>
-      )}
-    </div>
+              </FadeRise>
+            </div>
+            <FadeRise delay={delay(TIMING.subtitle)}>
+              <OnlineCluster members={team} />
+            </FadeRise>
+          </div>
+
+          {/* Invite form — admin only */}
+          {isAdmin && (
+            <FadeRise delay={delay(TIMING.invite)} y={12}>
+              <InviteForm />
+            </FadeRise>
+          )}
+
+          {/* Main team card */}
+          <FadeRise delay={delay(TIMING.card)} y={12}>
+            <Card className="rounded-2xl border-0 bg-white shadow-seeko">
+              <CardContent className="p-5">
+                {members.length === 0 ? (
+                  <LightEmpty
+                    icon={Users}
+                    title="No team members yet"
+                    description="Invite people to get started."
+                  />
+                ) : (
+                  <div className="flex flex-col gap-5">
+                    {sortedDeptGroups.map(([dept, deptMembers]) => (
+                      <DepartmentSection
+                        key={dept}
+                        label={dept}
+                        members={deptMembers}
+                        isAdmin={isAdmin}
+                        colorClass={dept !== 'Unassigned' ? LIGHT_DEPT_COLOR[dept] : undefined}
+                      />
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </FadeRise>
+
+          {/* Contractors section */}
+          {(contractors.length > 0 || isAdmin) && (
+            <FadeRise delay={delay(TIMING.rows)} y={12}>
+              <Card className="rounded-2xl border-0 bg-white shadow-seeko">
+                <CardContent className="p-5">
+                  <div className="flex items-center gap-2 mb-1 px-3">
+                    <Globe className="size-3.5 text-[#808080]" />
+                    <p className="text-[13px] font-medium text-[#808080]">
+                      Contractors
+                    </p>
+                    <div className="flex-1 h-px bg-black/[0.06]" />
+                    <span className="text-xs tabular-nums text-[#9a9a9a]">{contractors.length}</span>
+                  </div>
+                  {contractors.length === 0 ? (
+                    <LightEmpty
+                      icon={Globe}
+                      title="No contractors yet"
+                      description={isAdmin
+                        ? 'Use the "Make Contractor" toggle on any member above to move them here.'
+                        : 'No contractors have been added to the team.'}
+                    />
+                  ) : (
+                    <Stagger className="flex flex-col" staggerMs={0.04}>
+                      {contractors.map(member => (
+                        <StaggerItem key={member.id}>
+                          <MemberRow member={member} isAdmin={isAdmin} />
+                        </StaggerItem>
+                      ))}
+                    </Stagger>
+                  )}
+                </CardContent>
+              </Card>
+            </FadeRise>
+          )}
+        </div>
+      </main>
+    </LightShell>
   );
 }
