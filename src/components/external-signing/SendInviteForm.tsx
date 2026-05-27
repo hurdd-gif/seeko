@@ -8,11 +8,11 @@ import { EXTERNAL_TEMPLATES } from '@/lib/external-agreement-templates';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent } from '@/components/ui/card';
 import { DatePicker } from '@/components/ui/date-picker';
 import { toast } from 'sonner';
 import DOMPurify from 'dompurify';
 import { springs } from '@/lib/motion';
+import { LIGHT_INPUT, DIALOG_SAVE, DIALOG_CANCEL } from '@/components/dashboard/lightKit';
 
 const SPRING = springs.smooth;
 
@@ -125,14 +125,13 @@ export function SendInviteForm({ onInviteSent }: SendInviteFormProps) {
   const selectedTemplate = EXTERNAL_TEMPLATES.find((t) => t.id === templateId);
 
   return (
-    <Card className="overflow-visible">
-      <CardContent className="pt-6">
+    <div className="overflow-visible rounded-2xl border-0 bg-white p-6 shadow-seeko">
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* ── Section 1: Recipient ── */}
           <div className="space-y-3">
             <div className="flex items-center gap-2">
-              <div className="flex size-5 items-center justify-center rounded-full bg-foreground text-background text-xs font-semibold">1</div>
-              <span className="text-sm font-medium text-foreground">Recipient</span>
+              <div className="flex size-5 items-center justify-center rounded-full bg-[#111] text-white text-xs font-semibold">1</div>
+              <span className="text-sm font-medium text-[#111]">Recipient</span>
             </div>
             <Input
               id="recipient-email"
@@ -141,27 +140,28 @@ export function SendInviteForm({ onInviteSent }: SendInviteFormProps) {
               onChange={(e) => setEmail(e.target.value)}
               required
               placeholder="name@company.com"
+              className={LIGHT_INPUT}
             />
           </div>
 
-          <div className="h-px bg-border" />
+          <div className="h-px bg-black/[0.06]" />
 
           {/* ── Section 2: Document ── */}
           <div className="space-y-3">
             <div className="flex items-center gap-2">
-              <div className="flex size-5 items-center justify-center rounded-full bg-foreground text-background text-xs font-semibold">2</div>
-              <span className="text-sm font-medium text-foreground">Document</span>
+              <div className="flex size-5 items-center justify-center rounded-full bg-[#111] text-white text-xs font-semibold">2</div>
+              <span className="text-sm font-medium text-[#111]">Document</span>
             </div>
 
             {/* Template Mode Toggle */}
-            <div className="flex gap-1.5 rounded-lg bg-muted/50 p-1">
+            <div className="flex gap-1.5 rounded-lg bg-[#f4f4f4] border border-black/[0.06] p-1">
               <button
                 type="button"
                 onClick={() => setTemplateMode('preset')}
                 className={`flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-1.5 text-sm transition-all ${
                   templateMode === 'preset'
-                    ? 'bg-background text-foreground font-medium shadow-sm ring-1 ring-border'
-                    : 'text-muted-foreground hover:text-foreground'
+                    ? 'bg-white text-[#111] font-medium shadow-seeko'
+                    : 'text-[#808080] hover:text-[#111]'
                 }`}
               >
                 <FileText className="size-3.5" /> Template
@@ -171,8 +171,8 @@ export function SendInviteForm({ onInviteSent }: SendInviteFormProps) {
                 onClick={() => setTemplateMode('upload')}
                 className={`flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-1.5 text-sm transition-all ${
                   templateMode === 'upload'
-                    ? 'bg-background text-foreground font-medium shadow-sm ring-1 ring-border'
-                    : 'text-muted-foreground hover:text-foreground'
+                    ? 'bg-white text-[#111] font-medium shadow-seeko'
+                    : 'text-[#808080] hover:text-[#111]'
                 }`}
               >
                 <Upload className="size-3.5" /> Upload PDF
@@ -187,8 +187,8 @@ export function SendInviteForm({ onInviteSent }: SendInviteFormProps) {
                     key={t.id}
                     className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors ${
                       templateId === t.id
-                        ? 'border-seeko-accent/40 bg-seeko-accent/5'
-                        : 'border-border hover:border-border hover:bg-muted/30'
+                        ? 'border-[#0a63cc]/40 bg-[#0a63cc]/[0.06]'
+                        : 'border-black/[0.08] hover:border-black/[0.12] hover:bg-black/[0.02]'
                     }`}
                   >
                     <input
@@ -197,11 +197,11 @@ export function SendInviteForm({ onInviteSent }: SendInviteFormProps) {
                       value={t.id}
                       checked={templateId === t.id}
                       onChange={() => setTemplateId(t.id)}
-                      className="mt-0.5 accent-seeko-accent"
+                      className="mt-0.5 accent-[#0a63cc]"
                     />
                     <div>
-                      <p className="text-sm font-medium text-foreground">{t.name}</p>
-                      <p className="text-xs text-muted-foreground">{t.description}</p>
+                      <p className="text-sm font-medium text-[#111]">{t.name}</p>
+                      <p className="text-xs text-[#808080]">{t.description}</p>
                     </div>
                   </label>
                 ))}
@@ -212,17 +212,17 @@ export function SendInviteForm({ onInviteSent }: SendInviteFormProps) {
             {templateMode === 'upload' && (
               <div className="space-y-2">
                 {!customSections ? (
-                  <label className="flex cursor-pointer flex-col items-center gap-2 rounded-lg border-2 border-dashed border-border p-6 transition-colors hover:border-muted-foreground/30">
+                  <label className="flex cursor-pointer flex-col items-center gap-2 rounded-lg border-2 border-dashed border-black/[0.12] p-6 transition-colors hover:border-black/[0.2]">
                     {parsing ? (
                       <>
-                        <Loader2 className="size-5 animate-spin text-muted-foreground" />
-                        <span className="text-sm text-muted-foreground">AI is parsing your PDF into sections...</span>
+                        <Loader2 className="size-5 animate-spin text-[#9a9a9a]" />
+                        <span className="text-sm text-[#808080]">AI is parsing your PDF into sections...</span>
                       </>
                     ) : (
                       <>
-                        <Upload className="size-5 text-muted-foreground" />
-                        <span className="text-sm text-muted-foreground">Tap to upload a PDF</span>
-                        <span className="text-xs text-muted-foreground/60">Will be parsed into signable sections</span>
+                        <Upload className="size-5 text-[#9a9a9a]" />
+                        <span className="text-sm text-[#808080]">Tap to upload a PDF</span>
+                        <span className="text-xs text-[#9a9a9a]">Will be parsed into signable sections</span>
                       </>
                     )}
                     <input
@@ -236,18 +236,18 @@ export function SendInviteForm({ onInviteSent }: SendInviteFormProps) {
                     />
                   </label>
                 ) : (
-                  <div className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-3 py-2">
+                  <div className="flex items-center justify-between rounded-lg border border-black/[0.06] bg-[#f7f7f7] px-3 py-2">
                     <div className="flex items-center gap-2">
-                      <FileText className="size-4 text-muted-foreground" />
-                      <span className="text-sm text-foreground">{customTitle}</span>
-                      <span className="text-xs text-muted-foreground">{customSections.length} sections</span>
+                      <FileText className="size-4 text-[#9a9a9a]" />
+                      <span className="text-sm text-[#111]">{customTitle}</span>
+                      <span className="text-xs text-[#808080]">{customSections.length} sections</span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <button type="button" onClick={() => setShowPreview(!showPreview)} className="rounded p-1.5 hover:bg-muted">
-                        <Eye className="size-4 text-muted-foreground" />
+                      <button type="button" onClick={() => setShowPreview(!showPreview)} className="rounded p-1.5 hover:bg-black/[0.04]">
+                        <Eye className="size-4 text-[#9a9a9a]" />
                       </button>
-                      <button type="button" onClick={() => { setCustomSections(null); setCustomTitle(''); }} className="rounded p-1.5 hover:bg-muted">
-                        <X className="size-4 text-muted-foreground" />
+                      <button type="button" onClick={() => { setCustomSections(null); setCustomTitle(''); }} className="rounded p-1.5 hover:bg-black/[0.04]">
+                        <X className="size-4 text-[#9a9a9a]" />
                       </button>
                     </div>
                   </div>
@@ -262,11 +262,11 @@ export function SendInviteForm({ onInviteSent }: SendInviteFormProps) {
                       exit={{ height: 0, opacity: 0 }}
                       className="overflow-hidden"
                     >
-                      <div className="max-h-64 overflow-y-auto rounded-lg border border-border bg-muted/30 p-4 [scrollbar-width:thin]">
+                      <div className="max-h-64 overflow-y-auto rounded-lg border border-black/[0.06] bg-[#f7f7f7] p-4 [scrollbar-width:thin]">
                         {customSections.map((s) => (
                           <div key={s.number} className="mb-3">
-                            <h4 className="text-sm font-semibold text-foreground">{s.number}. {s.title}</h4>
-                            <div className="mt-1 text-xs text-muted-foreground prose prose-sm prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(s.content) }} />
+                            <h4 className="text-sm font-semibold text-[#111]">{s.number}. {s.title}</h4>
+                            <div className="mt-1 text-xs text-[#808080] prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(s.content) }} />
                           </div>
                         ))}
                       </div>
@@ -283,26 +283,26 @@ export function SendInviteForm({ onInviteSent }: SendInviteFormProps) {
             onClick={() => setIsGuardianSigning(!isGuardianSigning)}
             className={`flex w-full cursor-pointer items-center gap-3 rounded-lg px-4 py-3 text-left transition-all ${
               isGuardianSigning
-                ? 'bg-seeko-accent/8 ring-1 ring-seeko-accent/25'
-                : 'bg-muted/30 hover:bg-muted/50'
+                ? 'bg-[#0a63cc]/[0.06] ring-1 ring-[#0a63cc]/25'
+                : 'bg-[#f7f7f7] hover:bg-black/[0.04]'
             }`}
           >
             <div className={`flex size-8 shrink-0 items-center justify-center rounded-lg transition-colors ${
-              isGuardianSigning ? 'bg-seeko-accent/15 text-seeko-accent' : 'bg-muted text-muted-foreground'
+              isGuardianSigning ? 'bg-[#0a63cc]/[0.12] text-[#0a63cc]' : 'bg-[#f4f4f4] text-[#808080]'
             }`}>
               <ShieldCheck className="size-4" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-foreground">Guardian signing for a minor</p>
-              <p className="text-xs text-muted-foreground">A parent or legal guardian will sign on behalf of someone under 18</p>
+              <p className="text-sm font-medium text-[#111]">Guardian signing for a minor</p>
+              <p className="text-xs text-[#808080]">A parent or legal guardian will sign on behalf of someone under 18</p>
             </div>
             <div className={`flex size-5 shrink-0 items-center justify-center rounded-full border-2 transition-all ${
               isGuardianSigning
-                ? 'border-seeko-accent bg-seeko-accent'
-                : 'border-muted-foreground/30'
+                ? 'border-[#0a63cc] bg-[#0a63cc]'
+                : 'border-black/20'
             }`}>
               {isGuardianSigning && (
-                <svg viewBox="0 0 12 12" className="size-3 text-background" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg viewBox="0 0 12 12" className="size-3 text-white" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M2.5 6L5 8.5L9.5 3.5" />
                 </svg>
               )}
@@ -313,7 +313,7 @@ export function SendInviteForm({ onInviteSent }: SendInviteFormProps) {
           <button
             type="button"
             onClick={() => setShowOptions(!showOptions)}
-            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            className="flex items-center gap-1.5 text-xs text-[#808080] hover:text-[#111] transition-colors"
           >
             {showOptions ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}
             {showOptions ? 'Hide options' : 'Expiration & personal note'}
@@ -328,10 +328,10 @@ export function SendInviteForm({ onInviteSent }: SendInviteFormProps) {
                 transition={SPRING}
                 className="overflow-hidden"
               >
-                <div className="space-y-4 rounded-lg border border-border/50 bg-muted/20 p-4">
+                <div className="space-y-4 rounded-lg border border-black/[0.06] bg-[#f7f7f7] p-4">
                   {/* Expiration */}
                   <div className="space-y-2">
-                    <Label className="text-xs">Expires in</Label>
+                    <Label className="text-xs text-[#808080]">Expires in</Label>
                     <div className="flex flex-wrap gap-1.5">
                       {[
                         { value: '7', label: '7 days' },
@@ -345,8 +345,8 @@ export function SendInviteForm({ onInviteSent }: SendInviteFormProps) {
                           onClick={() => setExpiration(opt.value)}
                           className={`rounded-full px-3 py-1 text-xs font-medium transition-all ${
                             expiration === opt.value
-                              ? 'bg-foreground text-background'
-                              : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground ring-1 ring-border/50'
+                              ? 'bg-[#111] text-white'
+                              : 'bg-[#f4f4f4] text-[#808080] hover:text-[#111] ring-1 ring-black/[0.06]'
                           }`}
                         >
                           {opt.label}
@@ -358,9 +358,10 @@ export function SendInviteForm({ onInviteSent }: SendInviteFormProps) {
                         value={customDate}
                         onChange={setCustomDate}
                         dateLabel="Expires"
+                        light
                       />
                     ) : (
-                      <p className="flex items-center gap-1.5 text-xs text-muted-foreground/70">
+                      <p className="flex items-center gap-1.5 text-xs text-[#9a9a9a]">
                         <Calendar className="size-3" />
                         Expires {new Date(Date.now() + parseInt(expiration) * 86400000).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
                       </p>
@@ -369,14 +370,14 @@ export function SendInviteForm({ onInviteSent }: SendInviteFormProps) {
 
                   {/* Personal Note */}
                   <div className="space-y-1.5">
-                    <Label htmlFor="personal-note" className="text-xs">Personal Note</Label>
+                    <Label htmlFor="personal-note" className="text-xs text-[#808080]">Personal Note</Label>
                     <textarea
                       id="personal-note"
                       value={personalNote}
                       onChange={(e) => setPersonalNote(e.target.value)}
                       rows={2}
                       placeholder="Include a message for the recipient..."
-                      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:border-ring focus:outline-none resize-none"
+                      className={`flex w-full px-3 py-2 text-sm focus-visible:outline-none resize-none ${LIGHT_INPUT}`}
                     />
                   </div>
                 </div>
@@ -388,7 +389,7 @@ export function SendInviteForm({ onInviteSent }: SendInviteFormProps) {
           <Button
             type="submit"
             disabled={!canSubmit || sending}
-            className="w-full gap-2 bg-seeko-accent text-background hover:bg-seeko-accent/90 font-medium"
+            className={`w-full gap-2 font-medium ${DIALOG_SAVE}`}
           >
             {sending ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
             Send Invite
@@ -408,8 +409,7 @@ export function SendInviteForm({ onInviteSent }: SendInviteFormProps) {
           customDate={customDate}
           isGuardianSigning={isGuardianSigning}
         />
-      </CardContent>
-    </Card>
+    </div>
   );
 }
 
@@ -439,23 +439,23 @@ function ConfirmDialog({ show, onClose, onConfirm, email, templateMode, template
                 exit={{ opacity: 0, y: 40 }}
                 transition={SPRING}
                 onClick={(e) => e.stopPropagation()}
-                className="mx-0 sm:mx-4 w-full max-w-sm rounded-t-2xl sm:rounded-2xl border border-border bg-card p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:pb-6 shadow-2xl"
+                className="mx-0 sm:mx-4 w-full max-w-sm rounded-t-2xl sm:rounded-2xl border-0 bg-white p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:pb-6 shadow-seeko"
               >
                 <div className="flex flex-col gap-4">
                   <div className="flex items-center gap-3">
-                    <div className="flex size-10 items-center justify-center rounded-full bg-seeko-accent/15 ring-1 ring-seeko-accent/30">
-                      <AlertCircle className="size-5 text-seeko-accent" />
+                    <div className="flex size-10 items-center justify-center rounded-full bg-[#0a63cc]/[0.12]">
+                      <AlertCircle className="size-5 text-[#0a63cc]" />
                     </div>
-                    <h3 className="text-base font-semibold text-foreground">Confirm Send</h3>
+                    <h3 className="text-base font-semibold text-[#111]">Confirm Send</h3>
                   </div>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Recipient</span>
-                      <span className="text-foreground font-mono text-xs">{email}</span>
+                      <span className="text-[#808080]">Recipient</span>
+                      <span className="text-[#111] font-mono text-xs">{email}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Document</span>
-                      <span className="text-foreground text-xs">
+                      <span className="text-[#808080]">Document</span>
+                      <span className="text-[#111] text-xs">
                         {templateMode === 'preset'
                           ? templateName
                           : title || 'Custom PDF'}
@@ -463,31 +463,31 @@ function ConfirmDialog({ show, onClose, onConfirm, email, templateMode, template
                     </div>
                     {isGuardianSigning && (
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Signing type</span>
-                        <span className="text-foreground text-xs">Guardian (for a minor)</span>
+                        <span className="text-[#808080]">Signing type</span>
+                        <span className="text-[#111] text-xs">Guardian (for a minor)</span>
                       </div>
                     )}
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Expires</span>
-                      <span className="text-foreground text-xs">
+                      <span className="text-[#808080]">Expires</span>
+                      <span className="text-[#111] text-xs">
                         {expiration === 'custom' ? customDate : `${expiration} days`}
                       </span>
                     </div>
                   </div>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-[#808080]">
                     This will send a signing invitation email to the recipient.
                   </p>
                   <div className="flex gap-2">
                     <Button
                       variant="outline"
                       onClick={onClose}
-                      className="flex-1"
+                      className={`flex-1 border-black/[0.08] ${DIALOG_CANCEL}`}
                     >
                       Cancel
                     </Button>
                     <Button
                       onClick={onConfirm}
-                      className="flex-1 gap-2 bg-seeko-accent text-background hover:bg-seeko-accent/90"
+                      className={`flex-1 gap-2 ${DIALOG_SAVE}`}
                     >
                       <Send className="size-4" />
                       Send
