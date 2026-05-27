@@ -36,3 +36,17 @@ export const LIGHT_DEPT_BADGE: Record<string, string> = {
   'Animation':      'bg-[#b8801a]/10 text-[#946a00]',
   'Asset Creation': 'bg-[#bd3f7c]/10 text-[#bd3f7c]',
 };
+
+/* Invoice-request status badge colors on white (Payments admin). Mirrors the dark
+ * INVOICE_STATUS_COLOR keys, mapped to the AA-on-white ladder: azure `#0a63cc` for
+ * verified/approved, amber `#946a00` for submitted, destructive `#d4503e` for
+ * rejected/revoked, neutral grey for pending/expired. */
+export const LIGHT_INVOICE_STATUS: Record<string, string> = {
+  pending:  'text-[#808080] border-black/[0.08]',
+  verified: 'text-[#0a63cc] border-[#0a63cc]/30 bg-[#0a63cc]/10',
+  signed:   'text-[#946a00] border-[#b8801a]/40 bg-[#b8801a]/10',
+  approved: 'text-[#0a63cc] border-[#0a63cc]/30 bg-[#0a63cc]/10',
+  rejected: 'text-[#d4503e] border-[#d4503e]/30 bg-[#d4503e]/10',
+  expired:  'text-[#9a9a9a] border-black/[0.08]',
+  revoked:  'text-[#d4503e] border-[#d4503e]/30 bg-[#d4503e]/10',
+};
