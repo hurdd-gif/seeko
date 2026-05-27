@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { uuid } from '@/lib/utils';
+import { LIGHT_INPUT, DIALOG_SAVE } from '@/components/dashboard/lightKit';
 
 interface LineItem {
   id: string;
@@ -122,7 +123,7 @@ export function InvoiceRequestForm({ open, onOpenChange }: InvoiceRequestFormPro
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange} contentClassName="max-w-md">
+    <Dialog open={open} onOpenChange={onOpenChange} contentClassName="max-w-md" light>
       {success ? (
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
@@ -134,31 +135,31 @@ export function InvoiceRequestForm({ open, onOpenChange }: InvoiceRequestFormPro
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ type: 'spring', visualDuration: 0.5, bounce: 0.3, delay: 0.1 }}
-            className="flex size-14 items-center justify-center rounded-full bg-sky-500/10"
+            className="flex size-14 items-center justify-center rounded-full bg-[#0a63cc]/10"
           >
-            <CheckCircle2 className="size-7 text-sky-400" />
+            <CheckCircle2 className="size-7 text-[#0a63cc]" />
           </motion.div>
           <div className="text-center">
-            <p className="text-lg font-semibold text-foreground">Invoice request sent!</p>
-            <p className="text-sm text-muted-foreground mt-1">
-              Sent to <span className="font-medium text-foreground">{sentEmail}</span>
+            <p className="text-lg font-semibold text-[#111]">Invoice request sent!</p>
+            <p className="text-sm text-[#808080] mt-1">
+              Sent to <span className="font-medium text-[#111]">{sentEmail}</span>
             </p>
-            <p className="text-xs text-muted-foreground mt-2">
+            <p className="text-xs text-[#808080] mt-2">
               They&apos;ll receive an email with a secure link to submit their invoice.
             </p>
           </div>
-          <Button onClick={() => onOpenChange(false)} className="mt-2">Done</Button>
+          <Button onClick={() => onOpenChange(false)} className={`mt-2 ${DIALOG_SAVE}`}>Done</Button>
         </motion.div>
       ) : (
         <>
           <DialogHeader>
             <div className="flex items-center gap-3">
-              <div className="flex size-9 items-center justify-center rounded-lg bg-seeko-accent/15">
-                <FileText className="size-4.5 text-seeko-accent" />
+              <div className="flex size-9 items-center justify-center rounded-lg bg-[#0a63cc]/10">
+                <FileText className="size-4.5 text-[#0a63cc]" />
               </div>
               <div>
                 <DialogTitle>Request Invoice</DialogTitle>
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className="text-xs text-[#808080] mt-0.5">
                   They&apos;ll receive a secure link to submit their invoice
                 </p>
               </div>
@@ -171,7 +172,7 @@ export function InvoiceRequestForm({ open, onOpenChange }: InvoiceRequestFormPro
             <div className="flex flex-col gap-4">
               {/* Recipient email */}
               <div className="space-y-1.5">
-                <Label htmlFor="invoice-email">Recipient Email</Label>
+                <Label htmlFor="invoice-email" className="text-[#808080]">Recipient Email</Label>
                 <Input
                   id="invoice-email"
                   type="email"
@@ -182,7 +183,7 @@ export function InvoiceRequestForm({ open, onOpenChange }: InvoiceRequestFormPro
                     if (emailError) setEmailError('');
                   }}
                   onBlur={() => { if (email.trim()) validateEmail(); }}
-                  className={emailError ? 'border-destructive focus-visible:ring-destructive/30' : ''}
+                  className={`${LIGHT_INPUT} ${emailError ? 'border-[#d4503e] focus-visible:ring-[#d4503e]/30' : ''}`}
                 />
                 <AnimatePresence>
                   {emailError && (
@@ -191,7 +192,7 @@ export function InvoiceRequestForm({ open, onOpenChange }: InvoiceRequestFormPro
                       animate={{ opacity: 1, height: 'auto' }}
                       exit={{ opacity: 0, height: 0 }}
                       transition={{ duration: 0.15 }}
-                      className="text-xs text-destructive"
+                      className="text-xs text-[#d4503e]"
                     >
                       {emailError}
                     </motion.p>
@@ -203,12 +204,12 @@ export function InvoiceRequestForm({ open, onOpenChange }: InvoiceRequestFormPro
               <div className="space-y-2.5">
                 <div className="flex items-center justify-between">
                   <div>
-                    <Label>Pre-filled Items</Label>
-                    <p className="text-[11px] text-muted-foreground/60 mt-0.5">Optional — the recipient can add or edit items</p>
+                    <Label className="text-[#808080]">Pre-filled Items</Label>
+                    <p className="text-[11px] text-[#9a9a9a] mt-0.5">Optional — the recipient can add or edit items</p>
                   </div>
                   <button
                     onClick={addItem}
-                    className="flex items-center gap-1 text-xs text-seeko-accent hover:text-seeko-accent/80 transition-colors"
+                    className="flex items-center gap-1 text-xs text-[#0a63cc] hover:text-[#0a63cc]/80 transition-colors"
                   >
                     <Plus className="size-3" />
                     Add item
@@ -229,10 +230,10 @@ export function InvoiceRequestForm({ open, onOpenChange }: InvoiceRequestFormPro
                           value={item.description}
                           onChange={e => updateItem(item.id, 'description', e.target.value)}
                           placeholder="Item description"
-                          className="flex-1"
+                          className={`flex-1 ${LIGHT_INPUT}`}
                         />
                         <div className="relative w-28 shrink-0">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9a9a9a] pointer-events-none">
                             <DollarSign className="size-3.5" />
                           </span>
                           <Input
@@ -242,12 +243,12 @@ export function InvoiceRequestForm({ open, onOpenChange }: InvoiceRequestFormPro
                             value={item.amount}
                             onChange={e => updateItem(item.id, 'amount', e.target.value)}
                             placeholder="0.00"
-                            className="pl-7"
+                            className={`pl-7 tabular-nums ${LIGHT_INPUT}`}
                           />
                         </div>
                         <button
                           onClick={() => removeItem(item.id)}
-                          className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors shrink-0"
+                          className="p-1.5 rounded-md text-[#9a9a9a] hover:text-[#d4503e] hover:bg-[#d4503e]/10 transition-colors shrink-0"
                         >
                           <Trash2 className="size-3.5" />
                         </button>
@@ -258,7 +259,7 @@ export function InvoiceRequestForm({ open, onOpenChange }: InvoiceRequestFormPro
                 {items.length === 0 && (
                   <button
                     onClick={addItem}
-                    className="w-full py-3 rounded-lg border border-dashed border-border/60 text-xs text-muted-foreground/50 hover:border-border hover:text-muted-foreground transition-colors"
+                    className="w-full py-3 rounded-lg border border-dashed border-black/[0.12] text-xs text-[#9a9a9a] hover:border-black/[0.2] hover:text-[#808080] transition-colors"
                   >
                     + Add a pre-filled item
                   </button>
@@ -275,9 +276,9 @@ export function InvoiceRequestForm({ open, onOpenChange }: InvoiceRequestFormPro
                     transition={{ duration: 0.2 }}
                     className="overflow-hidden"
                   >
-                    <div className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-seeko-accent/[0.06]">
-                      <span className="text-sm font-medium text-muted-foreground">Pre-filled Total</span>
-                      <span className="text-xl font-semibold text-seeko-accent tabular-nums">{fmt(total)}</span>
+                    <div className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-[#0a63cc]/[0.06]">
+                      <span className="text-sm font-medium text-[#808080]">Pre-filled Total</span>
+                      <span className="text-xl font-semibold text-[#0a63cc] tabular-nums">{fmt(total)}</span>
                     </div>
                   </motion.div>
                 )}
@@ -285,35 +286,35 @@ export function InvoiceRequestForm({ open, onOpenChange }: InvoiceRequestFormPro
             </div>
 
             {/* ── Divider ─────────────────────────────── */}
-            <div className="border-t border-border/50" />
+            <div className="border-t border-black/[0.06]" />
 
             {/* ── Section 2: How ───────────────────────── */}
             <div className="flex flex-col gap-4">
               {/* Personal note */}
               <div className="space-y-1.5">
-                <Label htmlFor="invoice-note">Personal Note <span className="text-muted-foreground font-normal">(optional)</span></Label>
+                <Label htmlFor="invoice-note" className="text-[#808080]">Personal Note <span className="text-[#9a9a9a] font-normal">(optional)</span></Label>
                 <textarea
                   id="invoice-note"
                   value={note}
                   onChange={e => setNote(e.target.value)}
                   placeholder="Add a note for the recipient..."
                   rows={2}
-                  className="flex w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground transition-[box-shadow_var(--focus-ring-duration)_ease-out] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
+                  className={`flex w-full px-3 py-2 text-sm transition-[box-shadow_var(--focus-ring-duration)_ease-out] focus-visible:outline-none resize-none ${LIGHT_INPUT}`}
                 />
               </div>
 
               {/* Expiry — segmented control */}
               <div className="space-y-1.5">
-                <Label>Link Expiry</Label>
-                <div className="flex gap-1 p-1 rounded-lg bg-muted/50 border border-border/50">
+                <Label className="text-[#808080]">Link Expiry</Label>
+                <div className="flex gap-1 p-1 rounded-lg bg-[#f4f4f4] border border-black/[0.06]">
                   {EXPIRY_OPTIONS.map(opt => (
                     <button
                       key={opt.value}
                       onClick={() => setExpiry(opt.value)}
                       className={`flex-1 py-1.5 rounded-md text-xs font-medium transition-all ${
                         expiry === opt.value
-                          ? 'bg-background text-foreground shadow-sm'
-                          : 'text-muted-foreground hover:text-foreground'
+                          ? 'bg-white text-[#111] shadow-seeko'
+                          : 'text-[#808080] hover:text-[#111]'
                       }`}
                     >
                       {opt.label}
@@ -327,7 +328,7 @@ export function InvoiceRequestForm({ open, onOpenChange }: InvoiceRequestFormPro
             <Button
               onClick={handleSubmit}
               disabled={sending || !email.trim()}
-              className="gap-2 bg-seeko-accent text-black hover:bg-seeko-accent/90 w-full h-10"
+              className={`gap-2 w-full h-10 ${DIALOG_SAVE}`}
             >
               {sending ? (
                 <>
