@@ -134,9 +134,9 @@ export function InvoiceRequestForm({ open, onOpenChange }: InvoiceRequestFormPro
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ type: 'spring', visualDuration: 0.5, bounce: 0.3, delay: 0.1 }}
-            className="flex size-14 items-center justify-center rounded-full bg-emerald-500/10"
+            className="flex size-14 items-center justify-center rounded-full bg-sky-500/10"
           >
-            <CheckCircle2 className="size-7 text-emerald-400" />
+            <CheckCircle2 className="size-7 text-sky-400" />
           </motion.div>
           <div className="text-center">
             <p className="text-lg font-semibold text-foreground">Invoice request sent!</p>
