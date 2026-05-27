@@ -50,3 +50,17 @@ export const LIGHT_INVOICE_STATUS: Record<string, string> = {
   expired:  'text-[#9a9a9a] border-black/[0.08]',
   revoked:  'text-[#d4503e] border-[#d4503e]/30 bg-[#d4503e]/10',
 };
+
+/* External-signing invite status on white (External Signing admin). The loudness
+ * ladder differs from invoices: here `pending` is the LOUD status (it blocks an
+ * external party from acting) and `signed`/`expired` are quiet (done/dead), the
+ * inverse emphasis of LIGHT_INVOICE_STATUS. Mapped to the same AA-on-white ramp:
+ * amber `#946a00` = pending (needs attention), azure `#0a63cc` = verified (mid-flow),
+ * neutral grey = signed/expired (quiet), destructive `#d4503e` = revoked. */
+export const LIGHT_SIGNING_STATUS: Record<string, string> = {
+  pending:  'text-[#946a00] border-[#b8801a]/40 bg-[#b8801a]/10',
+  verified: 'text-[#0a63cc] border-[#0a63cc]/30 bg-[#0a63cc]/10',
+  signed:   'text-[#808080] border-black/[0.08]',
+  expired:  'text-[#9a9a9a] border-black/[0.08]',
+  revoked:  'text-[#d4503e] border-[#d4503e]/30 bg-[#d4503e]/10',
+};
