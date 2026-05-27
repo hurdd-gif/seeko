@@ -459,7 +459,7 @@ export function PaymentsAdmin({ team }: PaymentsAdminProps) {
                           </>
                         ) : person.hasPaid ? (
                           <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                            <CheckCircle2 className="size-3.5 text-emerald-500/60" />
+                            <CheckCircle2 className="size-3.5 text-sky-500/60" />
                             Paid
                           </span>
                         ) : (
@@ -730,7 +730,7 @@ function PendingRequestRow({ payment, onAction }: { payment: Payment; onAction: 
               <div className="flex gap-2 pt-1">
                 <Button
                   size="sm"
-                  className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white h-8"
+                  className="gap-1.5 bg-sky-600 hover:bg-sky-700 text-white h-8"
                   onClick={(e) => { e.stopPropagation(); handleAction('paid'); }}
                   disabled={acting}
                 >
@@ -761,7 +761,7 @@ const INVOICE_STATUS_COLOR: Record<string, string> = {
   pending: 'text-muted-foreground border-border',
   verified: 'text-blue-400 border-blue-500/30 bg-blue-500/10',
   signed: 'text-amber-400 border-amber-500/30 bg-amber-500/10',
-  approved: 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10',
+  approved: 'text-sky-400 border-sky-500/30 bg-sky-500/10',
   rejected: 'text-red-400 border-red-500/30 bg-red-500/10',
   expired: 'text-muted-foreground/60 border-border',
   revoked: 'text-red-400 border-red-500/30 bg-red-500/10',
