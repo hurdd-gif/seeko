@@ -1,12 +1,15 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import { motion } from 'motion/react';
-import { Lock, KeyRound, Loader2 } from 'lucide-react';
+import { Lock, KeyRound, Loader2, ChevronLeft } from 'lucide-react';
 import { startRegistration, startAuthentication } from '@simplewebauthn/browser';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { LightShell } from '@/components/dashboard/LightShell';
+import { DIALOG_SAVE, LIGHT_INPUT } from '@/components/dashboard/lightKit';
 import { springs } from '@/lib/motion';
 
 type Mode = 'loading' | 'first-time-setup' | 'unlock' | 'unsupported' | 'recovery';
@@ -129,8 +132,8 @@ export function PaymentsPasskeyGate({ onAuthenticated }: PaymentsPasskeyGateProp
 
   const icon =
     mode === 'recovery' || mode === 'first-time-setup'
-      ? <KeyRound className="size-5 text-seeko-accent" />
-      : <Lock className="size-5 text-seeko-accent" />;
+      ? <KeyRound className="size-5 text-[#0a63cc]" />
+      : <Lock className="size-5 text-[#0a63cc]" />;
 
   const title =
     mode === 'first-time-setup' ? 'Set up payments access'
@@ -145,110 +148,126 @@ export function PaymentsPasskeyGate({ onAuthenticated }: PaymentsPasskeyGateProp
     : mode === 'loading' ? ''
     : 'Approve with Touch ID, Face ID, or a security key. Unlocks payments for 1 hour.';
 
+  const breadcrumb = (
+    <Link
+      href="/"
+      className="flex items-center gap-1 text-[13px] text-[#9a9a9a] transition-colors hover:text-[#3a3a3a]"
+    >
+      <ChevronLeft className="size-3.5" />
+      <span>Payments</span>
+    </Link>
+  );
+
   return (
-    <div className="flex items-center justify-center min-h-[calc(100vh-8rem)] -my-6">
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={springs.snappy}
-        className="w-full max-w-[440px]"
-      >
-        <Card className="w-full border-0 shadow-elevated">
-          <CardHeader className="text-center p-8 pb-5">
-            <div className="mx-auto mb-3 flex size-12 items-center justify-center rounded-full bg-seeko-accent/10">
-              {icon}
-            </div>
-            <CardTitle>{title}</CardTitle>
-            <CardDescription>{description}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4 p-8 pt-0">
-            {mode === 'loading' && (
-              <div className="flex justify-center py-4 text-muted-foreground">
-                <Loader2 className="size-4 animate-spin" />
-              </div>
-            )}
-            {mode === 'first-time-setup' && (
-              <form onSubmit={doFirstTimeSetup} className="space-y-3">
-                <Input
-                  type="password"
-                  value={recoveryPw}
-                  onChange={e => setRecoveryPw(e.target.value)}
-                  placeholder="Recovery password"
-                  autoFocus
-                />
-                <Button type="submit" disabled={busy || !recoveryPw} className="w-full active:scale-[0.98] transition-transform">
-                  {busy ? (
-                    <span className="inline-flex items-center gap-2">
-                      <Loader2 className="size-4 animate-spin" />
-                      Setting up…
-                    </span>
-                  ) : (
-                    'Set up device'
-                  )}
-                </Button>
-              </form>
-            )}
-            {mode === 'unlock' && (
-              <Button onClick={doUnlock} disabled={busy} className="w-full active:scale-[0.98] transition-transform">
-                {busy ? (
-                  <span className="inline-flex items-center gap-2">
+    <LightShell fill bordered leftSlot={breadcrumb}>
+      <main className="min-h-0 flex-1 overflow-y-auto">
+        <div className="flex min-h-full items-center justify-center px-6 py-10">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={springs.snappy}
+            className="w-full max-w-[440px]"
+          >
+            <Card className="w-full rounded-2xl border-0 bg-white shadow-seeko">
+              <CardHeader className="text-center p-8 pb-5">
+                <div className="mx-auto mb-3 flex size-12 items-center justify-center rounded-full bg-[#0a63cc]/10">
+                  {icon}
+                </div>
+                <CardTitle className="text-[#111]">{title}</CardTitle>
+                <CardDescription className="text-[#808080]">{description}</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4 p-8 pt-0">
+                {mode === 'loading' && (
+                  <div className="flex justify-center py-4 text-[#9a9a9a]">
                     <Loader2 className="size-4 animate-spin" />
-                    Awaiting browser…
-                  </span>
-                ) : (
-                  'Unlock with passkey'
+                  </div>
                 )}
-              </Button>
-            )}
-            {mode === 'recovery' && (
-              <form onSubmit={doRecover} className="space-y-3">
-                <Input
-                  type="password"
-                  value={recoveryPw}
-                  onChange={e => setRecoveryPw(e.target.value)}
-                  placeholder="Recovery password"
-                  autoFocus
-                />
-                <Button type="submit" disabled={busy || !recoveryPw} className="w-full active:scale-[0.98] transition-transform">
-                  {busy ? (
-                    <span className="inline-flex items-center gap-2">
-                      <Loader2 className="size-4 animate-spin" />
-                      Verifying…
-                    </span>
-                  ) : (
-                    'Recover'
-                  )}
-                </Button>
-              </form>
-            )}
-            {error && <p className="text-sm text-destructive">{error}</p>}
-            {mode !== 'recovery' && mode !== 'loading' && (
-              <button
-                type="button"
-                onClick={() => {
-                  setError('');
-                  setMode('recovery');
-                }}
-                className="block w-full text-center text-xs text-muted-foreground hover:text-foreground transition-colors"
-              >
-                {mode === 'first-time-setup' ? 'Skip enrollment — use recovery only' : 'Lost your devices? Use recovery'}
-              </button>
-            )}
-            {mode === 'recovery' && (
-              <button
-                type="button"
-                onClick={() => {
-                  setError('');
-                  setMode('unlock');
-                }}
-                className="block w-full text-center text-xs text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Back to passkey
-              </button>
-            )}
-          </CardContent>
-        </Card>
-      </motion.div>
-    </div>
+                {mode === 'first-time-setup' && (
+                  <form onSubmit={doFirstTimeSetup} className="space-y-3">
+                    <Input
+                      type="password"
+                      value={recoveryPw}
+                      onChange={e => setRecoveryPw(e.target.value)}
+                      placeholder="Recovery password"
+                      autoFocus
+                      className={LIGHT_INPUT}
+                    />
+                    <Button type="submit" disabled={busy || !recoveryPw} className={`w-full active:scale-[0.98] transition-transform ${DIALOG_SAVE}`}>
+                      {busy ? (
+                        <span className="inline-flex items-center gap-2">
+                          <Loader2 className="size-4 animate-spin" />
+                          Setting up…
+                        </span>
+                      ) : (
+                        'Set up device'
+                      )}
+                    </Button>
+                  </form>
+                )}
+                {mode === 'unlock' && (
+                  <Button onClick={doUnlock} disabled={busy} className={`w-full active:scale-[0.98] transition-transform ${DIALOG_SAVE}`}>
+                    {busy ? (
+                      <span className="inline-flex items-center gap-2">
+                        <Loader2 className="size-4 animate-spin" />
+                        Awaiting browser…
+                      </span>
+                    ) : (
+                      'Unlock with passkey'
+                    )}
+                  </Button>
+                )}
+                {mode === 'recovery' && (
+                  <form onSubmit={doRecover} className="space-y-3">
+                    <Input
+                      type="password"
+                      value={recoveryPw}
+                      onChange={e => setRecoveryPw(e.target.value)}
+                      placeholder="Recovery password"
+                      autoFocus
+                      className={LIGHT_INPUT}
+                    />
+                    <Button type="submit" disabled={busy || !recoveryPw} className={`w-full active:scale-[0.98] transition-transform ${DIALOG_SAVE}`}>
+                      {busy ? (
+                        <span className="inline-flex items-center gap-2">
+                          <Loader2 className="size-4 animate-spin" />
+                          Verifying…
+                        </span>
+                      ) : (
+                        'Recover'
+                      )}
+                    </Button>
+                  </form>
+                )}
+                {error && <p className="text-sm text-[#d4503e]">{error}</p>}
+                {mode !== 'recovery' && mode !== 'loading' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setError('');
+                      setMode('recovery');
+                    }}
+                    className="block w-full text-center text-xs text-[#9a9a9a] hover:text-[#3a3a3a] transition-colors"
+                  >
+                    {mode === 'first-time-setup' ? 'Skip enrollment — use recovery only' : 'Lost your devices? Use recovery'}
+                  </button>
+                )}
+                {mode === 'recovery' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setError('');
+                      setMode('unlock');
+                    }}
+                    className="block w-full text-center text-xs text-[#9a9a9a] hover:text-[#3a3a3a] transition-colors"
+                  >
+                    Back to passkey
+                  </button>
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
+        </div>
+      </main>
+    </LightShell>
   );
 }
