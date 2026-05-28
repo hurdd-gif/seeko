@@ -43,7 +43,7 @@ export default function PaymentsLoading() {
                 <Lock className="size-5 text-[#0a63cc]" />
               </div>
               {/* title + description + button placeholders — the only pulsing skeletons */}
-              <div className="animate-pulse">
+              <div className="motion-safe:animate-pulse">
                 <div className="flex flex-col items-center gap-2.5">
                   <div className="h-4 w-40 rounded bg-black/[0.06]" />
                   <div className="h-3 w-56 rounded bg-black/[0.05]" />

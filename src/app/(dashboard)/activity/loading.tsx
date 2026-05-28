@@ -12,7 +12,7 @@ import { ContentSkeleton } from '@/components/dashboard/ContentSkeleton';
 
 function ActivityFallback() {
   return (
-    <div className="animate-pulse">
+    <div className="motion-safe:animate-pulse">
       {/* heading + subtitle */}
       <div className="mb-6">
         <div className="h-6 w-28 rounded-md bg-black/[0.06]" />
