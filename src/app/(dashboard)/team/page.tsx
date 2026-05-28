@@ -330,8 +330,11 @@ export default async function TeamPage() {
       <main className="min-h-0 flex-1 overflow-y-auto">
         <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-6 py-10">
           {/* Runtime passthrough (loading={false}); also the boneyard capture
-              target — team/loading.tsx mirrors this with loading forced on. */}
+              target — team/loading.tsx mirrors this with loading forced on.
+              Inner flex wrapper restores the body's gap-6 rhythm, which the
+              ContentSkeleton content div would otherwise collapse. */}
           <ContentSkeleton name="team-content" loading={false}>
+          <div className="flex flex-col gap-6">
           {/* Header */}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
@@ -417,6 +420,7 @@ export default async function TeamPage() {
               </Card>
             </FadeRise>
           )}
+          </div>
           </ContentSkeleton>
         </div>
       </main>
