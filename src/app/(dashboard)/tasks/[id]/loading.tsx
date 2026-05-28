@@ -28,18 +28,18 @@ export default function TaskDetailLoading() {
           </Link>
           <ChevronRight className="size-3 text-[#c5c5c5]" />
           {/* task number unknown at load → skeleton bar */}
-          <div className="h-3 w-12 animate-pulse rounded bg-black/[0.06]" />
+          <div className="h-3 w-12 motion-safe:animate-pulse rounded bg-black/[0.06]" />
         </div>
         <div className="flex items-center justify-end gap-1 px-6 pb-3">
           {/* actions placeholder */}
-          <div className="size-8 animate-pulse rounded-md bg-black/[0.05]" />
+          <div className="size-8 motion-safe:animate-pulse rounded-md bg-black/[0.05]" />
         </div>
       </header>
 
       {/* Body: main content + right sidebar */}
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <main className="min-h-0 flex-1 overflow-y-auto">
-          <div className="mx-auto max-w-3xl animate-pulse px-8 py-8">
+          <div className="mx-auto max-w-3xl motion-safe:animate-pulse px-8 py-8">
             {/* main detail card */}
             <section className="overflow-hidden rounded-2xl bg-white shadow-seeko">
               <div className="px-8 pt-8 pb-6">
@@ -72,7 +72,7 @@ export default function TaskDetailLoading() {
           aria-label="Task properties"
           className="hidden w-[380px] shrink-0 border-l border-black/[0.06] lg:flex lg:flex-col"
         >
-          <div className="flex min-h-0 flex-1 animate-pulse flex-col gap-6 overflow-y-auto px-4 py-6">
+          <div className="flex min-h-0 flex-1 motion-safe:animate-pulse flex-col gap-6 overflow-y-auto px-4 py-6">
             {Array.from({ length: 3 }).map((_, i) => (
               <div key={i} className="space-y-3">
                 <div className="h-3.5 w-24 rounded bg-black/[0.06]" />

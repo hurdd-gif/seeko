@@ -15,7 +15,7 @@ import { ContentSkeleton } from '@/components/dashboard/ContentSkeleton';
 
 function TeamFallback() {
   return (
-    <div className="flex flex-col gap-6 animate-pulse">
+    <div className="flex flex-col gap-6 motion-safe:animate-pulse">
       {/* header — title + subtitle on the left, online cluster on the right */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>

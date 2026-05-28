@@ -77,7 +77,7 @@ function ColumnSkeleton({ cardCount }: { cardCount: number }) {
 function BoardSkeleton() {
   const columnCardCounts = [3, 4, 2, 3, 1];
   return (
-    <div className="flex h-full items-start gap-4 px-6 pb-8 pt-2 animate-pulse">
+    <div className="flex h-full items-start gap-4 px-6 pb-8 pt-2 motion-safe:animate-pulse">
       {columnCardCounts.map((cardCount, i) => (
         <ColumnSkeleton key={i} cardCount={cardCount} />
       ))}

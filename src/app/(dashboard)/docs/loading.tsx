@@ -13,7 +13,7 @@ import { ContentSkeleton } from '@/components/dashboard/ContentSkeleton';
 
 function DocsFallback() {
   return (
-    <div className="animate-pulse">
+    <div className="motion-safe:animate-pulse">
       {/* heading + subtitle */}
       <div className="mb-6">
         <div className="h-6 w-32 rounded-md bg-black/[0.06]" />
