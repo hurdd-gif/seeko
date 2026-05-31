@@ -66,6 +66,41 @@ export type Database = {
           },
         ]
       }
+      area_sections: {
+        Row: {
+          area_id: string
+          created_at: string
+          id: string
+          name: string
+          progress: number
+          sort_order: number
+        }
+        Insert: {
+          area_id: string
+          created_at?: string
+          id?: string
+          name: string
+          progress?: number
+          sort_order?: number
+        }
+        Update: {
+          area_id?: string
+          created_at?: string
+          id?: string
+          name?: string
+          progress?: number
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "area_sections_area_id_fkey"
+            columns: ["area_id"]
+            isOneToOne: false
+            referencedRelation: "areas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       areas: {
         Row: {
           created_at: string | null
@@ -74,6 +109,7 @@ export type Database = {
           name: string
           phase: Database["public"]["Enums"]["area_phase"] | null
           progress: number | null
+          sort_order: number
           status: Database["public"]["Enums"]["area_status"] | null
         }
         Insert: {
@@ -83,6 +119,7 @@ export type Database = {
           name: string
           phase?: Database["public"]["Enums"]["area_phase"] | null
           progress?: number | null
+          sort_order?: number
           status?: Database["public"]["Enums"]["area_status"] | null
         }
         Update: {
@@ -92,6 +129,7 @@ export type Database = {
           name?: string
           phase?: Database["public"]["Enums"]["area_phase"] | null
           progress?: number | null
+          sort_order?: number
           status?: Database["public"]["Enums"]["area_status"] | null
         }
         Relationships: []
@@ -164,6 +202,7 @@ export type Database = {
         Row: {
           content: string | null
           created_at: string | null
+          deck_orientation: string | null
           granted_user_ids: string[] | null
           id: string
           parent_id: string | null
@@ -177,6 +216,7 @@ export type Database = {
         Insert: {
           content?: string | null
           created_at?: string | null
+          deck_orientation?: string | null
           granted_user_ids?: string[] | null
           id?: string
           parent_id?: string | null
@@ -190,6 +230,7 @@ export type Database = {
         Update: {
           content?: string | null
           created_at?: string | null
+          deck_orientation?: string | null
           granted_user_ids?: string[] | null
           id?: string
           parent_id?: string | null
@@ -218,20 +259,32 @@ export type Database = {
           custom_title: string | null
           expires_at: string
           id: string
+          is_guardian_signing: boolean
+          minor_name: string | null
+          paypal_email: string | null
           personal_note: string | null
+          prefilled_items: Json | null
+          purpose: string
           recipient_email: string
+          session_ip: string | null
+          session_started_at: string | null
+          session_token: string | null
+          session_user_agent: string | null
+          shared_doc_id: string | null
           signed_at: string | null
           signer_address: string | null
           signer_ip: string | null
           signer_name: string | null
           signer_user_agent: string | null
           status: string
+          submitted_payment_id: string | null
           template_id: string | null
           template_type: string
           token: string
           verification_attempts: number
           verification_code: string | null
           verified_at: string | null
+          view_count: number | null
         }
         Insert: {
           created_at?: string | null
@@ -240,20 +293,32 @@ export type Database = {
           custom_title?: string | null
           expires_at: string
           id?: string
+          is_guardian_signing?: boolean
+          minor_name?: string | null
+          paypal_email?: string | null
           personal_note?: string | null
+          prefilled_items?: Json | null
+          purpose?: string
           recipient_email: string
+          session_ip?: string | null
+          session_started_at?: string | null
+          session_token?: string | null
+          session_user_agent?: string | null
+          shared_doc_id?: string | null
           signed_at?: string | null
           signer_address?: string | null
           signer_ip?: string | null
           signer_name?: string | null
           signer_user_agent?: string | null
           status?: string
+          submitted_payment_id?: string | null
           template_id?: string | null
           template_type: string
           token: string
           verification_attempts?: number
           verification_code?: string | null
           verified_at?: string | null
+          view_count?: number | null
         }
         Update: {
           created_at?: string | null
@@ -262,24 +327,95 @@ export type Database = {
           custom_title?: string | null
           expires_at?: string
           id?: string
+          is_guardian_signing?: boolean
+          minor_name?: string | null
+          paypal_email?: string | null
           personal_note?: string | null
+          prefilled_items?: Json | null
+          purpose?: string
           recipient_email?: string
+          session_ip?: string | null
+          session_started_at?: string | null
+          session_token?: string | null
+          session_user_agent?: string | null
+          shared_doc_id?: string | null
           signed_at?: string | null
           signer_address?: string | null
           signer_ip?: string | null
           signer_name?: string | null
           signer_user_agent?: string | null
           status?: string
+          submitted_payment_id?: string | null
           template_id?: string | null
           template_type?: string
           token?: string
           verification_attempts?: number
           verification_code?: string | null
           verified_at?: string | null
+          view_count?: number | null
         }
         Relationships: [
           {
             foreignKeyName: "external_signing_invites_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "external_signing_invites_shared_doc_id_fkey"
+            columns: ["shared_doc_id"]
+            isOneToOne: false
+            referencedRelation: "docs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "external_signing_invites_submitted_payment_id_fkey"
+            columns: ["submitted_payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notes: {
+        Row: {
+          body: string
+          converted_to_task_id: string | null
+          created_at: string
+          created_by: string
+          id: string
+          source: Database["public"]["Enums"]["note_source"]
+          status: Database["public"]["Enums"]["note_status"]
+        }
+        Insert: {
+          body: string
+          converted_to_task_id?: string | null
+          created_at?: string
+          created_by: string
+          id?: string
+          source?: Database["public"]["Enums"]["note_source"]
+          status?: Database["public"]["Enums"]["note_status"]
+        }
+        Update: {
+          body?: string
+          converted_to_task_id?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          source?: Database["public"]["Enums"]["note_source"]
+          status?: Database["public"]["Enums"]["note_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notes_converted_to_task_id_fkey"
+            columns: ["converted_to_task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notes_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -360,9 +496,9 @@ export type Database = {
       passkey_credentials: {
         Row: {
           counter: number
-          created_at: string | null
+          created_at: string
           credential_id: string
-          device_name: string | null
+          device_name: string
           id: string
           last_used_at: string | null
           public_key: string
@@ -371,9 +507,9 @@ export type Database = {
         }
         Insert: {
           counter?: number
-          created_at?: string | null
+          created_at?: string
           credential_id: string
-          device_name?: string | null
+          device_name: string
           id?: string
           last_used_at?: string | null
           public_key: string
@@ -382,9 +518,9 @@ export type Database = {
         }
         Update: {
           counter?: number
-          created_at?: string | null
+          created_at?: string
           credential_id?: string
-          device_name?: string | null
+          device_name?: string
           id?: string
           last_used_at?: string | null
           public_key?: string
@@ -449,7 +585,8 @@ export type Database = {
           description: string | null
           id: string
           paid_at: string | null
-          recipient_id: string
+          recipient_email: string | null
+          recipient_id: string | null
           status: Database["public"]["Enums"]["payment_status"]
         }
         Insert: {
@@ -460,7 +597,8 @@ export type Database = {
           description?: string | null
           id?: string
           paid_at?: string | null
-          recipient_id: string
+          recipient_email?: string | null
+          recipient_id?: string | null
           status?: Database["public"]["Enums"]["payment_status"]
         }
         Update: {
@@ -471,7 +609,8 @@ export type Database = {
           description?: string | null
           id?: string
           paid_at?: string | null
-          recipient_id?: string
+          recipient_email?: string | null
+          recipient_id?: string | null
           status?: Database["public"]["Enums"]["payment_status"]
         }
         Relationships: [
@@ -893,7 +1032,7 @@ export type Database = {
           metadata?: Json | null
           page?: string
           target?: string | null
-          user_id?: string
+          user_id: string
         }
         Relationships: [
           {
@@ -910,7 +1049,49 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      increment_verification_attempt: {
+        Args: { p_max_attempts: number; p_purpose: string; p_token: string }
+        Returns: {
+          created_at: string | null
+          created_by: string
+          custom_sections: Json | null
+          custom_title: string | null
+          expires_at: string
+          id: string
+          is_guardian_signing: boolean
+          minor_name: string | null
+          paypal_email: string | null
+          personal_note: string | null
+          prefilled_items: Json | null
+          purpose: string
+          recipient_email: string
+          session_ip: string | null
+          session_started_at: string | null
+          session_token: string | null
+          session_user_agent: string | null
+          shared_doc_id: string | null
+          signed_at: string | null
+          signer_address: string | null
+          signer_ip: string | null
+          signer_name: string | null
+          signer_user_agent: string | null
+          status: string
+          submitted_payment_id: string | null
+          template_id: string | null
+          template_type: string
+          token: string
+          verification_attempts: number
+          verification_code: string | null
+          verified_at: string | null
+          view_count: number | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "external_signing_invites"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
     }
     Enums: {
       area_phase: "Alpha" | "Beta" | "Launch"
@@ -921,6 +1102,8 @@ export type Database = {
         | "UI/UX"
         | "Animation"
         | "Asset Creation"
+      note_source: "web" | "telegram"
+      note_status: "open" | "archived"
       notification_kind:
         | "task_assigned"
         | "mentioned"
@@ -937,6 +1120,7 @@ export type Database = {
         | "task_review_approved"
         | "task_review_denied"
         | "task_handoff"
+        | "user_joined"
       payment_status: "pending" | "paid" | "cancelled"
       priority: "High" | "Medium" | "Low"
       task_status: "Complete" | "In Progress" | "In Review" | "Blocked"
@@ -1076,6 +1260,8 @@ export const Constants = {
         "Animation",
         "Asset Creation",
       ],
+      note_source: ["web", "telegram"],
+      note_status: ["open", "archived"],
       notification_kind: [
         "task_assigned",
         "mentioned",
@@ -1092,6 +1278,7 @@ export const Constants = {
         "task_review_approved",
         "task_review_denied",
         "task_handoff",
+        "user_joined",
       ],
       payment_status: ["pending", "paid", "cancelled"],
       priority: ["High", "Medium", "Low"],

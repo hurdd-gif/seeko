@@ -2,25 +2,25 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { createBrowserClient } from '@supabase/ssr';
 import { revalidateDashboard } from '@/app/(dashboard)/settings/actions';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
 import { motion, AnimatePresence } from 'motion/react';
-import { Camera, Check, Eye, MousePointer, Monitor, UserX, AlertTriangle, RotateCcw, DollarSign, Vibrate, Lock, ChevronDown, LogOut } from 'lucide-react';
+import { Camera, Check, Eye, MousePointer, Monitor, UserX, AlertTriangle, RotateCcw, Vibrate, Lock, ChevronDown, ChevronLeft, LogOut } from 'lucide-react';
 import { toast } from 'sonner';
 import { Profile, UserEvent, Task, Payment } from '@/lib/types';
 import { useHaptics } from '@/components/HapticsProvider';
 import { useTourMaybe } from '@/components/ui/tour';
 import { PaymentRequestDialog } from '@/components/dashboard/PaymentRequestDialog';
 import { SecurityKeysPanel } from '@/components/dashboard/SecurityKeysPanel';
-import { Dialog, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
+import { Dialog } from '@/components/ui/dialog';
+import { LightShell } from '@/components/dashboard/LightShell';
+import { LIGHT_INPUT, BTN_BASE, BTN_PRIMARY, BTN_SECONDARY, CARD_TITLE, CARD_DESC, HAIRLINE } from '@/components/dashboard/lightKit';
+import { FadeRise } from '@/components/motion';
 import { EmptyState } from '@/components/ui/empty-state';
 import { formatCurrency } from '@/lib/format';
 import { cn } from '@/lib/utils';
@@ -69,11 +69,11 @@ function timeAgo(dateStr: string): string {
 }
 
 const EVENT_ICONS: Record<string, { icon: typeof Eye; className: string; label: string }> = {
-  page_view: { icon: Eye, className: 'text-blue-400', label: 'viewed' },
-  click: { icon: MousePointer, className: 'text-amber-400', label: 'clicked' },
-  navigate: { icon: Eye, className: 'text-seeko-accent', label: 'navigated' },
-  select: { icon: MousePointer, className: 'text-purple-400', label: 'selected' },
-  input: { icon: MousePointer, className: 'text-purple-400', label: 'interacted' },
+  page_view: { icon: Eye, className: 'text-blue-600', label: 'viewed' },
+  click: { icon: MousePointer, className: 'text-amber-600', label: 'clicked' },
+  navigate: { icon: Eye, className: 'text-[#0d7aff]', label: 'navigated' },
+  select: { icon: MousePointer, className: 'text-[#808080]', label: 'selected' },
+  input: { icon: MousePointer, className: 'text-[#808080]', label: 'interacted' },
 };
 
 const PAGE_NAMES: Record<string, string> = {
@@ -302,500 +302,521 @@ export function SettingsPanel({ profile, isAdmin, team, revalidate, completedTas
     router.refresh();
   }
 
-
-
   return (
-    <div className="flex flex-col gap-8 max-w-3xl mx-auto w-full">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground text-balance">Settings</h1>
-        <p className="text-sm text-muted-foreground">Manage your profile and preferences.</p>
-      </div>
+    <LightShell
+      fill
+      bordered
+      leftSlot={
+        <Link
+          href="/"
+          className="flex items-center gap-1 text-[13px] text-[#9a9a9a] transition-colors hover:text-[#3a3a3a]"
+        >
+          <ChevronLeft className="size-3.5" />
+          <span>Settings</span>
+        </Link>
+      }
+    >
+      <main className="min-h-0 flex-1 overflow-y-auto">
+        <div className="mx-auto flex w-full max-w-3xl flex-col gap-10 px-6 py-10">
+          <div>
+            <h1 className="text-[22px] font-semibold tracking-tight text-[#111]">Settings</h1>
+            <p className="text-[13px] text-[#808080]">Manage your profile and preferences.</p>
+          </div>
 
-      {/* ── Account ────────────────────────────────────── */}
-      <section className="flex flex-col gap-4">
-        <h2 className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Account</h2>
+          {/* ── Account ────────────────────────────────────── */}
+          <FadeRise y={8} delay={0.06}>
+            <section className="flex flex-col gap-4">
+              <h2 className="text-[13px] font-medium text-[#808080]">Account</h2>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Profile</CardTitle>
-            <CardDescription>Update your display name, photo, and timezone.</CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-6">
-            <div className="flex items-center gap-4">
-              <div className="relative group">
-                <Avatar className="size-16 border-2 border-border">
-                  {avatarUrl ? (
-                    <AvatarImage src={avatarUrl} alt={displayName} />
-                  ) : (
-                    <AvatarFallback className="text-lg bg-secondary text-foreground">
-                      {getInitials(displayName)}
-                    </AvatarFallback>
-                  )}
-                </Avatar>
-                <label className={cn(
-                  "absolute inset-0 flex cursor-pointer items-center justify-center rounded-full bg-black/50 transition-opacity",
-                  isTouchDevice ? "opacity-0 active:opacity-100" : "opacity-0 group-hover:opacity-100"
-                )}>
-                  <Camera className="size-4 text-white" />
-                  <input
-                    ref={avatarInputRef}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleAvatarChange}
-                    disabled={uploading}
-                  />
-                </label>
+              <section className="overflow-hidden rounded-2xl bg-white shadow-seeko">
+                <div className="flex flex-col gap-6 p-6">
+                  <div className="flex flex-col gap-1.5">
+                    <h3 className={CARD_TITLE}>Profile</h3>
+                    <p className={CARD_DESC}>Update your display name, photo, and timezone.</p>
+                  </div>
+
+                  <div className="flex items-center gap-4">
+                    <div className="relative group">
+                      <Avatar className="size-16 outline outline-1 -outline-offset-1 outline-black/10">
+                        {avatarUrl ? (
+                          <AvatarImage src={avatarUrl} alt={displayName} />
+                        ) : (
+                          <AvatarFallback className="text-lg bg-[#ececec] text-[#505050]">
+                            {getInitials(displayName)}
+                          </AvatarFallback>
+                        )}
+                      </Avatar>
+                      <label className={cn(
+                        "absolute inset-0 flex cursor-pointer items-center justify-center rounded-full bg-black/50 transition-opacity",
+                        isTouchDevice ? "opacity-0 active:opacity-100" : "opacity-0 group-hover:opacity-100"
+                      )}>
+                        <Camera className="size-4 text-white" />
+                        <input
+                          ref={avatarInputRef}
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={handleAvatarChange}
+                          disabled={uploading}
+                        />
+                      </label>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-[#111]">{profile.display_name}</p>
+                      {profile.email && <p className="text-xs text-[#808080]">{profile.email}</p>}
+                      <p className="text-xs text-[#808080] mt-0.5">
+                        {uploading ? 'Uploading...' : isTouchDevice ? 'Tap photo to change' : 'Hover photo to change'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className={HAIRLINE} />
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="display-name">Display Name</Label>
+                      <Input
+                        id="display-name"
+                        value={displayName}
+                        onChange={e => setDisplayName(e.target.value)}
+                        placeholder="Your name"
+                        className={LIGHT_INPUT}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="timezone">Timezone</Label>
+                      <Select
+                        id="timezone"
+                        value={timezone}
+                        onChange={e => setTimezone(e.target.value)}
+                        searchable
+                        light
+                      >
+                        {COMMON_TIMEZONES.map(tz => (
+                          <option key={tz} value={tz}>{formatTzLabel(tz)}</option>
+                        ))}
+                        {!COMMON_TIMEZONES.includes(timezone) && (
+                          <option value={timezone}>{formatTzLabel(timezone)}</option>
+                        )}
+                      </Select>
+                    </div>
+                  </div>
+
+                  {error && <p className="text-sm text-[#d4503e]">{error}</p>}
+
+                  <div className="flex flex-wrap items-center justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={handleSave}
+                      disabled={saving}
+                      className={cn(BTN_PRIMARY, 'inline-flex items-center justify-center gap-2 min-w-[7.5rem] min-h-[2.5rem] touch-manipulation disabled:opacity-50')}
+                    >
+                      {saved ? <><Check className="size-3.5" /> Saved</> : saving ? 'Saving...' : 'Save Changes'}
+                    </button>
+                  </div>
+
+                  <div className={HAIRLINE} />
+
+                  <button
+                    type="button"
+                    className="flex items-center gap-2 w-full text-left"
+                    onClick={() => setPwOpen(v => !v)}
+                  >
+                    <Lock className="size-4 text-[#808080]" />
+                    <p className="text-sm font-medium text-[#111] flex-1">Change Password</p>
+                    <ChevronDown className={cn("size-4 text-[#808080] transition-transform duration-200", pwOpen && "rotate-180")} />
+                  </button>
+
+                  <AnimatePresence>
+                    {pwOpen && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={springs.heavy}
+                        className="overflow-hidden"
+                      >
+                        <div className="flex flex-col gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="current-password">Current Password</Label>
+                            <Input
+                              id="current-password"
+                              type="password"
+                              value={currentPassword}
+                              onChange={e => { setCurrentPassword(e.target.value); setPwError(''); }}
+                              placeholder="Enter current password"
+                              className={LIGHT_INPUT}
+                            />
+                          </div>
+                          <div className="grid gap-4 sm:grid-cols-2">
+                            <div className="space-y-2">
+                              <Label htmlFor="new-password">New Password</Label>
+                              <Input
+                                id="new-password"
+                                type="password"
+                                value={newPassword}
+                                onChange={e => { setNewPassword(e.target.value); setPwError(''); }}
+                                placeholder="At least 8 characters"
+                                className={LIGHT_INPUT}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="confirm-password">Confirm New Password</Label>
+                              <Input
+                                id="confirm-password"
+                                type="password"
+                                value={confirmPassword}
+                                onChange={e => { setConfirmPassword(e.target.value); setPwError(''); }}
+                                placeholder="Re-enter new password"
+                                onKeyDown={e => e.key === 'Enter' && handleChangePassword()}
+                                className={LIGHT_INPUT}
+                              />
+                            </div>
+                          </div>
+                          {pwError && <p className="text-sm text-[#d4503e]">{pwError}</p>}
+                          {pwSuccess && <p className="text-sm text-[#0d7aff]">Password updated successfully.</p>}
+                          <div className="flex justify-end">
+                            <button
+                              type="button"
+                              onClick={handleChangePassword}
+                              disabled={pwSaving}
+                              className={cn(BTN_PRIMARY, 'inline-flex items-center justify-center gap-2 min-w-[7.5rem] min-h-[2.5rem] touch-manipulation disabled:opacity-50')}
+                            >
+                              {pwSaving ? 'Updating...' : 'Update Password'}
+                            </button>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* Sign out — mobile only */}
+                  <div className="md:hidden">
+                    <div className={HAIRLINE} />
+                    <form action="/auth/signout" method="post" className="pt-4">
+                      <button
+                        type="submit"
+                        className="flex items-center gap-2 text-sm text-[#d4503e] hover:text-[#b8402f] transition-colors"
+                      >
+                        <LogOut className="size-4" />
+                        Sign out
+                      </button>
+                    </form>
+                  </div>
+                </div>
+              </section>
+
+              <ReplayTourCard userId={profile.id} />
+
+              <HapticsToggleCard />
+            </section>
+          </FadeRise>
+
+          {/* ── Payments ───────────────────────────────────── */}
+          {!profile.is_investor && (
+            <FadeRise y={8} delay={0.1}>
+              <section className="flex flex-col gap-4">
+                <h2 className="text-[13px] font-medium text-[#808080]">Payments</h2>
+
+                <section className="overflow-hidden rounded-2xl bg-white shadow-seeko">
+                  <div className="flex flex-col gap-5 p-6">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex flex-col gap-1.5">
+                        <h3 className={CARD_TITLE}>Payment History</h3>
+                        <p className={CARD_DESC}>Request payment and view your history.</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setRequestDialogOpen(true)}
+                        className={cn(BTN_SECONDARY, 'inline-flex shrink-0 items-center justify-center gap-1.5')}
+                      >
+                        Request Payment
+                      </button>
+                    </div>
+
+                    {/* PayPal email — editable */}
+                    <div className="space-y-2">
+                      <Label htmlFor="paypal-email">PayPal Email</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          id="paypal-email"
+                          type="email"
+                          value={paypalEmail}
+                          onChange={e => setPaypalEmail(e.target.value)}
+                          placeholder="your@paypal.email"
+                          className={cn(LIGHT_INPUT, 'flex-1')}
+                        />
+                      </div>
+                      {!paypalEmail.trim() && (
+                        <p className="text-xs text-[#b8860b]">Set your PayPal email to receive payments.</p>
+                      )}
+                    </div>
+
+                    <div className={HAIRLINE} />
+
+                    {loadingPayments ? (
+                      <p className="text-xs text-[#808080] text-center py-4">Loading...</p>
+                    ) : myPayments.length === 0 ? (
+                      <EmptyState
+                        icon="DollarSign"
+                        title="No payment requests yet"
+                        description="Submit a request after completing tasks with bounties."
+                        action={
+                          <button
+                            type="button"
+                            onClick={() => setRequestDialogOpen(true)}
+                            className={cn(BTN_SECONDARY, 'inline-flex items-center justify-center')}
+                          >
+                            Request Payment
+                          </button>
+                        }
+                        className="py-8"
+                      />
+                    ) : (
+                      <div className="flex flex-col divide-y divide-black/[0.06]">
+                        {myPayments.slice(0, 10).map(payment => (
+                          <div key={payment.id} className="flex items-center justify-between py-3">
+                            <div className="min-w-0">
+                              <p className="text-sm text-[#111] truncate">
+                                {payment.description || `${payment.items?.length ?? 0} items`}
+                              </p>
+                              <p className="text-xs text-[#808080]">
+                                {new Date(payment.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-3 shrink-0">
+                              <span className="text-sm font-medium font-mono tabular-nums text-[#111]">
+                                {formatCurrency(Number(payment.amount))}
+                              </span>
+                              <span
+                                className={cn(
+                                  "inline-flex items-center rounded-full text-[10px] font-medium py-0.5 px-2",
+                                  payment.status === 'paid' && "bg-[#0d7aff]/10 text-[#0d7aff]",
+                                  payment.status === 'cancelled' && "bg-[#d4503e]/10 text-[#d4503e]",
+                                  payment.status === 'pending' && "bg-black/[0.05] text-[#505050]"
+                                )}
+                              >
+                                {payment.status === 'paid' ? 'Approved'
+                                  : payment.status === 'cancelled' ? 'Denied'
+                                  : 'Pending'}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </section>
+              </section>
+            </FadeRise>
+          )}
+
+          <PaymentRequestDialog
+            open={requestDialogOpen}
+            onOpenChange={setRequestDialogOpen}
+            paypalEmail={paypalEmail}
+            completedTasks={(completedTasks ?? []) as Task[]}
+            onSubmitted={() => {
+              setRequestDialogOpen(false);
+              loadMyPayments();
+            }}
+          />
+
+          {/* ── Admin ──────────────────────────────────────── */}
+          {isAdmin && (
+            <FadeRise y={8} delay={0.14}>
+              <section className="flex flex-col gap-4">
+                <h2 className="text-[13px] font-medium text-[#808080]">Admin</h2>
+
+                <section className="overflow-hidden rounded-2xl bg-white shadow-seeko">
+                  <div className="flex flex-col gap-6 p-6">
+                    <div className="flex items-center gap-2">
+                      <Monitor className="size-4 text-[#808080]" />
+                      <div className="flex flex-col gap-1.5 flex-1">
+                        <h3 className={CARD_TITLE}>User Activity</h3>
+                        <p className={CARD_DESC}>Track what non-admin users view and interact with.</p>
+                      </div>
+                      <Select
+                        value={selectedUser}
+                        onChange={e => setSelectedUser(e.target.value)}
+                        className="w-44"
+                        light
+                      >
+                        <option value="all">All users</option>
+                        {team.map(m => (
+                          <option key={m.id} value={m.id}>{m.display_name ?? 'Unknown'}{m.is_admin ? ' (admin)' : ''}</option>
+                        ))}
+                      </Select>
+                    </div>
+                    {loadingEvents ? (
+                      <p className="text-xs text-[#808080] text-center py-6">Loading activity...</p>
+                    ) : events.length === 0 ? (
+                      <EmptyState
+                        icon="Activity"
+                        title="No activity recorded"
+                        description="User interactions will appear here as team members use the app."
+                        className="py-6"
+                      />
+                    ) : (
+                      <div className="max-h-[420px] overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                        <div className="flex flex-col">
+                          {events.map((event, i) => {
+                            const cfg = EVENT_ICONS[event.event_type] ?? EVENT_ICONS.click;
+                            const Icon = cfg.icon;
+                            const userName = event.profiles?.display_name ?? 'Unknown';
+                            const meta = event.metadata as Record<string, string> | undefined;
+
+                            return (
+                              <div key={event.id}>
+                                <div className="flex items-start gap-3 py-2.5">
+                                  <div className={`mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-black/[0.04] ${cfg.className}`}>
+                                    <Icon className="size-3" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-sm font-medium text-[#111]">{userName}</span>
+                                      <span className="inline-flex items-center rounded-full bg-black/[0.05] text-[10px] text-[#505050] py-0.5 px-2">
+                                        {cfg.label}
+                                      </span>
+                                    </div>
+                                    <p className="text-xs text-[#808080] mt-0.5">
+                                      {event.event_type === 'page_view' ? (
+                                        <>Viewed <span className="font-medium text-[#505050]">{friendlyPage(event.page)}</span></>
+                                      ) : event.event_type === 'navigate' ? (
+                                        <>
+                                          Went to <span className="font-medium text-[#505050]">{meta?.href ? friendlyPage(meta.href) : event.target}</span>
+                                          <span className="text-[#9a9a9a]"> from {friendlyPage(event.page)}</span>
+                                        </>
+                                      ) : (
+                                        <>
+                                          {cfg.label === 'clicked' ? 'Pressed' : cfg.label.charAt(0).toUpperCase() + cfg.label.slice(1)}{' '}
+                                          <span className="font-medium text-[#505050]">&quot;{event.target}&quot;</span>
+                                          <span className="text-[#9a9a9a]"> on {friendlyPage(event.page)}</span>
+                                        </>
+                                      )}
+                                    </p>
+                                  </div>
+                                  <span className="text-[11px] text-[#9a9a9a] shrink-0 whitespace-nowrap">
+                                    {timeAgo(event.created_at)}
+                                  </span>
+                                </div>
+                                {i < events.length - 1 && <div className={HAIRLINE} />}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </section>
+
+                <section className="overflow-hidden rounded-2xl bg-white shadow-seeko">
+                  <div className="flex flex-col gap-6 p-6">
+                    <div className="flex items-center gap-2">
+                      <UserX className="size-4 text-[#808080]" />
+                      <div className="flex flex-col gap-1.5">
+                        <h3 className={CARD_TITLE}>Team Management</h3>
+                        <p className={CARD_DESC}>Remove members from the team. This action is permanent.</p>
+                      </div>
+                    </div>
+                    {team.filter(m => m.id !== profile.id).length === 0 ? (
+                      <EmptyState
+                        icon="Users"
+                        title="No other team members"
+                        description="Invite team members from the Team page."
+                        className="py-4"
+                      />
+                    ) : (
+                      <div className="flex flex-col divide-y divide-black/[0.06]">
+                        {team.filter(m => m.id !== profile.id).map(member => (
+                          <div key={member.id} className="flex items-center justify-between py-3">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <Avatar className="size-8 shrink-0 outline outline-1 -outline-offset-1 outline-black/10">
+                                {member.avatar_url && <AvatarImage src={member.avatar_url} alt={member.display_name ?? ''} />}
+                                <AvatarFallback className="text-xs bg-[#ececec] text-[#505050]">
+                                  {getInitials(member.display_name ?? '?')}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="min-w-0">
+                                <p className="text-sm font-medium text-[#111] truncate">
+                                  {member.display_name ?? 'Unknown'}
+                                  {member.is_admin && <span className="ml-1.5 text-[10px] text-[#808080] font-normal">(admin)</span>}
+                                </p>
+                                {member.email && <p className="text-xs text-[#808080] truncate">{member.email}</p>}
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              className="inline-flex shrink-0 items-center gap-1.5 rounded-full h-8 px-3 text-[13px] font-medium text-[#d4503e] transition-[background-color,transform] duration-150 ease-out hover:bg-[#d4503e]/10 active:scale-[0.98]"
+                              onClick={() => { setBootTarget(member); setBootPassword(''); setBootError(''); }}
+                            >
+                              <UserX className="size-3.5" />
+                              Remove
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </section>
+
+                <SecurityKeysPanel />
+              </section>
+            </FadeRise>
+          )}
+
+          {/* Boot member dialog — uses Dialog component (renders inline within .overview-light) */}
+          <Dialog open={!!bootTarget} onOpenChange={open => { if (!open) { setBootTarget(null); setBootPassword(''); setBootError(''); } }} contentClassName="max-w-sm bg-white border-black/[0.06]">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[#d4503e]/10">
+                <AlertTriangle className="size-5 text-[#d4503e]" />
               </div>
-              <div className="flex-1">
-                <p className="text-sm font-medium text-foreground">{profile.display_name}</p>
-                {profile.email && <p className="text-xs text-muted-foreground">{profile.email}</p>}
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {uploading ? 'Uploading...' : isTouchDevice ? 'Tap photo to change' : 'Hover photo to change'}
+              <div>
+                <p className="text-sm font-semibold text-[#111]">Remove member</p>
+                <p className="text-xs text-[#808080]">
+                  This will permanently remove <span className="font-medium text-[#111]">{bootTarget?.display_name ?? bootTarget?.email}</span> from the team.
                 </p>
               </div>
             </div>
 
-            <Separator />
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="display-name">Display Name</Label>
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="boot-password">Confirm with your password</Label>
                 <Input
-                  id="display-name"
-                  value={displayName}
-                  onChange={e => setDisplayName(e.target.value)}
-                  placeholder="Your name"
+                  id="boot-password"
+                  type="password"
+                  placeholder="Your password"
+                  value={bootPassword}
+                  onChange={e => { setBootPassword(e.target.value); setBootError(''); }}
+                  onKeyDown={e => e.key === 'Enter' && handleBoot()}
+                  className={LIGHT_INPUT}
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="timezone">Timezone</Label>
-                <Select
-                  id="timezone"
-                  value={timezone}
-                  onChange={e => setTimezone(e.target.value)}
-                  searchable
-                >
-                  {COMMON_TIMEZONES.map(tz => (
-                    <option key={tz} value={tz}>{formatTzLabel(tz)}</option>
-                  ))}
-                  {!COMMON_TIMEZONES.includes(timezone) && (
-                    <option value={timezone}>{formatTzLabel(timezone)}</option>
-                  )}
-                </Select>
-              </div>
+              {bootError && <p className="text-xs text-[#d4503e]">{bootError}</p>}
             </div>
 
-            {error && <p className="text-sm text-destructive">{error}</p>}
-
-            <div className="flex flex-wrap items-center justify-end gap-2">
-              <Button
+            <div className="flex gap-2 mt-5">
+              <button
                 type="button"
-                onClick={handleSave}
-                disabled={saving}
-                className="gap-2 min-w-[7.5rem] min-h-[2.5rem] touch-manipulation"
+                className={cn(BTN_SECONDARY, 'flex-1 inline-flex items-center justify-center disabled:opacity-50')}
+                onClick={() => { setBootTarget(null); setBootPassword(''); setBootError(''); }}
+                disabled={bootLoading}
               >
-                {saved ? <><Check className="size-3.5" /> Saved</> : saving ? 'Saving...' : 'Save Changes'}
-              </Button>
+                Cancel
+              </button>
+              <button
+                type="button"
+                className={cn(BTN_BASE, 'flex-1 inline-flex items-center justify-center bg-[#d4503e] text-white hover:bg-[#b8402f] disabled:opacity-50')}
+                onClick={handleBoot}
+                disabled={bootLoading || !bootPassword}
+              >
+                {bootLoading ? 'Removing…' : 'Remove member'}
+              </button>
             </div>
-
-            <Separator />
-
-            <button
-              type="button"
-              className="flex items-center gap-2 w-full text-left"
-              onClick={() => setPwOpen(v => !v)}
-            >
-              <Lock className="size-4 text-muted-foreground" />
-              <p className="text-sm font-medium text-foreground flex-1">Change Password</p>
-              <ChevronDown className={cn("size-4 text-muted-foreground transition-transform duration-200", pwOpen && "rotate-180")} />
-            </button>
-
-            <AnimatePresence>
-              {pwOpen && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={springs.heavy}
-                  className="overflow-hidden"
-                >
-                  <div className="flex flex-col gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="current-password">Current Password</Label>
-                      <Input
-                        id="current-password"
-                        type="password"
-                        value={currentPassword}
-                        onChange={e => { setCurrentPassword(e.target.value); setPwError(''); }}
-                        placeholder="Enter current password"
-                      />
-                    </div>
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <div className="space-y-2">
-                        <Label htmlFor="new-password">New Password</Label>
-                        <Input
-                          id="new-password"
-                          type="password"
-                          value={newPassword}
-                          onChange={e => { setNewPassword(e.target.value); setPwError(''); }}
-                          placeholder="At least 8 characters"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="confirm-password">Confirm New Password</Label>
-                        <Input
-                          id="confirm-password"
-                          type="password"
-                          value={confirmPassword}
-                          onChange={e => { setConfirmPassword(e.target.value); setPwError(''); }}
-                          placeholder="Re-enter new password"
-                          onKeyDown={e => e.key === 'Enter' && handleChangePassword()}
-                        />
-                      </div>
-                    </div>
-                    {pwError && <p className="text-sm text-destructive">{pwError}</p>}
-                    {pwSuccess && <p className="text-sm text-seeko-accent">Password updated successfully.</p>}
-                    <div className="flex justify-end">
-                      <Button
-                        type="button"
-                        onClick={handleChangePassword}
-                        disabled={pwSaving}
-                        className="gap-2 min-w-[7.5rem] min-h-[2.5rem] touch-manipulation"
-                      >
-                        {pwSaving ? 'Updating...' : 'Update Password'}
-                      </Button>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {/* Sign out — mobile only */}
-            <div className="md:hidden">
-              <Separator />
-              <form action="/auth/signout" method="post" className="pt-4">
-                <button
-                  type="submit"
-                  className="flex items-center gap-2 text-sm text-destructive hover:text-destructive/80 transition-colors"
-                >
-                  <LogOut className="size-4" />
-                  Sign out
-                </button>
-              </form>
-            </div>
-          </CardContent>
-        </Card>
-
-        <ReplayTourCard userId={profile.id} />
-
-        <HapticsToggleCard />
-      </section>
-
-      {/* ── Payments ───────────────────────────────────── */}
-      {!profile.is_investor && (
-        <section className="flex flex-col gap-4">
-          <h2 className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Payments</h2>
-
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Payment History</CardTitle>
-                  <CardDescription>Request payment and view your history.</CardDescription>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setRequestDialogOpen(true)}
-                  className="gap-1.5 shrink-0"
-                >
-                  Request Payment
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-4">
-              {/* PayPal email — editable */}
-              <div className="space-y-2">
-                <Label htmlFor="paypal-email">PayPal Email</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="paypal-email"
-                    type="email"
-                    value={paypalEmail}
-                    onChange={e => setPaypalEmail(e.target.value)}
-                    placeholder="your@paypal.email"
-                    className="flex-1"
-                  />
-                </div>
-                {!paypalEmail.trim() && (
-                  <p className="text-xs text-amber-400">Set your PayPal email to receive payments.</p>
-                )}
-              </div>
-
-              <Separator />
-
-              {loadingPayments ? (
-                <p className="text-xs text-muted-foreground text-center py-4">Loading...</p>
-              ) : myPayments.length === 0 ? (
-                <EmptyState
-                  icon="DollarSign"
-                  title="No payment requests yet"
-                  description="Submit a request after completing tasks with bounties."
-                  action={
-                    <Button variant="outline" size="sm" onClick={() => setRequestDialogOpen(true)}>
-                      Request Payment
-                    </Button>
-                  }
-                  className="py-8"
-                />
-              ) : (
-                <div className="flex flex-col divide-y divide-border">
-                  {myPayments.slice(0, 10).map(payment => (
-                    <div key={payment.id} className="flex items-center justify-between py-3">
-                      <div className="min-w-0">
-                        <p className="text-sm text-foreground truncate">
-                          {payment.description || `${payment.items?.length ?? 0} items`}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {new Date(payment.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-3 shrink-0">
-                        <span className="text-sm font-medium font-mono text-foreground">
-                          {formatCurrency(Number(payment.amount))}
-                        </span>
-                        <Badge
-                          variant={
-                            payment.status === 'cancelled' ? 'destructive'
-                            : payment.status === 'pending' ? 'outline'
-                            : 'default'
-                          }
-                          className={cn(
-                            "text-[10px] py-0 px-1.5",
-                            payment.status === 'paid' && "bg-emerald-500/15 text-emerald-400 border-emerald-500/20"
-                          )}
-                        >
-                          {payment.status === 'paid' ? 'Approved'
-                            : payment.status === 'cancelled' ? 'Denied'
-                            : 'Pending'}
-                        </Badge>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </section>
-      )}
-
-      <PaymentRequestDialog
-        open={requestDialogOpen}
-        onOpenChange={setRequestDialogOpen}
-        paypalEmail={paypalEmail}
-        completedTasks={(completedTasks ?? []) as Task[]}
-        onSubmitted={() => {
-          setRequestDialogOpen(false);
-          loadMyPayments();
-        }}
-      />
-
-      {/* ── Admin ──────────────────────────────────────── */}
-      {isAdmin && (
-        <section className="flex flex-col gap-4">
-          <h2 className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Admin</h2>
-
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <Monitor className="size-4 text-muted-foreground" />
-                <div className="flex-1">
-                  <CardTitle>User Activity</CardTitle>
-                  <CardDescription>Track what non-admin users view and interact with.</CardDescription>
-                </div>
-                <Select
-                  value={selectedUser}
-                  onChange={e => setSelectedUser(e.target.value)}
-                  className="w-44"
-                >
-                  <option value="all">All users</option>
-                  {team.map(m => (
-                    <option key={m.id} value={m.id}>{m.display_name ?? 'Unknown'}{m.is_admin ? ' (admin)' : ''}</option>
-                  ))}
-                </Select>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {loadingEvents ? (
-                <p className="text-xs text-muted-foreground text-center py-6">Loading activity...</p>
-              ) : events.length === 0 ? (
-                <EmptyState
-                  icon="Activity"
-                  title="No activity recorded"
-                  description="User interactions will appear here as team members use the app."
-                  className="py-6"
-                />
-              ) : (
-                <div className="max-h-[420px] overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                  <div className="flex flex-col">
-                    {events.map((event, i) => {
-                      const cfg = EVENT_ICONS[event.event_type] ?? EVENT_ICONS.click;
-                      const Icon = cfg.icon;
-                      const userName = event.profiles?.display_name ?? 'Unknown';
-                      const meta = event.metadata as Record<string, string> | undefined;
-
-                      return (
-                        <div key={event.id}>
-                          <div className="flex items-start gap-3 py-2.5">
-                            <div className={`mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-secondary ${cfg.className}`}>
-                              <Icon className="size-3" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <span className="text-sm font-medium text-foreground">{userName}</span>
-                                <Badge variant="outline" className="text-[10px] py-0 px-1.5">
-                                  {cfg.label}
-                                </Badge>
-                              </div>
-                              <p className="text-xs text-muted-foreground mt-0.5">
-                                {event.event_type === 'page_view' ? (
-                                  <>Viewed <span className="font-medium text-foreground/70">{friendlyPage(event.page)}</span></>
-                                ) : event.event_type === 'navigate' ? (
-                                  <>
-                                    Went to <span className="font-medium text-foreground/70">{meta?.href ? friendlyPage(meta.href) : event.target}</span>
-                                    <span className="text-muted-foreground/50"> from {friendlyPage(event.page)}</span>
-                                  </>
-                                ) : (
-                                  <>
-                                    {cfg.label === 'clicked' ? 'Pressed' : cfg.label.charAt(0).toUpperCase() + cfg.label.slice(1)}{' '}
-                                    <span className="font-medium text-foreground/70">&quot;{event.target}&quot;</span>
-                                    <span className="text-muted-foreground/50"> on {friendlyPage(event.page)}</span>
-                                  </>
-                                )}
-                              </p>
-                            </div>
-                            <span className="text-[11px] text-muted-foreground/60 shrink-0 whitespace-nowrap">
-                              {timeAgo(event.created_at)}
-                            </span>
-                          </div>
-                          {i < events.length - 1 && <Separator />}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <UserX className="size-4 text-muted-foreground" />
-                <div>
-                  <CardTitle>Team Management</CardTitle>
-                  <CardDescription>Remove members from the team. This action is permanent.</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {team.filter(m => m.id !== profile.id).length === 0 ? (
-                <EmptyState
-                  icon="Users"
-                  title="No other team members"
-                  description="Invite team members from the Team page."
-                  className="py-4"
-                />
-              ) : (
-                <div className="flex flex-col divide-y divide-border">
-                  {team.filter(m => m.id !== profile.id).map(member => (
-                    <div key={member.id} className="flex items-center justify-between py-3">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <Avatar className="size-8 shrink-0">
-                          {member.avatar_url && <AvatarImage src={member.avatar_url} alt={member.display_name ?? ''} />}
-                          <AvatarFallback className="text-xs bg-secondary text-foreground">
-                            {getInitials(member.display_name ?? '?')}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium text-foreground truncate">
-                            {member.display_name ?? 'Unknown'}
-                            {member.is_admin && <span className="ml-1.5 text-[10px] text-muted-foreground font-normal">(admin)</span>}
-                          </p>
-                          {member.email && <p className="text-xs text-muted-foreground truncate">{member.email}</p>}
-                        </div>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                        onClick={() => { setBootTarget(member); setBootPassword(''); setBootError(''); }}
-                      >
-                        <UserX className="size-3.5 mr-1.5" />
-                        Remove
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <SecurityKeysPanel />
-        </section>
-      )}
-
-      {/* Boot member dialog — uses Dialog component */}
-      <Dialog open={!!bootTarget} onOpenChange={open => { if (!open) { setBootTarget(null); setBootPassword(''); setBootError(''); } }} contentClassName="max-w-sm">
-        <DialogClose onClose={() => { setBootTarget(null); setBootPassword(''); setBootError(''); }} />
-        <div className="flex items-center gap-3 mb-4">
-          <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-destructive/10">
-            <AlertTriangle className="size-5 text-destructive" />
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-foreground">Remove member</p>
-            <p className="text-xs text-muted-foreground">
-              This will permanently remove <span className="font-medium text-foreground">{bootTarget?.display_name ?? bootTarget?.email}</span> from the team.
-            </p>
-          </div>
+          </Dialog>
         </div>
-
-        <div className="space-y-3">
-          <div className="space-y-1.5">
-            <Label htmlFor="boot-password">Confirm with your password</Label>
-            <Input
-              id="boot-password"
-              type="password"
-              placeholder="Your password"
-              value={bootPassword}
-              onChange={e => { setBootPassword(e.target.value); setBootError(''); }}
-              onKeyDown={e => e.key === 'Enter' && handleBoot()}
-            />
-          </div>
-          {bootError && <p className="text-xs text-destructive">{bootError}</p>}
-        </div>
-
-        <div className="flex gap-2 mt-5">
-          <Button
-            variant="outline"
-            className="flex-1"
-            onClick={() => { setBootTarget(null); setBootPassword(''); setBootError(''); }}
-            disabled={bootLoading}
-          >
-            Cancel
-          </Button>
-          <Button
-            variant="destructive"
-            className="flex-1"
-            onClick={handleBoot}
-            disabled={bootLoading || !bootPassword}
-          >
-            {bootLoading ? 'Removing…' : 'Remove member'}
-          </Button>
-        </div>
-      </Dialog>
-    </div>
+      </main>
+    </LightShell>
   );
 }
 
@@ -822,26 +843,23 @@ function ReplayTourCard({ userId }: { userId: string }) {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle>Onboarding Tour</CardTitle>
-            <CardDescription>Replay the guided tour to revisit key features.</CardDescription>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleReplay}
-            disabled={replaying}
-            className="gap-1.5 shrink-0"
-          >
-            <RotateCcw className="size-3.5" />
-            {replaying ? 'Starting...' : 'Replay Tour'}
-          </Button>
+    <section className="overflow-hidden rounded-2xl bg-white shadow-seeko">
+      <div className="flex items-center justify-between gap-3 p-5">
+        <div className="flex flex-col gap-1.5">
+          <h3 className="text-[15px] font-semibold text-[#111]">Onboarding Tour</h3>
+          <p className="text-[13px] text-[#808080]">Replay the guided tour to revisit key features.</p>
         </div>
-      </CardHeader>
-    </Card>
+        <button
+          type="button"
+          onClick={handleReplay}
+          disabled={replaying}
+          className={cn(BTN_SECONDARY, 'inline-flex shrink-0 items-center justify-center gap-1.5 disabled:opacity-50')}
+        >
+          <RotateCcw className="size-3.5" />
+          {replaying ? 'Starting...' : 'Replay Tour'}
+        </button>
+      </div>
+    </section>
   );
 }
 
@@ -850,26 +868,25 @@ function HapticsToggleCard() {
 
   return (
     <div className="md:hidden">
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Vibrate className="size-4 text-muted-foreground" />
-              <div>
-                <CardTitle>Haptic Feedback</CardTitle>
-                <CardDescription>Vibration feedback on taps and actions.</CardDescription>
-              </div>
+      <section className="overflow-hidden rounded-2xl bg-white shadow-seeko">
+        <div className="flex items-center justify-between gap-3 p-5">
+          <div className="flex items-center gap-2">
+            <Vibrate className="size-4 text-[#808080]" />
+            <div className="flex flex-col gap-1.5">
+              <h3 className="text-[15px] font-semibold text-[#111]">Haptic Feedback</h3>
+              <p className="text-[13px] text-[#808080]">Vibration feedback on taps and actions.</p>
             </div>
-            <Switch
-              checked={enabled}
-              onCheckedChange={(v) => {
-                setEnabled(v);
-                if (v) trigger('success');
-              }}
-            />
           </div>
-        </CardHeader>
-      </Card>
+          <Switch
+            checked={enabled}
+            onCheckedChange={(v) => {
+              setEnabled(v);
+              if (v) trigger('success');
+            }}
+            className={enabled ? 'bg-[#111]' : 'bg-black/[0.12]'}
+          />
+        </div>
+      </section>
     </div>
   );
 }

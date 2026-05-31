@@ -40,8 +40,10 @@ const Select = React.forwardRef<
   Omit<React.SelectHTMLAttributes<HTMLSelectElement>, 'onChange'> & {
     onChange?: (e: { target: { value: string } }) => void;
     searchable?: boolean;
+    /** Light surface variant — relights trigger + portaled dropdown for the light overview theme. */
+    light?: boolean;
   }
->(({ className, children, value, onChange, id, searchable, ...props }, ref) => {
+>(({ className, children, value, onChange, id, searchable, light, ...props }, ref) => {
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState('');
   const [position, setPosition] = React.useState({ top: 0, left: 0, width: 0 });
@@ -136,8 +138,10 @@ const Select = React.forwardRef<
           setOpen(v => !v);
         }}
         className={cn(
-          'flex h-9 w-full items-center justify-between rounded-lg border-0 bg-card px-3 py-1 text-sm text-foreground transition-colors transition-[box-shadow_var(--focus-ring-duration)_ease-out]',
-          'hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+          'flex h-9 w-full items-center justify-between rounded-lg px-3 py-1 text-sm transition-colors transition-[box-shadow_var(--focus-ring-duration)_ease-out] focus-visible:outline-none',
+          light
+            ? 'border border-black/[0.08] bg-white text-[#2a2a2a] hover:bg-[#fafafa] focus-visible:ring-2 focus-visible:ring-[#0d7aff]/30'
+            : 'border-0 bg-card text-foreground hover:bg-accent/50 focus-visible:ring-2 focus-visible:ring-ring',
           'disabled:cursor-not-allowed disabled:opacity-50',
           className
         )}
@@ -148,7 +152,7 @@ const Select = React.forwardRef<
           transition={springs.snappy}
           className="ml-2 flex shrink-0 items-center"
         >
-          <ChevronDown className="size-3.5 text-muted-foreground" />
+          <ChevronDown className={cn('size-3.5', light ? 'text-[#9a9a9a]' : 'text-muted-foreground')} />
         </motion.span>
       </button>
 
@@ -171,18 +175,26 @@ const Select = React.forwardRef<
                   transformOrigin: 'top left',
                   ['--select-dropdown-width' as string]: `${position.width}px`,
                 }}
-                className="rounded-xl border border-white/[0.08] bg-popover/80 backdrop-blur-xl backdrop-saturate-150 shadow-xl overflow-hidden min-w-[var(--select-dropdown-width)] w-max max-w-[calc(100vw-16px)]"
+                className={cn(
+                  'rounded-xl shadow-xl overflow-hidden min-w-[var(--select-dropdown-width)] w-max max-w-[calc(100vw-16px)]',
+                  light
+                    ? 'border border-black/[0.08] bg-white'
+                    : 'border border-white/[0.08] bg-popover/80 backdrop-blur-xl backdrop-saturate-150'
+                )}
               >
                 {searchable && (
-                  <div className="flex items-center gap-2 border-b border-white/[0.06] px-3 py-2">
-                    <Search className="size-3.5 text-muted-foreground shrink-0" />
+                  <div className={cn('flex items-center gap-2 px-3 py-2', light ? 'border-b border-black/[0.06]' : 'border-b border-white/[0.06]')}>
+                    <Search className={cn('size-3.5 shrink-0', light ? 'text-[#9a9a9a]' : 'text-muted-foreground')} />
                     <input
                       ref={searchRef}
                       type="text"
                       value={query}
                       onChange={e => setQuery(e.target.value)}
                       placeholder="Search..."
-                      className="w-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none min-w-0"
+                      className={cn(
+                        'w-full bg-transparent text-sm focus:outline-none min-w-0',
+                        light ? 'text-[#2a2a2a] placeholder:text-[#b3b3b3]' : 'text-foreground placeholder:text-muted-foreground'
+                      )}
                     />
                   </div>
                 )}
@@ -191,7 +203,7 @@ const Select = React.forwardRef<
                   className="max-h-56 overflow-y-auto p-1.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                 >
                   {filtered.length === 0 ? (
-                    <p className="px-2 py-3 text-xs text-muted-foreground text-center">No results</p>
+                    <p className={cn('px-2 py-3 text-xs text-center', light ? 'text-[#9a9a9a]' : 'text-muted-foreground')}>No results</p>
                   ) : (
                     filtered.map(opt => {
                       const isSelected = opt.value === String(value ?? '');
@@ -204,8 +216,10 @@ const Select = React.forwardRef<
                           onClick={() => handleSelect(opt.value)}
                           className={cn(
                             'flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm transition-colors text-left',
-                            'hover:bg-white/[0.08] hover:text-foreground',
-                            isSelected && 'bg-white/[0.08] text-foreground font-medium'
+                            light
+                              ? 'text-[#2a2a2a] hover:bg-black/[0.05]'
+                              : 'hover:bg-white/[0.08] hover:text-foreground',
+                            isSelected && (light ? 'bg-black/[0.05] font-medium' : 'bg-white/[0.08] text-foreground font-medium')
                           )}
                         >
                           <motion.span

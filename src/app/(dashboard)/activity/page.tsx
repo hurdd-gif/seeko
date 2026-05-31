@@ -1,45 +1,63 @@
 /* ─────────────────────────────────────────────────────────
+ * Activity — paper-family port matching Overview/Tasks chrome.
+ *
+ * Shell: fixed inset-0 light surface + pill nav at top.
+ * Body: single white shadow-seeko card containing the ActivitySection.
+ *
  * ANIMATION STORYBOARD
  *
- *    0ms   heading + subtitle fades up
- *  120ms   filter pills + feed fade in
+ *    0ms   page surface fades in
+ *   40ms   pill nav rises
+ *   80ms   header rises
+ *  120ms   activity card rises
  * ───────────────────────────────────────────────────────── */
 
 import { fetchActivity } from '@/lib/supabase/data';
 import { FadeRise } from '@/components/motion';
-import { EmptyState } from '@/components/ui/empty-state';
-import { ActivityFeed } from '@/components/dashboard/ActivityFeed';
+import { LightShell } from '@/components/dashboard/LightShell';
+import { ContentSkeleton } from '@/components/dashboard/ContentSkeleton';
+import { ActivitySection } from '@/components/dashboard/tasks/ActivitySection';
+import type { TaskActivity } from '@/lib/types';
 
-const TIMING = {
-  hero:    0,
-  feed:  120,
-};
-
-const delay = (ms: number) => ms / 1000;
-
-// ── Page ─────────────────────────────────────────────────
+export const dynamic = 'force-dynamic';
 
 export default async function ActivityPage() {
-  const activity = await fetchActivity(50).catch(() => { throw new Error('Failed to load activity.'); });
+  const activity = await fetchActivity(50).catch(() => []);
+  const typedActivity = activity as unknown as TaskActivity[];
 
   return (
-    <div className="flex flex-col gap-6 max-w-2xl mx-auto overflow-hidden">
-      <FadeRise delay={delay(TIMING.hero)}>
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground text-balance">Activity</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">What the team&apos;s been up to.</p>
-      </FadeRise>
+    <LightShell navLabel="Sections" fill bordered headerPadding="px-6 py-4">
+      {/* ── Body ────────────────────────────────────────────── */}
+      <main className="min-h-0 flex-1 overflow-y-auto">
+        <div className="mx-auto max-w-3xl px-6 py-8">
+          {/* Runtime passthrough (loading={false}); also the boneyard capture
+              target — activity/loading.tsx mirrors this with loading forced on. */}
+          <ContentSkeleton name="activity-content" loading={false}>
+            <FadeRise y={6} delay={0.08}>
+              <div className="mb-6">
+                <h1 className="text-[24px] font-medium leading-[1.2] tracking-[-0.02em] text-[#1a1a1a]">
+                  Activity
+                </h1>
+                <p className="mt-1 text-[13.5px] text-[#7a7a7a]">
+                  What the team&apos;s been up to.
+                </p>
+              </div>
+            </FadeRise>
 
-      {activity.length === 0 ? (
-        <EmptyState
-          icon="Activity"
-          title="No activity yet"
-          description="Task updates, comments, and assignments will show here."
-        />
-      ) : (
-        <FadeRise delay={delay(TIMING.feed)} y={12}>
-          <ActivityFeed activity={activity} />
-        </FadeRise>
-      )}
-    </div>
+            <FadeRise y={6} delay={0.12}>
+              {typedActivity.length === 0 ? (
+                <div className="rounded-2xl bg-white px-8 py-10 text-center shadow-seeko">
+                  <p className="text-[14px] text-[#9a9a9a]">No activity yet.</p>
+                </div>
+              ) : (
+                <section className="rounded-2xl bg-white px-6 py-5 shadow-seeko">
+                  <ActivitySection activity={typedActivity} />
+                </section>
+              )}
+            </FadeRise>
+          </ContentSkeleton>
+        </div>
+      </main>
+    </LightShell>
   );
 }

@@ -1,5 +1,5 @@
 import { createClient } from './server';
-import type { Task, Area, Profile, Doc, TaskHandoff } from '../types';
+import type { Task, Area, Profile, Doc, TaskHandoff, Note, NoteSource, Priority } from '../types';
 
 export type ActivityItem = {
   id: string;
@@ -34,7 +34,7 @@ export async function fetchAreas(): Promise<Area[]> {
 
   const { data, error } = await supabase
     .from('areas')
-    .select('id, name, status, progress, description, phase, created_at, sort_order')
+    .select('id, name, status, progress, description, phase, created_at, sort_order, target_date')
     .order('sort_order', { ascending: true })
     .order('name', { ascending: true });
 
@@ -188,4 +188,119 @@ export async function fetchTeamWithPaypalEmails(): Promise<(Profile & { paypal_e
 
   if (error) throw error;
   return (data ?? []) as (Profile & { paypal_email?: string })[];
+}
+
+export async function fetchInboxNotes(): Promise<Note[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('notes')
+    .select('*')
+    .eq('status', 'open')
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as Note[];
+}
+
+export async function fetchArchivedNotes(limit = 50): Promise<Note[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('notes')
+    .select('*')
+    .eq('status', 'archived')
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return (data ?? []) as Note[];
+}
+
+export async function archiveNote(id: string): Promise<void> {
+  const supabase = await createClient();
+  const { error } = await supabase.from('notes').update({ status: 'archived' }).eq('id', id);
+  if (error) throw error;
+}
+
+export async function createNote(body: string, source: NoteSource = 'web'): Promise<Note> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Unauthenticated');
+  const { data, error } = await supabase
+    .from('notes')
+    .insert({ body, source, created_by: user.id })
+    .select('*')
+    .single();
+  if (error) throw error;
+  return data as Note;
+}
+
+export async function convertNoteToTask(
+  noteId: string,
+  task: { name: string; department: string; description?: string; assignee_id?: string; deadline?: string; priority?: Priority }
+): Promise<Task> {
+  const supabase = await createClient();
+  const { data: created, error: insertErr } = await supabase
+    .from('tasks')
+    .insert({ ...task, status: 'In Progress', priority: task.priority ?? 'Medium' })
+    .select('*')
+    .single();
+  if (insertErr) throw insertErr;
+  const { error: updateErr } = await supabase
+    .from('notes')
+    .update({ status: 'archived', converted_to_task_id: created.id })
+    .eq('id', noteId);
+  if (updateErr) throw updateErr;
+  return created as Task;
+}
+
+export type RecentItem = {
+  id: string;
+  kind: 'task' | 'doc' | 'area';
+  title: string;
+  updated_at: string;
+  href: string;
+};
+
+export async function fetchRecentItems(_userId: string, limit = 6): Promise<RecentItem[]> {
+  const supabase = await createClient();
+  const [{ data: tasks }, { data: docs }, { data: areas }] = await Promise.all([
+    supabase.from('tasks').select('id, name, updated_at').order('updated_at', { ascending: false }).limit(limit),
+    supabase.from('docs').select('id, title, updated_at').order('updated_at', { ascending: false }).limit(limit),
+    supabase.from('areas').select('id, name, updated_at').order('updated_at', { ascending: false }).limit(limit),
+  ]);
+  const items: RecentItem[] = [
+    ...((tasks ?? []) as { id: string; name: string; updated_at: string }[]).map((t) => ({
+      id: t.id,
+      kind: 'task' as const,
+      title: t.name,
+      updated_at: t.updated_at,
+      href: `/tasks/${t.id}`,
+    })),
+    ...((docs ?? []) as { id: string; title: string; updated_at: string }[]).map((d) => ({
+      id: d.id,
+      kind: 'doc' as const,
+      title: d.title,
+      updated_at: d.updated_at,
+      href: `/docs/${d.id}`,
+    })),
+    ...((areas ?? []) as { id: string; name: string; updated_at: string }[]).map((a) => ({
+      id: a.id,
+      kind: 'area' as const,
+      title: a.name,
+      updated_at: a.updated_at,
+      href: `/areas/${a.id}`,
+    })),
+  ];
+  return items
+    .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+    .slice(0, limit);
+}
+
+export async function fetchTodayTasks(limit = 5): Promise<Task[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from('tasks')
+    .select('*')
+    .in('status', ['In Progress', 'In Review'])
+    .order('priority', { ascending: false })
+    .limit(limit);
+  return (data ?? []) as Task[];
 }

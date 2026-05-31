@@ -30,6 +30,7 @@ export type Area = {
   description?: string;
   phase?: string;
   sort_order?: number;
+  target_date?: string;
 };
 
 export type Profile = {
@@ -232,4 +233,17 @@ export type ExternalSigningInvite = {
   created_at: string;
   is_guardian_signing?: boolean;
   minor_name?: string;
+};
+
+export type NoteStatus = 'open' | 'archived';
+export type NoteSource = 'web' | 'telegram';
+
+export type Note = {
+  id: string;
+  body: string;
+  status: NoteStatus;
+  source: NoteSource;
+  created_by: string;
+  created_at: string;
+  converted_to_task_id?: string;
 };

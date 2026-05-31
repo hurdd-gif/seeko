@@ -3,12 +3,13 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Plus, Loader2, CheckCircle2, UserPlus, ChevronDown } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import { springs } from '@/lib/motion';
+import { LIGHT_INPUT, BTN_PRIMARY } from './lightKit';
 
 const DEPARTMENTS = ['Coding', 'Visual Art', 'UI/UX', 'Animation', 'Asset Creation'];
 
@@ -57,20 +58,20 @@ export function InviteForm() {
   }
 
   return (
-    <Card>
+    <Card className="overflow-hidden rounded-2xl border-0 bg-white shadow-seeko">
       <button
         type="button"
         onClick={() => setExpanded(v => !v)}
         className="flex w-full items-center justify-between px-6 py-4 text-left"
       >
         <div className="flex items-center gap-2">
-          <UserPlus className="size-4 text-muted-foreground" />
+          <UserPlus className="size-4 text-[#808080]" />
           <div>
-            <CardTitle>Invite Member</CardTitle>
-            <CardDescription>Send an invite link by email.</CardDescription>
+            <CardTitle className="text-[15px] font-semibold text-[#111]">Invite Member</CardTitle>
+            <CardDescription className="text-[13px] text-[#808080]">Send an invite link by email.</CardDescription>
           </div>
         </div>
-        <ChevronDown className={`size-4 text-muted-foreground transition-transform ${expanded ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`size-4 text-[#9a9a9a] transition-transform ${expanded ? 'rotate-180' : ''}`} />
       </button>
 
       <AnimatePresence>
@@ -86,7 +87,7 @@ export function InviteForm() {
               <form onSubmit={handleInvite} className="flex flex-col gap-4">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
                   <div className="flex-1 space-y-2">
-                    <Label htmlFor="invite-email">Email</Label>
+                    <Label htmlFor="invite-email" className="text-[#808080]">Email</Label>
                     <Input
                       id="invite-email"
                       placeholder="colleague@example.com"
@@ -94,11 +95,13 @@ export function InviteForm() {
                       value={email}
                       onChange={e => setEmail(e.target.value)}
                       required
+                      className={LIGHT_INPUT}
                     />
                   </div>
                   <div className="w-full space-y-2 sm:w-40">
-                    <Label>Department</Label>
+                    <Label className="text-[#808080]">Department</Label>
                     <Select
+                      light
                       value={department}
                       onChange={e => setDepartment(e.target.value)}
                     >
@@ -109,8 +112,9 @@ export function InviteForm() {
                     </Select>
                   </div>
                   <div className="w-full space-y-2 sm:w-36">
-                    <Label>Role</Label>
+                    <Label className="text-[#808080]">Role</Label>
                     <Select
+                      light
                       value={role}
                       onChange={e => setRole(e.target.value as 'member' | 'contractor' | 'investor')}
                     >
@@ -119,7 +123,7 @@ export function InviteForm() {
                       <option value="investor">Investor</option>
                     </Select>
                   </div>
-                  <Button type="submit" disabled={sending || !email} className="gap-2 shrink-0">
+                  <Button type="submit" disabled={sending || !email} className={`${BTN_PRIMARY} gap-2 shrink-0`}>
                     {sending ? (
                       <Loader2 className="size-4 animate-spin" />
                     ) : (
@@ -139,8 +143,8 @@ export function InviteForm() {
                     >
                       <div className={`flex items-center gap-2 rounded-lg px-3 py-2 text-xs ${
                         result.ok
-                          ? 'bg-seeko-accent/10 text-seeko-accent'
-                          : 'bg-destructive/10 text-destructive'
+                          ? 'bg-[#0d7aff]/10 text-[#0a63cc]'
+                          : 'bg-[#d4503e]/10 text-[#d4503e]'
                       }`}>
                         {result.ok && <CheckCircle2 className="size-3.5" />}
                         {result.message}

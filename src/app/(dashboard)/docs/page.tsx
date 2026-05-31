@@ -1,31 +1,29 @@
 /* ─────────────────────────────────────────────────────────
+ * Docs — paper-family port matching Overview/Tasks/Activity chrome.
+ *
+ * Shell: fixed inset-0 light surface + pill nav (Docs active) at top.
+ * Body: grouped white shadow-seeko cards with divide-y document rows.
+ *
  * ANIMATION STORYBOARD
  *
- *    0ms   heading fades up
- *   80ms   subtitle fades up
- *  160ms   doc list or empty state rises in
+ *    0ms   page surface fades in
+ *   40ms   pill nav rises (LightShell internal)
+ *   80ms   heading + subtitle rise
+ *  120ms   doc list / empty state rises in
  * ───────────────────────────────────────────────────────── */
 
 import { fetchDocs, fetchProfile, fetchTeam } from '@/lib/supabase/data';
 import { createClient } from '@/lib/supabase/server';
 import { DocList } from '@/components/dashboard/DocList';
-import { FileText } from 'lucide-react';
+import { LightShell } from '@/components/dashboard/LightShell';
+import { ContentSkeleton } from '@/components/dashboard/ContentSkeleton';
 import { FadeRise } from '@/components/motion';
-
-const TIMING = {
-  heading:  0,    // page title
-  subtitle: 80,   // description line
-  list:     160,  // DocList card container
-};
-
-/** FadeRise delay in seconds */
-const delay = (ms: number) => ms / 1000;
 
 export default async function DocsPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   const [docs, profile, team] = await Promise.all([
-    fetchDocs().catch((e) => { throw new Error('Failed to load documents.'); }),
+    fetchDocs().catch(() => { throw new Error('Failed to load documents.'); }),
     user ? fetchProfile(user.id).catch(() => null) : null,
     fetchTeam().catch(() => []),
   ]);
@@ -33,25 +31,36 @@ export default async function DocsPage() {
   const isAdmin = profile?.is_admin ?? false;
 
   return (
-    <div className="space-y-6">
-      <div>
-        <FadeRise delay={delay(TIMING.heading)}>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground text-balance">Documents</h1>
-        </FadeRise>
-        <FadeRise delay={delay(TIMING.subtitle)}>
-          <p className="text-sm text-muted-foreground mt-1">Team documents, specs, and shared resources.</p>
-        </FadeRise>
-      </div>
+    <LightShell activeTab="docs" navLabel="Sections" fill bordered headerPadding="px-6 py-4">
+      {/* ── Body ────────────────────────────────────────────── */}
+      <main className="min-h-0 flex-1 overflow-y-auto">
+        <div className="mx-auto w-full max-w-5xl px-6 py-8">
+          {/* Runtime passthrough (loading={false}); also the boneyard capture
+              target — docs/loading.tsx mirrors this with loading forced on. */}
+          <ContentSkeleton name="docs-content" loading={false}>
+            <FadeRise y={6} delay={0.08}>
+              <div className="mb-6">
+                <h1 className="text-[24px] font-medium leading-[1.2] tracking-[-0.02em] text-[#1a1a1a]">
+                  Documents
+                </h1>
+                <p className="mt-1 text-[13.5px] text-[#7a7a7a]">
+                  Team documents, specs, and shared resources.
+                </p>
+              </div>
+            </FadeRise>
 
-      <FadeRise delay={delay(TIMING.list)} y={12}>
-        <DocList
-          docs={docs}
-          userDepartment={userDepartment}
-          isAdmin={isAdmin}
-          currentUserId={user?.id ?? ''}
-          team={team}
-        />
-      </FadeRise>
-    </div>
+            <FadeRise y={6} delay={0.12}>
+              <DocList
+                docs={docs}
+                userDepartment={userDepartment}
+                isAdmin={isAdmin}
+                currentUserId={user?.id ?? ''}
+                team={team}
+              />
+            </FadeRise>
+          </ContentSkeleton>
+        </div>
+      </main>
+    </LightShell>
   );
 }

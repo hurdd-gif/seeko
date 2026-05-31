@@ -19,6 +19,7 @@ import type { Doc, Profile } from '@/lib/types';
 import { useHaptics } from '@/components/HapticsProvider';
 import { useDialogFooter } from '@/components/ui/dialog';
 import { Editor as DesktopEditor } from '@/components/ui/editor';
+import { LIGHT_INPUT, DIALOG_SAVE, DIALOG_CANCEL } from './lightKit';
 
 const DEPARTMENTS = ['Coding', 'Visual Art', 'UI/UX', 'Animation', 'Asset Creation'] as const;
 
@@ -48,8 +49,8 @@ function ToolbarButton({
       className={cn(
         'flex size-7 items-center justify-center rounded text-xs transition-colors',
         active
-          ? 'bg-foreground text-background'
-          : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
+          ? 'bg-[#111] text-white'
+          : 'text-[#808080] hover:bg-black/[0.04] hover:text-[#111]'
       )}
     >
       {children}
@@ -104,7 +105,7 @@ function ImagePopover({ onInsert }: { onInsert: (url: string) => void }) {
       </ToolbarButton>
 
       {open && (
-        <div className="absolute left-0 top-8 z-50 w-72 rounded-lg border border-border bg-card p-3 shadow-lg">
+        <div className="absolute left-0 top-8 z-50 w-72 rounded-lg border border-black/[0.08] bg-white p-3 shadow-seeko-pop">
           <div className="mb-2 flex gap-1">
             {(['url', 'upload'] as const).map(t => (
               <button
@@ -113,7 +114,7 @@ function ImagePopover({ onInsert }: { onInsert: (url: string) => void }) {
                 onClick={() => setTab(t)}
                 className={cn(
                   'rounded px-2 py-1 text-xs capitalize transition-colors',
-                  tab === t ? 'bg-secondary text-foreground' : 'text-muted-foreground hover:text-foreground'
+                  tab === t ? 'bg-black/[0.06] text-[#111]' : 'text-[#808080] hover:text-[#111]'
                 )}
               >
                 {t === 'url' ? 'Paste URL' : 'Upload'}
@@ -124,20 +125,20 @@ function ImagePopover({ onInsert }: { onInsert: (url: string) => void }) {
           {tab === 'url' ? (
             <div className="flex gap-2">
               <Input
-                className="h-7 text-xs"
+                className={cn(LIGHT_INPUT, 'h-7 text-xs')}
                 placeholder="https://..."
                 value={url}
                 onChange={e => setUrl(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleUrl()}
               />
-              <Button size="sm" className="h-7 text-xs" onClick={handleUrl}>
+              <Button size="sm" className={cn('h-7 text-xs', DIALOG_SAVE)} onClick={handleUrl}>
                 Insert
               </Button>
             </div>
           ) : (
             <div>
               <label className={cn(
-                'flex cursor-pointer items-center justify-center rounded border border-dashed border-border p-3 text-xs text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground',
+                'flex cursor-pointer items-center justify-center rounded border border-dashed border-black/[0.12] p-3 text-xs text-[#808080] transition-colors hover:border-black/25 hover:text-[#111]',
                 uploading && 'pointer-events-none opacity-50'
               )}>
                 {uploading ? 'Uploading…' : 'Click to choose image (≤ 5 MB)'}
@@ -187,7 +188,7 @@ export function DocEditor({ doc, onSave, onCancel, team = [] }: DocEditorProps) 
     content: doc?.content ?? '',
     editorProps: {
       attributes: {
-        class: 'prose prose-invert max-w-none min-h-[200px] focus:outline-none text-foreground/80 prose-headings:text-foreground prose-strong:text-foreground',
+        class: 'prose max-w-none min-h-[200px] focus:outline-none text-[#2a2a2a] prose-headings:text-[#111] prose-strong:text-[#111]',
       },
     },
     onUpdate: () => { userEditedContentRef.current = true; },
@@ -242,7 +243,7 @@ export function DocEditor({ doc, onSave, onCancel, team = [] }: DocEditorProps) 
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      color: '#6ee7b7',
+      color: '#0d7aff',
       width: '20px',
       height: '20px',
     });
@@ -380,7 +381,7 @@ export function DocEditor({ doc, onSave, onCancel, team = [] }: DocEditorProps) 
           size="sm"
           onClick={() => { trigger('selection'); onCancel(); }}
           disabled={saving}
-          className="min-w-[4.5rem] min-h-[2.5rem] touch-manipulation"
+          className={cn('min-w-[4.5rem] min-h-[2.5rem] touch-manipulation', DIALOG_CANCEL)}
         >
           Cancel
         </Button>
@@ -389,7 +390,7 @@ export function DocEditor({ doc, onSave, onCancel, team = [] }: DocEditorProps) 
           size="sm"
           onClick={() => handleSaveRef.current()}
           disabled={saving}
-          className="min-w-[7rem] min-h-[2.5rem] touch-manipulation"
+          className={cn('min-w-[7rem] min-h-[2.5rem] touch-manipulation', DIALOG_SAVE)}
         >
           {saving ? 'Saving…' : doc ? 'Save changes' : 'Create document'}
         </Button>
@@ -409,7 +410,7 @@ export function DocEditor({ doc, onSave, onCancel, team = [] }: DocEditorProps) 
         size="sm"
         onClick={() => { trigger('selection'); onCancel(); }}
         disabled={saving}
-        className="min-w-[4.5rem] min-h-[2.5rem] touch-manipulation"
+        className={cn('min-w-[4.5rem] min-h-[2.5rem] touch-manipulation', DIALOG_CANCEL)}
       >
         Cancel
       </Button>
@@ -418,7 +419,7 @@ export function DocEditor({ doc, onSave, onCancel, team = [] }: DocEditorProps) 
         size="sm"
         onClick={handleSave}
         disabled={saving}
-        className="min-w-[7rem] min-h-[2.5rem] touch-manipulation"
+        className={cn('min-w-[7rem] min-h-[2.5rem] touch-manipulation', DIALOG_SAVE)}
       >
         {saving ? 'Saving…' : doc ? 'Save changes' : 'Create document'}
       </Button>
@@ -432,12 +433,12 @@ export function DocEditor({ doc, onSave, onCancel, team = [] }: DocEditorProps) 
         value={title}
         onChange={e => setTitle(e.target.value)}
         placeholder="Document title"
-        className="text-base font-semibold h-10"
+        className={cn(LIGHT_INPUT, 'h-10 text-base font-semibold text-[#1a1a1a]')}
       />
 
       {/* Department restrict — multi-select toggles */}
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs text-muted-foreground whitespace-nowrap">Restrict to:</span>
+        <span className="text-xs text-[#808080] whitespace-nowrap">Restrict to:</span>
         {DEPARTMENTS.map(dept => (
           <button
             key={dept}
@@ -446,8 +447,8 @@ export function DocEditor({ doc, onSave, onCancel, team = [] }: DocEditorProps) 
             className={cn(
               'rounded-full border px-2.5 py-0.5 text-xs transition-colors',
               departments.includes(dept)
-                ? 'border-seeko-accent bg-seeko-accent/10 text-seeko-accent'
-                : 'border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground'
+                ? 'border-[#0d7aff]/30 bg-[#0d7aff]/10 text-[#0d7aff]'
+                : 'border-black/[0.1] text-[#808080] hover:border-black/20 hover:text-[#111]'
             )}
           >
             {dept}
@@ -457,7 +458,7 @@ export function DocEditor({ doc, onSave, onCancel, team = [] }: DocEditorProps) 
           <button
             type="button"
             onClick={() => setDepartments([])}
-            className="text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors"
+            className="text-xs text-[#9a9a9a] hover:text-[#505050] transition-colors"
           >
             Clear
           </button>
@@ -467,8 +468,9 @@ export function DocEditor({ doc, onSave, onCancel, team = [] }: DocEditorProps) 
       {/* Also allow access — users who get access despite department restriction */}
       {team.length > 0 && (
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs text-muted-foreground whitespace-nowrap">Also allow access:</span>
+          <span className="text-xs text-[#808080] whitespace-nowrap">Also allow access:</span>
           <Select
+            light
             value={addUserValue}
             onChange={e => {
               const val = e.target.value;
@@ -489,13 +491,13 @@ export function DocEditor({ doc, onSave, onCancel, team = [] }: DocEditorProps) 
             return (
               <span
                 key={id}
-                className="inline-flex items-center gap-1 rounded-full border border-border bg-secondary/50 px-2.5 py-0.5 text-xs text-foreground"
+                className="inline-flex items-center gap-1 rounded-full border border-black/[0.08] bg-black/[0.03] px-2.5 py-0.5 text-xs text-[#2a2a2a]"
               >
                 @{p?.display_name ?? 'Unknown'}
                 <button
                   type="button"
                   onClick={() => setGrantedIds(prev => prev.filter(x => x !== id))}
-                  className="rounded p-0.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+                  className="rounded p-0.5 text-[#9a9a9a] hover:bg-[#d4503e]/10 hover:text-[#d4503e] transition-colors"
                   aria-label={`Remove ${p?.display_name ?? id}`}
                 >
                   <Trash2 className="size-3" />
@@ -537,7 +539,7 @@ export function DocEditor({ doc, onSave, onCancel, team = [] }: DocEditorProps) 
           {/* Mobile toolbar */}
           {editor && (
             <>
-              <div className="flex flex-wrap items-center gap-1 rounded-md border border-border bg-secondary/40 px-2 py-1.5">
+              <div className="flex flex-wrap items-center gap-1 rounded-md border border-black/[0.08] bg-black/[0.02] px-2 py-1.5">
                 <ToolbarButton title="Heading 1" active={editor.isActive('heading', { level: 1 })} onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}>
                   <Heading1 className="size-3.5" />
                 </ToolbarButton>
@@ -548,7 +550,7 @@ export function DocEditor({ doc, onSave, onCancel, team = [] }: DocEditorProps) 
                   <Heading3 className="size-3.5" />
                 </ToolbarButton>
 
-                <div className="mx-1 h-4 w-px bg-border" />
+                <div className="mx-1 h-4 w-px bg-black/[0.08]" />
 
                 <ToolbarButton title="Bold" active={editor.isActive('bold')} onClick={() => editor.chain().focus().toggleBold().run()}>
                   <Bold className="size-3.5" />
@@ -557,7 +559,7 @@ export function DocEditor({ doc, onSave, onCancel, team = [] }: DocEditorProps) 
                   <Italic className="size-3.5" />
                 </ToolbarButton>
 
-                <div className="mx-1 h-4 w-px bg-border" />
+                <div className="mx-1 h-4 w-px bg-black/[0.08]" />
 
                 <ToolbarButton title="Bullet list" active={editor.isActive('bulletList')} onClick={() => editor.chain().focus().toggleBulletList().run()}>
                   <List className="size-3.5" />
@@ -566,11 +568,11 @@ export function DocEditor({ doc, onSave, onCancel, team = [] }: DocEditorProps) 
                   <ListOrdered className="size-3.5" />
                 </ToolbarButton>
 
-                <div className="mx-1 h-4 w-px bg-border" />
+                <div className="mx-1 h-4 w-px bg-black/[0.08]" />
 
                 <ImagePopover onInsert={insertImage} />
 
-                <div className="mx-1 h-4 w-px bg-border" />
+                <div className="mx-1 h-4 w-px bg-black/[0.08]" />
 
                 <ToolbarButton
                   title="Insert table (3×3)"
@@ -601,7 +603,7 @@ export function DocEditor({ doc, onSave, onCancel, team = [] }: DocEditorProps) 
               </div>
 
               {/* Mobile editor area */}
-              <div className="min-h-[200px] rounded-md border border-border bg-card p-3">
+              <div className="min-h-[200px] rounded-md border border-black/[0.08] bg-white p-3">
                 <EditorContent editor={editor} />
               </div>
             </>
@@ -613,7 +615,7 @@ export function DocEditor({ doc, onSave, onCancel, team = [] }: DocEditorProps) 
 
       {/* Actions: when not inside a Dialog, render inline; otherwise they're in the dialog footer */}
       {!setDialogFooter && (
-        <div className="sticky bottom-0 left-0 right-0 z-10 flex flex-shrink-0 items-center justify-end gap-3 border-t border-border bg-card pt-4 pb-2 -mx-6 px-6 mt-4">
+        <div className="sticky bottom-0 left-0 right-0 z-10 flex flex-shrink-0 items-center justify-end gap-3 border-t border-black/[0.06] bg-white pt-4 pb-2 -mx-6 px-6 mt-4">
           {actionBar}
         </div>
       )}

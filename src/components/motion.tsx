@@ -133,15 +133,18 @@ export function StaggerItem({
 export function InteractiveRow({
   children,
   className,
+  light = false,
 }: {
   children: ReactNode;
   className?: string;
+  /** Opt-in light theme: dark-on-white hover tint instead of white-on-dark. */
+  light?: boolean;
 }) {
   const shouldReduce = useReducedMotion();
   if (shouldReduce) return <div className={className}>{children}</div>;
   return (
     <motion.div
-      whileHover={{ y: -1, backgroundColor: 'rgba(255,255,255,0.04)' }}
+      whileHover={{ y: -1, backgroundColor: light ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.04)' }}
       whileTap={{ scale: 0.995 }}
       transition={springs.snappy}
       className={className}

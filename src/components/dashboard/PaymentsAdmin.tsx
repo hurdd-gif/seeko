@@ -12,11 +12,12 @@
  *  650ms   recent payments card fades in
  * ───────────────────────────────────────────────────────── */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, type ComponentType } from 'react';
+import Link from 'next/link';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Users, CheckCircle2, Clock,
-  CreditCard, Plus, ChevronDown, ChevronUp, Check, X as XIcon,
+  CreditCard, Plus, ChevronDown, ChevronUp, ChevronLeft, Check, X as XIcon,
   TrendingUp, DollarSign, FileText, RotateCw, Ban, Loader2,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,7 +25,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { FadeRise, Stagger, StaggerItem, HoverCard, springs } from '@/components/motion';
-import { EmptyState } from '@/components/ui/empty-state';
+import { LightShell } from '@/components/dashboard/LightShell';
+import { BTN_PRIMARY, BTN_SECONDARY, LIGHT_INVOICE_STATUS } from '@/components/dashboard/lightKit';
 import { PaymentsPasskeyGate } from '@/components/dashboard/PaymentsPasskeyGate';
 import { PaymentCreateDialog } from '@/components/dashboard/PaymentCreateDialog';
 import { InvoiceRequestForm } from '@/components/dashboard/InvoiceRequestForm';
@@ -53,6 +55,26 @@ function getInitials(name: string): string {
 
 function fmt(amount: number): string {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+}
+
+/* Local light empty block — the shared <EmptyState> bakes a `text-foreground` title that
+ * is invisible on white, so light surfaces render their own. */
+function LightEmpty({ icon: Icon, title, description }: {
+  icon: ComponentType<{ className?: string }>;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="flex flex-col items-center gap-3 py-12 text-center">
+      <div className="flex size-11 items-center justify-center rounded-full bg-[#f4f4f4]">
+        <Icon className="size-5 text-[#9a9a9a]" />
+      </div>
+      <div className="space-y-1">
+        <p className="text-sm font-medium text-[#111]">{title}</p>
+        <p className="text-xs text-[#808080]">{description}</p>
+      </div>
+    </div>
+  );
 }
 
 type TeamMember = Profile & { paypal_email?: string };
@@ -207,28 +229,43 @@ export function PaymentsAdmin({ team }: PaymentsAdminProps) {
   ];
 
   return (
-    <div className="flex flex-col gap-8">
+    <LightShell
+      fill
+      bordered
+      leftSlot={
+        <Link
+          href="/"
+          className="flex items-center gap-1 text-[13px] text-[#9a9a9a] transition-colors hover:text-[#3a3a3a]"
+        >
+          <ChevronLeft className="size-3.5" />
+          <span>Payments</span>
+        </Link>
+      }
+    >
+    <main className="min-h-0 flex-1 overflow-y-auto">
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-6 py-10">
       {/* ── Hero ── */}
       <FadeRise delay={d(TIMING.hero)}>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground text-balance">Payments</h1>
-            <p className="hidden sm:block text-sm text-muted-foreground mt-1">Track and manage team payments.</p>
+            <h1 className="text-2xl font-semibold tracking-tight text-[#111] text-balance">Payments</h1>
+            <p className="hidden sm:block text-sm text-[#808080] mt-1">Track and manage team payments.</p>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setInvoiceFormOpen(true)}>
+            <button type="button" onClick={() => setInvoiceFormOpen(true)} className={`${BTN_SECONDARY} inline-flex items-center gap-1.5`}>
               <FileText className="size-3.5" />
               <span className="hidden sm:inline">Request Invoice</span>
               <span className="sm:hidden">Invoice</span>
-            </Button>
-            <Button
+            </button>
+            <button
+              type="button"
               onClick={() => { setSelectedRecipient(null); setCreateDialogOpen(true); }}
-              className="gap-1.5 bg-seeko-accent text-black hover:bg-seeko-accent/90"
+              className={`${BTN_PRIMARY} inline-flex items-center gap-1.5`}
             >
               <Plus className="size-4" />
               <span className="hidden sm:inline">New Payment</span>
               <span className="sm:hidden">Payment</span>
-            </Button>
+            </button>
           </div>
         </div>
       </FadeRise>
@@ -243,31 +280,28 @@ export function PaymentsAdmin({ team }: PaymentsAdminProps) {
           <StaggerItem key={stat.label}>
             <HoverCard>
               <Card className={cn(
-                'relative overflow-hidden',
-                stat.accent && 'border-seeko-accent/30'
+                'relative overflow-hidden rounded-2xl border-0 bg-white shadow-seeko',
+                stat.accent && 'ring-1 ring-[#0a63cc]/20'
               )}>
-                {stat.accent && (
-                  <div className="absolute inset-0 bg-gradient-to-br from-seeko-accent/[0.06] to-transparent pointer-events-none" />
-                )}
                 <CardContent className="pt-5 pb-4 px-5">
                   <div className="flex items-center justify-between mb-3">
-                    <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                    <span className="text-[13px] font-medium text-[#808080]">
                       {stat.label}
                     </span>
                     <div className={cn(
                       'flex size-8 items-center justify-center rounded-lg',
-                      stat.accent ? 'bg-seeko-accent/15' : 'bg-white/[0.04]'
+                      stat.accent ? 'bg-[#0a63cc]/10' : 'bg-[#f4f4f4]'
                     )}>
-                      <stat.icon className={cn('size-4', stat.accent ? 'text-seeko-accent' : 'text-muted-foreground')} />
+                      <stat.icon className={cn('size-4', stat.accent ? 'text-[#0a63cc]' : 'text-[#808080]')} />
                     </div>
                   </div>
                   <p className={cn(
-                    'font-semibold tracking-tight',
-                    stat.accent ? 'text-3xl' : 'text-2xl'
-                  )} style={stat.accent ? { color: 'var(--color-seeko-accent)' } : undefined}>
+                    'font-semibold tracking-tight tabular-nums',
+                    stat.accent ? 'text-3xl text-[#0a63cc]' : 'text-2xl text-[#111]'
+                  )}>
                     {stat.format ? fmt(stat.value) : stat.value}
                   </p>
-                  <p className="text-[11px] text-muted-foreground mt-1">{stat.subtitle}</p>
+                  <p className="text-[11px] text-[#9a9a9a] mt-1">{stat.subtitle}</p>
                 </CardContent>
               </Card>
             </HoverCard>
@@ -284,29 +318,29 @@ export function PaymentsAdmin({ team }: PaymentsAdminProps) {
             exit={{ opacity: 0, y: -10, scale: 0.98 }}
             transition={{ ...springs.smooth, delay: d(TIMING.pending) }}
           >
-            <Card className="border-amber-500/25 bg-gradient-to-br from-amber-500/[0.03] to-transparent">
+            <Card className="rounded-2xl border-0 bg-white shadow-seeko ring-1 ring-[#b8801a]/20">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="flex size-9 items-center justify-center rounded-lg bg-amber-500/15">
-                      <DollarSign className="size-4.5 text-amber-400" />
+                    <div className="flex size-9 items-center justify-center rounded-lg bg-[#b8801a]/10">
+                      <DollarSign className="size-4.5 text-[#946a00]" />
                     </div>
                     <div>
-                      <CardTitle className="text-base font-semibold text-foreground">
+                      <CardTitle className="text-base font-semibold text-[#111]">
                         Payment Requests
                       </CardTitle>
-                      <CardDescription className="text-xs">
+                      <CardDescription className="text-xs text-[#808080]">
                         Team members requesting payment approval.
                       </CardDescription>
                     </div>
                   </div>
-                  <Badge variant="outline" className="text-amber-400 border-amber-500/30 bg-amber-500/10 tabular-nums">
+                  <Badge variant="outline" className="text-[#946a00] border-[#b8801a]/40 bg-[#b8801a]/10 tabular-nums">
                     {pendingRequests.length}
                   </Badge>
                 </div>
               </CardHeader>
               <CardContent className="pt-0">
-                <div className="divide-y divide-border">
+                <div className="divide-y divide-black/[0.06]">
                   {pendingRequests.map((payment, i) => (
                     <motion.div
                       key={payment.id}
@@ -330,25 +364,25 @@ export function PaymentsAdmin({ team }: PaymentsAdminProps) {
       {/* ── Invoice Requests ── */}
       {invoiceRequests.length > 0 && (
         <FadeRise delay={d(TIMING.invoiceRequests)}>
-          <Card>
+          <Card className="rounded-2xl border-0 bg-white shadow-seeko">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="flex size-9 items-center justify-center rounded-lg bg-seeko-accent/10">
-                    <FileText className="size-4.5 text-seeko-accent" />
+                  <div className="flex size-9 items-center justify-center rounded-lg bg-[#0a63cc]/10">
+                    <FileText className="size-4.5 text-[#0a63cc]" />
                   </div>
                   <div>
-                    <CardTitle className="text-base font-semibold text-foreground">Invoice Requests</CardTitle>
-                    <CardDescription className="text-xs">Outbound invoice links sent to external recipients.</CardDescription>
+                    <CardTitle className="text-base font-semibold text-[#111]">Invoice Requests</CardTitle>
+                    <CardDescription className="text-xs text-[#808080]">Outbound invoice links sent to external recipients.</CardDescription>
                   </div>
                 </div>
-                <Badge variant="outline" className="tabular-nums">
+                <Badge variant="outline" className="text-[#808080] border-black/[0.08] tabular-nums">
                   {invoiceRequests.length}
                 </Badge>
               </div>
             </CardHeader>
             <CardContent className="pt-0">
-              <div className="divide-y divide-border/50">
+              <div className="divide-y divide-black/[0.06]">
                 {(invoicesExpanded ? invoiceRequests : invoiceRequests.slice(0, 3)).map((inv, i) => (
                   <InvoiceRequestRow key={inv.id} invite={inv} index={i} onAction={fetchData} />
                 ))}
@@ -357,7 +391,7 @@ export function PaymentsAdmin({ team }: PaymentsAdminProps) {
                 <button
                   type="button"
                   onClick={() => setInvoicesExpanded((v) => !v)}
-                  className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-white/[0.04] hover:text-foreground"
+                  className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-medium text-[#808080] transition-colors hover:bg-black/[0.03] hover:text-[#111]"
                 >
                   {invoicesExpanded ? 'Show less' : `Show all ${invoiceRequests.length}`}
                   <ChevronDown className={`size-3.5 transition-transform ${invoicesExpanded ? 'rotate-180' : ''}`} />
@@ -370,16 +404,16 @@ export function PaymentsAdmin({ team }: PaymentsAdminProps) {
 
       {/* ── People ── */}
       <FadeRise delay={d(TIMING.people)}>
-        <Card>
+        <Card className="rounded-2xl border-0 bg-white shadow-seeko">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="flex size-9 items-center justify-center rounded-lg bg-white/[0.04]">
-                  <Users className="size-4.5 text-muted-foreground" />
+                <div className="flex size-9 items-center justify-center rounded-lg bg-[#f4f4f4]">
+                  <Users className="size-4.5 text-[#808080]" />
                 </div>
                 <div>
-                  <CardTitle className="text-base font-semibold text-foreground">People</CardTitle>
-                  <CardDescription className="text-xs">Team members and their payment status.</CardDescription>
+                  <CardTitle className="text-base font-semibold text-[#111]">People</CardTitle>
+                  <CardDescription className="text-xs text-[#808080]">Team members and their payment status.</CardDescription>
                 </div>
               </div>
               {/* Filter pills — only show when team is large enough to warrant filtering */}
@@ -390,17 +424,17 @@ export function PaymentsAdmin({ team }: PaymentsAdminProps) {
                       key={opt.value}
                       onClick={() => setFilter(opt.value)}
                       className={cn(
-                        'rounded-full px-2.5 py-1 text-xs font-medium transition-all duration-200',
+                        'rounded-full px-2.5 py-1 text-xs font-medium transition-colors duration-200',
                         filter === opt.value
-                          ? 'bg-seeko-accent/15 text-seeko-accent shadow-[var(--shadow-accent-inset)]'
-                          : 'text-muted-foreground hover:text-foreground hover:bg-white/[0.06]'
+                          ? 'bg-[#0a63cc]/10 text-[#0a63cc]'
+                          : 'text-[#808080] hover:text-[#111] hover:bg-black/[0.04]'
                       )}
                     >
                       {opt.label}
                       {opt.count > 0 && (
                         <span className={cn(
                           'ml-1 tabular-nums',
-                          filter === opt.value ? 'text-seeko-accent/70' : 'text-muted-foreground/50'
+                          filter === opt.value ? 'text-[#0a63cc]/70' : 'text-[#9a9a9a]'
                         )}>
                           {opt.count}
                         </span>
@@ -415,55 +449,51 @@ export function PaymentsAdmin({ team }: PaymentsAdminProps) {
             {loading ? (
               <div className="flex items-center justify-center py-12">
                 <div className="flex flex-col items-center gap-3">
-                  <div className="size-5 rounded-full border-2 border-muted-foreground/20 border-t-seeko-accent animate-spin" />
-                  <p className="text-xs text-muted-foreground">Loading payments...</p>
+                  <div className="size-5 rounded-full border-2 border-black/10 border-t-[#0a63cc] animate-spin" />
+                  <p className="text-xs text-[#808080]">Loading payments...</p>
                 </div>
               </div>
             ) : filteredPeople.length === 0 ? (
-              <EmptyState
-                icon="Users"
-                title="No results"
-                description="No team members match this filter."
-              />
+              <LightEmpty icon={Users} title="No results" description="No team members match this filter." />
             ) : (
-              <Stagger className="divide-y divide-border/50" staggerMs={d(TIMING.peopleStagger)}>
+              <Stagger className="divide-y divide-black/[0.06]" staggerMs={d(TIMING.peopleStagger)}>
                 {filteredPeople.map(person => (
                   <StaggerItem key={person.id}>
-                    <div className="flex items-center justify-between py-3 px-1 hover:bg-white/[0.02] transition-colors rounded-md -mx-1">
+                    <div className="flex items-center justify-between py-3 px-1 hover:bg-black/[0.03] transition-colors rounded-md -mx-1">
                       <div className="flex items-center gap-3 min-w-0">
-                        <Avatar className="size-9 ring-1 ring-white/[0.06]">
+                        <Avatar className="size-9 outline outline-1 -outline-offset-1 outline-black/[0.06]">
                           <AvatarImage src={person.avatar_url ?? undefined} alt={person.display_name ?? ''} />
-                          <AvatarFallback className="bg-secondary text-foreground text-[10px]">
+                          <AvatarFallback className="bg-[#f4f4f4] text-[#505050] text-[10px]">
                             {getInitials(person.display_name ?? '?')}
                           </AvatarFallback>
                         </Avatar>
                         <div className="min-w-0">
-                          <p className="text-sm font-medium text-foreground truncate">{person.display_name}</p>
-                          <p className="text-[11px] text-muted-foreground font-mono">{person.department ?? 'Unassigned'}</p>
+                          <p className="text-sm font-medium text-[#111] truncate">{person.display_name}</p>
+                          <p className="text-[11px] text-[#9a9a9a] font-mono">{person.department ?? 'Unassigned'}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-3 shrink-0">
                         {person.pendingAmount > 0 ? (
                           <>
-                            <span className="text-sm font-semibold tabular-nums" style={{ color: 'var(--color-seeko-accent)' }}>
+                            <span className="text-sm font-semibold tabular-nums text-[#0a63cc]">
                               {fmt(person.pendingAmount)}
                             </span>
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={() => handlePay(person)}
-                              className="text-seeko-accent hover:bg-seeko-accent/10 h-7 px-2.5 text-xs"
+                              className="text-[#0a63cc] hover:bg-[#0a63cc]/10 h-7 px-2.5 text-xs"
                             >
                               Pay
                             </Button>
                           </>
                         ) : person.hasPaid ? (
-                          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                            <CheckCircle2 className="size-3.5 text-emerald-500/60" />
+                          <span className="flex items-center gap-1.5 text-xs text-[#808080]">
+                            <CheckCircle2 className="size-3.5 text-[#0a63cc]" />
                             Paid
                           </span>
                         ) : (
-                          <span className="text-xs text-muted-foreground/30">No payments</span>
+                          <span className="text-xs text-[#c8c8c8]">No payments</span>
                         )}
                       </div>
                     </div>
@@ -477,27 +507,23 @@ export function PaymentsAdmin({ team }: PaymentsAdminProps) {
 
       {/* ── Recent Payments ── */}
       <FadeRise delay={d(TIMING.recent)}>
-        <Card>
+        <Card className="rounded-2xl border-0 bg-white shadow-seeko">
           <CardHeader className="pb-3">
             <div className="flex items-center gap-3">
-              <div className="flex size-9 items-center justify-center rounded-lg bg-white/[0.04]">
-                <CreditCard className="size-4.5 text-muted-foreground" />
+              <div className="flex size-9 items-center justify-center rounded-lg bg-[#f4f4f4]">
+                <CreditCard className="size-4.5 text-[#808080]" />
               </div>
               <div>
-                <CardTitle className="text-base font-semibold text-foreground">Recent Payments</CardTitle>
-                <CardDescription className="text-xs">Completed payments.</CardDescription>
+                <CardTitle className="text-base font-semibold text-[#111]">Recent Payments</CardTitle>
+                <CardDescription className="text-xs text-[#808080]">Completed payments.</CardDescription>
               </div>
             </div>
           </CardHeader>
           <CardContent className="pt-0">
             {recentPaid.length === 0 ? (
-              <EmptyState
-                icon="CreditCard"
-                title="No completed payments"
-                description="Payments will appear here once marked as paid."
-              />
+              <LightEmpty icon={CreditCard} title="No completed payments" description="Payments will appear here once marked as paid." />
             ) : (
-              <div className="divide-y divide-border/50">
+              <div className="divide-y divide-black/[0.06]">
                 {recentPaid.map(payment => (
                   <PaidPaymentRow
                     key={payment.id}
@@ -525,6 +551,8 @@ export function PaymentsAdmin({ team }: PaymentsAdminProps) {
         if (!open) fetchData();
       }} />
     </div>
+    </main>
+    </LightShell>
   );
 }
 
@@ -544,33 +572,33 @@ function PaidPaymentRow({ payment, externalPaypalEmail }: { payment: Payment; ex
         tabIndex={0}
         onClick={() => setExpanded(!expanded)}
         onKeyDown={e => { if (e.key === 'Enter') setExpanded(!expanded); }}
-        className="flex items-center justify-between py-3 px-1 w-full text-left hover:bg-white/[0.02] transition-colors cursor-pointer rounded-md -mx-1"
+        className="flex items-center justify-between py-3 px-1 w-full text-left hover:bg-black/[0.03] transition-colors cursor-pointer rounded-md -mx-1"
       >
         <div className="flex items-center gap-3 min-w-0">
-          <Avatar className="size-8 ring-1 ring-white/[0.06]">
+          <Avatar className="size-8 outline outline-1 -outline-offset-1 outline-black/[0.06]">
             <AvatarImage src={payment.recipient?.avatar_url ?? undefined} />
-            <AvatarFallback className="bg-secondary text-foreground text-[10px]">
+            <AvatarFallback className="bg-[#f4f4f4] text-[#505050] text-[10px]">
               {fallbackInitials}
             </AvatarFallback>
           </Avatar>
           <div className="min-w-0">
-            <p className="text-sm font-medium text-foreground truncate">{title}</p>
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-sm font-medium text-[#111] truncate">{title}</p>
+            <p className="text-[11px] text-[#808080]">
               {payment.items?.length ?? 0} item{(payment.items?.length ?? 0) !== 1 ? 's' : ''}
-              {payment.description && <span className="ml-1.5 text-muted-foreground/50">· {payment.description}</span>}
+              {payment.description && <span className="ml-1.5 text-[#9a9a9a]">· {payment.description}</span>}
             </p>
           </div>
         </div>
         <div className="flex items-center gap-3 shrink-0">
-          <span className="text-sm font-medium text-foreground tabular-nums">{fmt(Number(payment.amount))}</span>
-          <span className="text-[11px] text-muted-foreground/60 tabular-nums">
+          <span className="text-sm font-medium text-[#111] tabular-nums">{fmt(Number(payment.amount))}</span>
+          <span className="text-[11px] text-[#9a9a9a] tabular-nums">
             {new Date(payment.paid_at!).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
           </span>
           <motion.div
             animate={{ rotate: expanded ? 180 : 0 }}
             transition={{ duration: 0.2 }}
           >
-            <ChevronDown className="size-4 text-muted-foreground/40" />
+            <ChevronDown className="size-4 text-[#b3b3b3]" />
           </motion.div>
         </div>
       </span>
@@ -585,8 +613,8 @@ function PaidPaymentRow({ payment, externalPaypalEmail }: { payment: Payment; ex
           >
             <div className="pb-3 px-1 pt-1 space-y-2">
               {paypalEmail && (
-                <div className="flex items-center justify-between gap-3 rounded-lg bg-white/[0.02] px-3 py-2 text-xs">
-                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground">PayPal</span>
+                <div className="flex items-center justify-between gap-3 rounded-lg bg-[#f7f7f7] px-3 py-2 text-xs">
+                  <span className="text-[10px] text-[#9a9a9a]">PayPal</span>
                   <span
                     role="button"
                     tabIndex={0}
@@ -598,7 +626,7 @@ function PaidPaymentRow({ payment, externalPaypalEmail }: { payment: Payment; ex
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') { e.stopPropagation(); navigator.clipboard.writeText(paypalEmail); toast.success('PayPal email copied'); }
                     }}
-                    className="font-mono text-foreground/90 truncate hover:text-seeko-accent transition-colors cursor-copy"
+                    className="font-mono text-[#2a2a2a] truncate hover:text-[#0a63cc] transition-colors cursor-copy"
                     title="Click to copy"
                   >
                     {paypalEmail}
@@ -606,11 +634,11 @@ function PaidPaymentRow({ payment, externalPaypalEmail }: { payment: Payment; ex
                 </div>
               )}
               {payment.items && payment.items.length > 0 && (
-                <div className="rounded-lg bg-white/[0.02] p-3 space-y-2">
+                <div className="rounded-lg bg-[#f7f7f7] p-3 space-y-2">
                   {payment.items.map(item => (
                     <div key={item.id} className="flex items-center justify-between text-xs">
-                      <span className="text-muted-foreground">{item.label}</span>
-                      <span className="text-foreground font-medium tabular-nums">{fmt(Number(item.amount))}</span>
+                      <span className="text-[#808080]">{item.label}</span>
+                      <span className="text-[#111] font-medium tabular-nums">{fmt(Number(item.amount))}</span>
                     </div>
                   ))}
                 </div>
@@ -657,17 +685,17 @@ function PendingRequestRow({ payment, onAction }: { payment: Payment; onAction: 
         tabIndex={0}
         onClick={() => setExpanded(!expanded)}
         onKeyDown={e => { if (e.key === 'Enter') setExpanded(!expanded); }}
-        className="flex items-center justify-between py-3 px-1 w-full text-left hover:bg-white/[0.02] transition-colors cursor-pointer rounded-md -mx-1"
+        className="flex items-center justify-between py-3 px-1 w-full text-left hover:bg-black/[0.03] transition-colors cursor-pointer rounded-md -mx-1"
       >
         <div className="flex items-center gap-3 min-w-0">
-          <Avatar className="size-8 ring-1 ring-amber-500/20">
+          <Avatar className="size-8 outline outline-1 -outline-offset-1 outline-[#b8801a]/25">
             <AvatarImage src={payment.recipient?.avatar_url ?? undefined} />
-            <AvatarFallback className="bg-amber-500/10 text-amber-300 text-[10px]">
+            <AvatarFallback className="bg-[#b8801a]/10 text-[#946a00] text-[10px]">
               {(payment.recipient?.display_name ?? payment.recipient_email ?? '?').split(' ').map(p => p[0]).join('').toUpperCase().slice(0, 2)}
             </AvatarFallback>
           </Avatar>
           <div className="min-w-0">
-            <p className="text-sm font-medium text-foreground truncate">
+            <p className="text-sm font-medium text-[#111] truncate">
               {payment.recipient?.display_name ?? payment.recipient_email ?? 'External'}
             </p>
             {payment.recipient?.paypal_email ? (
@@ -682,25 +710,25 @@ function PendingRequestRow({ payment, onAction }: { payment: Payment; onAction: 
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') { e.stopPropagation(); navigator.clipboard.writeText(payment.recipient!.paypal_email!); toast.success('PayPal email copied'); }
                 }}
-                className="text-[11px] text-muted-foreground/50 font-mono truncate hover:text-muted-foreground transition-colors cursor-copy block"
+                className="text-[11px] text-[#9a9a9a] font-mono truncate hover:text-[#0a63cc] transition-colors cursor-copy block"
                 title="Click to copy"
               >
                 {payment.recipient.paypal_email}
               </span>
             ) : payment.recipient_email ? (
-              <span className="text-[11px] text-muted-foreground/50 font-mono truncate block">
+              <span className="text-[11px] text-[#9a9a9a] font-mono truncate block">
                 {payment.recipient_email}
               </span>
             ) : null}
           </div>
         </div>
         <div className="flex items-center gap-3 shrink-0">
-          <span className="text-sm font-semibold text-amber-400 tabular-nums">{fmt(Number(payment.amount))}</span>
+          <span className="text-sm font-semibold text-[#946a00] tabular-nums">{fmt(Number(payment.amount))}</span>
           <motion.div
             animate={{ rotate: expanded ? 180 : 0 }}
             transition={{ duration: 0.2 }}
           >
-            <ChevronDown className="size-4 text-muted-foreground/40" />
+            <ChevronDown className="size-4 text-[#b3b3b3]" />
           </motion.div>
         </div>
       </span>
@@ -715,14 +743,14 @@ function PendingRequestRow({ payment, onAction }: { payment: Payment; onAction: 
           >
             <div className="pb-3 px-1 pt-1 space-y-3">
               {payment.description && (
-                <p className="text-xs text-muted-foreground">{payment.description}</p>
+                <p className="text-xs text-[#808080]">{payment.description}</p>
               )}
               {payment.items && payment.items.length > 0 && (
-                <div className="rounded-lg bg-white/[0.02] p-3 space-y-2">
+                <div className="rounded-lg bg-[#f7f7f7] p-3 space-y-2">
                   {payment.items.map(item => (
                     <div key={item.id} className="flex items-center justify-between text-xs">
-                      <span className="text-muted-foreground">{item.label}</span>
-                      <span className="text-foreground font-medium tabular-nums">{fmt(Number(item.amount))}</span>
+                      <span className="text-[#808080]">{item.label}</span>
+                      <span className="text-[#111] font-medium tabular-nums">{fmt(Number(item.amount))}</span>
                     </div>
                   ))}
                 </div>
@@ -730,7 +758,7 @@ function PendingRequestRow({ payment, onAction }: { payment: Payment; onAction: 
               <div className="flex gap-2 pt-1">
                 <Button
                   size="sm"
-                  className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white h-8"
+                  className="gap-1.5 bg-[#111] hover:bg-[#2a2a2a] text-white h-8"
                   onClick={(e) => { e.stopPropagation(); handleAction('paid'); }}
                   disabled={acting}
                 >
@@ -740,7 +768,7 @@ function PendingRequestRow({ payment, onAction }: { payment: Payment; onAction: 
                 <Button
                   size="sm"
                   variant="ghost"
-                  className="gap-1.5 text-red-400 hover:text-red-300 hover:bg-red-500/10 h-8"
+                  className="gap-1.5 text-[#d4503e] hover:text-[#b8341f] hover:bg-[#d4503e]/10 h-8"
                   onClick={(e) => { e.stopPropagation(); handleAction('cancelled'); }}
                   disabled={acting}
                 >
@@ -757,16 +785,6 @@ function PendingRequestRow({ payment, onAction }: { payment: Payment; onAction: 
 }
 
 /* ── Invoice Request Row ── */
-const INVOICE_STATUS_COLOR: Record<string, string> = {
-  pending: 'text-muted-foreground border-border',
-  verified: 'text-blue-400 border-blue-500/30 bg-blue-500/10',
-  signed: 'text-amber-400 border-amber-500/30 bg-amber-500/10',
-  approved: 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10',
-  rejected: 'text-red-400 border-red-500/30 bg-red-500/10',
-  expired: 'text-muted-foreground/60 border-border',
-  revoked: 'text-red-400 border-red-500/30 bg-red-500/10',
-};
-
 const INVOICE_STATUS_LABEL: Record<string, string> = {
   pending: 'Pending',
   verified: 'Verified',
@@ -822,26 +840,26 @@ function InvoiceRequestRow({ invite, index, onAction }: { invite: InvoiceRequest
       initial={{ opacity: 0, x: -8 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ type: 'spring', visualDuration: 0.3, bounce: 0.1, delay: index * 0.04 }}
-      className="flex items-center justify-between py-3 px-1 hover:bg-white/[0.02] transition-colors rounded-md -mx-1"
+      className="flex items-center justify-between py-3 px-1 hover:bg-black/[0.03] transition-colors rounded-md -mx-1"
     >
       <div className="flex items-center gap-3 min-w-0">
-        <div className="flex size-8 items-center justify-center rounded-full bg-muted ring-1 ring-border">
-          <FileText className="size-3.5 text-muted-foreground" />
+        <div className="flex size-8 items-center justify-center rounded-full bg-[#f4f4f4] outline outline-1 -outline-offset-1 outline-black/[0.06]">
+          <FileText className="size-3.5 text-[#808080]" />
         </div>
         <div className="min-w-0">
-          <p className="text-sm font-medium text-foreground font-mono truncate">{invite.recipient_email}</p>
-          <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+          <p className="text-sm font-medium text-[#111] font-mono truncate">{invite.recipient_email}</p>
+          <div className="flex items-center gap-2 text-[11px] text-[#808080]">
             <span>{new Date(invite.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
             {prefilledTotal > 0 && (
               <>
-                <span className="text-muted-foreground/30">·</span>
+                <span className="text-[#c8c8c8]">·</span>
                 <span className="tabular-nums">{fmt(prefilledTotal)}</span>
               </>
             )}
           </div>
           {invite.paypal_email && (
-            <div className="flex items-center gap-1.5 mt-0.5 text-[11px] text-muted-foreground/70">
-              <span className="text-[9px] uppercase tracking-wider text-muted-foreground/50">PayPal</span>
+            <div className="flex items-center gap-1.5 mt-0.5 text-[11px] text-[#9a9a9a]">
+              <span className="text-[9px] text-[#b3b3b3]">PayPal</span>
               <span
                 role="button"
                 tabIndex={0}
@@ -853,7 +871,7 @@ function InvoiceRequestRow({ invite, index, onAction }: { invite: InvoiceRequest
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') { e.stopPropagation(); navigator.clipboard.writeText(invite.paypal_email!); toast.success('PayPal email copied'); }
                 }}
-                className="font-mono truncate hover:text-seeko-accent transition-colors cursor-copy"
+                className="font-mono truncate hover:text-[#0a63cc] transition-colors cursor-copy"
                 title="Click to copy"
               >
                 {invite.paypal_email}
@@ -863,7 +881,7 @@ function InvoiceRequestRow({ invite, index, onAction }: { invite: InvoiceRequest
         </div>
       </div>
       <div className="flex items-center gap-2.5 shrink-0">
-        <Badge variant="outline" className={cn('text-[10px] capitalize', INVOICE_STATUS_COLOR[displayStatus])}>
+        <Badge variant="outline" className={cn('text-[10px] capitalize', LIGHT_INVOICE_STATUS[displayStatus])}>
           {INVOICE_STATUS_LABEL[displayStatus] ?? displayStatus}
         </Badge>
         {canAct && !isExpired && (
@@ -872,24 +890,24 @@ function InvoiceRequestRow({ invite, index, onAction }: { invite: InvoiceRequest
               onClick={() => handleAction('resend')}
               disabled={!!actionLoading}
               title="Resend"
-              className="rounded p-1.5 hover:bg-muted transition-colors group"
+              className="rounded p-1.5 hover:bg-black/[0.04] transition-colors group"
             >
               {actionLoading === 'resend' ? (
-                <Loader2 className="size-3.5 animate-spin text-muted-foreground" />
+                <Loader2 className="size-3.5 animate-spin text-[#808080]" />
               ) : (
-                <RotateCw className="size-3.5 text-muted-foreground group-hover:text-foreground transition-colors" />
+                <RotateCw className="size-3.5 text-[#808080] group-hover:text-[#111] transition-colors" />
               )}
             </button>
             <button
               onClick={() => handleAction('revoke')}
               disabled={!!actionLoading}
               title="Revoke"
-              className="rounded p-1.5 hover:bg-destructive/10 transition-colors group"
+              className="rounded p-1.5 hover:bg-[#d4503e]/10 transition-colors group"
             >
               {actionLoading === 'revoke' ? (
-                <Loader2 className="size-3.5 animate-spin text-muted-foreground" />
+                <Loader2 className="size-3.5 animate-spin text-[#808080]" />
               ) : (
-                <Ban className="size-3.5 text-muted-foreground group-hover:text-destructive transition-colors" />
+                <Ban className="size-3.5 text-[#808080] group-hover:text-[#d4503e] transition-colors" />
               )}
             </button>
           </div>

@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import { BTN_SECONDARY } from './lightKit';
 
 interface DocDeleteConfirmProps {
   docId: string;
@@ -33,15 +35,20 @@ export function DocDeleteConfirm({ docId, docTitle, onDelete, onCancel }: DocDel
   };
 
   return (
-    <div className="flex items-center gap-3 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3">
-      <p className="flex-1 text-sm text-foreground">
+    <div className="flex items-center gap-3 rounded-lg border border-[#d4503e]/30 bg-[#d4503e]/5 px-4 py-3">
+      <p className="flex-1 text-sm text-[#111]">
         Delete <span className="font-medium">{docTitle}</span>?
       </p>
-      {error && <p className="text-xs text-destructive">{error}</p>}
-      <Button variant="ghost" size="sm" onClick={onCancel} disabled={deleting}>
+      {error && <p className="text-xs text-[#d4503e]">{error}</p>}
+      <Button variant="ghost" size="sm" onClick={onCancel} disabled={deleting} className={BTN_SECONDARY}>
         Cancel
       </Button>
-      <Button variant="destructive" size="sm" onClick={handleConfirm} disabled={deleting}>
+      <Button
+        size="sm"
+        onClick={handleConfirm}
+        disabled={deleting}
+        className={cn('bg-[#d4503e] text-white hover:bg-[#c04535]')}
+      >
         {deleting ? 'Deleting…' : 'Delete'}
       </Button>
     </div>

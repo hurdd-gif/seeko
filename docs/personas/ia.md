@@ -136,6 +136,24 @@ Short-lived registration/authentication challenges. One row per `(user_id, kind)
 
 RLS: enabled, no client policies — service-role-only.
 
+### 9. notes
+
+Inbox surface for the Studio Agents Quick Note composer (in-app, written as the admin user) and the Telegram bot (writes via service role, bypassing RLS). `note_status` enum is `open | archived`.
+
+| Column               | Type                | Notes                                                  |
+|----------------------|---------------------|--------------------------------------------------------|
+| id                   | uuid (PK)           | Auto-generated                                         |
+| body                 | text                | Note contents                                          |
+| status               | note_status enum    | `open` or `archived` (defaults to `open`)              |
+| source               | note_source enum    | Origin tag (`web` or `telegram`); defaults to `web`    |
+| created_by           | uuid (FK)           | → profiles.id (cascade delete)                         |
+| created_at           | timestamptz         | Defaults to `now()`                                    |
+| converted_to_task_id | uuid (FK, null)     | → tasks.id (null until promoted; set null on task delete) |
+
+Indexes: `(status, created_at desc)` for the inbox feed, `(created_by)` for per-author lookups.
+
+RLS: admin-only `select` / `insert` / `update` (checked against `profiles.is_admin`). The Telegram bot inserts via the service role, which bypasses RLS.
+
 ---
 
 ## Enum Types (dropdowns in Table Editor)
@@ -148,6 +166,8 @@ RLS: enabled, no client policies — service-role-only.
 | area_status    | Active, Planned, Complete                                 |
 | area_phase     | Alpha, Beta, Launch                                       |
 | payment_status | pending, paid, cancelled                                  |
+| note_status    | open, archived                                            |
+| note_source    | web, telegram                                             |
 
 ---
 
@@ -162,6 +182,7 @@ Supabase (seeko-studio project)
 │   └── payment_items ← task_id → tasks (optional)
 ├── passkey_credentials ← user_id → profiles (WebAuthn devices for /payments gate)
 ├── passkey_challenges  ← user_id → profiles (short-lived ceremony challenges)
+├── notes          ← created_by → profiles, converted_to_task_id → tasks (Studio Agents inbox)
 └── docs           ← self-referencing tree (parent_id)
     ├── Game Design Doc
     └── Onboarding
@@ -199,6 +220,7 @@ const docs  = await fetchDocs(parentId);  // optional parent filter, null = top-
 - `tasks`, `areas`, `docs`: any authenticated user can read
 - `passkey_credentials`: owner can `select` and `delete`; inserts/updates only via service role
 - `passkey_challenges`: RLS enabled, no client policies — service-role only
+- `notes`: admin-only select/insert/update; service role bypasses for the Telegram bot.
 
 Doc visibility is enforced in app logic: a doc is locked for a user unless they are admin, their department is in `restricted_department`, or their user id is in `granted_user_ids` (granted access despite department restriction).
 

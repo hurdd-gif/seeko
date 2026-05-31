@@ -2,15 +2,11 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
-import { FileText, Lock, Pencil, Trash2, Plus, Search, Clock, ChevronDown, Circle, Presentation, Share2, XCircle, RotateCcw, Eye, Calendar, Loader2 } from 'lucide-react';
+import { FileText, Lock, Pencil, Trash2, Plus, Search, Clock, ChevronDown, Presentation, Share2, XCircle, RotateCcw, Eye, Calendar, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { Doc } from '@/lib/types';
 import type { Profile } from '@/lib/types';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Dialog, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
 import {
   DropdownMenu,
@@ -19,8 +15,8 @@ import {
   DropdownMenuItem,
 } from '@/components/ui/dropdown-menu';
 import { motion, AnimatePresence } from 'motion/react';
-import { Stagger, StaggerItem, HoverCard } from '@/components/motion';
-import { EmptyState } from '@/components/ui/empty-state';
+import { Stagger, StaggerItem } from '@/components/motion';
+import { LIGHT_INPUT, BTN_PRIMARY } from '@/components/dashboard/lightKit';
 import { DocEditor } from './DocEditor';
 import { DeckEditor } from './DeckEditor';
 import { DeckViewer } from './DeckViewer';
@@ -78,13 +74,13 @@ function isRecentlyUpdated(doc: Doc): boolean {
  * ANIMATION STORYBOARD
  *
  *    0ms   list container visible
- *   70ms   stagger between each doc card (fade + rise)
- *  Hover   card lifts 2px (HoverCard)
+ *   70ms   stagger between each doc row (fade + rise)
+ *  Hover   row tints (hover:bg-black/[0.02])
  * ───────────────────────────────────────────────────────── */
 
 const LIST = {
-  staggerMs: 70,   // ms between each card
-  delayMs:   0,    // ms before first card
+  staggerMs: 70,   // ms between each row
+  delayMs:   0,    // ms before first row
 };
 
 const TAB_ORDER: Record<string, number> = { docs: 0, decks: 1, shared: 2 };
@@ -102,15 +98,16 @@ const tabSlideTransition = {
   opacity: { duration: 0.15 },
 };
 
+/* Light status chips — bg tint + restrained ink (no borders). */
 const SHARE_STATUS_COLORS: Record<string, string> = {
-  pending: 'border-yellow-500/30 text-yellow-400',
-  verified: 'border-emerald-500/30 text-emerald-400',
-  expired: 'border-muted-foreground/30 text-muted-foreground',
-  revoked: 'border-red-500/30 text-red-400',
+  pending: 'bg-[#f5a623]/10 text-[#b8801a]',
+  verified: 'bg-[#0d7aff]/10 text-[#0d7aff]',
+  expired: 'bg-black/[0.04] text-[#9a9a9a]',
+  revoked: 'bg-[#d4503e]/10 text-[#d4503e]',
 };
 
 /* ─────────────────────────────────────────────────────────
- * FilterPill (matches Tasks page pattern)
+ * FilterPill (light — sentence-case, no uppercase eyebrow)
  * ───────────────────────────────────────────────────────── */
 
 function FilterPill({
@@ -129,23 +126,26 @@ function FilterPill({
       <DropdownMenuTrigger asChild>
         <button
           className={cn(
-            'inline-flex items-center gap-1.5 rounded-full border px-4 py-1.5 text-xs font-medium uppercase tracking-wide transition-colors',
+            'inline-flex h-9 items-center gap-1.5 rounded-full border px-4 text-[13px] font-medium transition-[color,background-color,border-color] duration-150',
             value !== 'all'
-              ? 'border-foreground/20 bg-muted text-foreground'
-              : 'border-border text-muted-foreground hover:text-foreground hover:border-foreground/20'
+              ? 'border-black/15 bg-black/[0.04] text-[#111]'
+              : 'border-black/[0.08] text-[#808080] hover:text-[#111] hover:border-black/15'
           )}
         >
           {value !== 'all' ? options.find(o => o.value === value)?.label ?? label : label}
-          <ChevronDown className="size-3 text-muted-foreground" />
+          <ChevronDown className="size-3 text-[#9a9a9a]" />
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start">
+      <DropdownMenuContent
+        align="start"
+        className="border-black/[0.06] bg-white/95 text-[#111] shadow-seeko-pop"
+      >
         {options.map(opt => (
           <DropdownMenuItem
             key={opt.value}
             onClick={() => onChange(opt.value)}
             selected={opt.value === value}
-            className="text-xs"
+            className="text-[13px] text-[#505050] hover:bg-black/[0.04] hover:text-[#111] focus:bg-black/[0.04] focus:text-[#111]"
           >
             {opt.label}
           </DropdownMenuItem>
@@ -352,10 +352,11 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, is
     trigger('success');
   };
 
-  /* ── Render: unlocked doc/deck card ───────────────────── */
-  const renderDocCard = (doc: Doc) => {
+  /* ── Render: unlocked doc/deck row (inside a divide-y group card) ── */
+  const renderDocRow = (doc: Doc) => {
     const recent = isRecentlyUpdated(doc);
     const isDeck = doc.type === 'deck';
+    const hasThumb = isDeck && !!doc.slides?.[0];
     const handleEdit = (e: React.MouseEvent) => {
       e.stopPropagation();
       if (isDeck) setEditingDeck(doc);
@@ -364,98 +365,94 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, is
     return (
       <StaggerItem key={doc.id}>
         {deletingId === doc.id ? (
-          <DocDeleteConfirm
-            docId={doc.id}
-            docTitle={doc.title}
-            onDelete={handleDelete}
-            onCancel={() => setDeletingId(null)}
-          />
+          <div className="px-4 py-3">
+            <DocDeleteConfirm
+              docId={doc.id}
+              docTitle={doc.title}
+              onDelete={handleDelete}
+              onCancel={() => setDeletingId(null)}
+            />
+          </div>
         ) : (
-          <HoverCard>
-            <Card
-              className="group cursor-pointer transition-colors hover:border-foreground/20"
-              onClick={() => setSelected(doc)}
-            >
-              <CardContent className={cn("flex items-start gap-3.5 p-4", isDeck && doc.slides?.[0] && "flex-col p-0 pb-3")}>
-                {/* Deck thumbnail — replaces icon when present */}
-                {isDeck && doc.slides?.[0] && (
-                  <div className="relative w-full aspect-[16/9] rounded-t-lg overflow-hidden bg-secondary">
-                    <img src={doc.slides[0].url} alt="" className="w-full h-full object-cover" />
-                    {recent && (
-                      <span className="absolute top-2 right-2 size-2 rounded-full bg-seeko-accent" />
-                    )}
-                  </div>
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={() => setSelected(doc)}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelected(doc); } }}
+            className="group flex cursor-pointer items-start gap-3.5 px-4 py-3.5 transition-colors duration-150 hover:bg-black/[0.02] focus-visible:bg-black/[0.02] focus-visible:outline-none"
+          >
+            {/* Left: deck thumbnail or icon container */}
+            {hasThumb ? (
+              <div className="relative h-10 w-[68px] shrink-0 overflow-hidden rounded-md bg-[#f4f4f4] outline outline-1 -outline-offset-1 outline-black/[0.06]">
+                <img src={doc.slides![0].url} alt="" className="h-full w-full object-cover" />
+                {recent && (
+                  <span className="absolute right-1 top-1 size-2 rounded-full bg-[#0d7aff] ring-2 ring-white" />
                 )}
-                {/* Icon row — only for docs or decks without thumbnails */}
-                {(!isDeck || !doc.slides?.[0]) && (
-                  <div className="relative flex size-9 shrink-0 items-center justify-center rounded-md bg-secondary">
-                    {isDeck ? <Presentation className="size-4 text-foreground" /> : <FileText className="size-4 text-foreground" />}
-                    {recent && (
-                      <span className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-seeko-accent" />
-                    )}
-                  </div>
+              </div>
+            ) : (
+              <div className="relative flex size-9 shrink-0 items-center justify-center rounded-md bg-[#f4f4f4]">
+                {isDeck ? <Presentation className="size-4 text-[#808080]" /> : <FileText className="size-4 text-[#808080]" />}
+                {recent && (
+                  <span className="absolute -right-0.5 -top-0.5 size-2 rounded-full bg-[#0d7aff] ring-2 ring-white" />
                 )}
-                <div className={cn("flex flex-col gap-1 min-w-0 flex-1", isDeck && doc.slides?.[0] && "px-3")}>
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex flex-wrap items-center gap-2 min-w-0">
-                      <p className="text-sm font-medium text-foreground truncate">{doc.title}</p>
-                      {isDeck && doc.slides && (
-                        <span className="text-[10px] text-muted-foreground/50 font-mono">{doc.slides.length} slides</span>
-                      )}
-                      {recent && (
-                        <Badge variant="outline" className="text-[10px] font-medium text-seeko-accent border-seeko-accent/25 shrink-0">Updated</Badge>
-                      )}
-                      {doc.restricted_department?.map(dept => (
-                        <Badge key={dept} variant="outline" className="text-xs font-normal text-muted-foreground shrink-0">{dept}</Badge>
-                      ))}
-                    </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      {(doc.updated_at || doc.created_at) && (
-                        <span className="text-[11px] text-muted-foreground/50 hidden sm:inline">
-                          {timeAgo(doc.updated_at ?? doc.created_at!)}
-                        </span>
-                      )}
-                      {isAdmin && (
-                        <>
-                          <button
-                            type="button"
-                            title="Edit"
-                            onClick={handleEdit}
-                            className="flex size-7 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground opacity-0 group-hover:opacity-100"
-                          >
-                            <Pencil className="size-3.5" />
-                          </button>
-                          <button
-                            type="button"
-                            title="Delete"
-                            onClick={(e) => { e.stopPropagation(); setDeletingId(doc.id); }}
-                            className="flex size-7 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive opacity-0 group-hover:opacity-100"
-                          >
-                            <Trash2 className="size-3.5" />
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                  {isAdmin && doc.granted_user_ids?.length ? (
-                    <p className="text-[11px] text-muted-foreground/70">
-                      Also granted: {team.filter(p => doc.granted_user_ids?.includes(p.id)).map(p => p.display_name ?? 'Unknown').join(', ')}
-                    </p>
-                  ) : null}
-                  {!isDeck && doc.content ? (
-                    <p className="text-xs text-muted-foreground/80 leading-relaxed line-clamp-2">
-                      {stripHtml(doc.content).slice(0, 200)}
-                    </p>
-                  ) : null}
-                  {isDeck && doc.content ? (
-                    <p className="text-xs text-muted-foreground/80 leading-relaxed line-clamp-1">
-                      {stripHtml(doc.content).slice(0, 100)}
-                    </p>
-                  ) : null}
+              </div>
+            )}
+
+            {/* Right: title + meta */}
+            <div className="flex min-w-0 flex-1 flex-col gap-1">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex min-w-0 flex-wrap items-center gap-2">
+                  <p className="truncate text-[14px] font-medium text-[#111]">{doc.title}</p>
+                  {isDeck && doc.slides && (
+                    <span className="font-mono text-[10px] tabular-nums text-[#b0b0b0]">{doc.slides.length} slides</span>
+                  )}
+                  {recent && (
+                    <span className="shrink-0 rounded-full bg-[#0d7aff]/10 px-2 py-0.5 text-[10px] font-medium text-[#0d7aff]">Updated</span>
+                  )}
+                  {doc.restricted_department?.map(dept => (
+                    <span key={dept} className="shrink-0 rounded-full bg-black/[0.04] px-2 py-0.5 text-[11px] font-medium text-[#808080]">{dept}</span>
+                  ))}
                 </div>
-              </CardContent>
-            </Card>
-          </HoverCard>
+                <div className="flex shrink-0 items-center gap-1.5">
+                  {(doc.updated_at || doc.created_at) && (
+                    <span className="hidden text-[11px] tabular-nums text-[#9a9a9a] sm:inline">
+                      {timeAgo(doc.updated_at ?? doc.created_at!)}
+                    </span>
+                  )}
+                  {isAdmin && (
+                    <>
+                      <button
+                        type="button"
+                        title="Edit"
+                        onClick={handleEdit}
+                        className="flex size-7 items-center justify-center rounded-md text-[#9a9a9a] opacity-0 transition-[color,background-color,opacity] duration-150 hover:bg-black/[0.04] hover:text-[#111] group-hover:opacity-100"
+                      >
+                        <Pencil className="size-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        title="Delete"
+                        onClick={(e) => { e.stopPropagation(); setDeletingId(doc.id); }}
+                        className="flex size-7 items-center justify-center rounded-md text-[#9a9a9a] opacity-0 transition-[color,background-color,opacity] duration-150 hover:bg-[#d4503e]/10 hover:text-[#d4503e] group-hover:opacity-100"
+                      >
+                        <Trash2 className="size-3.5" />
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+              {isAdmin && doc.granted_user_ids?.length ? (
+                <p className="text-[11px] text-[#9a9a9a]">
+                  Also granted: {team.filter(p => doc.granted_user_ids?.includes(p.id)).map(p => p.display_name ?? 'Unknown').join(', ')}
+                </p>
+              ) : null}
+              {doc.content ? (
+                <p className={cn('text-[13px] leading-relaxed text-[#808080]', isDeck ? 'line-clamp-1' : 'line-clamp-2')}>
+                  {stripHtml(doc.content).slice(0, isDeck ? 100 : 200)}
+                </p>
+              ) : null}
+            </div>
+          </div>
         )}
       </StaggerItem>
     );
@@ -465,59 +462,40 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, is
   const deckCount = docs.filter(d => d.type === 'deck').length;
   const sharedCount = sharedLinks.length;
 
+  /* Light segmented tab — active chip is white-on-tint with shadow-seeko. */
+  const tabBtn = (active: boolean) =>
+    cn(
+      'rounded-full px-3.5 h-8 text-[13px] font-medium transition-[color,background-color,box-shadow] duration-150',
+      active ? 'bg-white text-[#111] shadow-seeko' : 'text-[#808080] hover:text-[#111]'
+    );
+
   return (
     <>
       {/* Tab toggle + New button */}
-      <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-        <div className="flex items-center gap-1 rounded-lg bg-secondary/50 p-0.5">
-          <button
-            type="button"
-            onClick={() => setViewMode('docs')}
-            className={cn(
-              'rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
-              viewMode === 'docs'
-                ? 'bg-card text-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground'
-            )}
-          >
-            Documents{docCount > 0 && <span className="ml-1 text-muted-foreground/60">{docCount}</span>}
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <div className="inline-flex items-center gap-1 rounded-full bg-black/[0.04] p-1">
+          <button type="button" onClick={() => setViewMode('docs')} className={tabBtn(viewMode === 'docs')}>
+            Documents{docCount > 0 && <span className="ml-1 tabular-nums text-[#9a9a9a]">{docCount}</span>}
           </button>
-          <button
-            type="button"
-            onClick={() => setViewMode('decks')}
-            className={cn(
-              'rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
-              viewMode === 'decks'
-                ? 'bg-card text-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground'
-            )}
-          >
-            Decks{deckCount > 0 && <span className="ml-1 text-muted-foreground/60">{deckCount}</span>}
+          <button type="button" onClick={() => setViewMode('decks')} className={tabBtn(viewMode === 'decks')}>
+            Decks{deckCount > 0 && <span className="ml-1 tabular-nums text-[#9a9a9a]">{deckCount}</span>}
           </button>
           {isAdmin && (
-            <button
-              type="button"
-              onClick={() => setViewMode('shared')}
-              className={cn(
-                'rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
-                viewMode === 'shared'
-                  ? 'bg-card text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground'
-              )}
-            >
-              Shared{sharedCount > 0 && <span className="ml-1 text-muted-foreground/60">{sharedCount}</span>}
+            <button type="button" onClick={() => setViewMode('shared')} className={tabBtn(viewMode === 'shared')}>
+              Shared{sharedCount > 0 && <span className="ml-1 tabular-nums text-[#9a9a9a]">{sharedCount}</span>}
             </button>
           )}
         </div>
         {isAdmin && viewMode !== 'shared' && (
-          <Button
-            size="sm"
+          <button
+            type="button"
             aria-label={viewMode === 'decks' ? 'New Deck' : 'New Document'}
             onClick={() => viewMode === 'decks' ? setEditingDeck('new') : setEditingDoc('new')}
+            className={cn(BTN_PRIMARY, 'inline-flex items-center gap-1.5 pl-3.5 pr-4')}
           >
-            <Plus className="size-3.5 sm:mr-1.5" />
+            <Plus className="size-3.5" />
             <span className="hidden sm:inline">{viewMode === 'decks' ? 'New Deck' : 'New Document'}</span>
-          </Button>
+          </button>
         )}
       </div>
 
@@ -536,51 +514,51 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, is
         >
           {sharedLoading ? (
             <div className="flex items-center justify-center py-12">
-              <div className="size-5 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-foreground" />
+              <div className="size-5 animate-spin rounded-full border-2 border-black/10 border-t-[#808080]" />
             </div>
           ) : sharedLinks.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-8 text-center">No shared links yet</p>
+            <p className="py-8 text-center text-[13px] text-[#808080]">No shared links yet</p>
           ) : (
             <>
               {(sharedExpanded ? sharedLinks : sharedLinks.slice(0, 3)).map(link => (
-                  <Card key={link.id}>
-                    <CardContent className="flex items-center gap-3 p-3">
-                      <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-secondary">
+                  <div key={link.id} className="overflow-hidden rounded-xl bg-white shadow-seeko">
+                    <div className="flex items-center gap-3 p-3">
+                      <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-[#f4f4f4]">
                         {link.doc_type === 'deck' ? (
-                          <Presentation className="size-3.5 text-foreground" />
+                          <Presentation className="size-3.5 text-[#808080]" />
                         ) : (
-                          <FileText className="size-3.5 text-foreground" />
+                          <FileText className="size-3.5 text-[#808080]" />
                         )}
                       </div>
-                      <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+                      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                         <div className="flex items-center gap-2">
-                          <p className="text-sm font-medium text-foreground truncate">{link.doc_title ?? 'Untitled'}</p>
-                          <Badge variant="outline" className={cn('text-[10px] font-medium capitalize', SHARE_STATUS_COLORS[link.status] ?? SHARE_STATUS_COLORS.expired)}>
+                          <p className="truncate text-sm font-medium text-[#111]">{link.doc_title ?? 'Untitled'}</p>
+                          <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-medium capitalize', SHARE_STATUS_COLORS[link.status] ?? SHARE_STATUS_COLORS.expired)}>
                             {link.status}
-                          </Badge>
+                          </span>
                         </div>
-                        <div className="flex items-center gap-3 text-[11px] text-muted-foreground/70">
+                        <div className="flex items-center gap-3 text-[11px] text-[#9a9a9a]">
                           <span className="truncate">{link.recipient_email}</span>
-                          <span className="flex items-center gap-1 shrink-0">
+                          <span className="flex shrink-0 items-center gap-1 tabular-nums">
                             <Eye className="size-3" />
                             {link.view_count ?? 0}
                           </span>
-                          <span className="shrink-0">{timeAgo(link.created_at)}</span>
+                          <span className="shrink-0 tabular-nums">{timeAgo(link.created_at)}</span>
                           {link.expires_at && (link.status === 'pending' || link.status === 'verified') && (
-                            <span className="flex items-center gap-1 shrink-0">
+                            <span className="flex shrink-0 items-center gap-1 tabular-nums">
                               <Clock className="size-3" />
                               {timeUntil(link.expires_at)}
                             </span>
                           )}
                         </div>
                       </div>
-                      <div className="flex items-center gap-1.5 shrink-0">
+                      <div className="flex shrink-0 items-center gap-1.5">
                         {(link.status === 'pending' || link.status === 'verified') && (
                           <button
                             type="button"
                             title="Revoke"
                             onClick={() => handleRevoke(link.id)}
-                            className="flex size-7 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                            className="flex size-7 items-center justify-center rounded-md text-[#9a9a9a] transition-[color,background-color] duration-150 hover:bg-[#d4503e]/10 hover:text-[#d4503e]"
                           >
                             <XCircle className="size-3.5" />
                           </button>
@@ -590,7 +568,7 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, is
                             type="button"
                             title="Resend"
                             onClick={() => handleResend(link.id)}
-                            className="flex size-7 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                            className="flex size-7 items-center justify-center rounded-md text-[#9a9a9a] transition-[color,background-color] duration-150 hover:bg-black/[0.04] hover:text-[#111]"
                           >
                             <RotateCcw className="size-3.5" />
                           </button>
@@ -604,13 +582,13 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, is
                               setDeadlineDate(current);
                               setEditingDeadlineId(editingDeadlineId === link.id ? null : link.id);
                             }}
-                            className="flex size-7 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                            className="flex size-7 items-center justify-center rounded-md text-[#9a9a9a] transition-[color,background-color] duration-150 hover:bg-black/[0.04] hover:text-[#111]"
                           >
                             <Calendar className="size-3.5" />
                           </button>
                         )}
                       </div>
-                    </CardContent>
+                    </div>
                     <AnimatePresence>
                       {editingDeadlineId === link.id && (
                         <motion.div
@@ -618,10 +596,10 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, is
                           animate={{ opacity: 1, height: 'auto' }}
                           exit={{ opacity: 0, height: 0 }}
                           transition={{ type: 'spring', visualDuration: 0.3, bounce: 0 }}
-                          className="overflow-hidden border-t border-border/50"
+                          className="overflow-hidden border-t border-black/[0.06]"
                         >
-                          <div className="p-3 flex flex-col gap-2">
-                            <p className="text-xs text-muted-foreground">
+                          <div className="flex flex-col gap-2 p-3">
+                            <p className="text-xs text-[#808080]">
                               Current expiry: {link.expires_at ? new Date(link.expires_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'None'}
                             </p>
                             <DatePicker
@@ -630,35 +608,35 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, is
                               minDate={(() => { const d = new Date(); d.setDate(d.getDate() + 1); d.setHours(0,0,0,0); return d; })()}
                               dateLabel="New deadline"
                             />
-                            <div className="flex items-center gap-2 mt-1">
-                              <Button
-                                size="sm"
+                            <div className="mt-1 flex items-center gap-2">
+                              <button
+                                type="button"
                                 disabled={!deadlineDate || deadlineLoading}
                                 onClick={() => handleUpdateDeadline(link.id, deadlineDate)}
-                                className="gap-1.5 bg-seeko-accent text-black hover:bg-seeko-accent/90"
+                                className={cn(BTN_PRIMARY, 'inline-flex items-center gap-1.5 disabled:opacity-50')}
                               >
                                 {deadlineLoading ? <Loader2 className="size-3 animate-spin" /> : null}
                                 Update
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
+                              </button>
+                              <button
+                                type="button"
                                 onClick={() => { setEditingDeadlineId(null); setDeadlineDate(''); }}
+                                className="rounded-full px-4 h-9 text-[13px] font-medium text-[#808080] transition-colors duration-150 hover:text-[#111]"
                               >
                                 Cancel
-                              </Button>
+                              </button>
                             </div>
                           </div>
                         </motion.div>
                       )}
                     </AnimatePresence>
-                  </Card>
+                  </div>
               ))}
               {sharedLinks.length > 3 && (
                 <button
                   type="button"
                   onClick={() => setSharedExpanded(prev => !prev)}
-                  className="text-xs text-muted-foreground hover:text-foreground transition-colors py-1.5"
+                  className="py-1.5 text-[13px] text-[#808080] transition-colors duration-150 hover:text-[#111]"
                 >
                   {sharedExpanded ? 'Show less' : `Show ${sharedLinks.length - 3} more`}
                 </button>
@@ -678,26 +656,36 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, is
           exit="exit"
           transition={tabSlideTransition}
         >
-        <EmptyState
-          icon="FileText"
-          title={viewMode === 'decks' ? 'No decks yet' : 'No documents yet'}
-          description={isAdmin
-            ? (viewMode === 'decks'
-              ? 'Upload a PDF to create your first deck.'
-              : 'Create your first document to share specs and resources with the team.')
-            : (viewMode === 'decks'
-              ? 'Decks will appear here when the team uploads them.'
-              : 'Your lead can add team documents. Check back later or ask them to create one.')}
-          action={isAdmin ? (
-            <Button
-              size="sm"
-              onClick={() => viewMode === 'decks' ? setEditingDeck('new') : setEditingDoc('new')}
-            >
-              <Plus className="size-3.5 mr-1.5" />
-              {viewMode === 'decks' ? 'Upload a deck' : 'Create your first document'}
-            </Button>
-          ) : undefined}
-        />
+          {/* Empty state — custom light (shared EmptyState bakes near-white text) */}
+          <div className="flex flex-col items-center gap-3 rounded-2xl bg-white px-8 py-14 text-center shadow-seeko">
+            <div className="flex size-12 items-center justify-center rounded-full bg-[#0d7aff]/10">
+              <FileText className="size-5 text-[#0d7aff]" />
+            </div>
+            <div className="flex flex-col gap-1">
+              <p className="text-[15px] font-semibold text-[#111]">
+                {viewMode === 'decks' ? 'No decks yet' : 'No documents yet'}
+              </p>
+              <p className="max-w-sm text-[13px] text-[#808080]">
+                {isAdmin
+                  ? (viewMode === 'decks'
+                    ? 'Upload a PDF to create your first deck.'
+                    : 'Create your first document to share specs and resources with the team.')
+                  : (viewMode === 'decks'
+                    ? 'Decks will appear here when the team uploads them.'
+                    : 'Your lead can add team documents. Check back later or ask them to create one.')}
+              </p>
+            </div>
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={() => viewMode === 'decks' ? setEditingDeck('new') : setEditingDoc('new')}
+                className={cn(BTN_PRIMARY, 'mt-1 inline-flex items-center gap-1.5 pl-3.5 pr-4')}
+              >
+                <Plus className="size-3.5" />
+                {viewMode === 'decks' ? 'Upload a deck' : 'Create your first document'}
+              </button>
+            )}
+          </div>
         </motion.div>
       ) : (
         <motion.div
@@ -710,15 +698,15 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, is
           transition={tabSlideTransition}
         >
           {/* Search + filter row */}
-          <div className="flex flex-wrap items-center gap-2 mb-4">
-            <div className="relative flex-1 min-w-[200px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
-              <Input
+          <div className="mb-5 flex flex-wrap items-center gap-2">
+            <div className="relative min-w-[200px] flex-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-[#9a9a9a]" />
+              <input
                 type="search"
                 placeholder={viewMode === 'decks' ? 'Search decks…' : 'Search documents…'}
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="pl-9 h-9 w-full"
+                className={cn(LIGHT_INPUT, 'h-9 w-full pl-9 pr-3 text-[13px] outline-none')}
               />
             </div>
             <FilterPill
@@ -733,51 +721,53 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, is
           </div>
 
           {sortedDocs.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-8 text-center">
+            <p className="py-8 text-center text-[13px] text-[#808080]">
               No documents match your search or filter.
             </p>
           ) : (
-            <div className="flex flex-col gap-6">
-              {/* Grouped unlocked docs */}
+            <div className="flex flex-col gap-7">
+              {/* Grouped unlocked docs — one white card per department, divide-y rows */}
               {grouped.groups.map(([dept, deptDocs]) => (
                 <div key={dept}>
-                  <div className="flex items-center gap-2 mb-2.5">
-                    <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/60">{dept}</p>
-                    <div className="flex-1 h-px bg-border/50" />
-                    <span className="text-[11px] text-muted-foreground/40">{deptDocs.length}</span>
+                  <div className="mb-2.5 flex items-center gap-2 px-1">
+                    <span className="text-[13px] font-medium text-[#808080]">{dept}</span>
+                    <span className="text-[12px] tabular-nums text-[#9a9a9a]">{deptDocs.length}</span>
                   </div>
-                  <Stagger
-                    className="flex flex-col gap-2"
-                    staggerMs={LIST.staggerMs / 1000}
-                    delayMs={LIST.delayMs / 1000}
-                  >
-                    {deptDocs.map(renderDocCard)}
-                  </Stagger>
+                  <section className="overflow-hidden rounded-2xl bg-white shadow-seeko">
+                    <Stagger
+                      className="divide-y divide-black/[0.06]"
+                      staggerMs={LIST.staggerMs / 1000}
+                      delayMs={LIST.delayMs / 1000}
+                    >
+                      {deptDocs.map(renderDocRow)}
+                    </Stagger>
+                  </section>
                 </div>
               ))}
 
               {/* Condensed locked docs */}
               {grouped.locked.length > 0 && (
                 <div>
-                  <div className="flex items-center gap-2 mb-2.5">
-                    <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/40">Restricted</p>
-                    <div className="flex-1 h-px bg-border/50" />
-                    <span className="text-[11px] text-muted-foreground/40">{grouped.locked.length}</span>
+                  <div className="mb-2.5 flex items-center gap-2 px-1">
+                    <span className="text-[13px] font-medium text-[#9a9a9a]">Restricted</span>
+                    <span className="text-[12px] tabular-nums text-[#b0b0b0]">{grouped.locked.length}</span>
                   </div>
-                  <div className="flex flex-col gap-1">
-                    {grouped.locked.map(doc => (
-                      <div
-                        key={doc.id}
-                        className="flex items-center gap-2.5 rounded-lg px-3 py-2 bg-muted/10"
-                      >
-                        <Lock className="size-3.5 text-muted-foreground/40 shrink-0" />
-                        <p className="text-sm text-muted-foreground/50 truncate flex-1">{doc.title}</p>
-                        {doc.restricted_department?.map(dept => (
-                          <span key={dept} className="text-[10px] text-muted-foreground/30 shrink-0">{dept}</span>
-                        ))}
-                      </div>
-                    ))}
-                  </div>
+                  <section className="overflow-hidden rounded-2xl bg-white shadow-seeko">
+                    <div className="divide-y divide-black/[0.06]">
+                      {grouped.locked.map(doc => (
+                        <div
+                          key={doc.id}
+                          className="flex cursor-default items-center gap-2.5 px-4 py-3"
+                        >
+                          <Lock className="size-3.5 shrink-0 text-[#b0b0b0]" />
+                          <p className="flex-1 truncate text-[13px] text-[#9a9a9a]">{doc.title}</p>
+                          {doc.restricted_department?.map(dept => (
+                            <span key={dept} className="shrink-0 text-[11px] text-[#b0b0b0]">{dept}</span>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  </section>
                 </div>
               )}
             </div>
@@ -791,12 +781,13 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, is
         open={!!selected}
         onOpenChange={() => setSelected(null)}
         resizable
+        light
         actions={isAdmin && selected ? (
           <button
             type="button"
             title="Share externally"
             onClick={() => setShareDoc(selected)}
-            className="flex size-8 items-center justify-center rounded-md opacity-60 transition-opacity hover:opacity-100 hover:bg-white/[0.06] focus:outline-none"
+            className="flex size-8 items-center justify-center rounded-md text-[#505050] transition-[background-color,opacity] duration-150 hover:bg-black/[0.04] focus:outline-none"
           >
             <Share2 className="size-3.5" />
           </button>
@@ -807,8 +798,8 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, is
             <DialogClose onClose={() => setSelected(null)} />
             <DialogHeader>
               <div className="flex items-center gap-2 pr-20">
-                <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-secondary">
-                  {selected.type === 'deck' ? <Presentation className="size-4 text-foreground" /> : <FileText className="size-4 text-foreground" />}
+                <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-[#f4f4f4]">
+                  {selected.type === 'deck' ? <Presentation className="size-4 text-[#808080]" /> : <FileText className="size-4 text-[#808080]" />}
                 </div>
                 <DialogTitle>{selected.title}</DialogTitle>
               </div>
@@ -820,18 +811,18 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, is
                 <DocContent html={selected.content} />
               ) : (
                 <div className="flex flex-col items-center gap-3 py-16 text-center">
-                  <div className="flex size-12 items-center justify-center rounded-xl bg-secondary">
-                    <FileText className="size-5 text-muted-foreground" />
+                  <div className="flex size-12 items-center justify-center rounded-xl bg-[#f4f4f4]">
+                    <FileText className="size-5 text-[#9a9a9a]" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-foreground">No content yet</p>
-                    <p className="text-xs text-muted-foreground mt-1">Edit this document to add content.</p>
+                    <p className="text-sm font-medium text-[#111]">No content yet</p>
+                    <p className="text-xs text-[#808080] mt-1">Edit this document to add content.</p>
                   </div>
                   {isAdmin && (
                     <button
                       type="button"
                       onClick={() => { setSelected(null); setEditingDoc(selected); }}
-                      className="mt-2 text-xs font-medium text-seeko-accent hover:text-seeko-accent/80 transition-colors"
+                      className="mt-2 text-xs font-medium text-[#0d7aff] hover:text-[#0a63cc] transition-colors"
                     >
                       Edit document
                     </button>
@@ -844,7 +835,7 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, is
       </Dialog>
 
       {/* Edit / New document dialog */}
-      <Dialog open={editingDoc !== null} onOpenChange={() => setEditingDoc(null)} resizable>
+      <Dialog open={editingDoc !== null} onOpenChange={() => setEditingDoc(null)} resizable light>
         {editingDoc !== null && (
           <>
             <DialogClose onClose={() => setEditingDoc(null)} />
@@ -862,7 +853,7 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, is
       </Dialog>
 
       {/* Edit / New deck dialog */}
-      <Dialog open={editingDeck !== null} onOpenChange={() => setEditingDeck(null)} resizable>
+      <Dialog open={editingDeck !== null} onOpenChange={() => setEditingDeck(null)} resizable light>
         {editingDeck !== null && (
           <>
             <DialogClose onClose={() => setEditingDeck(null)} />

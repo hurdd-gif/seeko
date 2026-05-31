@@ -30,16 +30,20 @@
   --color-sidebar-border:    #2a2a2a;
 
   /* Seeko accent */
-  --color-seeko-accent:      #6ee7b7;
+  --color-seeko-accent:      #0d7aff;
+
+  /* Paper redesign — glass surface + eyebrow gray */
+  --color-glass:             rgba(32, 32, 32, 0.9);
+  --color-eyebrow:           #ADA9A3;
 
   /* Status dots (used inline, not as badges) */
-  --color-status-complete:   #6ee7b7;
+  --color-status-complete:   #0d7aff;
   --color-status-progress:   #fbbf24;
   --color-status-review:     #93c5fd;
   --color-status-blocked:    #f87171;
 
   /* Department colors (UX persona — filters, tags, labels) */
-  --color-dept-coding:         #6ee7b7;
+  --color-dept-coding:         #0d7aff;
   --color-dept-visual-art:     #93c5fd;
   --color-dept-ui-ux:          #c4b5fd;
   --color-dept-animation:      #fbbf24;
@@ -52,6 +56,7 @@
 
   /* Border radius */
   --radius: 0.5rem;
+  --radius-pill: var(--radius-pill);
 
   /* Surface opacity scale */
   --opacity-subtle:   0.02;
@@ -62,8 +67,26 @@
   --opacity-visible:  0.15;
 
   /* Accent shadows */
-  --shadow-accent-glow:  0 0 12px rgba(110, 231, 183, 0.04);
-  --shadow-accent-inset: inset 0 0 0 1px rgba(110, 231, 183, 0.2);
+  --shadow-accent-glow:  0 0 12px rgba(13, 122, 255, 0.04);
+  --shadow-accent-inset: inset 0 0 0 1px rgba(13, 122, 255, 0.2);
+
+  /* Canonical SEEKO drop shadow — the chrome elevation for light surfaces
+     (overview top bar, nav tabs, cards, and dropdowns that hang from chrome).
+     Hairline ring defines the silhouette on near-white; the 1px/2px drop
+     keeps bar and popover reading as one connected material when they sit
+     side-by-side on the canvas. Tailwind v4 exposes this as `shadow-seeko`. */
+  --shadow-seeko: 0 0 0 0.5px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.04);
+
+  /* Lifted popover shadow — used by menus that float OVER `shadow-seeko`
+     surfaces (board cards, the column tray) rather than peeling off the
+     chrome. One step taller than `--shadow-seeko` so a quick-assign or
+     property popover reads as floating, not flat against the card behind it.
+     Layered: hairline ring → close crisp shadow → wide ambient pool.
+     Tailwind v4 exposes this as `shadow-seeko-pop`. */
+  --shadow-seeko-pop:
+    0 0 0 0.5px rgba(0, 0, 0, 0.06),
+    0 6px 16px -4px rgba(0, 0, 0, 0.08),
+    0 16px 32px -12px rgba(0, 0, 0, 0.12);
 
   /* Elevated surface — dark-mode-correct depth.
      Hairline ring defines silhouette; inner top highlight catches ambient light;
@@ -74,6 +97,45 @@
     0 8px 20px -12px rgba(0, 0, 0, 0.5);
 }
 
+/* ── Overview light canvas (Paper redesign, node 1WK-0) ─────────────────────
+ * Scoped to the `/` overview subtree only. The dashboard shell + shared header
+ * stay dark; nothing here leaks to other routes. Hexes are the exact values
+ * extracted from the Paper file (node 1WK-0) — pixel-faithful, no overrides. */
+.overview-light {
+  --ov-bg:          #eeeeee;
+  --ov-row:         rgba(255, 255, 255, 0.90); /* 263×40 recent rows — #FFFFFFE6 */
+  --ov-panel:       #fefefe;                   /* side-by-side panel surface */
+  --ov-heading:     #111111;                   /* hero headline */
+  --ov-title:       #b3b3b3;                   /* recent-tile titles — exact mockup #B3B3B3 */
+  --ov-text:        #505050;                   /* task / body text */
+  --ov-muted:       #808080;                   /* timestamps, secondary */
+  --ov-faint:       #9a9a9a;                   /* leading glyphs */
+  --ov-eyebrow:     #808080;                   /* section eyebrows */
+  --ov-hairline:    #62241d0f;                 /* warm panel divider/ring */
+  --ov-pill-bg:     rgba(13, 122, 255, 0.06);  /* "View Tasks" — #0D7AFF0F */
+  --ov-pill-bg-hov: rgba(13, 122, 255, 0.11);
+  --ov-pill-fg:     #0d7aff;
+  --ov-chip-bg:     rgba(0, 0, 0, 0.045);      /* neutral pills (Open studio) */
+  --ov-chip-bg-hov: rgba(0, 0, 0, 0.075);
+  --ov-pri-high:    #ff6e5e;
+  --ov-pri-medium:  #ffce52;
+  --ov-pri-low:     #4c4c4c;
+  --ov-dot:         #0d7aff;
+  /* Panel: exact mockup elevation — warm 0.5px ring, faint pool, white bloom. */
+  --ov-shadow-panel:
+    0 0 0 0.5px #62241d0f,
+    0 2px 8px #00000005,
+    0 8px 24px #ffffff80;
+  --ov-shadow-row:
+    0 0 0 1px rgba(0, 0, 0, 0.04),
+    0 1px 2px -1px rgba(0, 0, 0, 0.05);
+  --ov-shadow-row-hov:
+    0 0 0 1px rgba(0, 0, 0, 0.05),
+    0 2px 6px -2px rgba(0, 0, 0, 0.12);
+  color: var(--ov-text);
+  -webkit-font-smoothing: antialiased;
+}
+
 @layer utilities {
   .interactive-surface {
     background-color: rgb(255 255 255 / 0.03);
@@ -82,16 +144,18 @@
   }
   .interactive-surface:hover {
     background-color: rgb(255 255 255 / 0.06);
-    border-color: rgb(110 231 183 / 0.1);
-    box-shadow: 0 0 12px rgba(110, 231, 183, 0.04);
+    border-color: rgb(13 122 255 / 0.1);
+    box-shadow: 0 0 12px rgba(13, 122, 255, 0.04);
   }
 }
 
 body {
-  background-color: var(--color-background);
+  background:
+    radial-gradient(circle at 50% 0%, oklch(0.14 0 0), oklch(0.10 0 0) 60%)
+    var(--color-background);
   color: var(--color-foreground);
   color-scheme: dark;
-  font-family: var(--font-sans), Arial, sans-serif;
+  font-family: var(--font-outfit), Arial, sans-serif;
   min-height: 100dvh;
   min-height: 100vh;
 }
@@ -104,6 +168,18 @@ html {
  * Storyboard: 0ms no ring → 200ms ring fades in (ease-out). */
 :root {
   --focus-ring-duration: 200ms;
+
+  /* Pill geometry — for interactive controls only (chips, pills, filter buttons) */
+  --radius-pill: 9999px;
+
+  /* Number pop-in (transitions.dev) — used by StatPills digit transitions */
+  --digit-dur: 500ms;
+  --digit-distance: 8px;
+  --digit-stagger: 70ms;
+  --digit-blur: 2px;
+  --digit-ease: cubic-bezier(0.34, 1.45, 0.64, 1);
+  --digit-dir-x: 0;
+  --digit-dir-y: 1;
 }
 
 /* Tour: when Cmd+K step is active, lower palette z-index so tour overlay frames it */
@@ -120,6 +196,14 @@ body.tour-cmd-k-active #command-palette-container * {
 @keyframes toast-fill {
   from { transform: scaleY(0); }
   to { transform: scaleY(1); }
+}
+
+/* Undo toast drain bar: empties left-to-right over UNDO_WINDOW_MS.
+   Used by TaskDeleteUndoToast — when the bar reaches 0%, the parent
+   commits the deferred Supabase delete and unmounts the toast. */
+@keyframes seeko-undo-drain {
+  from { width: 100%; }
+  to   { width: 0%; }
 }
 
 /* Confetti burst: see TourConfetti.tsx CONFETTI/BURST storyboard.
@@ -229,7 +313,7 @@ body.tour-cmd-k-active #command-palette-container * {
   padding: 0.125rem 0.25rem;
   border-radius: 0.25rem;
   background: var(--color-muted);
-  font-family: var(--font-mono), monospace;
+  font-family: var(--font-jetbrains-mono), monospace;
 }
 .doc-content a,
 .doc-read-body .doc-content a {
@@ -300,6 +384,57 @@ body.tour-cmd-k-active #command-palette-container * {
 .ProseMirror tr:last-child td {
   border-bottom: none;
 }
+
+/* ── Light doc prose (read dialog AND editor) ───────────────────────────────
+ * Both the read dialog and the desktop editor (.doc-content / .ProseMirror)
+ * render inline inside the `.overview-light` shell, so these dark-on-light
+ * overrides apply there only. `.overview-light .doc-content` (0,2,x) subsumes
+ * the read view's `.doc-read-body .doc-content` and wins over the dark base
+ * rules by source order. External /invoice and /sign viewers live outside
+ * `.overview-light` and keep the dark base untouched. */
+.overview-light .doc-content,
+.overview-light .doc-content-body,
+.overview-light .doc-content article {
+  color: #2a2a2a;
+}
+.overview-light .doc-content strong,
+.overview-light .doc-content h1,
+.overview-light .doc-content h2,
+.overview-light .doc-content h3 {
+  color: #111111;
+}
+.overview-light .doc-content p {
+  color: #3a3a3a;
+}
+.overview-light .doc-content li::marker {
+  color: #9a9a9a;
+}
+.overview-light .doc-content code {
+  background: rgba(0, 0, 0, 0.05);
+  color: #2a2a2a;
+}
+.overview-light .doc-content a {
+  color: #0d7aff;
+}
+.overview-light .doc-content hr {
+  border-color: rgba(0, 0, 0, 0.08);
+}
+.overview-light .doc-content table,
+.overview-light .doc-content th,
+.overview-light .doc-content td {
+  border-color: rgba(0, 0, 0, 0.08);
+}
+.overview-light .doc-content th {
+  background: #f4f4f4;
+  color: #111111;
+}
+.overview-light .doc-content td {
+  color: #3a3a3a;
+}
+/* Editor table cell selection highlight (light) */
+.overview-light .ProseMirror .selectedCell {
+  background: rgba(13, 122, 255, 0.08);
+}
 .ProseMirror .selectedCell {
   background: var(--color-muted);
   outline: 2px solid var(--color-seeko-accent);
@@ -344,7 +479,7 @@ body.tour-cmd-k-active #command-palette-container * {
   backdrop-filter: blur(16px) saturate(180%);
   -webkit-backdrop-filter: blur(16px) saturate(180%);
   border: 1px solid var(--color-border);
-  font-family: var(--font-sans);
+  font-family: var(--font-outfit);
 }
 
 /* Mobile fixed chrome: promote to own layer so it stays fixed during scroll (iOS) */
@@ -382,4 +517,97 @@ body.tour-cmd-k-active #command-palette-container * {
 .ProseMirror th p {
   margin: 0;
   padding: 0;
+}
+
+/* transitions-dev: number pop-in (drives StatPillCount) */
+@keyframes t-digit-pop-in {
+  0% {
+    transform: translate(
+      calc(var(--digit-distance) * var(--digit-dir-x)),
+      calc(var(--digit-distance) * var(--digit-dir-y))
+    );
+    opacity: 0;
+    filter: blur(var(--digit-blur));
+  }
+  100% {
+    transform: translate(0, 0);
+    opacity: 1;
+    filter: blur(0);
+  }
+}
+
+.t-digit-group {
+  display: inline-flex;
+  align-items: baseline;
+}
+.t-digit {
+  display: inline-block;
+  will-change: transform, opacity, filter;
+}
+.t-digit-group.is-animating .t-digit {
+  animation: t-digit-pop-in var(--digit-dur) var(--digit-ease) both;
+}
+.t-digit-group.is-animating .t-digit[data-stagger="1"] {
+  animation-delay: var(--digit-stagger);
+}
+.t-digit-group.is-animating .t-digit[data-stagger="2"] {
+  animation-delay: calc(var(--digit-stagger) * 2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .t-digit-group .t-digit {
+    animation: none !important;
+  }
+}
+
+/* InterfaceKit (dev-only): anchor its floating toolbar to the bottom, not the
+   top — it otherwise collides with the header pill. The toolbar carries no data
+   attribute, so it's matched by its unique class signature (high z + shadow-lg +
+   select-none; the editing panels use shadow-xl and are intentionally excluded).
+   Overrides the package's inline fixed-position styles, hence !important. */
+[class*="z-[999999]"][class*="shadow-lg"][class*="select-none"] {
+  top: auto !important;
+  bottom: 24px !important;
+}
+
+/* Thin overlay scrollbar — replaces the loud default track on horizontal
+   tile rows. Transparent track, low-contrast pill thumb that lifts on hover. */
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: #f7f5f31f transparent;
+}
+.scrollbar-thin::-webkit-scrollbar {
+  height: 6px;
+  width: 6px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: #f7f5f31f;
+  border-radius: 9999px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background-color: #f7f5f33f;
+}
+
+/* Light-mode variant — black-tinted thumb on transparent track, for use
+   inside white popovers/menus. Same pill shape, inverted contrast. */
+.scrollbar-paper {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.16) transparent;
+}
+.scrollbar-paper::-webkit-scrollbar {
+  height: 6px;
+  width: 6px;
+}
+.scrollbar-paper::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-paper::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.16);
+  border-radius: 9999px;
+}
+.scrollbar-paper::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(0, 0, 0, 0.28);
 }
