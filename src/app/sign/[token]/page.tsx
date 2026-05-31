@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { getServiceClient } from '@/lib/supabase/service';
 import { getTemplateById } from '@/lib/external-agreement-templates';
+import { isSigningInvite } from '@/lib/invite-filters';
 import { SigningPageClient } from './client';
 import type { ExternalSigningInvite } from '@/lib/types';
 
@@ -24,15 +25,12 @@ export default async function ExternalSignPage({ params }: Props) {
     .eq('token', token)
     .single() as { data: ExternalSigningInvite | null };
 
-  if (!invite) {
-    return (
-      <div className="flex min-h-dvh items-center justify-center bg-background px-4 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
-        <div className="text-center">
-          <h1 className="text-xl font-semibold text-foreground">Link not found</h1>
-          <p className="mt-2 text-sm text-muted-foreground">This signing link is invalid or has been removed.</p>
-        </div>
-      </div>
-    );
+  // Unknown tokens AND non-signing rows (invoice / doc-share share this table)
+  // resolve to the same not-found terminal — a signing URL must never expose, or
+  // act on, a sibling product's invite. Routed through the client so it wears the
+  // unified light terminal chrome (no logo), exactly like the other end states.
+  if (!isSigningInvite(invite)) {
+    return <SigningPageClient token={token} initialData={{ status: 'notfound' }} />;
   }
 
   // Check expiration

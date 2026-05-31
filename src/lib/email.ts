@@ -1,4 +1,5 @@
 import { Resend } from 'resend';
+import { sanitizeEmailHtml } from './sanitize';
 
 let resend: Resend | null = null;
 
@@ -134,7 +135,7 @@ function buildAgreementHtml(
             </td>
             <td style="padding-left:12px;">
               <p style="margin:0 0 6px;font-size:15px;font-weight:600;color:#111;">${esc(s.title)}</p>
-              <div style="font-size:14px;color:#555;line-height:1.65;">${s.content}</div>
+              <div style="font-size:14px;color:#555;line-height:1.65;">${sanitizeEmailHtml(s.content)}</div>
             </td>
           </tr>
         </table>
@@ -276,6 +277,27 @@ export async function sendExternalInviteEmail({
       ${divider()}
       ${footer("If you didn't expect this email, you can safely ignore it.")}
     `),
+  });
+}
+
+/* ── 3b. Signing Link Reissued (admin notify) ────────────── */
+
+export interface SendReissueNotificationEmailParams {
+  recipientEmail: string;
+  templateName: string;
+}
+
+/** Admin heads-up when a signer self-serves a fresh link via the expired-link flow. */
+export async function sendReissueNotificationEmail({
+  recipientEmail,
+  templateName,
+}: SendReissueNotificationEmailParams): Promise<void> {
+  const r = getResend();
+  await r.emails.send({
+    from: FROM_EMAIL,
+    to: ADMIN_EMAIL,
+    subject: `Signing link reissued: ${templateName}`,
+    text: `${recipientEmail} requested a fresh signing link for "${templateName}". A new link has been sent and the invite reset to pending.`,
   });
 }
 

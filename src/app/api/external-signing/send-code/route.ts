@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServiceClient } from '@/lib/supabase/service';
 import bcrypt from 'bcryptjs';
 import { sendVerificationCodeEmail } from '@/lib/email';
+import { isSigningInvite } from '@/lib/invite-filters';
 import type { ExternalSigningInvite } from '@/lib/types';
 
 // Rate limiter: max 3 send-code requests per token per hour
@@ -37,11 +38,12 @@ export async function POST(request: NextRequest) {
 
   const { data: invite } = await service
     .from('external_signing_invites')
-    .select('id, recipient_email, status, expires_at')
+    .select('id, recipient_email, status, expires_at, template_type')
     .eq('token', token)
     .single() as { data: ExternalSigningInvite | null };
 
-  if (!invite) return NextResponse.json({ error: 'Invite not found' }, { status: 404 });
+  // Not-found and wrong-product (invoice / doc-share share this table) → one 404.
+  if (!isSigningInvite(invite)) return NextResponse.json({ error: 'Invite not found' }, { status: 404 });
 
   if (invite.status !== 'pending') {
     return NextResponse.json({ error: 'Invite is no longer available' }, { status: 400 });

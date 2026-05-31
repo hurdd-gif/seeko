@@ -1,14 +1,27 @@
 'use client';
 
 import { useState } from 'react';
-import { motion } from 'motion/react';
-import { FileCheck, Clock, Ban, FileText } from 'lucide-react';
+import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
+import { FileCheck, Clock, Ban, FileQuestion, Mail, Loader2 } from 'lucide-react';
 import { VerificationForm } from '@/components/external-signing/VerificationForm';
 import { AgreementForm } from '@/components/agreement/AgreementForm';
+import { RecipientSheet } from '@/components/external/RecipientSheet';
+import { TerminalStatus } from '@/components/external/TerminalStatus';
+import { Button } from '@/components/ui/button';
 import { withGuardianSection } from '@/lib/external-agreement-templates';
-import { springs } from '@/lib/motion';
+import { springs, ceremonySwap } from '@/lib/motion';
+import { cn } from '@/lib/utils';
+import {
+  LIGHT_RECIPIENT_TITLE,
+  LIGHT_RECIPIENT_MUTED,
+  LIGHT_RECIPIENT_CTA,
+  LIGHT_TERMINAL_ICON,
+  LIGHT_SUCCESS_TEXT,
+} from '@/components/dashboard/lightKit';
 
 const SPRING = springs.smooth;
+
+type Section = { number: number; title: string; content: string };
 
 interface SigningPageClientProps {
   token: string;
@@ -17,167 +30,210 @@ interface SigningPageClientProps {
     maskedEmail?: string;
     templateName?: string;
     personalNote?: string;
-    sections?: { number: number; title: string; content: string }[];
+    sections?: Section[];
     isGuardianSigning?: boolean;
   };
 }
 
+// Terminal screens share one shape (icon chip + headline + line of copy). The
+// expired screen alone carries a self-service action, wired below by status.
+const TERMINALS: Record<
+  string,
+  { iconKey: keyof typeof LIGHT_TERMINAL_ICON; icon: React.ReactNode; title: string; description: string }
+> = {
+  signed: {
+    iconKey: 'signed',
+    icon: <FileCheck className="size-7" />,
+    title: 'Already signed',
+    description: 'This document has already been signed. A copy was sent to your email.',
+  },
+  expired: {
+    iconKey: 'expired',
+    icon: <Clock className="size-7" />,
+    title: 'Link expired',
+    description: "This signing link has expired. Request a fresh one below and we'll email it to you.",
+  },
+  revoked: {
+    iconKey: 'revoked',
+    icon: <Ban className="size-7" />,
+    title: 'Link revoked',
+    description: 'This signing link is no longer valid. Please contact the sender if you believe this is a mistake.',
+  },
+  notfound: {
+    iconKey: 'notfound',
+    icon: <FileQuestion className="size-7" />,
+    title: 'Link not found',
+    description: "We couldn't find this signing request. Please check the link, or contact the sender for a new one.",
+  },
+};
+
 export function SigningPageClient({ token, initialData }: SigningPageClientProps) {
   const alreadyVerified = initialData.status === 'verified' && !!initialData.sections;
   const [verified, setVerified] = useState(alreadyVerified);
-  const [sections, setSections] = useState<{ number: number; title: string; content: string }[] | null>(
+  const [sections, setSections] = useState<Section[] | null>(
     initialData.sections
-      ? (initialData.isGuardianSigning ? withGuardianSection(initialData.sections) : initialData.sections)
-      : null
+      ? initialData.isGuardianSigning
+        ? withGuardianSection(initialData.sections)
+        : initialData.sections
+      : null,
   );
   const [title, setTitle] = useState(initialData.templateName || 'Agreement');
   const [personalNote, setPersonalNote] = useState(initialData.personalNote);
+  const [dismissed, setDismissed] = useState(false);
+  // Drawer → fullscreen on "Continue to sign": AgreementForm signals when the
+  // ceremony leaves the reading step, and the sheet grows to match.
+  const [expanded, setExpanded] = useState(false);
+  const reduce = useReducedMotion();
 
-  // Terminal states
-  if (initialData.status === 'signed') {
+  // ── Terminal states (signed / expired / revoked / not-found) ──
+  // Dismissible: the ceremony is over, so the signer may swipe/tap away. On
+  // dismiss the sheet slides off to reveal a quiet "you can close this" hint.
+  const terminal = TERMINALS[initialData.status];
+  if (terminal) {
     return (
-      <StatusPage
-        icon={<FileCheck className="size-7 text-seeko-accent" />}
-        title="Document already signed"
-        description="This document has already been signed. A copy was sent to your email."
-      />
+      <AnimatePresence>
+        {dismissed ? (
+          <ClosedHint key="closed" />
+        ) : (
+          <RecipientSheet key="terminal" dismissible onDismiss={() => setDismissed(true)}>
+            <TerminalStatus
+              iconKey={terminal.iconKey}
+              icon={terminal.icon}
+              title={terminal.title}
+              description={terminal.description}
+              action={initialData.status === 'expired' ? <ReissueAction token={token} /> : undefined}
+            />
+          </RecipientSheet>
+        )}
+      </AnimatePresence>
     );
   }
 
-  if (initialData.status === 'expired') {
-    return (
-      <StatusPage
-        icon={<Clock className="size-7 text-yellow-400" />}
-        title="Link expired"
-        description="This signing link has expired. Please contact the sender for a new link."
-      />
-    );
-  }
-
-  if (initialData.status === 'revoked') {
-    return (
-      <StatusPage
-        icon={<Ban className="size-7 text-destructive" />}
-        title="Link revoked"
-        description="This signing link is no longer valid."
-      />
-    );
-  }
-
-  // Verification phase
-  if (!verified || !sections) {
-    return (
-      <div className="flex min-h-dvh items-center justify-center bg-background px-4 pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)]">
-        <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={SPRING}
-          className="w-full max-w-md"
-        >
-          {/* Card */}
-          <div className="rounded-2xl border border-border bg-card p-6 sm:p-8">
-            {/* Header: logo + document info */}
-            <div className="flex items-start gap-4 mb-6">
-              <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-muted ring-1 ring-border">
-                <FileText className="size-5 text-muted-foreground" />
+  // ── Active ceremony (verify → review → sign) ──
+  // One persistent, LOCKED sheet: it can't be swiped away mid-signature. The
+  // inner panel cross-fades from verification to the agreement once the signer
+  // proves their email, so the surface itself never leaves the screen.
+  return (
+    <RecipientSheet expanded={expanded}>
+      <AnimatePresence mode="wait" initial={false}>
+        {!verified || !sections ? (
+          <motion.div key="verify" {...ceremonySwap(reduce)} className="flex flex-col gap-6">
+            {/* Header — no logo (signer feedback): icon chip + the document name */}
+            <div className="flex flex-col items-center gap-4 pt-2 text-center">
+              <div className="flex size-12 items-center justify-center rounded-2xl bg-black/[0.04] text-[#6e6e6e]">
+                <Mail className="size-5" />
               </div>
-              <div className="min-w-0">
-                <h1 className="text-lg font-semibold text-foreground leading-tight">{initialData.templateName}</h1>
-                <p className="text-sm text-muted-foreground mt-0.5">Document signing request</p>
-              </div>
+              <h1 className={cn('text-[22px] leading-tight tracking-[-0.01em]', LIGHT_RECIPIENT_TITLE)}>
+                {initialData.templateName || 'Signature request'}
+              </h1>
             </div>
 
-            {/* Personal note */}
-            {initialData.personalNote && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.1 }}
-                className="mb-6 rounded-lg bg-muted/50 px-4 py-3"
-              >
-                <p className="text-sm text-foreground/70 leading-relaxed italic">
-                  &ldquo;{initialData.personalNote}&rdquo;
-                </p>
-              </motion.div>
-            )}
-
-            {/* Divider */}
-            <div className="h-px bg-border mb-6" />
-
-            {/* Verification */}
             <VerificationForm
+              light
               token={token}
               maskedEmail={initialData.maskedEmail || '***'}
               onVerified={(data) => {
-                const d = data as { sections: { number: number; title: string; content: string }[]; title: string; personalNote?: string };
+                const d = data as { sections: Section[]; title: string; personalNote?: string };
                 setSections(initialData.isGuardianSigning ? withGuardianSection(d.sections) : d.sections);
                 setTitle(d.title);
                 setPersonalNote(d.personalNote);
                 setVerified(true);
               }}
             />
-          </div>
+          </motion.div>
+        ) : (
+          <motion.div key="sign" {...ceremonySwap(reduce)}>
+            <AgreementForm
+              light
+              userId=""
+              userEmail=""
+              sections={sections}
+              title={title}
+              showEngagementType={false}
+              signEndpoint="/api/external-signing/sign"
+              signPayloadExtra={{ token }}
+              successRedirect={null}
+              personalNote={personalNote}
+              isGuardianSigning={initialData.isGuardianSigning}
+              onExpandedChange={setExpanded}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </RecipientSheet>
+  );
+}
 
-          {/* Footer outside card */}
-          <div className="mt-4 flex items-center justify-center gap-1.5">
-            <img src="/seeko-s.png" alt="SEEKO" className="size-4 opacity-40" />
-            <span className="text-xs text-muted-foreground/50">Powered by SEEKO Studio</span>
-          </div>
-        </motion.div>
-      </div>
+/** Shown after a terminal sheet is dismissed — the page is spent, nothing to do. */
+function ClosedHint() {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ delay: 0.15, duration: 0.3 }}
+      className="overview-light fixed inset-0 z-40 flex items-center justify-center bg-[var(--ov-bg)] px-6 text-center"
+    >
+      <p className={cn('text-[15px]', LIGHT_RECIPIENT_MUTED)}>You can close this page now.</p>
+    </motion.div>
+  );
+}
+
+/**
+ * Expired-only self-service: emails the signer a fresh link via the reissue
+ * endpoint. The new token is delivered by email (never returned in the response),
+ * so the UI only confirms that a new link is on its way.
+ */
+function ReissueAction({ token }: { token: string }) {
+  const [status, setStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
+  const [error, setError] = useState('');
+
+  async function requestNewLink() {
+    setStatus('sending');
+    setError('');
+    try {
+      const res = await fetch('/api/external-signing/reissue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data.error || 'Could not send a new link. Please try again.');
+        setStatus('error');
+        return;
+      }
+      setStatus('sent');
+    } catch {
+      setError('Could not send a new link. Please try again.');
+      setStatus('error');
+    }
+  }
+
+  if (status === 'sent') {
+    return (
+      <motion.p
+        initial={{ opacity: 0, y: 6 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={SPRING}
+        className={cn('text-sm leading-relaxed', LIGHT_SUCCESS_TEXT)}
+      >
+        A new link is on its way to your inbox. It may take a minute to arrive.
+      </motion.p>
     );
   }
 
-  // Signing phase — reuse AgreementForm
   return (
-    <div className="flex min-h-dvh flex-col items-center justify-center bg-background px-4 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
-      <div className="w-full max-w-2xl py-6">
-        <div className="flex items-center justify-center mb-6">
-          <Logo />
-        </div>
-        <AgreementForm
-          userId=""
-          userEmail=""
-          sections={sections}
-          title={title}
-          showEngagementType={false}
-          signEndpoint="/api/external-signing/sign"
-          signPayloadExtra={{ token }}
-          successRedirect={null}
-          personalNote={personalNote}
-          isGuardianSigning={initialData.isGuardianSigning}
-        />
-      </div>
-    </div>
-  );
-}
-
-function StatusPage({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }) {
-  return (
-    <div className="flex min-h-dvh items-center justify-center bg-background px-4 pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)]">
-      <div className="flex max-w-md flex-col items-center gap-6 text-center">
-        <Logo />
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={SPRING}
-          className="flex flex-col items-center gap-4 text-center"
-        >
-          <div className="flex size-14 items-center justify-center rounded-full bg-muted ring-1 ring-border">
-            {icon}
-          </div>
-          <h1 className="text-xl font-semibold text-foreground">{title}</h1>
-          <p className="text-sm text-muted-foreground">{description}</p>
-        </motion.div>
-      </div>
-    </div>
-  );
-}
-
-function Logo() {
-  return (
-    <div>
-      <img src="/seeko-s.png" alt="SEEKO" className="size-10 mx-auto" />
+    <div className="flex w-full flex-col items-center gap-2">
+      <Button
+        type="button"
+        onClick={requestNewLink}
+        disabled={status === 'sending'}
+        className={cn('gap-2', LIGHT_RECIPIENT_CTA)}
+      >
+        {status === 'sending' ? <Loader2 className="size-4 animate-spin" /> : <Mail className="size-4" />}
+        {status === 'sending' ? 'Sending…' : 'Request a new link'}
+      </Button>
+      {status === 'error' && <p className="text-sm text-[#d4503e]">{error}</p>}
     </div>
   );
 }

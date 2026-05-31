@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { Mail, Loader2, RotateCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { springs } from '@/lib/motion';
+import { cn } from '@/lib/utils';
+import { LIGHT_OTP_CELL, LIGHT_RECIPIENT_CTA, LIGHT_RECIPIENT_MUTED, LIGHT_FOCUS_RING } from '@/components/dashboard/lightKit';
 
 interface VerificationFormProps {
   token: string;
@@ -12,6 +14,8 @@ interface VerificationFormProps {
   onVerified: (data: Record<string, unknown>) => void;
   sendCodeEndpoint?: string;
   verifyEndpoint?: string;
+  /** Opt into the light signer-ceremony theme. Default false → dark. */
+  light?: boolean;
 }
 
 const SPRING = springs.smooth;
@@ -42,6 +46,7 @@ export function VerificationForm({
   onVerified,
   sendCodeEndpoint = '/api/external-signing/send-code',
   verifyEndpoint = '/api/external-signing/verify',
+  light = false,
 }: VerificationFormProps) {
   const [codeSent, setCodeSent] = useState(false);
   const [digits, setDigits] = useState<string[]>(Array(CODE_LENGTH).fill(''));
@@ -50,6 +55,7 @@ export function VerificationForm({
   const [error, setError] = useState('');
   const [resendCooldown, setResendCooldown] = useState(0);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const reduce = useReducedMotion();
 
   // Restore persisted state after hydration (avoids SSR mismatch)
   useEffect(() => {
@@ -189,18 +195,19 @@ export function VerificationForm({
             key="send"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={SPRING}
+            exit={reduce ? { opacity: 0 } : { opacity: 0, y: -10 }}
+            transition={reduce ? { duration: 0.12 } : SPRING}
             className="flex flex-col items-center gap-4"
           >
-            <p className="text-sm text-muted-foreground">
-              We&apos;ll send a code to <span className="font-mono text-xs text-foreground/60">{maskedEmail}</span>
+            <p className={cn('text-sm', light ? LIGHT_RECIPIENT_MUTED : 'text-muted-foreground')}>
+              We&apos;ll send a code to{' '}
+              <span className={cn('font-mono text-xs', light ? 'text-[#111]' : 'text-foreground/60')}>{maskedEmail}</span>
             </p>
             <Button
               type="button"
               onClick={handleSendCode}
               disabled={sending}
-              className="w-full gap-2"
+              className={cn('w-full gap-2', light && LIGHT_RECIPIENT_CTA)}
             >
               {sending ? <Loader2 className="size-4 animate-spin" /> : <Mail className="size-4" />}
               {sending ? 'Sending...' : 'Send Code'}
@@ -210,12 +217,12 @@ export function VerificationForm({
           /* ── Enter code phase ────────────────────────── */
           <motion.div
             key="verify"
-            initial={{ opacity: 0, y: 10 }}
+            initial={reduce ? { opacity: 0 } : { opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={SPRING}
+            transition={reduce ? { duration: 0.12 } : SPRING}
             className="flex flex-col items-center gap-5"
           >
-            <p className="text-sm text-muted-foreground">
+            <p className={cn('text-sm', light ? LIGHT_RECIPIENT_MUTED : 'text-muted-foreground')}>
               Enter the code sent to your email
             </p>
 
@@ -233,12 +240,15 @@ export function VerificationForm({
                   onChange={(e) => handleDigitChange(i, e.target.value)}
                   onKeyDown={(e) => handleDigitKeyDown(i, e)}
                   disabled={verifying}
-                  initial={{ opacity: 0, y: 12 }}
+                  initial={reduce ? { opacity: 0 } : { opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ ...SPRING, delay: i * 0.04 }}
-                  className="size-12 sm:size-14 rounded-xl border border-border bg-muted text-center text-xl sm:text-2xl font-semibold text-foreground font-mono
-                    focus:outline-none focus:ring-2 focus:ring-foreground/20 focus:border-foreground/40
-                    disabled:opacity-50 transition-colors"
+                  transition={reduce ? { duration: 0.12 } : { ...SPRING, delay: i * 0.04 }}
+                  className={cn(
+                    'size-12 sm:size-14 rounded-xl text-center text-xl sm:text-2xl font-semibold font-mono transition-colors disabled:opacity-50',
+                    light
+                      ? LIGHT_OTP_CELL
+                      : 'border border-border bg-muted text-foreground focus:outline-none focus:ring-2 focus:ring-foreground/20 focus:border-foreground/40',
+                  )}
                 />
               ))}
             </div>
@@ -248,7 +258,7 @@ export function VerificationForm({
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="flex items-center gap-2 text-sm text-muted-foreground"
+                className={cn('flex items-center gap-2 text-sm', light ? LIGHT_RECIPIENT_MUTED : 'text-muted-foreground')}
               >
                 <Loader2 className="size-4 animate-spin" />
                 Verifying...
@@ -260,7 +270,11 @@ export function VerificationForm({
               type="button"
               onClick={handleResendCode}
               disabled={resendCooldown > 0 || sending}
-              className="min-h-[44px] px-4 text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40 disabled:cursor-default flex items-center gap-1.5"
+              className={cn(
+                'min-h-[44px] rounded-md px-4 text-xs transition-colors disabled:opacity-40 disabled:cursor-default flex items-center gap-1.5',
+                light ? 'text-[#6e6e6e] hover:text-[#111]' : 'text-muted-foreground hover:text-foreground',
+                light && LIGHT_FOCUS_RING,
+              )}
             >
               <RotateCw className="size-3" />
               {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Didn\u2019t receive it? Resend"}
@@ -273,10 +287,13 @@ export function VerificationForm({
       <AnimatePresence>
         {error && (
           <motion.p
-            initial={{ opacity: 0, y: 6 }}
+            initial={reduce ? { opacity: 0 } : { opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
-            className="text-sm text-destructive bg-destructive/10 px-4 py-2 rounded-lg"
+            className={cn(
+              'text-sm px-4 py-2 rounded-lg',
+              light ? 'text-[#d4503e] bg-[#d4503e]/10' : 'text-destructive bg-destructive/10',
+            )}
           >
             {error}
           </motion.p>
