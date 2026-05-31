@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getServiceClient } from '@/lib/supabase/service';
+import { isSigningInvite } from '@/lib/invite-filters';
+import type { ExternalSigningInvite } from '@/lib/types';
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -16,11 +18,13 @@ export async function POST(request: NextRequest) {
   const service = getServiceClient();
   const { data: invite } = await service
     .from('external_signing_invites')
-    .select('status')
+    .select('status, template_type')
     .eq('id', invite_id)
-    .single() as { data: { status: string } | null };
+    .single() as { data: { status: string; template_type: ExternalSigningInvite['template_type'] } | null };
 
-  if (!invite) return NextResponse.json({ error: 'Invite not found' }, { status: 404 });
+  // Even an admin acts only on signing rows here — invoice / doc-share share this
+  // table and have their own management surfaces. Not-found and wrong-product → 404.
+  if (!isSigningInvite(invite)) return NextResponse.json({ error: 'Invite not found' }, { status: 404 });
   if (invite.status === 'signed') {
     return NextResponse.json({ error: 'Cannot revoke a signed invite' }, { status: 400 });
   }

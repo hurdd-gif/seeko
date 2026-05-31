@@ -27,6 +27,31 @@ export function excludeDocShare(invites: ExternalSigningInvite[]): ExternalSigni
   return invites.filter(i => i.template_type !== 'doc_share');
 }
 
+/**
+ * The signing products (`preset` + `custom`) within the shared
+ * `external_signing_invites` table, which serves three sibling products
+ * (signing / invoice / doc-share). Used by `isSigningInvite` below — the per-row
+ * cross-product isolation guard every signing route runs before acting on a token.
+ */
+export const SIGNING_TEMPLATE_TYPES = new Set<ExternalSigningInvite['template_type']>(['preset', 'custom']);
+
+/**
+ * Single source of truth for the cross-product isolation guard. Every route that
+ * fetches a row from the shared `external_signing_invites` table by token/id MUST
+ * reject non-signing rows with this helper before acting — otherwise an invoice or
+ * doc-share token could be operated on through a signing route. Returns `false` for
+ * a missing row so callers can fold the not-found and wrong-product cases into one
+ * identical 404 (no enumeration oracle). See `.claude/claude-security-guidance.md`.
+ *
+ * It is a type guard: a truthy result narrows away `null | undefined`, so callers
+ * get the not-found check for free and cannot forget it.
+ */
+export function isSigningInvite<T extends { template_type: ExternalSigningInvite['template_type'] }>(
+  invite: T | null | undefined,
+): invite is T {
+  return !!invite && SIGNING_TEMPLATE_TYPES.has(invite.template_type);
+}
+
 export type InviteGroup = {
   email: string;
   invites: ExternalSigningInvite[];

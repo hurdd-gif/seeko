@@ -15,6 +15,62 @@ interface PdfInput {
   title: string;
   sections: { number: number; title: string; content: string }[];
   signer: PdfSigner;
+  /* ── Certificate of Completion (external signing only) ──────────────────
+   * When `envelopeId` OR `integrityHash` is provided, a Certificate of
+   * Completion page is appended documenting the electronic-execution audit
+   * trail (ESIGN/UETA). Onboarding omits these → no certificate page, so the
+   * onboarding PDF is byte-for-byte unchanged. `ip`/`userAgent` are optional
+   * even when the certificate is rendered: legacy/missing-header signs print
+   * "Not recorded" for the absent field rather than fabricating a value. */
+  envelopeId?: string | null;
+  integrityHash?: string | null;
+  ip?: string | null;
+  userAgent?: string | null;
+}
+
+export interface CertificateFields {
+  envelopeId?: string | null;
+  integrityHash?: string | null;
+  ip?: string | null;
+  userAgent?: string | null;
+  signerName: string;
+  signerEmail: string;
+  signedAt: Date;
+}
+
+const NOT_RECORDED = 'Not recorded';
+
+/** A field's value, or "Not recorded" when null/undefined/blank. Never fabricate
+ * an audit value (a spoofed IP/UA would poison the legal record) — absence is
+ * surfaced honestly. */
+function orNotRecorded(v: string | null | undefined): string {
+  return v && v.trim() ? v : NOT_RECORDED;
+}
+
+/** Pure builder for the Certificate of Completion's label/value rows. Extracted
+ * so the formatting + "Not recorded" degradation is unit-testable without
+ * parsing a PDF. The signed timestamp is stamped in UTC with an explicit
+ * timezone label so the certificate is unambiguous and host-timezone-independent. */
+export function buildCertificateRows(f: CertificateFields): { label: string; value: string }[] {
+  const signedStr = f.signedAt.toLocaleString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    second: '2-digit',
+    timeZoneName: 'short',
+    timeZone: 'UTC',
+  });
+  return [
+    { label: 'Envelope ID', value: orNotRecorded(f.envelopeId) },
+    { label: 'Signer', value: orNotRecorded(f.signerName) },
+    { label: 'Email', value: orNotRecorded(f.signerEmail) },
+    { label: 'Signed', value: signedStr },
+    { label: 'IP Address', value: orNotRecorded(f.ip) },
+    { label: 'User Agent', value: orNotRecorded(f.userAgent) },
+    { label: 'Document Hash (SHA-256)', value: orNotRecorded(f.integrityHash) },
+  ];
 }
 
 /** Strip HTML tags for plain-text PDF rendering */
@@ -306,7 +362,52 @@ export async function generateAgreementPdf(input: PdfInput): Promise<Uint8Array>
     color: GRAY,
   });
 
-  // Add footer to last page
+  /* ── Certificate of Completion ───────────────────────────
+   * Appended only for audited e-signs (envelopeId/integrityHash present), on
+   * its own page. `newPage()` foots the final agreement page and opens the
+   * certificate page; the trailing addFooter then foots the certificate page. */
+  if (input.envelopeId || input.integrityHash) {
+    newPage();
+
+    drawCentered('CERTIFICATE OF COMPLETION', 14, timesBold);
+    y -= 8;
+    drawRule();
+    y -= 6;
+
+    drawWrapped(
+      'This certificate records the electronic execution of the agreement above, captured by SEEKO Studio in accordance with the U.S. ESIGN Act and the Uniform Electronic Transactions Act (UETA).',
+      9.5, timesItalic, 13
+    );
+    y -= 14;
+
+    const rows = buildCertificateRows({
+      envelopeId: input.envelopeId,
+      integrityHash: input.integrityHash,
+      ip: input.ip,
+      userAgent: input.userAgent,
+      signerName: input.signer.fullName,
+      signerEmail: input.signer.email,
+      signedAt: input.signer.signedAt,
+    });
+
+    for (const { label, value } of rows) {
+      ensureSpace(30);
+      // Uppercase field label (matches this document's existing title/heading
+      // convention; this is a formal legal certificate, not app UI chrome).
+      page.drawText(label.toUpperCase(), { x: MARGIN, y, size: 8, font: timesBold, color: GRAY });
+      y -= 13;
+      drawWrapped(value, 10.5, timesRoman, 14);
+      y -= 9;
+    }
+
+    y -= 6;
+    drawWrapped(
+      'The signer consented to transact electronically and to the use of electronic records and signatures for this agreement. The document hash above uniquely identifies the exact agreement content that was signed; any later modification of that content would produce a different hash.',
+      8.5, timesItalic, 12
+    );
+  }
+
+  // Add footer to the last page (agreement page, or certificate page if appended)
   addFooter(page, pageNum);
 
   return doc.save();

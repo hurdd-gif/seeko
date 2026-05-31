@@ -4,6 +4,7 @@ import { getServiceClient } from '@/lib/supabase/service';
 import bcrypt from 'bcryptjs';
 import { sendExternalInviteEmail } from '@/lib/email';
 import { getTemplateById } from '@/lib/external-agreement-templates';
+import { isSigningInvite } from '@/lib/invite-filters';
 import type { ExternalSigningInvite } from '@/lib/types';
 
 export async function POST(request: NextRequest) {
@@ -24,7 +25,9 @@ export async function POST(request: NextRequest) {
     .eq('id', invite_id)
     .single() as { data: ExternalSigningInvite | null };
 
-  if (!invite) return NextResponse.json({ error: 'Invite not found' }, { status: 404 });
+  // Even an admin re-sends only signing rows here — invoice / doc-share share this
+  // table and have their own management surfaces. Not-found and wrong-product → 404.
+  if (!isSigningInvite(invite)) return NextResponse.json({ error: 'Invite not found' }, { status: 404 });
   if (invite.status === 'signed') return NextResponse.json({ error: 'Already signed' }, { status: 400 });
   if (invite.status === 'revoked') return NextResponse.json({ error: 'Invite is revoked' }, { status: 400 });
   if (new Date(invite.expires_at) < new Date()) return NextResponse.json({ error: 'Invite has expired — create a new one' }, { status: 400 });

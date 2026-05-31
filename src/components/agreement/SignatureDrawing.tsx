@@ -12,6 +12,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { cn } from '@/lib/utils';
 
 const DRAW_DURATION = 0.3;
 const DRAW_EASING = [0.22, 0.03, 0.26, 1] as [number, number, number, number];
@@ -25,6 +26,8 @@ interface SignatureDrawingProps {
   charDuration?: number;
   initialDelay?: number;
   className?: string;
+  /** Opt into the light signer-ceremony theme. Default false → dark (onboarding untouched). */
+  light?: boolean;
 }
 
 export function SignatureDrawing({
@@ -36,6 +39,7 @@ export function SignatureDrawing({
   charDuration = DRAW_DURATION,
   initialDelay = 0.2,
   className,
+  light = false,
 }: SignatureDrawingProps) {
   const prevTextRef = useRef('');
   const [charStates, setCharStates] = useState<{ char: string; isNew: boolean }[]>([]);
@@ -78,7 +82,7 @@ export function SignatureDrawing({
                   delay,
                   ease: DRAW_EASING,
                 }}
-                className="inline-block leading-tight text-foreground"
+                className={cn('inline-block leading-tight', light ? 'text-[#111]' : 'text-foreground')}
                 style={{
                   fontFamily: 'var(--font-caveat), cursive',
                   fontSize,

@@ -52,3 +52,54 @@ export const SLIDEOUT = {
   animate: { x: 0 },
   exit: { x: '100%' },
 } as const;
+
+// ── Signer-ceremony phase swap (verify ↔ sign) ─────────────────
+/**
+ * Cross-blur phase swap for the external-signing ceremony's locked sheet,
+ * used inside <AnimatePresence mode="wait">. It is the app's standard fade —
+ * the FadeRise opacity+y rise on `springs.smooth`, as on /activity and
+ * /settings — enriched with the transitions.dev "panel reveal" cross-blur:
+ * a 2px blur on enter/exit so the swap reads as a real open even though the
+ * compact verify panel and the taller sign panel are very different heights.
+ * The blur masks that height jump (Emil: "blur masks imperfect transitions"),
+ * and the exit accelerates out faster than the enter (transitions.dev: close
+ * quicker than open).
+ *
+ * STORYBOARD (mode="wait" → old phase exits fully, then new phase enters):
+ *   EXIT   opacity 1→0 · y 0→-6 · blur 0→2px   — 180ms accelerate-out
+ *   ENTER  opacity 0→1 · y 8→0  · blur 2px→0    — springs.smooth (the app fade);
+ *          blur rides its own 280ms ease-out so the spring can't pull it past 0
+ *   reduced-motion → opacity-only 120ms, no y, no blur (matches MODAL.reduced)
+ */
+export const CEREMONY_SWAP = {
+  enter: { opacity: 0, y: 8, filter: 'blur(2px)' },
+  rest: { opacity: 1, y: 0, filter: 'blur(0px)' },
+  exit: { opacity: 0, y: -6, filter: 'blur(2px)' },
+  /** Blur on a clean ease-out — a spring would overshoot blur below 0 → flicker. */
+  blurTransition: { duration: 0.28, ease: 'easeOut' as const },
+  exitTransition: { duration: 0.18, ease: [0.4, 0, 1, 1] as const },
+  reduced: { duration: 0.12 },
+} as const;
+
+/**
+ * Per-phase entrance props for the ceremony swap, reduced-motion aware.
+ * Spread onto each phase's `motion.div` inside the locked sheet's
+ * <AnimatePresence mode="wait">.
+ */
+export function ceremonySwap(reduce: boolean | null) {
+  if (reduce) {
+    return {
+      initial: { opacity: 0 },
+      animate: { opacity: 1 },
+      exit: { opacity: 0, transition: CEREMONY_SWAP.reduced },
+      transition: CEREMONY_SWAP.reduced,
+    };
+  }
+  return {
+    initial: CEREMONY_SWAP.enter,
+    animate: CEREMONY_SWAP.rest,
+    exit: { ...CEREMONY_SWAP.exit, transition: CEREMONY_SWAP.exitTransition },
+    // opacity + y ride springs.smooth (the app fade); blur rides its own ease-out
+    transition: { ...springs.smooth, filter: CEREMONY_SWAP.blurTransition },
+  };
+}

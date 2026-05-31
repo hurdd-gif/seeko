@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceClient } from '@/lib/supabase/service';
+import { isSigningInvite } from '@/lib/invite-filters';
 import type { ExternalSigningInvite } from '@/lib/types';
 
 export async function GET(
@@ -15,7 +16,8 @@ export async function GET(
     .eq('token', token)
     .single() as { data: ExternalSigningInvite | null };
 
-  if (!invite) {
+  // Not-found and wrong-product (invoice / doc-share share this table) → one 404.
+  if (!isSigningInvite(invite)) {
     return NextResponse.json({ error: 'Invite not found' }, { status: 404 });
   }
 

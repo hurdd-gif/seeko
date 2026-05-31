@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServiceClient } from '@/lib/supabase/service';
 import bcrypt from 'bcryptjs';
 import { getTemplateById } from '@/lib/external-agreement-templates';
+import { isSigningInvite } from '@/lib/invite-filters';
 import type { ExternalSigningInvite } from '@/lib/types';
 
 const MAX_ATTEMPTS = 5;
@@ -12,7 +13,7 @@ interface VerifyRow {
   expires_at: string;
   verification_code: string;
   verification_attempts: number;
-  template_type: string;
+  template_type: ExternalSigningInvite['template_type'];
   template_id: string | null;
   custom_sections: any;
   custom_title: string | null;
@@ -30,7 +31,9 @@ export async function POST(request: NextRequest) {
 
   // Atomic increment: only increment if under the limit, return the updated row.
   // This prevents race conditions where concurrent requests all read attempts=0.
-  // Note: purpose is NOT filtered here since external-signing invites use purpose='signing' or NULL.
+  // Cross-product isolation can't be enforced inside the RPC (signing rows use
+  // purpose='signing' OR NULL), so every row this route reads is run through
+  // isSigningInvite below before it is acted on.
   const { data: updated, error: rpcError } = await (service as any).rpc('increment_verification_attempt', {
     p_token: token,
     p_purpose: 'signing',
@@ -51,11 +54,12 @@ export async function POST(request: NextRequest) {
     // RPC returned nothing — either invite not found, wrong status, or attempts exhausted
     const { data: invite } = await service
       .from('external_signing_invites')
-      .select('id, status, verification_attempts')
+      .select('id, status, verification_attempts, template_type')
       .eq('token', token)
-      .single();
+      .single() as { data: Pick<ExternalSigningInvite, 'id' | 'status' | 'verification_attempts' | 'template_type'> | null };
 
-    if (!invite) return NextResponse.json({ error: 'Invite not found' }, { status: 404 });
+    // Not-found and wrong-product (invoice / doc-share) collapse to one 404.
+    if (!isSigningInvite(invite)) return NextResponse.json({ error: 'Invite not found' }, { status: 404 });
     if (invite.status === 'verified' || invite.status === 'signed') {
       return NextResponse.json({ error: 'Invite has already been verified' }, { status: 409 });
     }
@@ -66,6 +70,11 @@ export async function POST(request: NextRequest) {
   }
 
   const invite = updated[0];
+
+  // A non-signing row must never be verified through the signing surface.
+  if (!isSigningInvite(invite)) {
+    return NextResponse.json({ error: 'Invite not found' }, { status: 404 });
+  }
 
   // Check expiry
   if (new Date(invite.expires_at) < new Date()) {
@@ -117,7 +126,8 @@ async function verifyFallback(service: ReturnType<typeof getServiceClient>, toke
     .eq('token', token)
     .single() as { data: (ExternalSigningInvite & { verification_code: string }) | null };
 
-  if (!invite) return NextResponse.json({ error: 'Invite not found' }, { status: 404 });
+  // Not-found and wrong-product (invoice / doc-share) collapse to one 404.
+  if (!isSigningInvite(invite)) return NextResponse.json({ error: 'Invite not found' }, { status: 404 });
 
   if (invite.status === 'verified' || invite.status === 'signed') {
     return NextResponse.json({ error: 'Invite has already been verified' }, { status: 409 });
