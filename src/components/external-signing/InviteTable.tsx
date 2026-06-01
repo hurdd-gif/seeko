@@ -9,7 +9,7 @@ import type { ExternalSigningInvite } from '@/lib/types';
 import {
   filterByStatus,
   filterBySearch,
-  excludeDocShare,
+  filterSigningInvites,
   sortByActivePriority,
   groupByRecipient,
   type FilterStatus,
@@ -128,7 +128,7 @@ export function InviteTable({ refreshKey }: InviteTableProps) {
     } finally { setActionLoading(null); }
   }
 
-  const signingInvites = useMemo(() => excludeDocShare(invites), [invites]);
+  const signingInvites = useMemo(() => filterSigningInvites(invites), [invites]);
   const filtered = useMemo(() => {
     const byStatus = filterByStatus(signingInvites, status);
     const bySearch = filterBySearch(byStatus, debouncedSearch);
