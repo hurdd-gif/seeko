@@ -23,10 +23,6 @@ export function filterBySearch(
   return invites.filter(i => i.recipient_email.toLowerCase().includes(q));
 }
 
-export function excludeDocShare(invites: ExternalSigningInvite[]): ExternalSigningInvite[] {
-  return invites.filter(i => i.template_type !== 'doc_share');
-}
-
 /**
  * The signing products (`preset` + `custom`) within the shared
  * `external_signing_invites` table, which serves three sibling products
@@ -50,6 +46,10 @@ export function isSigningInvite<T extends { template_type: ExternalSigningInvite
   invite: T | null | undefined,
 ): invite is T {
   return !!invite && SIGNING_TEMPLATE_TYPES.has(invite.template_type);
+}
+
+export function filterSigningInvites(invites: ExternalSigningInvite[]): ExternalSigningInvite[] {
+  return invites.filter(isSigningInvite);
 }
 
 export type InviteGroup = {

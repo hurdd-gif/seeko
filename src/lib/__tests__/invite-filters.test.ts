@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { filterByStatus, filterBySearch, excludeDocShare, groupByRecipient, sortByActivePriority, type FilterStatus } from '../invite-filters';
+import { filterByStatus, filterBySearch, filterSigningInvites, groupByRecipient, sortByActivePriority } from '../invite-filters';
 import type { ExternalSigningInvite } from '../types';
 
 const makeInvite = (overrides: Partial<ExternalSigningInvite>): ExternalSigningInvite => ({
@@ -70,15 +70,15 @@ describe('filterBySearch', () => {
   });
 });
 
-describe('excludeDocShare', () => {
-  it('removes rows where template_type is doc_share', () => {
+describe('filterSigningInvites', () => {
+  it('keeps only signing rows from the shared invite table', () => {
     const invites = [
       makeInvite({ id: '1', template_type: 'preset' }),
       makeInvite({ id: '2', template_type: 'custom' }),
       makeInvite({ id: '3', template_type: 'invoice' }),
       makeInvite({ id: '4', template_type: 'doc_share' }),
     ];
-    expect(excludeDocShare(invites).map(i => i.id)).toEqual(['1', '2', '3']);
+    expect(filterSigningInvites(invites).map(i => i.id)).toEqual(['1', '2']);
   });
 });
 

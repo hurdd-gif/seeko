@@ -2,24 +2,19 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
-import { FileCheck, Clock, Ban, FileQuestion, Mail, Loader2 } from 'lucide-react';
+import { FileCheck, Clock, Ban, FileQuestion, Mail } from 'lucide-react';
 import { VerificationForm } from '@/components/external-signing/VerificationForm';
 import { AgreementForm } from '@/components/agreement/AgreementForm';
 import { RecipientSheet } from '@/components/external/RecipientSheet';
 import { TerminalStatus } from '@/components/external/TerminalStatus';
-import { Button } from '@/components/ui/button';
 import { withGuardianSection } from '@/lib/external-agreement-templates';
-import { springs, ceremonySwap } from '@/lib/motion';
+import { ceremonySwap } from '@/lib/motion';
 import { cn } from '@/lib/utils';
 import {
   LIGHT_RECIPIENT_TITLE,
   LIGHT_RECIPIENT_MUTED,
-  LIGHT_RECIPIENT_CTA,
   LIGHT_TERMINAL_ICON,
-  LIGHT_SUCCESS_TEXT,
 } from '@/components/dashboard/lightKit';
-
-const SPRING = springs.smooth;
 
 type Section = { number: number; title: string; content: string };
 
@@ -35,8 +30,7 @@ interface SigningPageClientProps {
   };
 }
 
-// Terminal screens share one shape (icon chip + headline + line of copy). The
-// expired screen alone carries a self-service action, wired below by status.
+// Terminal screens share one shape (icon chip + headline + line of copy).
 const TERMINALS: Record<
   string,
   { iconKey: keyof typeof LIGHT_TERMINAL_ICON; icon: React.ReactNode; title: string; description: string }
@@ -51,7 +45,7 @@ const TERMINALS: Record<
     iconKey: 'expired',
     icon: <Clock className="size-7" />,
     title: 'Link expired',
-    description: "This signing link has expired. Request a fresh one below and we'll email it to you.",
+    description: 'This signing link has expired. Please contact the sender for a new link.',
   },
   revoked: {
     iconKey: 'revoked',
@@ -101,7 +95,6 @@ export function SigningPageClient({ token, initialData }: SigningPageClientProps
               icon={terminal.icon}
               title={terminal.title}
               description={terminal.description}
-              action={initialData.status === 'expired' ? <ReissueAction token={token} /> : undefined}
             />
           </RecipientSheet>
         )}
@@ -175,65 +168,5 @@ function ClosedHint() {
     >
       <p className={cn('text-[15px]', LIGHT_RECIPIENT_MUTED)}>You can close this page now.</p>
     </motion.div>
-  );
-}
-
-/**
- * Expired-only self-service: emails the signer a fresh link via the reissue
- * endpoint. The new token is delivered by email (never returned in the response),
- * so the UI only confirms that a new link is on its way.
- */
-function ReissueAction({ token }: { token: string }) {
-  const [status, setStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
-  const [error, setError] = useState('');
-
-  async function requestNewLink() {
-    setStatus('sending');
-    setError('');
-    try {
-      const res = await fetch('/api/external-signing/reissue', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setError(data.error || 'Could not send a new link. Please try again.');
-        setStatus('error');
-        return;
-      }
-      setStatus('sent');
-    } catch {
-      setError('Could not send a new link. Please try again.');
-      setStatus('error');
-    }
-  }
-
-  if (status === 'sent') {
-    return (
-      <motion.p
-        initial={{ opacity: 0, y: 6 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={SPRING}
-        className={cn('text-sm leading-relaxed', LIGHT_SUCCESS_TEXT)}
-      >
-        A new link is on its way to your inbox. It may take a minute to arrive.
-      </motion.p>
-    );
-  }
-
-  return (
-    <div className="flex w-full flex-col items-center gap-2">
-      <Button
-        type="button"
-        onClick={requestNewLink}
-        disabled={status === 'sending'}
-        className={cn('gap-2', LIGHT_RECIPIENT_CTA)}
-      >
-        {status === 'sending' ? <Loader2 className="size-4 animate-spin" /> : <Mail className="size-4" />}
-        {status === 'sending' ? 'Sending…' : 'Request a new link'}
-      </Button>
-      {status === 'error' && <p className="text-sm text-[#d4503e]">{error}</p>}
-    </div>
   );
 }
