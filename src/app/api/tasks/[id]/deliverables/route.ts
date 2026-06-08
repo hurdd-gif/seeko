@@ -186,7 +186,7 @@ export async function POST(
         kind: 'deliverable_uploaded',
         title: 'Deliverable uploaded',
         body: `${uploaderName} uploaded a deliverable for "${taskName}"`,
-        link: `/tasks?task=${taskId}`,
+        link: `/?task=${taskId}`,
         read: false,
       }))
     );

@@ -1,33 +1,13 @@
-import { Suspense } from 'react';
-import { createClient } from '@/lib/supabase/server';
-import { fetchTasks, fetchAllTasksWithAssignees, fetchTeam, fetchProfile, fetchDocs } from '@/lib/supabase/data';
-import { TaskList } from '@/components/dashboard/TaskList';
+import { redirect } from 'next/navigation';
 
-export default async function TasksPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  const profile = user ? await fetchProfile(user.id) : null;
-  const isAdmin = profile?.is_admin ?? false;
-
-  const tasks = isAdmin
-    ? await fetchAllTasksWithAssignees().catch(() => [])
-    : await fetchTasks(user?.id).catch(() => []);
-
-  const [team, docs] = await Promise.all([
-    fetchTeam().catch(() => []),
-    fetchDocs().catch(() => []),
-  ]);
-
-  return (
-    <Suspense>
-      <TaskList
-        tasks={tasks}
-        isAdmin={isAdmin}
-        team={team}
-        docs={docs}
-        currentUserId={user?.id ?? ''}
-      />
-    </Suspense>
-  );
+// The Issues board now lives at the dashboard root (`/`). This route is kept as a
+// redirect so existing deep-links (e.g. `/tasks?task=<id>` stored in older
+// notifications) continue to resolve to the board.
+export default async function TasksPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ task?: string }>;
+}) {
+  const { task } = await searchParams;
+  redirect(task ? `/?task=${task}` : '/');
 }

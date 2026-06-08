@@ -38,23 +38,49 @@ function KeybindKbd({ isMac }: { isMac: boolean }) {
 }
 
 function buildNavSteps(isMobile: boolean): TourStep[] {
-  const ids = isMobile ? TOUR_STEP_IDS_MOBILE : TOUR_STEP_IDS;
-  const pos = isMobile ? 'top' as const : 'right' as const;
+  // Desktop chrome is the Frame 6 top bar: an Issues·Docs nav pill plus a More
+  // overflow menu. Mobile keeps the bottom tab bar (Issues / Team / Docs /
+  // Activity + More).
+  if (!isMobile) {
+    return [
+      {
+        selectorId: TOUR_STEP_IDS.TASKS,
+        content: (
+          <p>
+            <strong>Issues</strong> — Your home screen. View and manage tasks: filter by assignee, status, and priority, and open details from here.
+          </p>
+        ),
+        position: 'bottom',
+      },
+      {
+        selectorId: TOUR_STEP_IDS.DOCS,
+        content: (
+          <p>
+            <strong>Docs</strong> — Shared documents and resources for the team.
+          </p>
+        ),
+        position: 'bottom',
+      },
+      {
+        selectorId: TOUR_STEP_IDS.MORE,
+        content: (
+          <p>
+            <strong>More</strong> — Team, Activity, and everything else lives here.
+          </p>
+        ),
+        position: 'bottom',
+      },
+    ];
+  }
+
+  const ids = TOUR_STEP_IDS_MOBILE;
+  const pos = 'top' as const;
   return [
-    {
-      selectorId: ids.OVERVIEW,
-      content: (
-        <p>
-          <strong>Overview</strong> — Your home screen. See open tasks, completed count, team size, and game areas at a glance.
-        </p>
-      ),
-      position: pos,
-    },
     {
       selectorId: ids.TASKS,
       content: (
         <p>
-          <strong>Tasks</strong> — View and manage your assigned tasks. Search, filter by status, and open task details from here.
+          <strong>Issues</strong> — Your home screen. View and manage your tasks: filter by status and priority, and open task details from here.
         </p>
       ),
       position: pos,

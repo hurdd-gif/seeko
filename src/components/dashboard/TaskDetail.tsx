@@ -865,7 +865,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
                 body: action === 'approve'
                   ? `${adminName} approved your task`
                   : `${adminName} sent your task back to In Progress`,
-                link: `/tasks?task=${task.id}`,
+                link: `/?task=${task.id}`,
               }),
             }).catch(() => {})
           : Promise.resolve(),
@@ -911,7 +911,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
         kind: 'task_submitted_review',
         title: 'Task submitted for review',
         body: `${senderName} submitted "${task.name}" for review`,
-        link: `/tasks?task=${task.id}`,
+        link: `/?task=${task.id}`,
       }),
     }).catch(() => {});
     setShowDeliverableUpload(false);
@@ -1190,7 +1190,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
           kind: kindMap[newStatus] ?? 'task_completed',
           title: `"${task.name}" → ${newStatus}`,
           body: `${changerName} changed the status`,
-          link: `/tasks?task=${task.id}`,
+          link: `/?task=${task.id}`,
         }),
       }).catch(() => {});
     }
@@ -1265,7 +1265,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
           kind: 'mentioned',
           title: 'You were mentioned',
           body: `${senderName} mentioned you in "${task.name}"`,
-          link: `/tasks?task=${task.id}&comment=${realCommentId}`,
+          link: `/?task=${task.id}&comment=${realCommentId}`,
         });
       }
     }
@@ -1283,7 +1283,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
           kind: 'comment_reply',
           title: 'New reply',
           body: `${senderName} replied in "${task.name}"`,
-          link: `/tasks?task=${task.id}&comment=${realCommentId}`,
+          link: `/?task=${task.id}&comment=${realCommentId}`,
         });
       }
     }

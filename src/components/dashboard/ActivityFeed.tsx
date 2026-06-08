@@ -123,10 +123,10 @@ function actionToSentence(action: string): string {
 }
 
 function itemHref(parsed: { type: string }, taskId?: string | null, docId?: string | null): string {
-  if (taskId) return `/tasks?task=${encodeURIComponent(taskId)}`;
+  if (taskId) return `/?task=${encodeURIComponent(taskId)}`;
   if (docId) return `/docs?doc=${encodeURIComponent(docId)}`;
   if (parsed.type === 'doc') return '/docs';
-  if (parsed.type === 'task' || parsed.type === 'area') return '/tasks';
+  if (parsed.type === 'task' || parsed.type === 'area') return '/';
   return '/activity';
 }
 

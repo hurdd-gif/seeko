@@ -134,7 +134,7 @@ export async function POST(req: NextRequest) {
         kind: 'deadline_extension_requested',
         title: `Extension requested on "${task.name}"`,
         body: `${amount} \u2014 new deadline would be ${newDeadlineFormatted}`,
-        link: `/tasks?task=${taskId}`,
+        link: `/?task=${taskId}`,
       }),
     });
   } catch {

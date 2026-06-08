@@ -77,10 +77,11 @@ const EVENT_ICONS: Record<string, { icon: typeof Eye; className: string; label: 
 };
 
 const PAGE_NAMES: Record<string, string> = {
-  '/': 'Overview',
-  '/tasks': 'Tasks',
+  '/': 'Issues',
+  '/tasks': 'Issues',
   '/team': 'Team',
   '/docs': 'Documents',
+  '/progress': 'Progress',
   '/settings': 'Settings',
 };
 

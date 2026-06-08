@@ -108,7 +108,7 @@ export async function POST(
     kind: 'task_handoff',
     title: 'Task handed off to you',
     body: notifBody,
-    link: `/tasks?task=${taskId}`,
+    link: `/?task=${taskId}`,
     read: false,
   });
 

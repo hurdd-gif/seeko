@@ -1,17 +1,15 @@
 'use client';
 
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { createBrowserClient } from '@supabase/ssr';
 import {
   MoreHorizontal,
-  MoreVertical,
   Circle,
   Timer,
   AlertCircle,
   CheckCircle2,
-  Plus,
   ChevronDown,
   UserPlus,
   Trash2,
@@ -192,6 +190,8 @@ interface TaskListProps {
 
 export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs = [], currentUserId = '' }: TaskListProps) {
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
   const isMobile = useMediaQuery('(max-width: 639px)');
   const shouldReduceMotion = useReducedMotion();
 
@@ -231,6 +231,14 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
     const match = allTasks.find(t => t.id === taskId);
     if (match) setSelectedTask(match);
   }, [searchParams, allTasks]);
+
+  // Open the add-issue form from the top-bar Create button (?new=1), then strip
+  // the param so a refresh / back doesn't re-open it.
+  useEffect(() => {
+    if (!isAdmin || !searchParams.get('new')) return;
+    setShowAddForm(true);
+    router.replace(pathname, { scroll: false });
+  }, [searchParams, isAdmin, router, pathname]);
 
   /* ---------------------------------------------------------------- */
   /*  Callbacks                                                        */
@@ -292,7 +300,7 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
           kind: kindMap[newStatus] ?? 'task_completed',
           title: `"${task.name}" → ${newStatus}`,
           body: `${changerName} changed the status`,
-          link: `/tasks?task=${taskId}`,
+          link: `/?task=${taskId}`,
         }),
       }).catch(() => {});
     }
@@ -343,7 +351,7 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
         kind: 'task_submitted_review',
         title: 'Task submitted for review',
         body: `${completerName} submitted "${taskName}" for review`,
-        link: `/tasks?task=${taskId}`,
+        link: `/?task=${taskId}`,
       }),
     })
       .then(async r => {
@@ -370,7 +378,7 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
           kind: 'task_assigned',
           title: 'Task assigned to you',
           body: task?.name ?? 'A task has been assigned to you',
-          link: `/tasks?task=${taskId}`,
+          link: `/?task=${taskId}`,
         }),
       });
     }
@@ -826,41 +834,19 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
 
   return (
     <div className="flex flex-col gap-4">
-      <div
-        className="rounded-2xl border border-border bg-card px-2 py-3 shadow-sm"
-      >
-        {/* Header: title + kebab menu */}
-        <div className="flex items-center justify-between px-3 pb-3">
-          <h2 className="text-base text-balance font-semibold tracking-tight text-foreground">
-            {isAdmin ? 'All Tasks' : 'My Tasks'}
-          </h2>
-          {isAdmin && (
-            <motion.button
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              transition={TASK_DIALS.status.spring}
-              className="flex items-center justify-center size-8 rounded-lg bg-seeko-accent/10 text-seeko-accent hover:bg-seeko-accent/20 transition-colors"
-              onClick={() => setShowAddForm(true)}
+      {/* Add-issue inline form (desktop only) — opened from the top-bar Create button */}
+      {!isMobile && (
+        <AnimatePresence>
+          {showAddForm && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={TASK_DIALS.filter.spring}
+              className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm"
             >
-              <Plus className="size-4" />
-              <span className="sr-only">Add Task</span>
-            </motion.button>
-          )}
-        </div>
-
-        {/* Add-task inline form (desktop only) */}
-        {!isMobile && (
-          <AnimatePresence>
-            {showAddForm && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={TASK_DIALS.filter.spring}
-                className="overflow-hidden border-b border-border/50"
-              >
-                <div className="px-3 py-3">
-                  <div className="flex flex-col gap-3">
+              <div className="px-4 py-4">
+                <div className="flex flex-col gap-3">
                     <Input
                       placeholder="Task name..."
                       value={newName}
@@ -939,25 +925,9 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
           </Dialog>
         )}
 
-        {/* Summary bar */}
-        <div className="flex items-center gap-3 px-3 pt-1 text-xs text-muted-foreground">
-          <span className="text-[13px] tabular-nums">{filtered.length} task{filtered.length !== 1 ? 's' : ''}</span>
-          {(() => {
-            const inProgress = filtered.filter(t => getEffectiveStatus(t) === 'In Progress').length;
-            const blocked = filtered.filter(t => getEffectiveStatus(t) === 'Blocked').length;
-            const inReview = filtered.filter(t => getEffectiveStatus(t) === 'In Review').length;
-            return (
-              <>
-                {inProgress > 0 && <span className="text-xs tabular-nums text-amber-400">{inProgress} in progress</span>}
-                {inReview > 0 && <span className="text-xs tabular-nums text-blue-400">{inReview} in review</span>}
-                {blocked > 0 && <span className="text-xs tabular-nums text-red-400">{blocked} blocked</span>}
-              </>
-            );
-          })()}
-        </div>
-
-        {/* Filter pills */}
-        <div className="flex flex-wrap items-center gap-2 px-3 py-3">
+      {/* Sub-toolbar: board controls (filters) + result summary */}
+      <div className="flex flex-wrap items-center justify-between gap-3 px-1">
+        <div className="flex flex-wrap items-center gap-2">
           <FilterPill
             label="Assignee"
             value={filterAssignee}
@@ -983,25 +953,37 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
             onChange={setFilterPriority}
           />
         </div>
+        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+          <span className="text-[13px] tabular-nums">{filtered.length} issue{filtered.length !== 1 ? 's' : ''}</span>
+          {(() => {
+            const inProgress = filtered.filter(t => getEffectiveStatus(t) === 'In Progress').length;
+            const blocked = filtered.filter(t => getEffectiveStatus(t) === 'Blocked').length;
+            const inReview = filtered.filter(t => getEffectiveStatus(t) === 'In Review').length;
+            return (
+              <>
+                {inProgress > 0 && <span className="text-xs tabular-nums text-amber-400">{inProgress} in progress</span>}
+                {inReview > 0 && <span className="text-xs tabular-nums text-blue-400">{inReview} in review</span>}
+                {blocked > 0 && <span className="text-xs tabular-nums text-red-400">{blocked} blocked</span>}
+              </>
+            );
+          })()}
+        </div>
+      </div>
 
-        {/* Separator */}
-        <div className="border-b border-border/50" />
-
-        {/* Task rows */}
-        <div>
-          <AnimatePresence mode="popLayout">
+      {/* Board */}
+      <div className="rounded-2xl border border-border bg-card px-2 py-2 shadow-sm">
+        <AnimatePresence mode="popLayout">
           <div className="flex flex-col divide-y divide-border/30">
             {filtered.map(t => renderTaskRow(t))}
             {filtered.length === 0 && (
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <CheckCircle2 className="size-10 text-muted-foreground/50" />
-                <p className="mt-3 text-sm font-medium text-foreground">No tasks found</p>
+                <p className="mt-3 text-sm font-medium text-foreground">No issues found</p>
                 <p className="text-xs text-muted-foreground">Try adjusting your filters.</p>
               </div>
             )}
           </div>
-          </AnimatePresence>
-        </div>
+        </AnimatePresence>
       </div>
 
       {/* Dialogs */}

@@ -6,7 +6,6 @@ import { motion, AnimatePresence } from 'motion/react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  LayoutDashboard,
   CheckSquare,
   Users,
   FileText,
@@ -37,8 +36,7 @@ const NotificationBell = dynamic(
 );
 
 const NAV_BASE = [
-  { href: '/',         label: 'Overview',   mobileLabel: 'Home',   icon: LayoutDashboard, tourKey: 'OVERVIEW' as const },
-  { href: '/tasks',    label: '__TASKS__',  mobileLabel: '__TASKS__', icon: CheckSquare,  tourKey: 'TASKS' as const },
+  { href: '/',         label: 'Issues',     mobileLabel: 'Issues', icon: CheckSquare,     tourKey: 'TASKS' as const },
   { href: '/team',     label: 'Team',       mobileLabel: 'Team',   icon: Users,           tourKey: 'TEAM' as const },
   { href: '/docs',     label: 'Docs',       mobileLabel: 'Docs',   icon: FileText,        tourKey: 'DOCS' as const },
   { href: '/activity', label: 'Activity',   mobileLabel: 'Activity', icon: Activity,      tourKey: 'ACTIVITY' as const },
@@ -77,13 +75,7 @@ export function MobileNav({
   }, []);
 
   const NAV = [
-    ...NAV_BASE
-      .filter(item => !(isContractor && item.href === '/activity'))
-      .map(item =>
-        item.label === '__TASKS__'
-          ? { ...item, label: isAdmin ? 'All Tasks' : 'My Tasks', mobileLabel: 'Tasks' as const }
-          : item
-      ),
+    ...NAV_BASE.filter(item => !(isContractor && item.href === '/activity')),
     ...(isAdmin ? [
       { href: '/payments', label: 'Payments', mobileLabel: 'Pay' as const, icon: DollarSign, tourKey: undefined as undefined },
       { href: '/admin/external-signing', label: 'External Signing', mobileLabel: 'Sign' as const, icon: FileSignature, tourKey: undefined as undefined },

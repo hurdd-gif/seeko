@@ -31,7 +31,7 @@ export default function DashboardError({
           Retry
         </Button>
         <Button variant="ghost" onClick={() => router.push('/')}>
-          Back to Overview
+          Back to Issues
         </Button>
       </div>
     </div>

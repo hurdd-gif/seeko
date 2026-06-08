@@ -137,7 +137,7 @@ export async function PATCH(
         kind: notifKind,
         title: notifTitle,
         body: notifBody,
-        link: `/tasks?task=${ext.task_id}`,
+        link: `/?task=${ext.task_id}`,
       }),
     });
   } catch {
