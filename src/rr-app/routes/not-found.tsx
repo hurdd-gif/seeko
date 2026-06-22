@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import { Link } from 'react-router';
-import { motion, useScroll, useSpring, useTransform } from 'motion/react';
+import { motion, useReducedMotion, useScroll, useSpring, useTransform } from 'motion/react';
 import { BTN_PRIMARY } from '@/components/dashboard/lightKit';
 
 const NUMERAL_4 = 'M120 0 L40 130 L160 130 M120 0 L120 200';
@@ -13,6 +13,7 @@ export function NotFoundRoute() {
 
 export function NotFoundContent() {
   const trackRef = useRef<HTMLDivElement>(null);
+  const reduce = useReducedMotion();
 
   const { scrollYProgress } = useScroll({
     target: trackRef,
@@ -26,6 +27,11 @@ export function NotFoundContent() {
   const copyOpacity = useTransform(progress, [0.62, 0.95], [0, 1]);
   const copyY = useTransform(progress, [0.62, 0.95], [14, 0]);
   const hintOpacity = useTransform(progress, [0.0, 0.12], [1, 0]);
+
+  // Reduced motion: render fully-drawn numerals + visible copy, no scrub, no hint.
+  const pl4L = reduce ? 1 : draw4L;
+  const pl0 = reduce ? 1 : draw0;
+  const pl4R = reduce ? 1 : draw4R;
 
   return (
     <div className="overview-light min-h-[220vh] bg-[var(--ov-bg)] text-[#111] antialiased">
@@ -49,7 +55,7 @@ export function NotFoundContent() {
             <motion.path
               d={NUMERAL_4}
               transform="translate(40 20)"
-              style={{ pathLength: draw4L }}
+              style={{ pathLength: pl4L }}
               vectorEffect="non-scaling-stroke"
             />
             <motion.ellipse
@@ -59,20 +65,20 @@ export function NotFoundContent() {
               ry="100"
               transform="translate(230 20)"
               stroke="#0d7aff"
-              style={{ pathLength: draw0 }}
+              style={{ pathLength: pl0 }}
               vectorEffect="non-scaling-stroke"
             />
             <motion.path
               d={NUMERAL_4}
               transform="translate(420 20)"
-              style={{ pathLength: draw4R }}
+              style={{ pathLength: pl4R }}
               vectorEffect="non-scaling-stroke"
             />
           </svg>
 
           <motion.div
             className="flex flex-col items-center gap-4 text-center"
-            style={{ opacity: copyOpacity, y: copyY }}
+            style={{ opacity: reduce ? 1 : copyOpacity, y: reduce ? 0 : copyY }}
           >
             <h1 className="text-[clamp(22px,2.4vw,28px)] font-semibold text-[#111]">
               This page wandered off the map
@@ -96,7 +102,7 @@ export function NotFoundContent() {
           <motion.div
             aria-hidden
             className="pointer-events-none absolute bottom-10 flex flex-col items-center gap-1 text-[#9a9a9a]"
-            style={{ opacity: hintOpacity }}
+            style={{ opacity: reduce ? 0 : hintOpacity }}
           >
             <span className="font-mono text-[11px] tracking-[0.16em]">SCROLL</span>
             <svg
