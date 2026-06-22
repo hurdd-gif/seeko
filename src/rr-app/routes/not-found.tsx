@@ -4,6 +4,15 @@ import { motion, useReducedMotion, useScroll, useSpring, useTransform } from 'mo
 import { BTN_PRIMARY } from '@/components/dashboard/lightKit';
 
 const NUMERAL_4 = 'M120 0 L40 130 L160 130 M120 0 L120 200';
+
+// Shared glyph geometry — referenced by BOTH the faint static "ghost" guide and
+// the scroll-drawn strokes so the two layers can never drift out of register.
+const GLYPH = {
+  left4: { d: NUMERAL_4, transform: 'translate(40 20)' },
+  zero: { cx: 80, cy: 100, rx: 70, ry: 100, transform: 'translate(230 20)' },
+  right4: { d: NUMERAL_4, transform: 'translate(420 20)' },
+} as const;
+
 const FOCUS_RING =
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d7aff]/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--ov-bg)]';
 
@@ -52,25 +61,27 @@ export function NotFoundContent() {
             strokeLinecap="round"
             strokeLinejoin="round"
           >
+            {/* Ghost guide: the full 404 at rest, so the shape reads before it's
+              * drawn and the strokes trace over a visible path. Covered by the
+              * solid strokes at full draw (incl. reduced motion). */}
+            <g stroke="#111" opacity={0.1} aria-hidden>
+              <path {...GLYPH.left4} vectorEffect="non-scaling-stroke" />
+              <ellipse {...GLYPH.zero} vectorEffect="non-scaling-stroke" />
+              <path {...GLYPH.right4} vectorEffect="non-scaling-stroke" />
+            </g>
             <motion.path
-              d={NUMERAL_4}
-              transform="translate(40 20)"
+              {...GLYPH.left4}
               style={{ pathLength: pl4L }}
               vectorEffect="non-scaling-stroke"
             />
             <motion.ellipse
-              cx="80"
-              cy="100"
-              rx="70"
-              ry="100"
-              transform="translate(230 20)"
+              {...GLYPH.zero}
               stroke="#0d7aff"
               style={{ pathLength: pl0 }}
               vectorEffect="non-scaling-stroke"
             />
             <motion.path
-              d={NUMERAL_4}
-              transform="translate(420 20)"
+              {...GLYPH.right4}
               style={{ pathLength: pl4R }}
               vectorEffect="non-scaling-stroke"
             />
