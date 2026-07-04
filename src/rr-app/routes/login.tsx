@@ -44,12 +44,10 @@ export function LoginRouteContent() {
         </a>
       </header>
 
-      {/* Top-ANCHORED (not centered): the card grows when the invite view
-          swaps in, and my-auto recentring would lurch the whole frame
-          (top up, bottom down) mid-transition. A fixed optical top keeps
-          the badge/heading/fields rock-still — growth only extends down.
-          clamp ≥ 6rem clears the absolute header on short viewports. */}
-      <main className="mx-auto mb-auto mt-[clamp(6rem,15vh,11rem)] flex w-full max-w-[420px] flex-col items-center pb-24">
+      {/* Vertically centered. Safe now that the card's height change is a
+          real animation (LoginForm pins + WAAPI-glides the container): the
+          my-auto recentring rides that same curve instead of snapping. */}
+      <main className="mx-auto my-auto flex w-full max-w-[420px] flex-col items-center py-24">
         <LoginForm initialError={callbackError} />
 
         {/* Legal footnote — reference: 14px #969696, max 300px, 32px below card.
