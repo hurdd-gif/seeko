@@ -15,7 +15,6 @@ const indexHtmlPath = resolve(staticRoot, 'index.html');
 const server = new Hono().route('/', app);
 
 if (existsSync(staticRoot) && existsSync(indexHtmlPath)) {
-  const indexHtml = readFileSync(indexHtmlPath, 'utf8');
   // Serve ANY real file from the build output (hashed assets plus everything
   // Vite copies from public/ — logos, icons, manifest). serveStatic calls
   // next() on a miss, so unknown paths still fall through to the SPA HTML
@@ -27,7 +26,11 @@ if (existsSync(staticRoot) && existsSync(indexHtmlPath)) {
     if (pathname.startsWith('/api/') || pathname === '/api' || pathname.startsWith('/auth/')) {
       return c.notFound();
     }
-    return c.html(indexHtml);
+    // Read per-request, never cache at boot: the HTML references hashed
+    // asset filenames, so a rebuild while the server runs would otherwise
+    // keep serving pointers to assets that no longer exist (the page then
+    // dies on a text/html-for-JS MIME error).
+    return c.html(readFileSync(indexHtmlPath, 'utf8'));
   });
 }
 

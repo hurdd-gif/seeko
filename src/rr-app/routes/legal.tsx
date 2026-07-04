@@ -79,8 +79,33 @@ export function LegalRoute() {
   // Which tick's label is revealed (hover/focus) — one at a time, never a column.
   const [peekedSection, setPeekedSection] = useState<number | null>(null);
   const [railHovered, setRailHovered] = useState(false);
-  // Keyboard focus engages the rail the same way the pointer does.
-  const railEngaged = railHovered || peekedSection !== null;
+  // Drag-to-scrub bookkeeping: where the press landed, whether it has crossed
+  // into a real drag, and the last row scrubbed to (for the one hash write on
+  // release). A ref, not state — pointermove must read/write it without
+  // waiting a render.
+  const railRef = useRef<HTMLDivElement>(null);
+  const dragRef = useRef<{
+    pointerId: number;
+    startIndex: number;
+    dragging: boolean;
+    lastIndex: number;
+    // Per-section target scrollTops, measured once when the drag begins —
+    // the pointer interpolates between them, so mid-drag layout reads stay off
+    // the hot path.
+    tops: number[] | null;
+  } | null>(null);
+  // The scrub's glide loop: scrollTop chases `target` a fraction per frame
+  // (critically damped — no overshoot), which is what makes the drag feel
+  // smooth instead of teleporting per detent. Outlives dragRef so the last
+  // glide can settle after release.
+  const scrubAnimRef = useRef<{ target: number; factor: number; raf: number } | null>(null);
+  const [railDragging, setRailDragging] = useState(false);
+  useEffect(() => () => {
+    if (scrubAnimRef.current) cancelAnimationFrame(scrubAnimRef.current.raf);
+  }, []);
+  // Keyboard focus and an in-flight drag engage the rail the same way the
+  // pointer does (the drag can wander off the strip while captured).
+  const railEngaged = railHovered || peekedSection !== null || railDragging;
 
   useEffect(() => {
     if (doc) document.title = `${doc.title} · SEEKO Studio`;
@@ -151,6 +176,103 @@ export function LegalRoute() {
     history.replaceState(null, '', `#${sectionId(index, doc.sections[index].heading)}`);
   };
 
+  // Drag-to-scrub: which rail row sits under the pointer. Rect math (height /
+  // row count, every row is the same 12px band) rather than per-row hit
+  // testing, so the rail's 1.25× engaged scale is accounted for free.
+  const railIndexAt = (clientY: number) => {
+    const rail = railRef.current;
+    if (!rail) return 0;
+    const rect = rail.getBoundingClientRect();
+    const row = rect.height / doc.sections.length;
+    return Math.min(doc.sections.length - 1, Math.max(0, Math.floor((clientY - rect.top) / row)));
+  };
+
+  // Where scrollIntoView would land each section (scroll-mt-28 = 112px below
+  // the scroller top), clamped to the reachable range. Measured once per drag.
+  const measureSectionTops = () => {
+    const scroller = scrollerRef.current;
+    if (!scroller) return null;
+    const max = scroller.scrollHeight - scroller.clientHeight;
+    const scrollerTop = scroller.getBoundingClientRect().top;
+    return doc.sections.map((section, i) => {
+      const el = document.getElementById(sectionId(i, section.heading));
+      if (!el) return 0;
+      const top = scroller.scrollTop + el.getBoundingClientRect().top - scrollerTop - 112;
+      return Math.min(max, Math.max(0, top));
+    });
+  };
+
+  const startScrubGlide = () => {
+    const scroller = scrollerRef.current;
+    if (!scroller) return;
+    if (scrubAnimRef.current) cancelAnimationFrame(scrubAnimRef.current.raf);
+    // 0.22/frame ≈ 65ms time constant at 60fps: tight enough to feel wired to
+    // the hand, soft enough to swallow the high gearing where one 12px rail
+    // row spans a long section. Reduced motion tracks 1:1 instead of gliding.
+    const anim = { target: scroller.scrollTop, factor: reduceMotion ? 1 : 0.22, raf: 0 };
+    scrubAnimRef.current = anim;
+    const tick = () => {
+      const el = scrollerRef.current;
+      if (!el || scrubAnimRef.current !== anim) return;
+      const delta = anim.target - el.scrollTop;
+      if (Math.abs(delta) < 0.5) {
+        el.scrollTop = anim.target;
+        // Keep idling while the pointer is still down — the next move only
+        // updates `target`; once released and settled, stop for real.
+        if (!dragRef.current?.dragging) {
+          scrubAnimRef.current = null;
+          return;
+        }
+      } else {
+        el.scrollTop += delta * anim.factor;
+      }
+      anim.raf = requestAnimationFrame(tick);
+    };
+    anim.raf = requestAnimationFrame(tick);
+  };
+
+  // Continuous scrub: the pointer's position along the rail (row centers =
+  // whole numbers) interpolates piecewise-linearly between section tops, and
+  // the glide loop above chases it. The label still detents to the nearest
+  // row; the active tick follows the real scroll via the scroll-spy. The hash
+  // is written once on release, not per detent (jumpTo owns clicks).
+  const scrubMove = (clientY: number) => {
+    const drag = dragRef.current;
+    const rail = railRef.current;
+    const anim = scrubAnimRef.current;
+    if (!drag?.tops || !rail || !anim) return;
+    const rect = rail.getBoundingClientRect();
+    const rowH = rect.height / doc.sections.length;
+    const p = Math.min(doc.sections.length - 1, Math.max(0, (clientY - rect.top) / rowH - 0.5));
+    const i = Math.max(0, Math.min(doc.sections.length - 2, Math.floor(p)));
+    anim.target =
+      doc.sections.length < 2 ? drag.tops[0] : drag.tops[i] + (drag.tops[i + 1] - drag.tops[i]) * (p - i);
+    const nearest = Math.round(p);
+    if (nearest !== drag.lastIndex) {
+      drag.lastIndex = nearest;
+      setPeekedSection(nearest);
+    }
+  };
+
+  const endRailDrag = (e: React.PointerEvent<HTMLDivElement>) => {
+    const drag = dragRef.current;
+    if (!drag || e.pointerId !== drag.pointerId) return;
+    dragRef.current = null;
+    if (!drag.dragging) return; // stationary press — the button's onClick owns it
+    setRailDragging(false);
+    const landed = drag.lastIndex >= 0 ? drag.lastIndex : drag.startIndex;
+    history.replaceState(null, '', `#${sectionId(landed, doc.sections[landed].heading)}`);
+    // If the drag let go off the strip, tidy the hover states ourselves —
+    // mouseleave fired mid-capture (or never fires, for touch).
+    const rect = e.currentTarget.getBoundingClientRect();
+    const inside =
+      e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom;
+    if (!inside) {
+      setRailHovered(false);
+      setPeekedSection(null);
+    }
+  };
+
   const rise = (order: number) =>
     reduceMotion
       ? {}
@@ -193,7 +315,16 @@ export function LegalRoute() {
           rail 25% (scale, left-anchored so it grows into the page) AND grows
           every tick (14 → 22px), peeked/active longest (28px). A single
           tick's 10px change was invisible in practice — the component-level
-          magnification is what makes the hover unmistakable. */}
+          magnification is what makes the hover unmistakable.
+
+          It also scrubs like a dial: press and drag along the ticks and the
+          document glides with the pointer (continuous position → interpolated
+          section offsets → damped chase), the label detenting to the nearest
+          row. The press only becomes a drag once it crosses into another row,
+          so a stationary press still falls through to the button's onClick
+          (and its smooth scroll). Pointer capture starts at the same moment,
+          which also swallows the synthetic click that would otherwise
+          re-jump. */}
       <motion.nav
         aria-label="Sections"
         className="fixed left-6 top-1/2 z-10 hidden -translate-y-1/2 print:hidden xl:block sm:left-10"
@@ -214,10 +345,42 @@ export function LegalRoute() {
             nav's entrance animation. origin-left keeps the rail pinned to the
             margin while it scales; ticks, spacing, and label all magnify. */}
         <motion.div
-          className="relative flex origin-left flex-col"
+          ref={railRef}
+          // touch-none: a touch drag on the strip scrubs instead of scrolling
+          // the page; select-none keeps a mouse scrub from starting a text
+          // selection in the document beside it.
+          className={cn(
+            'relative flex origin-left touch-none select-none flex-col',
+            railDragging && 'cursor-grabbing **:cursor-grabbing',
+          )}
           animate={{ scale: railEngaged ? 1.25 : 1 }}
           transition={reduceMotion ? { duration: 0 } : springs.snappy}
           initial={false}
+          onPointerDown={e => {
+            if (e.pointerType === 'mouse' && e.button !== 0) return;
+            dragRef.current = {
+              pointerId: e.pointerId,
+              startIndex: railIndexAt(e.clientY),
+              dragging: false,
+              lastIndex: -1,
+              tops: null,
+            };
+          }}
+          onPointerMove={e => {
+            const drag = dragRef.current;
+            if (!drag || e.pointerId !== drag.pointerId) return;
+            if (!drag.dragging) {
+              if (railIndexAt(e.clientY) === drag.startIndex) return;
+              drag.dragging = true;
+              drag.tops = measureSectionTops();
+              setRailDragging(true);
+              e.currentTarget.setPointerCapture(e.pointerId);
+              startScrubGlide();
+            }
+            scrubMove(e.clientY);
+          }}
+          onPointerUp={endRailDrag}
+          onPointerCancel={endRailDrag}
         >
         {doc.sections.map((section, i) => (
           <button
