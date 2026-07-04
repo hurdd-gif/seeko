@@ -195,10 +195,10 @@ export function InviteCodeForm() {
       </div>
 
       {/* CTA springs into black the moment the 8th digit lands: resting state
-          is a muted gray pill; completion crossfades bg + label on a slow
-          spring (gentle, 200/20) so the arrival has weight instead of a flat
-          timed fade. Hover darkening runs its own quick 150ms so it never
-          feels gated by the slow spring; press keeps a 150ms CSS transform. */}
+          is a muted gray pill; completion crossfades bg + label on a spring
+          (smooth, 300/25 — quicker per feedback, still weighted) instead of a
+          flat timed fade. Hover darkening runs its own quick 150ms so it never
+          feels gated by the spring; press keeps a 150ms CSS transform. */}
       <motion.button
         type="submit"
         disabled={loading || token.length < 8}
@@ -207,7 +207,7 @@ export function InviteCodeForm() {
           backgroundColor: token.length === 8 ? '#111111' : '#f1f1f1',
           color: token.length === 8 ? '#ffffff' : '#9a9a9a',
         }}
-        transition={reduceMotion ? { duration: 0 } : springs.gentle}
+        transition={reduceMotion ? { duration: 0 } : springs.smooth}
         {...(token.length === 8
           ? { whileHover: { backgroundColor: '#2a2a2a', transition: { duration: 0.15, ease: 'easeOut' as const } } }
           : {})}
