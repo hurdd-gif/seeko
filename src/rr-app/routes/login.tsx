@@ -30,9 +30,10 @@ export function LoginRouteContent() {
       {/* Top bar — reference geometry: 32px mark + 16px #686868 labels, 32/40 padding */}
       <header className="absolute inset-x-0 top-0 flex items-center justify-between px-6 py-6 pt-[max(1.5rem,env(safe-area-inset-top))] sm:px-10 sm:py-8">
         <div className="flex items-center gap-2.5">
-          {/* Natural aspect (w-auto) — forcing the calligraphic mark square
-              inflates its whitespace and it reads oversized vs the label. */}
-          <img src="/seeko-logo.png" alt="SEEKO" className="h-7 w-auto" />
+          {/* Refined gray mark (#6E6E6E) exported from the Paper reference
+              header (27P-0) — replaces the outdated heavy black PNG. Tight
+              24×24 viewBox, so it sits square at the reference's 32px. */}
+          <img src="/seeko-mark.svg" alt="SEEKO" className="size-8" />
           <span className="text-base font-medium text-[#686868]">Studio</span>
         </div>
         <a
