@@ -9,7 +9,7 @@ import { useHaptics } from '@/components/HapticsProvider';
 import { SegmentedCodeInput } from './SegmentedCodeInput';
 import { springs } from '@/lib/motion';
 import { cn } from '@/lib/utils';
-import { LIGHT_INPUT, BTN_PRIMARY, LIGHT_FOCUS_RING } from '@/components/dashboard/lightKit';
+import { LIGHT_INPUT, LIGHT_FOCUS_RING } from '@/components/dashboard/lightKit';
 
 // Light Paper port: fields + CTA migrated dark→light onto the canonical lightKit
 // (azure-ring white input, #808080 labels, light segmented OTP cells, black-pill
@@ -194,13 +194,19 @@ export function InviteCodeForm() {
         </AnimatePresence>
       </div>
 
+      {/* CTA fades into black the moment the 8th digit lands: resting state
+          is a muted gray pill, and completion crossfades bg + label color
+          (150ms ease-out) rather than snapping opacity. */}
       <button
         type="submit"
         disabled={loading || token.length < 8}
         className={cn(
-          BTN_PRIMARY,
           LIGHT_FOCUS_RING,
-          'flex h-10 w-full items-center justify-center gap-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-40',
+          'flex h-10 w-full items-center justify-center gap-2 rounded-[14px] text-sm font-semibold active:scale-[0.98]',
+          '[transition:background-color_150ms_ease-out,color_150ms_ease-out,transform_150ms_ease-out]',
+          token.length === 8
+            ? 'bg-[#111] text-white hover:bg-[#2a2a2a]'
+            : 'cursor-not-allowed bg-[#f1f1f1] text-[#9a9a9a]',
         )}
       >
         {loading ? (
