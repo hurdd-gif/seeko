@@ -188,7 +188,9 @@ export function LegalRoute() {
             onBlur={() => setPeekedSection(null)}
             aria-label={`Section ${i + 1}: ${section.heading}`}
             aria-current={i === activeSection ? 'true' : undefined}
-            className="group/tick relative flex w-8 items-center py-[5px]"
+            // w-36 = generous invisible hit strip: the tick is a 14px sliver,
+            // so hovering anywhere in the margin band next to it must count.
+            className="group/tick relative flex w-36 items-center py-[5px]"
           >
             {/* Tick expands to full length on hover/focus (spring, interruptible),
                 not just a tint — the peeked tick reads as "this one". */}
@@ -218,7 +220,7 @@ export function LegalRoute() {
                   }
                   transition={reduceMotion ? { duration: 0 } : springs.snappy}
                   className={cn(
-                    'pointer-events-none absolute left-full ml-3 max-w-[320px] truncate whitespace-nowrap text-left text-[12px] leading-none',
+                    'pointer-events-none absolute left-10 max-w-[320px] truncate whitespace-nowrap text-left text-[12px] leading-none',
                     i === activeSection ? 'font-medium text-[#1c1c1c]' : 'text-[#5f5f5f]',
                   )}
                 >
