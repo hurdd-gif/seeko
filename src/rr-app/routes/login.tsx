@@ -37,7 +37,7 @@ export function LoginRouteContent() {
         </div>
         <a
           href="mailto:ykartix@gmail.com?subject=SEEKO%20Studio%20sign-in%20help"
-          className="flex items-center gap-2 text-base text-[#686868] transition-colors duration-150 hover:text-[#3a3a3a]"
+          className="flex items-center gap-2 text-base text-[#686868] transition-colors duration-150 hover:text-[#3a3a3a] active:text-[#111]"
         >
           <CircleHelp className="size-[18px]" strokeWidth={1.75} />
           Help &amp; Support

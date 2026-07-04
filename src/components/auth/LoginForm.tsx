@@ -103,7 +103,15 @@ const PILL = cn(
 );
 
 const SUBTLE_LINK =
-  'text-[13px] text-[#9a9a9a] transition-colors hover:text-[#3a3a3a]';
+  'text-[13px] text-[#9a9a9a] transition-colors hover:text-[#3a3a3a] active:text-[#111]';
+
+/* Busy-state content crossfade (never hard-swap a label/icon): tiny
+ * opacity + scale + blur bridge, 150ms ease-out. */
+const SWAP = {
+  initial: { opacity: 0, scale: 0.95, filter: 'blur(2px)' },
+  animate: { opacity: 1, scale: 1, filter: 'blur(0px)' },
+  exit:    { opacity: 0, scale: 0.95, filter: 'blur(2px)' },
+};
 
 /* Official Google "G" (standard brand colors), from the reference frame. */
 function GoogleGlyph() {
@@ -153,7 +161,12 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
   const passkeySupported =
     typeof window !== 'undefined' && typeof window.PublicKeyCredential !== 'undefined';
 
+  // Reduced motion: skip the storyboard — everything rests immediately.
   useEffect(() => {
+    if (reduceMotion) {
+      setStage(5);
+      return;
+    }
     const timers: ReturnType<typeof setTimeout>[] = [];
     timers.push(setTimeout(() => setStage(1), TIMING.card));
     timers.push(setTimeout(() => setStage(2), TIMING.identity));
@@ -161,7 +174,10 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
     timers.push(setTimeout(() => setStage(4), TIMING.providers));
     timers.push(setTimeout(() => setStage(5), TIMING.footer));
     return () => timers.forEach(clearTimeout);
-  }, []);
+  }, [reduceMotion]);
+
+  // Wraps any transition so prefers-reduced-motion collapses it to instant.
+  const t = <T,>(transition: T) => (reduceMotion ? { duration: 0 } : transition);
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -252,14 +268,14 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
         className="relative rounded-lg border border-[#E8E8E8]/75 bg-white px-6 py-10 shadow-[0_10px_20px_#D1D1D126]"
         initial={{ opacity: 0, y: CARD.offsetY }}
         animate={{ opacity: stage >= 1 ? 1 : 0, y: stage >= 1 ? 0 : CARD.offsetY }}
-        transition={CARD.spring}
+        transition={t(CARD.spring)}
       >
         {/* Badge + heading */}
         <motion.div
           className="mb-3 flex flex-col items-center gap-5"
           initial={{ opacity: 0, y: IDENTITY.offsetY }}
           animate={{ opacity: stage >= 2 ? 1 : 0, y: stage >= 2 ? 0 : IDENTITY.offsetY }}
-          transition={IDENTITY.spring}
+          transition={t(IDENTITY.spring)}
         >
           {/* White S-mark on the reference's #525252 disc — the dark-canvas
               asset finally has a home on the light card. */}
@@ -278,7 +294,7 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
           className="mb-10 text-center text-base leading-snug text-[#b4b4b4]"
           initial={{ opacity: 0 }}
           animate={{ opacity: stage >= 3 ? 1 : 0 }}
-          transition={FADE.spring}
+          transition={t(FADE.spring)}
         >
           <AnimatePresence mode="wait">
             <motion.p
@@ -286,24 +302,32 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
               initial={{ opacity: 0, filter: 'blur(4px)', y: 2 }}
               animate={{ opacity: 1, filter: 'blur(0px)', y: 0 }}
               exit={{ opacity: 0, filter: 'blur(4px)', y: -2 }}
-              transition={{ duration: 0.2, ease: 'easeOut' }}
+              transition={t({ duration: 0.2, ease: 'easeOut' })}
             >
               {view === 'signin' ? 'Your hub for tasks, docs, and payments' : 'Join the team!'}
             </motion.p>
           </AnimatePresence>
         </motion.div>
 
-        {/* Shared error slot — covers all three methods */}
+        {/* Shared error slot — covers all three methods. Height animates both
+            directions so the card reflows smoothly instead of snapping. */}
         <div aria-live="polite">
-          {error && (
-            <motion.p
-              initial={{ opacity: 0, scale: 0.97 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="mb-4 rounded-lg bg-[#d4503e]/10 px-3 py-2 text-sm text-[#d4503e]"
-            >
-              {error}
-            </motion.p>
-          )}
+          <AnimatePresence initial={false}>
+            {error && (
+              <motion.div
+                key="error"
+                className="overflow-hidden"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={t({ duration: 0.2, ease: 'easeOut' })}
+              >
+                <p className="mb-4 rounded-lg bg-[#d4503e]/10 px-3 py-2 text-sm text-[#d4503e]">
+                  {error}
+                </p>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Views */}
@@ -314,14 +338,14 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
               initial={{ opacity: 0, x: -8 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 8 }}
-              transition={springs.smooth}
+              transition={t(springs.smooth)}
             >
               {/* Provider pills */}
               <motion.div
                 className="space-y-2"
                 initial={{ opacity: 0, y: FIELD.offsetY }}
                 animate={{ opacity: stage >= 4 ? 1 : 0, y: stage >= 4 ? 0 : FIELD.offsetY }}
-                transition={FIELD.spring}
+                transition={t(FIELD.spring)}
               >
                 <button
                   type="button"
@@ -329,8 +353,17 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
                   disabled={googleBusy || passkeyBusy}
                   className={PILL}
                 >
-                  {googleBusy ? <Loader2 className="size-6 animate-spin" /> : <GoogleGlyph />}
-                  {googleBusy ? 'Redirecting…' : 'Continue with Google'}
+                  <AnimatePresence mode="wait" initial={false}>
+                    <motion.span
+                      key={googleBusy ? 'busy' : 'idle'}
+                      className="flex items-center gap-3"
+                      {...SWAP}
+                      transition={t({ duration: 0.15, ease: 'easeOut' })}
+                    >
+                      {googleBusy ? <Loader2 className="size-6 animate-spin" /> : <GoogleGlyph />}
+                      {googleBusy ? 'Redirecting…' : 'Continue with Google'}
+                    </motion.span>
+                  </AnimatePresence>
                 </button>
                 {passkeySupported && (
                   <button
@@ -339,10 +372,19 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
                     disabled={googleBusy || passkeyBusy}
                     className={PILL}
                   >
-                    {passkeyBusy
-                      ? <Loader2 className="size-6 animate-spin" />
-                      : <Fingerprint className="size-6" strokeWidth={1.75} />}
-                    {passkeyBusy ? 'Waiting for passkey…' : 'Continue with passkey'}
+                    <AnimatePresence mode="wait" initial={false}>
+                      <motion.span
+                        key={passkeyBusy ? 'busy' : 'idle'}
+                        className="flex items-center gap-3"
+                        {...SWAP}
+                        transition={t({ duration: 0.15, ease: 'easeOut' })}
+                      >
+                        {passkeyBusy
+                          ? <Loader2 className="size-6 animate-spin" />
+                          : <Fingerprint className="size-6" strokeWidth={1.75} />}
+                        {passkeyBusy ? 'Waiting for passkey…' : 'Continue with passkey'}
+                      </motion.span>
+                    </AnimatePresence>
                   </button>
                 )}
 
@@ -467,11 +509,21 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
                         className={cn(
                           BTN_PRIMARY,
                           LIGHT_FOCUS_RING,
-                          'h-11 w-full rounded-lg text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50',
+                          'flex h-11 w-full items-center justify-center rounded-lg text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50',
                         )}
                         whileTap={{ scale: 0.985 }}
                       >
-                        {loading ? 'Signing in…' : 'Sign in'}
+                        <AnimatePresence mode="wait" initial={false}>
+                          <motion.span
+                            key={loading ? 'busy' : 'idle'}
+                            className="flex items-center gap-2"
+                            {...SWAP}
+                            transition={t({ duration: 0.15, ease: 'easeOut' })}
+                          >
+                            {loading && <Loader2 className="size-4 animate-spin" />}
+                            {loading ? 'Signing in…' : 'Sign in'}
+                          </motion.span>
+                        </AnimatePresence>
                       </motion.button>
                     </form>
                   </motion.div>
@@ -483,7 +535,7 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
                 className="mt-6 text-center"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: stage >= 5 ? 1 : 0 }}
-                transition={FADE.spring}
+                transition={t(FADE.spring)}
               >
                 <button
                   type="button"
@@ -500,7 +552,7 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
               initial={{ opacity: 0, x: 8 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -8 }}
-              transition={springs.smooth}
+              transition={t(springs.smooth)}
             >
               <InviteCodeForm />
               <p className="mt-6 text-center">
