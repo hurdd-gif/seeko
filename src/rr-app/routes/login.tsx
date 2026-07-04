@@ -29,8 +29,10 @@ export function LoginRouteContent() {
     <div className="overview-light relative flex min-h-dvh flex-col bg-white px-4 antialiased pb-[env(safe-area-inset-bottom)]">
       {/* Top bar — reference geometry: 32px mark + 16px #686868 labels, 32/40 padding */}
       <header className="absolute inset-x-0 top-0 flex items-center justify-between px-6 py-6 pt-[max(1.5rem,env(safe-area-inset-top))] sm:px-10 sm:py-8">
-        <div className="flex items-center gap-3">
-          <img src="/seeko-logo.png" alt="SEEKO" className="size-8 rounded-md" />
+        <div className="flex items-center gap-2.5">
+          {/* Natural aspect (w-auto) — forcing the calligraphic mark square
+              inflates its whitespace and it reads oversized vs the label. */}
+          <img src="/seeko-logo.png" alt="SEEKO" className="h-7 w-auto" />
           <span className="text-base font-medium text-[#686868]">Studio</span>
         </div>
         <a
@@ -48,9 +50,14 @@ export function LoginRouteContent() {
       <main className="mx-auto my-auto flex w-full max-w-[420px] flex-col items-center py-24">
         <LoginForm initialError={callbackError} />
 
-        {/* Legal footnote — reference: 14px #969696, max 300px, 32px below card */}
+        {/* Legal footnote — reference: 14px #969696, max 300px, 32px below card.
+            Document names sit a step darker, link-style; wire real hrefs when
+            the terms/privacy pages exist. */}
         <p className="mt-8 max-w-[300px] text-pretty text-center text-sm leading-snug text-[#969696]">
-          Access is invite-only. By signing in you agree to the SEEKO Studio NDA.
+          By creating an account, you agree to our{' '}
+          <span className="font-medium text-[#6e6e6e]">Terms of Use</span>,{' '}
+          <span className="font-medium text-[#6e6e6e]">Developer Portal Terms of Service</span> and{' '}
+          <span className="font-medium text-[#6e6e6e]">Privacy Policy</span>
         </p>
       </main>
     </div>

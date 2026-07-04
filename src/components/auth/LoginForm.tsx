@@ -9,29 +9,35 @@
  *  150ms   card fades in, slides up to rest
  *  300ms   badge + heading fade in from y +8
  *  420ms   subtitle fades in
- *  540ms   provider pills (Google / passkey) fade in
- *  660ms   divider fades in
- *  740ms   email field slides in
- *  820ms   password field slides in (staggered 80ms)
- *  900ms   submit button + invite link fade in
+ *  540ms   provider pills (Google / passkey / email) fade in
+ *  660ms   invite link fades in
+ *
+ * SURFACE MORPH — "Continue with email" (transitions.dev pattern)
+ *
+ * The email pill IS the form's closed state. On click the surface
+ * animates height 48 → auto, radius 16 → 20, tint #f1f1f1 → #f7f7f7
+ * (bouncy open spring, calmer close). The two faces cross-fade with
+ * slide ±12px + scale 0.97 + blur 2px. Collapsed form is `inert`;
+ * Escape collapses; focus moves in on open, back to the pill on close.
  *
  * Layout follows the Paper reference (SK_DB frame 27P-0): centered 420px white
  * card — 64px #525252 circular badge with the white S-mark, 22px/600 −0.02em
- * heading, muted subtitle, stacked #f1f1f1 provider pills, "or" divider, then
- * the email/password pair with the black-pill CTA. The old Sign in / Invite
- * code tab pill is gone; the invite path survives as a footer link that swaps
- * the card body to the ORIGINAL <InviteCodeForm> (logic untouched). Geometry
+ * heading, muted subtitle, and a pills-only stack (Google / passkey / email —
+ * the email pill morphs into the email/password form on demand, so the card's
+ * default state matches the reference's pills-only layout). The old Sign in /
+ * Invite code tab pill is gone; the invite path survives as a footer link that
+ * swaps the card body to the ORIGINAL <InviteCodeForm> (logic untouched). Geometry
  * and inks follow the reference exactly: 8px card radius + #E8E8E8BF hairline
  * + 0 10px 20px #D1D1D126 shadow, #515151 heading, #B4B4B4 subcopy, 16px-radius
  * 48px pills with 24px icons. (The 16px-inside-8px radius inversion is the
  * reference's own call — fidelity beats the concentric rule here.)
  * ────────────────────────────────────────────────────────── */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from '@/lib/react-router-adapters';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { startAuthentication } from '@simplewebauthn/browser';
-import { Fingerprint, Loader2 } from 'lucide-react';
+import { Fingerprint, Loader2, Mail, X } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { InviteCodeForm } from '@/components/auth/InviteCodeForm';
 import { useHaptics } from '@/components/HapticsProvider';
@@ -44,11 +50,21 @@ const TIMING = {
   card:      150,   // outer card slides up
   identity:  300,   // badge + heading fade in
   subtitle:  420,   // tagline fades in
-  providers: 540,   // Google / passkey pills
-  divider:   660,   // "or" rule
-  field1:    740,   // email field
-  field2:    820,   // password field (staggered)
-  button:    900,   // submit + invite link
+  providers: 540,   // Google / passkey / email pills
+  footer:    660,   // invite link
+};
+
+/* ─── Email surface morph (transitions.dev grammar) ──────── */
+const MORPH = {
+  open:   { type: 'spring', duration: 0.5, bounce: 0.2 } as const,  // ≈ cubic-bezier(.34,1.25,.64,1)
+  close:  { type: 'spring', duration: 0.35, bounce: 0 } as const,   // calmer settle
+  fade:   { duration: 0.2, ease: 'easeOut' } as const,              // face cross-fade
+  slide:  12,     // px each face travels (vertical morph → vertical slide)
+  scale:  0.97,   // form face rests slightly shrunk while hidden
+  blur:   2,      // px blur bridging the cross-fade
+  radius: { closed: 16, open: 20 },
+  height: { closed: 48 },
+  tint:   { closed: '#f1f1f1', open: '#f7f7f7' },
 };
 
 /* ─── Element configs ────────────────────────────────────── */
@@ -71,7 +87,6 @@ const FADE = {
   spring: springs.smooth,
 };
 
-const FIELD_LABEL = 'block text-xs font-medium text-[#808080] mb-1.5';
 const FIELD_INPUT = cn(
   'h-11 w-full px-3 text-sm transition-[border-color,box-shadow] duration-150 focus-visible:outline-none',
   LIGHT_INPUT,
@@ -110,6 +125,7 @@ type LoginFormProps = {
 export function LoginForm({ initialError = null }: LoginFormProps) {
   const router = useRouter();
   const { trigger } = useHaptics();
+  const reduceMotion = useReducedMotion();
   const [view, setView] = useState<'signin' | 'invite'>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -118,6 +134,20 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
   const [googleBusy, setGoogleBusy] = useState(false);
   const [passkeyBusy, setPasskeyBusy] = useState(false);
   const [stage, setStage] = useState(0);
+  const [emailOpen, setEmailOpen] = useState(false);
+  const emailPillRef = useRef<HTMLButtonElement>(null);
+  const emailInputRef = useRef<HTMLInputElement>(null);
+
+  function openEmail() {
+    setEmailOpen(true);
+    // Focus once the panel is interactive (inert lifts on the state flip).
+    setTimeout(() => emailInputRef.current?.focus({ preventScroll: true }), 60);
+  }
+
+  function closeEmail() {
+    setEmailOpen(false);
+    setTimeout(() => emailPillRef.current?.focus({ preventScroll: true }), 60);
+  }
 
   // jsdom and older browsers have no WebAuthn — the pill simply doesn't render.
   const passkeySupported =
@@ -129,10 +159,7 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
     timers.push(setTimeout(() => setStage(2), TIMING.identity));
     timers.push(setTimeout(() => setStage(3), TIMING.subtitle));
     timers.push(setTimeout(() => setStage(4), TIMING.providers));
-    timers.push(setTimeout(() => setStage(5), TIMING.divider));
-    timers.push(setTimeout(() => setStage(6), TIMING.field1));
-    timers.push(setTimeout(() => setStage(7), TIMING.field2));
-    timers.push(setTimeout(() => setStage(8), TIMING.button));
+    timers.push(setTimeout(() => setStage(5), TIMING.footer));
     return () => timers.forEach(clearTimeout);
   }, []);
 
@@ -318,84 +345,144 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
                     {passkeyBusy ? 'Waiting for passkey…' : 'Continue with passkey'}
                   </button>
                 )}
-              </motion.div>
 
-              {/* Divider */}
-              <motion.div
-                className="my-6 flex items-center gap-3"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: stage >= 5 ? 1 : 0 }}
-                transition={FADE.spring}
-              >
-                <span className="h-px flex-1 bg-black/[0.06]" />
-                <span className="text-xs text-[#b3b3b3]">or</span>
-                <span className="h-px flex-1 bg-black/[0.06]" />
-              </motion.div>
-
-              {/* Email + password */}
-              <form onSubmit={handleLogin} className="space-y-4">
+                {/* Email surface morph — the pill IS the form's closed state.
+                    The surface animates height/radius/tint; the two faces
+                    cross-fade with slide + scale + blur (transitions.dev). */}
                 <motion.div
-                  initial={{ opacity: 0, y: FIELD.offsetY }}
-                  animate={{ opacity: stage >= 6 ? 1 : 0, y: stage >= 6 ? 0 : FIELD.offsetY }}
-                  transition={FIELD.spring}
+                  className="relative overflow-hidden"
+                  initial={false}
+                  animate={{
+                    height: emailOpen ? 'auto' : MORPH.height.closed,
+                    borderRadius: emailOpen ? MORPH.radius.open : MORPH.radius.closed,
+                    backgroundColor: emailOpen ? MORPH.tint.open : MORPH.tint.closed,
+                  }}
+                  transition={reduceMotion ? { duration: 0 } : emailOpen ? MORPH.open : MORPH.close}
                 >
-                  <label htmlFor="email" className={FIELD_LABEL}>
-                    Email
-                  </label>
-                  <input
-                    id="email"
-                    type="email"
-                    autoComplete="email"
-                    value={email}
-                    onChange={e => setEmail(e.target.value)}
-                    required
-                    className={FIELD_INPUT}
-                    placeholder="you@seeko.studio"
-                  />
-                </motion.div>
+                  {/* Closed face — the pill (transparent; the surface paints the tint) */}
+                  <motion.button
+                    ref={emailPillRef}
+                    type="button"
+                    onClick={openEmail}
+                    aria-expanded={emailOpen}
+                    aria-controls="email-signin-panel"
+                    tabIndex={emailOpen ? -1 : 0}
+                    className={cn(
+                      PILL,
+                      'absolute inset-x-0 top-0 bg-transparent',
+                      emailOpen && 'pointer-events-none',
+                    )}
+                    initial={false}
+                    animate={
+                      emailOpen
+                        ? { opacity: 0, y: -MORPH.slide, filter: `blur(${MORPH.blur}px)` }
+                        : { opacity: 1, y: 0, filter: 'blur(0px)' }
+                    }
+                    transition={reduceMotion ? { duration: 0 } : MORPH.fade}
+                  >
+                    <Mail className="size-6" strokeWidth={1.75} />
+                    Continue with email
+                  </motion.button>
 
-                <motion.div
-                  initial={{ opacity: 0, y: FIELD.offsetY }}
-                  animate={{ opacity: stage >= 7 ? 1 : 0, y: stage >= 7 ? 0 : FIELD.offsetY }}
-                  transition={FIELD.spring}
-                >
-                  <label htmlFor="password" className={FIELD_LABEL}>
-                    Password
-                  </label>
-                  <input
-                    id="password"
-                    type="password"
-                    autoComplete="current-password"
-                    value={password}
-                    onChange={e => setPassword(e.target.value)}
-                    required
-                    className={FIELD_INPUT}
-                  />
-                </motion.div>
+                  {/* Open face — the form. Panel radius 20 − padding 12 = the
+                      inputs' 8px radius (concentric). Inert while collapsed. */}
+                  <motion.div
+                    id="email-signin-panel"
+                    inert={!emailOpen}
+                    className="p-3"
+                    onKeyDown={e => {
+                      if (e.key === 'Escape') {
+                        e.stopPropagation();
+                        closeEmail();
+                      }
+                    }}
+                    initial={false}
+                    animate={
+                      emailOpen
+                        ? { opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }
+                        : { opacity: 0, y: MORPH.slide, scale: MORPH.scale, filter: `blur(${MORPH.blur}px)` }
+                    }
+                    transition={
+                      reduceMotion
+                        ? { duration: 0 }
+                        : emailOpen
+                          ? { ...MORPH.fade, delay: 0.06 } // surface leads, content follows
+                          : MORPH.fade
+                    }
+                  >
+                    <div className="mb-2 flex items-center justify-between pl-1">
+                      <span className="text-[13px] font-medium text-[#6e6e6e]">Sign in with email</span>
+                      <button
+                        type="button"
+                        onClick={closeEmail}
+                        aria-label="Close email sign-in"
+                        className={cn(
+                          'grid size-7 place-items-center rounded-full text-[#808080]',
+                          'transition-[background-color,color,transform] duration-150 ease-out',
+                          'hover:bg-black/[0.06] hover:text-[#3a3a3a] active:scale-95',
+                          LIGHT_FOCUS_RING,
+                        )}
+                      >
+                        <X className="size-4" strokeWidth={2} />
+                      </button>
+                    </div>
 
-                <motion.button
-                  type="submit"
-                  disabled={loading}
-                  className={cn(
-                    BTN_PRIMARY,
-                    LIGHT_FOCUS_RING,
-                    'h-12 w-full rounded-2xl text-base font-semibold disabled:cursor-not-allowed disabled:opacity-50',
-                  )}
-                  initial={{ opacity: 0, y: FIELD.offsetY }}
-                  animate={{ opacity: stage >= 8 ? 1 : 0, y: stage >= 8 ? 0 : FIELD.offsetY }}
-                  transition={FIELD.spring}
-                  whileHover={{ scale: 1.015 }}
-                  whileTap={{ scale: 0.985 }}
-                >
-                  {loading ? 'Signing in…' : 'Sign in'}
-                </motion.button>
-              </form>
+                    <form onSubmit={handleLogin} className="space-y-2">
+                      <div>
+                        <label htmlFor="email" className="sr-only">
+                          Email
+                        </label>
+                        <input
+                          ref={emailInputRef}
+                          id="email"
+                          type="email"
+                          autoComplete="email"
+                          value={email}
+                          onChange={e => setEmail(e.target.value)}
+                          required
+                          className={FIELD_INPUT}
+                          placeholder="you@seeko.studio"
+                        />
+                      </div>
+
+                      <div>
+                        <label htmlFor="password" className="sr-only">
+                          Password
+                        </label>
+                        <input
+                          id="password"
+                          type="password"
+                          autoComplete="current-password"
+                          value={password}
+                          onChange={e => setPassword(e.target.value)}
+                          required
+                          className={FIELD_INPUT}
+                          placeholder="Password"
+                        />
+                      </div>
+
+                      <motion.button
+                        type="submit"
+                        disabled={loading}
+                        className={cn(
+                          BTN_PRIMARY,
+                          LIGHT_FOCUS_RING,
+                          'h-11 w-full rounded-lg text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50',
+                        )}
+                        whileTap={{ scale: 0.985 }}
+                      >
+                        {loading ? 'Signing in…' : 'Sign in'}
+                      </motion.button>
+                    </form>
+                  </motion.div>
+                </motion.div>
+              </motion.div>
 
               {/* Invite path — a quiet footer link instead of the old tab */}
               <motion.p
                 className="mt-6 text-center"
                 initial={{ opacity: 0 }}
-                animate={{ opacity: stage >= 8 ? 1 : 0 }}
+                animate={{ opacity: stage >= 5 ? 1 : 0 }}
                 transition={FADE.spring}
               >
                 <button

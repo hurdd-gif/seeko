@@ -4,8 +4,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { LoginRouteContent } from '../login';
 
 // Login redesigned to the Paper reference (SK_DB frame 27P-0): centered card
-// with badge + "Sign in to SEEKO" heading, Google + passkey provider pills, an
-// "or" divider, then the ORIGINAL email/password flow. The invite path is now a
+// with badge + "Sign in to SEEKO" heading and a pills-only stack (Google,
+// passkey, email). The email pill is a transitions.dev-style surface morph:
+// collapsed (inert) by default, it expands into the ORIGINAL email/password
+// flow on click and collapses via its close button. The invite path is now a
 // footer link ("Have an invite code?") that swaps the card body to the ORIGINAL
 // <InviteCodeForm> — its copy "Enter the 8-digit code from your invite email"
 // proves the verbatim mount over a look-alike. The passkey pill only renders
@@ -23,16 +25,39 @@ describe('LoginRouteContent', () => {
     );
   }
 
-  it('renders the sign-in card with Google and email/password methods', () => {
+  it('renders the sign-in card with Google and email pills, form collapsed', () => {
     renderLogin();
 
     expect(screen.getByRole('heading', { name: 'Sign in to SEEKO' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Continue with Google/ })).toBeInTheDocument();
+    // The email form starts collapsed behind the "Continue with email" pill.
+    expect(screen.getByRole('button', { name: /Continue with email/ })).toHaveAttribute(
+      'aria-expanded',
+      'false'
+    );
+  });
+
+  it('morphs the email pill into the email/password form', () => {
+    renderLogin();
+
+    fireEvent.click(screen.getByRole('button', { name: /Continue with email/ }));
+
+    expect(screen.getByRole('button', { name: /Continue with email/ })).toHaveAttribute(
+      'aria-expanded',
+      'true'
+    );
     expect(screen.getByLabelText('Email')).toBeInTheDocument();
     expect(screen.getByLabelText('Password')).toBeInTheDocument();
     expect(
       screen.getAllByRole('button', { name: 'Sign in' }).some((button) => button.getAttribute('type') === 'submit')
     ).toBe(true);
+
+    // The close affordance collapses it back to the pill.
+    fireEvent.click(screen.getByRole('button', { name: 'Close email sign-in' }));
+    expect(screen.getByRole('button', { name: /Continue with email/ })).toHaveAttribute(
+      'aria-expanded',
+      'false'
+    );
   });
 
   it('hides the passkey pill when WebAuthn is unavailable', () => {
