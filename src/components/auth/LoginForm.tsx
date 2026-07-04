@@ -386,7 +386,7 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
 
       {/* Card */}
       <motion.div
-        className="relative rounded-lg border border-[#E8E8E8]/75 bg-white px-6 py-10 shadow-[0_10px_20px_#D1D1D126]"
+        className="relative rounded-[20px] border border-[#E8E8E8]/75 bg-white px-6 py-10 shadow-[0_10px_20px_#D1D1D126]"
         initial={{ opacity: 0, y: CARD.offsetY }}
         animate={{ opacity: stage >= 1 ? 1 : 0, y: stage >= 1 ? 0 : CARD.offsetY }}
         transition={t(CARD.spring)}
