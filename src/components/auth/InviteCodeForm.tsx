@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useRouter } from '@/lib/react-router-adapters';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { Loader2 } from 'lucide-react';
@@ -18,6 +18,30 @@ import { LIGHT_INPUT, BTN_PRIMARY, LIGHT_FOCUS_RING } from '@/components/dashboa
 const SPRING = springs.smooth;
 const FIELD_LABEL = 'block text-xs font-medium text-[#808080] mb-1.5';
 
+/* Error grammar — matches the login card's swap curves: entrances land on
+ * the 250ms [0.22,1,0.36,1] ease with a height glide + 2px blur bridge,
+ * exits clear faster (150ms) and subtler. The offending control also gets
+ * a short WAAPI shake for point-of-error continuity. */
+const ERR = {
+  in: { duration: 0.25, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] },
+  out: { duration: 0.15, ease: 'easeOut' as const },
+  shake: {
+    keyframes: [
+      { transform: 'translateX(0)' },
+      { transform: 'translateX(-5px)' },
+      { transform: 'translateX(4px)' },
+      { transform: 'translateX(-2px)' },
+      { transform: 'translateX(0)' },
+    ],
+    options: { duration: 300, easing: 'ease-out' } as KeyframeAnimationOptions,
+  },
+};
+
+function shake(el: HTMLElement | null, reduceMotion: boolean | null) {
+  if (!el || reduceMotion || typeof el.animate !== 'function') return;
+  el.animate(ERR.shake.keyframes, ERR.shake.options);
+}
+
 export function InviteCodeForm() {
   const router = useRouter();
   const { trigger } = useHaptics();
@@ -29,6 +53,7 @@ export function InviteCodeForm() {
   const [emailInvalid, setEmailInvalid] = useState(false);
   const [codeInvalid, setCodeInvalid] = useState(false);
   const [loading, setLoading] = useState(false);
+  const cellsRef = useRef<HTMLDivElement>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -44,7 +69,9 @@ export function InviteCodeForm() {
           ? "That doesn't look like an email address."
           : 'Enter the email your invite was sent to.',
       );
-      document.getElementById('invite-email')?.focus();
+      const field = document.getElementById('invite-email');
+      field?.focus();
+      shake(field, reduceMotion);
       trigger('error');
       return;
     }
@@ -62,6 +89,7 @@ export function InviteCodeForm() {
       setCodeInvalid(true);
       setError('Invalid or expired invite code. Please check your email and try again.');
       setLoading(false);
+      shake(cellsRef.current, reduceMotion);
       trigger('error');
       return;
     }
@@ -108,10 +136,28 @@ export function InviteCodeForm() {
             emailInvalid &&
               'border-[#d4503e]/60 focus-visible:border-[#d4503e] focus-visible:ring-2 focus-visible:ring-[#d4503e]/15',
           )}
+          aria-describedby={emailInvalid ? 'invite-email-error' : undefined}
         />
+        {/* Email errors live WITH the email field (not down by the code) —
+            the message glides open under the input on the same curve the
+            border turns red, so cause and callout read as one event. */}
+        <AnimatePresence initial={false}>
+          {emailInvalid && error && (
+            <motion.p
+              id="invite-email-error"
+              initial={{ height: 0, opacity: 0, filter: 'blur(2px)' }}
+              animate={{ height: 'auto', opacity: 1, filter: 'blur(0px)' }}
+              exit={{ height: 0, opacity: 0, filter: 'blur(2px)', transition: reduceMotion ? { duration: 0 } : ERR.out }}
+              transition={reduceMotion ? { duration: 0 } : ERR.in}
+              className="overflow-hidden text-[13px] leading-snug text-[#d4503e]"
+            >
+              <span className="block pt-1.5">{error}</span>
+            </motion.p>
+          )}
+        </AnimatePresence>
       </div>
 
-      <div className="mb-[18px]">
+      <div ref={cellsRef} className="mb-[18px]">
         <label className="block text-xs font-medium text-[#808080] mb-3 text-center">
           Enter the 8-digit code from your invite email
         </label>
@@ -128,20 +174,25 @@ export function InviteCodeForm() {
           light
           invalid={codeInvalid}
         />
+        {/* Code errors stay with the code cells; the pill glides open (height,
+            not a pop) so the layout shift rides the same curve as the cells
+            turning red. Lives INSIDE this block — mounting a sibling into the
+            form's space-y-5 would snap a 20px gap in before the glide starts.
+            Email errors render inline under the email field, never here. */}
+        <AnimatePresence initial={false}>
+          {codeInvalid && error && (
+            <motion.div
+              initial={{ height: 0, opacity: 0, filter: 'blur(2px)' }}
+              animate={{ height: 'auto', opacity: 1, filter: 'blur(0px)' }}
+              exit={{ height: 0, opacity: 0, filter: 'blur(2px)', transition: reduceMotion ? { duration: 0 } : ERR.out }}
+              transition={reduceMotion ? { duration: 0 } : ERR.in}
+              className="overflow-hidden"
+            >
+              <p className="mt-4 rounded-lg bg-[#d4503e]/10 px-4 py-2 text-sm text-[#d4503e]">{error}</p>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
-
-      <AnimatePresence>
-        {error && (
-          <motion.p
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            className="rounded-lg bg-[#d4503e]/10 px-4 py-2 text-sm text-[#d4503e]"
-          >
-            {error}
-          </motion.p>
-        )}
-      </AnimatePresence>
 
       <button
         type="submit"
