@@ -22,7 +22,9 @@
  *
  * PAGE SWAP — sign-in ↔ invite (transitions.dev side-by-side + morph)
  *
- * Both pages animate simultaneously (±8px slide, 3px blur, 250ms). The
+ * Both pages animate simultaneously (±8px slide, 3px blur; exits clear in
+ * 150ms, entrances land in 250ms, the card reshapes over 400ms (WAAPI) —
+ * and the route pins the card's TOP so growth never lurches the frame). The
  * subtitle and the view-toggle link live OUTSIDE the swap and crossfade
  * in place on the same curve, so the frame never dies. Continuity anchor:
  * the email pill's face and the invite form's email input share a
@@ -70,7 +72,15 @@ const TIMING = {
 const PAGE = {
   slide: 8,
   blur:  3,
-  t: { duration: 0.25, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] },
+  t:    { duration: 0.25, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] },
+  // Exits clear faster than entrances arrive — shrinks the double-exposure
+  // window so the two content sets never read as clashing.
+  out:  { duration: 0.15, ease: 'easeOut' as const },
+  // Card reshape runs on WAAPI, not Motion: Motion's height animation keeps
+  // its own 'auto' unit state, and its auto→px conversion re-measures AFTER
+  // the new page is in flow — so it always sprang new→new and the resize
+  // landed as a hard cut. WAAPI animates over the pinned inline height.
+  height: { duration: 400, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' } as const,
 };
 
 /* ─── Email surface morph (transitions.dev grammar) ──────── */
@@ -174,7 +184,10 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
    * back to auto once settled. */
   const pagesRef = useRef<HTMLDivElement>(null);
   const pageRef = useRef<HTMLDivElement>(null);
-  const [pagesH, setPagesH] = useState<number | 'auto'>('auto');
+  // True while the container height is pinned + animating between views;
+  // gates overflow-hidden so focus rings aren't clipped at rest.
+  const [pagesLocked, setPagesLocked] = useState(false);
+  const pagesAnim = useRef<Animation | null>(null);
   const viewMounted = useRef(false);
   // Return-leg morph: layoutId only animates the invite input FROM the pill
   // (fresh mount promotes it as lead); the remounting pill face never gets
@@ -182,7 +195,17 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
   const inviteEmailRect = useRef<DOMRect | null>(null);
 
   function switchView(next: 'signin' | 'invite') {
-    if (pagesRef.current) setPagesH(pagesRef.current.offsetHeight); // lock
+    // Pin the CURRENT height as an inline style *synchronously*, before React
+    // swaps the pages — otherwise `auto` reflows to the new page's height the
+    // instant the DOM swaps and the resize lands as a hard cut. A re-toggle
+    // mid-flight cancels the running animation first so the pin reads the
+    // true mid-flight height (interruptible, no restart-from-zero).
+    if (pagesRef.current) {
+      const h = pagesRef.current.offsetHeight; // read while any animation still applies
+      pagesAnim.current?.cancel();
+      pagesRef.current.style.height = `${h}px`;
+      setPagesLocked(true);
+    }
     if (next === 'signin') {
       inviteEmailRect.current =
         document.getElementById('invite-email')?.getBoundingClientRect() ?? null;
@@ -198,9 +221,30 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
       viewMounted.current = true;
       return;
     }
-    // Measure the entering page (in flow; the exiting one is popped absolute).
-    if (pageRef.current) setPagesH(pageRef.current.offsetHeight);
-  }, [view]);
+    // Animate the container from the pinned height to the entering page's
+    // height (in flow; the exiting one is popped absolute), then release the
+    // pin so the card tracks content again (email panel, error rows).
+    const container = pagesRef.current;
+    const page = pageRef.current;
+    if (!container || !page) return;
+    const release = () => {
+      pagesAnim.current = null;
+      container.style.height = '';
+      setPagesLocked(false);
+    };
+    const from = container.offsetHeight;
+    const to = page.offsetHeight;
+    if (reduceMotion || from === to || typeof container.animate !== 'function') {
+      release();
+      return;
+    }
+    const anim = container.animate(
+      [{ height: `${from}px` }, { height: `${to}px` }],
+      { duration: PAGE.height.duration, easing: PAGE.height.easing },
+    );
+    pagesAnim.current = anim;
+    anim.onfinish = release;
+  }, [view, reduceMotion]);
 
   // Invite → sign-in: fly the pill face home from the invite input's rect
   // (WAAPI FLIP — the mirror of the forward layoutId morph).
@@ -411,12 +455,9 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
         {/* Views — side-by-side page swap: both pages animate at once,
             each exiting toward its own side. overflow-hidden only while
             the height is locked, so focus rings aren't clipped at rest. */}
-        <motion.div
+        <div
           ref={pagesRef}
-          className={cn('relative', pagesH !== 'auto' && 'overflow-hidden')}
-          animate={{ height: pagesH }}
-          transition={t(PAGE.t)}
-          onAnimationComplete={() => setPagesH('auto')}
+          className={cn('relative', pagesLocked && 'overflow-hidden')}
         >
         <AnimatePresence mode="popLayout" initial={false}>
           {view === 'signin' ? (
@@ -424,9 +465,8 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
               key="signin"
               ref={pageRef}
               initial={{ opacity: 0, x: -PAGE.slide, filter: `blur(${PAGE.blur}px)` }}
-              animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
-              exit={{ opacity: 0, x: -PAGE.slide, filter: `blur(${PAGE.blur}px)` }}
-              transition={t(PAGE.t)}
+              animate={{ opacity: 1, x: 0, filter: 'blur(0px)', transition: t(PAGE.t) }}
+              exit={{ opacity: 0, x: -PAGE.slide, filter: `blur(${PAGE.blur}px)`, transition: t(PAGE.out) }}
             >
               {/* Provider pills */}
               <motion.div
@@ -632,15 +672,14 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
               key="invite"
               ref={pageRef}
               initial={{ opacity: 0, x: PAGE.slide, filter: `blur(${PAGE.blur}px)` }}
-              animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
-              exit={{ opacity: 0, x: PAGE.slide, filter: `blur(${PAGE.blur}px)` }}
-              transition={t(PAGE.t)}
+              animate={{ opacity: 1, x: 0, filter: 'blur(0px)', transition: t(PAGE.t) }}
+              exit={{ opacity: 0, x: PAGE.slide, filter: `blur(${PAGE.blur}px)`, transition: t(PAGE.out) }}
             >
               <InviteCodeForm />
             </motion.div>
           )}
         </AnimatePresence>
-        </motion.div>
+        </div>
 
         {/* View toggle — one persistent control shared by both views. The
             label crossfades in place (never unmounts), so the card's bottom

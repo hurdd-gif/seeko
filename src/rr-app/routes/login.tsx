@@ -44,10 +44,12 @@ export function LoginRouteContent() {
         </a>
       </header>
 
-      {/* my-auto (not justify-center) so a viewport shorter than the card
-          scrolls from the top instead of hiding content under the header;
-          py-24 keeps the card clear of the absolute top bar. */}
-      <main className="mx-auto my-auto flex w-full max-w-[420px] flex-col items-center py-24">
+      {/* Top-ANCHORED (not centered): the card grows when the invite view
+          swaps in, and my-auto recentring would lurch the whole frame
+          (top up, bottom down) mid-transition. A fixed optical top keeps
+          the badge/heading/fields rock-still — growth only extends down.
+          clamp ≥ 6rem clears the absolute header on short viewports. */}
+      <main className="mx-auto mb-auto mt-[clamp(6rem,15vh,11rem)] flex w-full max-w-[420px] flex-col items-center pb-24">
         <LoginForm initialError={callbackError} />
 
         {/* Legal footnote — reference: 14px #969696, max 300px, 32px below card.
