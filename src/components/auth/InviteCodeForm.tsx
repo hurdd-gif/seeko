@@ -194,11 +194,13 @@ export function InviteCodeForm() {
         </AnimatePresence>
       </div>
 
-      {/* CTA springs into black the moment the 8th digit lands: resting state
-          is a muted gray pill; completion crossfades bg + label on a spring
-          (smooth, 300/25 — quicker per feedback, still weighted) instead of a
-          flat timed fade. Hover darkening runs its own quick 150ms so it never
-          feels gated by the spring; press keeps a 150ms CSS transform. */}
+      {/* CTA springs into black the moment the 8th digit lands. A pure color
+          crossfade read "the same" at any pace, so completion is now a
+          compound event: the pill rests at 98% scale and springs up to full
+          size (firm, 400/30) as bg + label flip to black — arrival you can
+          see, not just a tint change. Removing a digit springs it back.
+          Hover darkening keeps its own quick 150ms; press keeps a 150ms CSS
+          transform (Tailwind `scale` composes with motion's transform). */}
       <motion.button
         type="submit"
         disabled={loading || token.length < 8}
@@ -206,8 +208,15 @@ export function InviteCodeForm() {
         animate={{
           backgroundColor: token.length === 8 ? '#111111' : '#f1f1f1',
           color: token.length === 8 ? '#ffffff' : '#9a9a9a',
+          scale: token.length === 8 ? 1 : 0.98,
         }}
-        transition={reduceMotion ? { duration: 0 } : springs.smooth}
+        // Reduced motion drops the scale movement but KEEPS the color fade —
+        // a crossfade isn't vestibular, and it's the affordance asked for.
+        transition={
+          reduceMotion
+            ? { scale: { duration: 0 }, backgroundColor: { duration: 0.15, ease: 'easeOut' }, color: { duration: 0.15, ease: 'easeOut' } }
+            : springs.firm
+        }
         {...(token.length === 8
           ? { whileHover: { backgroundColor: '#2a2a2a', transition: { duration: 0.15, ease: 'easeOut' as const } } }
           : {})}
