@@ -33,7 +33,7 @@
  * reference's own call — fidelity beats the concentric rule here.)
  * ────────────────────────────────────────────────────────── */
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { useRouter } from '@/lib/react-router-adapters';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { startAuthentication } from '@simplewebauthn/browser';
@@ -52,6 +52,16 @@ const TIMING = {
   subtitle:  420,   // tagline fades in
   providers: 540,   // Google / passkey / email pills
   footer:    660,   // invite link
+};
+
+/* ─── View swap (transitions.dev page side-by-side) ───────
+ * Sign-in is page 1 (rests/exits left), invite is page 2 (right).
+ * Both pages animate SIMULTANEOUSLY (popLayout, not mode="wait"):
+ * ±8px slide + blur 3px + fade, 250ms cubic-bezier(0.22,1,0.36,1). */
+const PAGE = {
+  slide: 8,
+  blur:  3,
+  t: { duration: 0.25, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] },
 };
 
 /* ─── Email surface morph (transitions.dev grammar) ──────── */
@@ -145,6 +155,30 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
   const [emailOpen, setEmailOpen] = useState(false);
   const emailPillRef = useRef<HTMLButtonElement>(null);
   const emailInputRef = useRef<HTMLInputElement>(null);
+
+  /* Page-swap height: locked to the old page's px at flip so the card
+   * doesn't snap, animated to the entering page's height, then released
+   * back to auto once settled. */
+  const pagesRef = useRef<HTMLDivElement>(null);
+  const pageRef = useRef<HTMLDivElement>(null);
+  const [pagesH, setPagesH] = useState<number | 'auto'>('auto');
+  const viewMounted = useRef(false);
+
+  function switchView(next: 'signin' | 'invite') {
+    if (pagesRef.current) setPagesH(pagesRef.current.offsetHeight); // lock
+    setEmailOpen(false); // leaving the page collapses the email panel
+    setError(null);
+    setView(next);
+  }
+
+  useLayoutEffect(() => {
+    if (!viewMounted.current) {
+      viewMounted.current = true;
+      return;
+    }
+    // Measure the entering page (in flow; the exiting one is popped absolute).
+    if (pageRef.current) setPagesH(pageRef.current.offsetHeight);
+  }, [view]);
 
   function openEmail() {
     setEmailOpen(true);
@@ -330,15 +364,25 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
           </AnimatePresence>
         </div>
 
-        {/* Views */}
-        <AnimatePresence mode="wait">
+        {/* Views — side-by-side page swap: both pages animate at once,
+            each exiting toward its own side. overflow-hidden only while
+            the height is locked, so focus rings aren't clipped at rest. */}
+        <motion.div
+          ref={pagesRef}
+          className={cn('relative', pagesH !== 'auto' && 'overflow-hidden')}
+          animate={{ height: pagesH }}
+          transition={t(PAGE.t)}
+          onAnimationComplete={() => setPagesH('auto')}
+        >
+        <AnimatePresence mode="popLayout" initial={false}>
           {view === 'signin' ? (
             <motion.div
               key="signin"
-              initial={{ opacity: 0, x: -8 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 8 }}
-              transition={t(springs.smooth)}
+              ref={pageRef}
+              initial={{ opacity: 0, x: -PAGE.slide, filter: `blur(${PAGE.blur}px)` }}
+              animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
+              exit={{ opacity: 0, x: -PAGE.slide, filter: `blur(${PAGE.blur}px)` }}
+              transition={t(PAGE.t)}
             >
               {/* Provider pills */}
               <motion.div
@@ -539,7 +583,7 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
               >
                 <button
                   type="button"
-                  onClick={() => { setView('invite'); setError(null); }}
+                  onClick={() => switchView('invite')}
                   className={SUBTLE_LINK}
                 >
                   Have an invite code?
@@ -549,16 +593,17 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
           ) : (
             <motion.div
               key="invite"
-              initial={{ opacity: 0, x: 8 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -8 }}
-              transition={t(springs.smooth)}
+              ref={pageRef}
+              initial={{ opacity: 0, x: PAGE.slide, filter: `blur(${PAGE.blur}px)` }}
+              animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
+              exit={{ opacity: 0, x: PAGE.slide, filter: `blur(${PAGE.blur}px)` }}
+              transition={t(PAGE.t)}
             >
               <InviteCodeForm />
               <p className="mt-6 text-center">
                 <button
                   type="button"
-                  onClick={() => { setView('signin'); setError(null); }}
+                  onClick={() => switchView('signin')}
                   className={SUBTLE_LINK}
                 >
                   Back to sign in
@@ -567,6 +612,7 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
             </motion.div>
           )}
         </AnimatePresence>
+        </motion.div>
       </motion.div>
     </div>
   );

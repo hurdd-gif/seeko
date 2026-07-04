@@ -76,9 +76,9 @@ describe('LoginRouteContent', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Have an invite code?' }));
 
-    // Marker unique to the ORIGINAL InviteCodeForm. The swap runs through
-    // AnimatePresence mode="wait" (signin exits, then invite enters), so await
-    // the entering child rather than querying synchronously.
+    // Marker unique to the ORIGINAL InviteCodeForm. The swap is a side-by-side
+    // page transition (popLayout — both pages animate at once), so the invite
+    // page mounts immediately; await keeps the assertion animation-agnostic.
     expect(
       await screen.findByText('Enter the 8-digit code from your invite email')
     ).toBeInTheDocument();
