@@ -78,6 +78,9 @@ export function LegalRoute() {
   const [activeSection, setActiveSection] = useState(0);
   // Which tick's label is revealed (hover/focus) — one at a time, never a column.
   const [peekedSection, setPeekedSection] = useState<number | null>(null);
+  const [railHovered, setRailHovered] = useState(false);
+  // Keyboard focus engages the rail the same way the pointer does.
+  const railEngaged = railHovered || peekedSection !== null;
 
   useEffect(() => {
     if (doc) document.title = `${doc.title} · SEEKO Studio`;
@@ -165,11 +168,20 @@ export function LegalRoute() {
           narrow screens keep the in-flow Contents card). Ticks only — the full
           section list is never printed on screen; hovering or focusing a tick
           reveals just that section's label (spring in, quiet fade out), and
-          clicking jumps within the route's own scroll container. */}
+          clicking jumps within the route's own scroll container.
+
+          The whole rail expands on hover: entering it anywhere grows every
+          tick (14 → 22px), and the peeked/active tick grows further (28px).
+          A single tick's 10px change was invisible in practice — the rail-wide
+          response is what makes the hover unmistakable. */}
       <motion.nav
         aria-label="Sections"
         className="fixed left-6 top-1/2 z-10 hidden -translate-y-1/2 flex-col print:hidden xl:flex sm:left-10"
-        onMouseLeave={() => setPeekedSection(null)}
+        onMouseEnter={() => setRailHovered(true)}
+        onMouseLeave={() => {
+          setRailHovered(false);
+          setPeekedSection(null);
+        }}
         {...(reduceMotion
           ? {}
           : {
@@ -192,15 +204,22 @@ export function LegalRoute() {
             // so hovering anywhere in the margin band next to it must count.
             className="group/tick relative flex w-36 items-center py-[5px]"
           >
-            {/* Tick expands to full length on hover/focus (spring, interruptible),
-                not just a tint — the peeked tick reads as "this one". */}
+            {/* Three tiers: peeked/active tick is longest, siblings all grow
+                while the rail is engaged, everything rests small otherwise.
+                Springs keep the retarget smooth when the cursor sweeps. */}
             <motion.span
               aria-hidden
               className="h-[2px] rounded-full"
               animate={{
-                width: i === activeSection || peekedSection === i ? 24 : 14,
+                width: i === activeSection || peekedSection === i ? 28 : railEngaged ? 22 : 14,
                 backgroundColor:
-                  i === activeSection ? '#1c1c1c' : peekedSection === i ? '#8a8a8a' : '#dcdcdc',
+                  i === activeSection
+                    ? '#1c1c1c'
+                    : peekedSection === i
+                      ? '#8a8a8a'
+                      : railEngaged
+                        ? '#c9c9c9'
+                        : '#dcdcdc',
               }}
               transition={reduceMotion ? { duration: 0 } : springs.snappy}
               initial={false}
