@@ -86,6 +86,25 @@ export function LegalRoute() {
     if (doc) document.title = `${doc.title} · SEEKO Studio`;
   }, [doc]);
 
+  // Deep links: the route owns its scroller, so the browser's native hash
+  // jump never fires — honor it manually on arrival. Accepts both the full
+  // rail-written id (`#3-cookies`) and the stable bare slug (`#cookies`),
+  // so external links survive sections being reordered or renumbered.
+  useEffect(() => {
+    if (!doc) return;
+    const hash = decodeURIComponent(window.location.hash.replace(/^#/, ''));
+    if (!hash) return;
+    const index = doc.sections.findIndex((section, i) => {
+      const id = sectionId(i, section.heading);
+      return id === hash || id.replace(/^\d+-/, '') === hash;
+    });
+    if (index === -1) return;
+    const el = document.getElementById(sectionId(index, doc.sections[index].heading));
+    // Instant, not smooth — this is initial placement, not a navigation.
+    el?.scrollIntoView({ block: 'start' });
+    setActiveSection(index);
+  }, [doc]);
+
   // Scroll-spy for the tick rail: the route owns its scrolling, so we watch
   // the container (not window) and mark the last section whose heading has
   // passed the anchor line. 160px sits just below where scrollIntoView +

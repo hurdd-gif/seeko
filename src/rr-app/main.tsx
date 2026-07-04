@@ -1,0 +1,46 @@
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
+import { RouterProvider } from 'react-router';
+import { Toaster } from 'sonner';
+import './globals.css';
+import './styles.css';
+import { CookieNotice } from '@/components/CookieNotice';
+import { LiveToastProvider } from '@/components/dashboard/notifications/LiveToastContext';
+import { initScrollEdgeBlurDamper } from '@/lib/scroll-blur';
+import { router } from './routes';
+
+// Dims .scroll-edge-blur chrome while any container is scrolling (globals.css).
+initScrollEdgeBlurDamper();
+
+const root = document.getElementById('root');
+
+if (!root) {
+  throw new Error('Missing root element');
+}
+
+// LiveToastProvider wraps the whole app so the realtime NotificationBell (mounted
+// by StudioHeaderActions on every Paper page) can push live toasts — useLiveToast
+// throws without it. Mirrors the legacy (dashboard)/layout.tsx provider.
+createRoot(root).render(
+  <StrictMode>
+    <LiveToastProvider>
+      <RouterProvider router={router} />
+      {/* First-visit cookie notice — sits outside the router (it survives
+          navigation and uses a plain <a> to reach /legal/privacy). Shows once,
+          bottom-right, until acknowledged. Notice-only by legal review: the
+          site sets solely strictly-necessary cookies, so there is no consent
+          to collect. */}
+      <CookieNotice />
+      {/* Mirrors the legacy src/app/layout.tsx Toaster — without it every
+          sonner toast (success + error feedback) silently vanishes. */}
+      <Toaster
+        richColors
+        position="top-center"
+        toastOptions={{
+          className: 'seeko-toast',
+          duration: 4000,
+        }}
+      />
+    </LiveToastProvider>
+  </StrictMode>
+);
