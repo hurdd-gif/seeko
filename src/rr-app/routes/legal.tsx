@@ -171,7 +171,7 @@ export function LegalRoute() {
           clicking jumps within the route's own scroll container.
 
           The whole rail expands on hover: entering it anywhere magnifies the
-          rail 30% (scale, left-anchored so it grows into the page) AND grows
+          rail 25% (scale, left-anchored so it grows into the page) AND grows
           every tick (14 → 22px), peeked/active longest (28px). A single
           tick's 10px change was invisible in practice — the component-level
           magnification is what makes the hover unmistakable. */}
@@ -196,7 +196,7 @@ export function LegalRoute() {
             margin while it scales; ticks, spacing, and label all magnify. */}
         <motion.div
           className="flex origin-left flex-col"
-          animate={{ scale: railEngaged ? 1.3 : 1 }}
+          animate={{ scale: railEngaged ? 1.25 : 1 }}
           transition={reduceMotion ? { duration: 0 } : springs.snappy}
           initial={false}
         >
