@@ -456,7 +456,9 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
                 glyph needs the larger box to fill the disc like the reference. */}
             <img src="/seeko-s.png" alt="" width={40} height={40} className="h-10 w-auto object-contain" />
           </div>
-          <h1 className="text-balance text-[22px] font-semibold tracking-[-0.02em] text-[#515151]">
+          {/* #454545 = the reference's #515151 darkened 15% (user-decided
+              2026-07-04); ~9.7:1 on white. */}
+          <h1 className="text-balance text-[22px] font-semibold tracking-[-0.02em] text-[#454545]">
             Sign in to SEEKO
           </h1>
         </motion.div>
