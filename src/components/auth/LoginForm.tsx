@@ -430,9 +430,18 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
               exit={{ opacity: 0, filter: 'blur(4px)', y: -2 }}
               transition={t(PAGE.t)}
             >
-              {view === 'signin'
-                ? 'Everything the studio runs on — tasks, docs, and payments in one place'
-                : 'Enter the invite code from your email to join the studio'}
+              {/* Public-facing page: never list what's inside the workspace
+                  (feature names here leak product surface to visitors). */}
+              {view === 'signin' ? (
+                // nowrap on the back half pins the wrap after the em dash —
+                // text-balance alone broke mid-phrase ("runs / on").
+                <>
+                  Everything the studio runs on —{' '}
+                  <span className="whitespace-nowrap">in one private workspace</span>
+                </>
+              ) : (
+                'Enter the invite code from your email to join the studio'
+              )}
             </motion.p>
           </AnimatePresence>
         </motion.div>
