@@ -1,4 +1,5 @@
 import { CircleHelp } from 'lucide-react';
+import { Link } from 'react-router';
 import { useSearchParams } from '@/lib/react-router-adapters';
 import { LoginForm } from '@/components/auth/LoginForm';
 
@@ -42,7 +43,7 @@ export function LoginRouteContent() {
           <span className="text-base font-medium text-[#686868]">Studio</span>
         </div>
         <a
-          href="mailto:ykartix@gmail.com?subject=SEEKO%20Studio%20sign-in%20help"
+          href="mailto:legal@seekostudios.com?subject=SEEKO%20Studio%20sign-in%20help"
           className="flex items-center gap-2 text-base text-[#686868] transition-colors duration-150 hover:text-[#3a3a3a] active:text-[#111]"
         >
           <CircleHelp className="size-[18px]" strokeWidth={1.75} />
@@ -57,13 +58,20 @@ export function LoginRouteContent() {
         <LoginForm initialError={callbackError} />
 
         {/* Legal footnote — reference: 14px #969696, max 300px, 32px below card.
-            Document names sit a step darker, link-style; wire real hrefs when
-            the terms/privacy pages exist. */}
+            Document names sit a step darker and link to /legal/:slug. */}
         <p className="mt-8 max-w-[300px] text-pretty text-center text-sm leading-snug text-[#969696]">
           By creating an account, you agree to our{' '}
-          <span className="font-medium text-[#6e6e6e]">Terms of Use</span>,{' '}
-          <span className="font-medium text-[#6e6e6e]">Developer Portal Terms of Service</span> and{' '}
-          <span className="font-medium text-[#6e6e6e]">Privacy Policy</span>
+          <Link to="/legal/terms" className="font-medium text-[#6e6e6e] transition-colors duration-150 hover:text-[#111]">
+            Terms of Use
+          </Link>
+          ,{' '}
+          <Link to="/legal/developer-terms" className="font-medium text-[#6e6e6e] transition-colors duration-150 hover:text-[#111]">
+            Developer Portal Terms of Service
+          </Link>{' '}
+          and{' '}
+          <Link to="/legal/privacy" className="font-medium text-[#6e6e6e] transition-colors duration-150 hover:text-[#111]">
+            Privacy Policy
+          </Link>
         </p>
       </main>
     </div>
