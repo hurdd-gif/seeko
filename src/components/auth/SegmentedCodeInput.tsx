@@ -22,9 +22,15 @@ interface SegmentedCodeInputProps {
   value: string;
   onChange: (value: string) => void;
   disabled?: boolean;
+  // Opt into the light Paper theme (white cells, AA-dark digits, azure rings).
+  // Default false → the original dark cells (other callers untouched).
+  light?: boolean;
+  // Rejected-code state: red rings replace the azure complete/focus rings
+  // until the user edits the code.
+  invalid?: boolean;
 }
 
-export function SegmentedCodeInput({ value, onChange, disabled }: SegmentedCodeInputProps) {
+export function SegmentedCodeInput({ value, onChange, disabled, light = false, invalid = false }: SegmentedCodeInputProps) {
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const [focusedIndex, setFocusedIndex] = useState(-1);
   const digits = Array.from({ length: CELL_COUNT }, (_, i) => value[i] ?? '');
@@ -91,7 +97,10 @@ export function SegmentedCodeInput({ value, onChange, disabled }: SegmentedCodeI
       {digits.map((digit, i) => (
         <React.Fragment key={i}>
           {i === 4 && (
-            <div className="w-2 sm:w-3 flex items-center justify-center text-muted-foreground/30 text-base sm:text-lg font-light select-none">
+            <div className={cn(
+              'w-2 sm:w-3 flex items-center justify-center text-base sm:text-lg font-light select-none',
+              light ? 'text-black/20' : 'text-muted-foreground/30',
+            )}>
               &ndash;
             </div>
           )}
@@ -114,17 +123,31 @@ export function SegmentedCodeInput({ value, onChange, disabled }: SegmentedCodeI
               onFocus={() => setFocusedIndex(i)}
               onBlur={() => setFocusedIndex(-1)}
               className={cn(
-                'w-full aspect-square rounded-lg sm:rounded-xl border text-center text-base sm:text-lg font-semibold font-mono transition-all duration-150',
-                'bg-white/5 text-foreground focus:outline-none caret-transparent',
-                'disabled:opacity-50',
-                isComplete
-                  ? 'border-seeko-accent/50 ring-1 ring-seeko-accent/20'
-                  : focusedIndex === i
-                    ? 'border-foreground/40 ring-2 ring-foreground/10'
-                    : digit
-                      ? 'border-border/80'
-                      : 'border-border',
+                'w-full aspect-square rounded-lg sm:rounded-xl border text-center text-base sm:text-lg font-semibold font-mono transition-[border-color,box-shadow,background-color] duration-150',
+                'focus:outline-none caret-transparent disabled:opacity-50',
+                light ? 'bg-white text-[#111]' : 'bg-white/5 text-foreground',
+                // Rejected code: red rings take priority over complete/focus azure.
+                invalid
+                  ? light
+                    ? 'border-[#d4503e]/60 ring-1 ring-[#d4503e]/20'
+                    : 'border-red-400/60 ring-1 ring-red-400/20'
+                  : light
+                    ? isComplete
+                      ? 'border-[#0d7aff]/50 ring-1 ring-[#0d7aff]/20'
+                      : focusedIndex === i
+                        ? 'border-[#0d7aff] ring-2 ring-[#0d7aff]/20'
+                        : digit
+                          ? 'border-black/[0.16]'
+                          : 'border-black/[0.10]'
+                    : isComplete
+                      ? 'border-seeko-accent/50 ring-1 ring-seeko-accent/20'
+                      : focusedIndex === i
+                        ? 'border-foreground/40 ring-2 ring-foreground/10'
+                        : digit
+                          ? 'border-border/80'
+                          : 'border-border',
               )}
+              aria-invalid={invalid || undefined}
               aria-label={`Digit ${i + 1}`}
             />
           </motion.div>

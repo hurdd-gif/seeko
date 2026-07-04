@@ -25,11 +25,30 @@ export function InviteCodeForm() {
   const [email, setEmail] = useState('');
   const [token, setToken] = useState('');
   const [error, setError] = useState<string | null>(null);
+  // Which control caused the error — drives the red highlight (field vs cells).
+  const [emailInvalid, setEmailInvalid] = useState(false);
+  const [codeInvalid, setCodeInvalid] = useState(false);
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+
+    // In-design validation (form is noValidate): the native browser bubble +
+    // blue focus ring clashed with the card — errors render red, in place.
+    const trimmed = email.trim();
+    if (!trimmed || !/^\S+@\S+\.\S+$/.test(trimmed)) {
+      setEmailInvalid(true);
+      setError(
+        trimmed
+          ? "That doesn't look like an email address."
+          : 'Enter the email your invite was sent to.',
+      );
+      document.getElementById('invite-email')?.focus();
+      trigger('error');
+      return;
+    }
+
     setLoading(true);
 
     const supabase = createClient();
@@ -40,6 +59,7 @@ export function InviteCodeForm() {
     });
 
     if (otpError) {
+      setCodeInvalid(true);
       setError('Invalid or expired invite code. Please check your email and try again.');
       setLoading(false);
       trigger('error');
@@ -55,7 +75,7 @@ export function InviteCodeForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
+    <form onSubmit={handleSubmit} noValidate className="space-y-5">
       <div>
         <label htmlFor="invite-email" className={FIELD_LABEL}>
           Email
@@ -71,12 +91,22 @@ export function InviteCodeForm() {
           id="invite-email"
           type="email"
           value={email}
-          onChange={e => setEmail(e.target.value)}
+          onChange={e => {
+            setEmail(e.target.value);
+            if (emailInvalid) {
+              setEmailInvalid(false);
+              setError(null);
+            }
+          }}
           required
+          aria-invalid={emailInvalid || undefined}
           placeholder="you@example.com"
           className={cn(
             'w-full px-3 py-2.5 text-sm transition-[border-color,box-shadow] duration-150 focus-visible:outline-none',
             LIGHT_INPUT,
+            // Error state overrides the azure focus ring — red, not blue.
+            emailInvalid &&
+              'border-[#d4503e]/60 focus-visible:border-[#d4503e] focus-visible:ring-2 focus-visible:ring-[#d4503e]/15',
           )}
         />
       </div>
@@ -87,9 +117,16 @@ export function InviteCodeForm() {
         </label>
         <SegmentedCodeInput
           value={token}
-          onChange={setToken}
+          onChange={next => {
+            setToken(next);
+            if (codeInvalid) {
+              setCodeInvalid(false);
+              setError(null);
+            }
+          }}
           disabled={loading}
           light
+          invalid={codeInvalid}
         />
       </div>
 
