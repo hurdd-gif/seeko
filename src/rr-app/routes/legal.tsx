@@ -170,13 +170,14 @@ export function LegalRoute() {
           reveals just that section's label (spring in, quiet fade out), and
           clicking jumps within the route's own scroll container.
 
-          The whole rail expands on hover: entering it anywhere grows every
-          tick (14 → 22px), and the peeked/active tick grows further (28px).
-          A single tick's 10px change was invisible in practice — the rail-wide
-          response is what makes the hover unmistakable. */}
+          The whole rail expands on hover: entering it anywhere magnifies the
+          rail 30% (scale, left-anchored so it grows into the page) AND grows
+          every tick (14 → 22px), peeked/active longest (28px). A single
+          tick's 10px change was invisible in practice — the component-level
+          magnification is what makes the hover unmistakable. */}
       <motion.nav
         aria-label="Sections"
-        className="fixed left-6 top-1/2 z-10 hidden -translate-y-1/2 flex-col print:hidden xl:flex sm:left-10"
+        className="fixed left-6 top-1/2 z-10 hidden -translate-y-1/2 print:hidden xl:block sm:left-10"
         onMouseEnter={() => setRailHovered(true)}
         onMouseLeave={() => {
           setRailHovered(false);
@@ -190,6 +191,15 @@ export function LegalRoute() {
               transition: { ...RISE.t, delay: 2 * RISE.stagger },
             })}
       >
+        {/* Inner wrapper owns the hover magnification so it composes with the
+            nav's entrance animation. origin-left keeps the rail pinned to the
+            margin while it scales; ticks, spacing, and label all magnify. */}
+        <motion.div
+          className="flex origin-left flex-col"
+          animate={{ scale: railEngaged ? 1.3 : 1 }}
+          transition={reduceMotion ? { duration: 0 } : springs.snappy}
+          initial={false}
+        >
         {doc.sections.map((section, i) => (
           <button
             key={i}
@@ -249,6 +259,7 @@ export function LegalRoute() {
             </AnimatePresence>
           </button>
         ))}
+        </motion.div>
       </motion.nav>
 
       <main className="mx-auto w-full max-w-[680px] pb-24 pt-32 sm:pt-36">
