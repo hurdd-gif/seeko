@@ -20,6 +20,15 @@
  * slide ±12px + scale 0.97 + blur 2px. Collapsed form is `inert`;
  * Escape collapses; focus moves in on open, back to the pill on close.
  *
+ * PAGE SWAP — sign-in ↔ invite (transitions.dev side-by-side + morph)
+ *
+ * Both pages animate simultaneously (±8px slide, 3px blur, 250ms). The
+ * subtitle and the view-toggle link live OUTSIDE the swap and crossfade
+ * in place on the same curve, so the frame never dies. Continuity anchor:
+ * the email pill's face and the invite form's email input share a
+ * layoutId — the pill visually travels and reshapes into the input
+ * (and back), stitching the two views into one surface.
+ *
  * Layout follows the Paper reference (SK_DB frame 27P-0): centered 420px white
  * card — 64px #525252 circular badge with the white S-mark, 22px/600 −0.02em
  * heading, muted subtitle, and a pills-only stack (Google / passkey / email —
@@ -153,6 +162,10 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
   const [passkeyBusy, setPasskeyBusy] = useState(false);
   const [stage, setStage] = useState(0);
   const [emailOpen, setEmailOpen] = useState(false);
+  // Surface clips only while open/closing: at rest the hidden form face is
+  // opacity-0 + inert, and an unclipped surface lets the pill face travel
+  // during the view-swap layoutId morph.
+  const [emailClosing, setEmailClosing] = useState(false);
   const emailPillRef = useRef<HTMLButtonElement>(null);
   const emailInputRef = useRef<HTMLInputElement>(null);
 
@@ -163,9 +176,18 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
   const pageRef = useRef<HTMLDivElement>(null);
   const [pagesH, setPagesH] = useState<number | 'auto'>('auto');
   const viewMounted = useRef(false);
+  // Return-leg morph: layoutId only animates the invite input FROM the pill
+  // (fresh mount promotes it as lead); the remounting pill face never gets
+  // re-promoted, so the way back is a manual FLIP from this captured rect.
+  const inviteEmailRect = useRef<DOMRect | null>(null);
 
   function switchView(next: 'signin' | 'invite') {
     if (pagesRef.current) setPagesH(pagesRef.current.offsetHeight); // lock
+    if (next === 'signin') {
+      inviteEmailRect.current =
+        document.getElementById('invite-email')?.getBoundingClientRect() ?? null;
+    }
+    if (emailOpen) setEmailClosing(true);
     setEmailOpen(false); // leaving the page collapses the email panel
     setError(null);
     setView(next);
@@ -180,6 +202,26 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
     if (pageRef.current) setPagesH(pageRef.current.offsetHeight);
   }, [view]);
 
+  // Invite → sign-in: fly the pill face home from the invite input's rect
+  // (WAAPI FLIP — the mirror of the forward layoutId morph).
+  useLayoutEffect(() => {
+    if (view !== 'signin' || !inviteEmailRect.current) return;
+    const from = inviteEmailRect.current;
+    inviteEmailRect.current = null;
+    const face = emailPillRef.current;
+    if (reduceMotion || !face || typeof face.animate !== 'function') return;
+    const to = face.getBoundingClientRect();
+    const dx = from.left + from.width / 2 - (to.left + to.width / 2);
+    const dy = from.top + from.height / 2 - (to.top + to.height / 2);
+    face.animate(
+      [
+        { transform: `translate(${dx}px, ${dy}px) scale(${from.width / to.width}, ${from.height / to.height})` },
+        { transform: 'none' },
+      ],
+      { duration: 250, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' },
+    );
+  }, [view, reduceMotion]);
+
   function openEmail() {
     setEmailOpen(true);
     // Focus once the panel is interactive (inert lifts on the state flip).
@@ -187,6 +229,7 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
   }
 
   function closeEmail() {
+    setEmailClosing(true);
     setEmailOpen(false);
     setTimeout(() => emailPillRef.current?.focus({ preventScroll: true }), 60);
   }
@@ -321,22 +364,23 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
           </h1>
         </motion.div>
 
-        {/* Subtitle — crossfade between views */}
-        {/* mode="wait" mounts one subtitle at a time, so the container can
-            auto-size — no fixed height to overflow when the copy wraps. */}
+        {/* Subtitle — crossfade between views. Grid-stacked so both taglines
+            occupy the same cell and crossfade SIMULTANEOUSLY on the page-swap
+            curve (mode="wait" made the swap feel sequential). */}
         <motion.div
-          className="mb-10 text-center text-base leading-snug text-[#b4b4b4]"
+          className="mb-10 grid justify-items-center text-center text-base leading-snug text-[#b4b4b4]"
           initial={{ opacity: 0 }}
           animate={{ opacity: stage >= 3 ? 1 : 0 }}
           transition={t(FADE.spring)}
         >
-          <AnimatePresence mode="wait">
+          <AnimatePresence initial={false}>
             <motion.p
               key={view}
+              className="col-start-1 row-start-1"
               initial={{ opacity: 0, filter: 'blur(4px)', y: 2 }}
               animate={{ opacity: 1, filter: 'blur(0px)', y: 0 }}
               exit={{ opacity: 0, filter: 'blur(4px)', y: -2 }}
-              transition={t({ duration: 0.2, ease: 'easeOut' })}
+              transition={t(PAGE.t)}
             >
               {view === 'signin' ? 'Your hub for tasks, docs, and payments' : 'Join the team!'}
             </motion.p>
@@ -436,7 +480,7 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
                     The surface animates height/radius/tint; the two faces
                     cross-fade with slide + scale + blur (transitions.dev). */}
                 <motion.div
-                  className="relative overflow-hidden"
+                  className={cn('relative', (emailOpen || emailClosing) && 'overflow-hidden')}
                   initial={false}
                   animate={{
                     height: emailOpen ? 'auto' : MORPH.height.closed,
@@ -444,10 +488,17 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
                     backgroundColor: emailOpen ? MORPH.tint.open : MORPH.tint.closed,
                   }}
                   transition={reduceMotion ? { duration: 0 } : emailOpen ? MORPH.open : MORPH.close}
+                  onAnimationComplete={() => setEmailClosing(false)}
                 >
-                  {/* Closed face — the pill (transparent; the surface paints the tint) */}
+                  {/* Closed face — the pill (transparent; the surface paints the
+                      tint). layoutId pairs it with the invite email input: on
+                      view swap the face travels/reshapes into the input's slot.
+                      Safe anchor: its own layout never changes, so projection
+                      can't fight the surface's height morph. */}
                   <motion.button
                     ref={emailPillRef}
+                    layoutId="auth-email-morph"
+                    style={{ borderRadius: MORPH.radius.closed }}
                     type="button"
                     onClick={openEmail}
                     aria-expanded={emailOpen}
@@ -458,13 +509,15 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
                       'absolute inset-x-0 top-0 bg-transparent',
                       emailOpen && 'pointer-events-none',
                     )}
-                    initial={false}
+                    // No initial={false} here: it suppresses the mount-time
+                    // shared-element morph from the invite input, and the closed
+                    // `animate` already equals the natural DOM state.
                     animate={
                       emailOpen
                         ? { opacity: 0, y: -MORPH.slide, filter: `blur(${MORPH.blur}px)` }
                         : { opacity: 1, y: 0, filter: 'blur(0px)' }
                     }
-                    transition={reduceMotion ? { duration: 0 } : MORPH.fade}
+                    transition={reduceMotion ? { duration: 0 } : { ...MORPH.fade, layout: PAGE.t }}
                   >
                     <Mail className="size-6" strokeWidth={1.75} />
                     Continue with email
@@ -573,22 +626,6 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
                   </motion.div>
                 </motion.div>
               </motion.div>
-
-              {/* Invite path — a quiet footer link instead of the old tab */}
-              <motion.p
-                className="mt-6 text-center"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: stage >= 5 ? 1 : 0 }}
-                transition={t(FADE.spring)}
-              >
-                <button
-                  type="button"
-                  onClick={() => switchView('invite')}
-                  className={SUBTLE_LINK}
-                >
-                  Have an invite code?
-                </button>
-              </motion.p>
             </motion.div>
           ) : (
             <motion.div
@@ -600,19 +637,39 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
               transition={t(PAGE.t)}
             >
               <InviteCodeForm />
-              <p className="mt-6 text-center">
-                <button
-                  type="button"
-                  onClick={() => switchView('signin')}
-                  className={SUBTLE_LINK}
-                >
-                  Back to sign in
-                </button>
-              </p>
             </motion.div>
           )}
         </AnimatePresence>
         </motion.div>
+
+        {/* View toggle — one persistent control shared by both views. The
+            label crossfades in place (never unmounts), so the card's bottom
+            edge stays alive through the swap instead of dying and respawning. */}
+        <motion.p
+          className="mt-6 text-center"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: stage >= 5 ? 1 : 0 }}
+          transition={t(FADE.spring)}
+        >
+          <button
+            type="button"
+            onClick={() => switchView(view === 'signin' ? 'invite' : 'signin')}
+            className={cn(SUBTLE_LINK, 'inline-grid justify-items-center')}
+          >
+            <AnimatePresence initial={false}>
+              <motion.span
+                key={view}
+                className="col-start-1 row-start-1 whitespace-nowrap"
+                initial={{ opacity: 0, filter: 'blur(3px)', y: 2 }}
+                animate={{ opacity: 1, filter: 'blur(0px)', y: 0 }}
+                exit={{ opacity: 0, filter: 'blur(3px)', y: -2 }}
+                transition={t(PAGE.t)}
+              >
+                {view === 'signin' ? 'Have an invite code?' : 'Back to sign in'}
+              </motion.span>
+            </AnimatePresence>
+          </button>
+        </motion.p>
       </motion.div>
     </div>
   );
