@@ -53,8 +53,15 @@ export function LoginRouteContent() {
 
       {/* Vertically centered. Safe now that the card's height change is a
           real animation (LoginForm pins + WAAPI-glides the container): the
-          my-auto recentring rides that same curve instead of snapping. */}
-      <main className="mx-auto my-auto flex w-full max-w-[420px] flex-col items-center py-24">
+          my-auto recentring rides that same curve instead of snapping.
+          Vertical padding is viewport-aware slack, not geometry: the email
+          view's content is ~753px, so a fixed py-24 (192px total) made any
+          window under 945px sprout a scrollbar the moment the email form
+          opened — and lose it on collapse. The clamp keeps the full 96px on
+          tall screens and compresses toward 24px as the window shrinks, so
+          the email view fits without scrolling down to ~800px-tall windows;
+          below that, scrolling is genuine (content taller than viewport). */}
+      <main className="mx-auto my-auto flex w-full max-w-[420px] flex-col items-center py-[clamp(1.5rem,calc((100dvh-780px)/2),6rem)]">
         <LoginForm initialError={callbackError} />
 
         {/* Legal footnote — reference: 14px #969696, max 300px, 32px below card.
