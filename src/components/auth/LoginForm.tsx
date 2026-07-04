@@ -401,7 +401,9 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
           {/* White S-mark on the reference's #525252 disc — the dark-canvas
               asset finally has a home on the light card. */}
           <div className="flex size-16 shrink-0 items-center justify-center rounded-full bg-[#525252]">
-            <img src="/seeko-s.png" alt="" width={32} height={32} className="h-8 w-auto object-contain" />
+            {/* 40px, not 32 — the PNG carries internal whitespace, so the
+                glyph needs the larger box to fill the disc like the reference. */}
+            <img src="/seeko-s.png" alt="" width={40} height={40} className="h-10 w-auto object-contain" />
           </div>
           <h1 className="text-balance text-[22px] font-semibold tracking-[-0.02em] text-[#515151]">
             Sign in to SEEKO
