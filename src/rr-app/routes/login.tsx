@@ -26,7 +26,11 @@ export function LoginRouteContent() {
   const callbackError = errorCode ? CALLBACK_ERROR_MESSAGES[errorCode] ?? 'Sign-in failed. Please try again.' : null;
 
   return (
-    <div className="overview-light relative flex min-h-dvh flex-col bg-white px-4 antialiased pb-[env(safe-area-inset-bottom)]">
+    // The route owns its scrolling (h-dvh + overflow-y-auto) with a gutter
+    // reserved on BOTH edges: when the email form expands past the viewport,
+    // the document scrollbar used to pop in and nudge the whole page ~7px
+    // left. Symmetric gutters keep the card centered in either state.
+    <div className="overview-light relative flex h-dvh flex-col overflow-y-auto bg-white px-4 antialiased pb-[env(safe-area-inset-bottom)] [scrollbar-gutter:stable_both-edges]">
       {/* Top bar — reference geometry: 32px mark + 16px #686868 labels, 32/40 padding */}
       <header className="absolute inset-x-0 top-0 flex items-center justify-between px-6 py-6 pt-[max(1.5rem,env(safe-area-inset-top))] sm:px-10 sm:py-8">
         <div className="flex items-center gap-2.5">
