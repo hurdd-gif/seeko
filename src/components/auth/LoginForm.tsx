@@ -121,6 +121,26 @@ const FIELD_INPUT = cn(
   LIGHT_INPUT,
 );
 
+// Error state overrides the azure focus border — red, not blue (matches the
+// invite tab's treatment so both forms speak one error language).
+const FIELD_INPUT_INVALID =
+  'border-[#d4503e]/60 focus-visible:border-[#d4503e] focus-visible:ring-2 focus-visible:ring-[#d4503e]/15';
+
+/* Point-of-error continuity: the offending field shakes as the message lands
+ * (same keyframes as InviteCodeForm — one grammar across the auth card). */
+const SHAKE_KEYFRAMES = [
+  { transform: 'translateX(0)' },
+  { transform: 'translateX(-5px)' },
+  { transform: 'translateX(4px)' },
+  { transform: 'translateX(-2px)' },
+  { transform: 'translateX(0)' },
+];
+
+function shakeEl(el: HTMLElement | null, reduceMotion: boolean | null) {
+  if (!el || reduceMotion || typeof el.animate !== 'function') return;
+  el.animate(SHAKE_KEYFRAMES, { duration: 300, easing: 'ease-out' });
+}
+
 /* Provider pill — reference geometry verbatim: 48px tall, #F1F1F1, 16px radius,
  * 8px icon–label gap, 24px icon + 16px/600 #3A3A3A label. */
 const PILL = cn(
@@ -178,6 +198,9 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
   const [emailClosing, setEmailClosing] = useState(false);
   const emailPillRef = useRef<HTMLButtonElement>(null);
   const emailInputRef = useRef<HTMLInputElement>(null);
+  const passwordInputRef = useRef<HTMLInputElement>(null);
+  // Which sign-in field failed validation — drives the red border + shake.
+  const [fieldInvalid, setFieldInvalid] = useState<'email' | 'password' | null>(null);
 
   /* Page-swap height: locked to the old page's px at flip so the card
    * doesn't snap, animated to the entering page's height, then released
@@ -275,6 +298,11 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
   function closeEmail() {
     setEmailClosing(true);
     setEmailOpen(false);
+    // A validation callout must not outlive the fields it points at.
+    if (fieldInvalid) {
+      setFieldInvalid(null);
+      setError(null);
+    }
     setTimeout(() => emailPillRef.current?.focus({ preventScroll: true }), 60);
   }
 
@@ -302,8 +330,29 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
-    setLoading(true);
     setError(null);
+
+    // In-design validation (form is noValidate): the native browser bubble
+    // clashed with the card. Errors use the shared slot + red field + shake.
+    const trimmed = email.trim();
+    if (!trimmed || !/^\S+@\S+\.\S+$/.test(trimmed)) {
+      setFieldInvalid('email');
+      setError(trimmed ? "That doesn't look like an email address." : 'Enter your email address.');
+      emailInputRef.current?.focus();
+      shakeEl(emailInputRef.current, reduceMotion);
+      trigger('error');
+      return;
+    }
+    if (!password) {
+      setFieldInvalid('password');
+      setError('Enter your password.');
+      passwordInputRef.current?.focus();
+      shakeEl(passwordInputRef.current, reduceMotion);
+      trigger('error');
+      return;
+    }
+
+    setLoading(true);
 
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -621,7 +670,7 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
                       </button>
                     </div>
 
-                    <form onSubmit={handleLogin} className="space-y-2">
+                    <form onSubmit={handleLogin} noValidate className="space-y-2">
                       <div>
                         <label htmlFor="email" className="sr-only">
                           Email
@@ -632,9 +681,16 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
                           type="email"
                           autoComplete="email"
                           value={email}
-                          onChange={e => setEmail(e.target.value)}
+                          onChange={e => {
+                            setEmail(e.target.value);
+                            if (fieldInvalid === 'email') {
+                              setFieldInvalid(null);
+                              setError(null);
+                            }
+                          }}
                           required
-                          className={FIELD_INPUT}
+                          aria-invalid={fieldInvalid === 'email' || undefined}
+                          className={cn(FIELD_INPUT, fieldInvalid === 'email' && FIELD_INPUT_INVALID)}
                           placeholder="you@seeko.studio"
                         />
                       </div>
@@ -644,13 +700,21 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
                           Password
                         </label>
                         <input
+                          ref={passwordInputRef}
                           id="password"
                           type="password"
                           autoComplete="current-password"
                           value={password}
-                          onChange={e => setPassword(e.target.value)}
+                          onChange={e => {
+                            setPassword(e.target.value);
+                            if (fieldInvalid === 'password') {
+                              setFieldInvalid(null);
+                              setError(null);
+                            }
+                          }}
                           required
-                          className={FIELD_INPUT}
+                          aria-invalid={fieldInvalid === 'password' || undefined}
+                          className={cn(FIELD_INPUT, fieldInvalid === 'password' && FIELD_INPUT_INVALID)}
                           placeholder="Password"
                         />
                       </div>
