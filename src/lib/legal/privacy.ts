@@ -64,6 +64,19 @@ export const privacyPolicy: LegalDoc = {
       ],
     },
     {
+      heading: 'Cookies',
+      body: [
+        {
+          kind: 'p',
+          text: 'The workspace sets only strictly necessary cookies — the kind the law does not require a consent banner for, which is why you never see one here. There are three: the Supabase session cookies that keep you signed in, a short-lived session cookie that keeps the payments area unlocked after you verify with a passkey, and a five-minute challenge cookie used during the passkey ceremony itself. All are essential to signing in and staying signed in; none of them track you.',
+        },
+        {
+          kind: 'p',
+          text: 'We use no analytics cookies, no advertising cookies, and no third-party trackers of any kind. If that ever changes, we will update this policy and ask for consent before setting any non-essential cookie. You can clear or block cookies in your browser at any time — the only consequence is that you will be signed out.',
+        },
+      ],
+    },
+    {
       heading: 'How we use information',
       body: [
         {
