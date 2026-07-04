@@ -122,9 +122,9 @@ const FIELD_INPUT = cn(
 );
 
 /* Provider pill — reference geometry verbatim: 48px tall, #F1F1F1, 16px radius,
- * 24px icon + 16px/600 #3A3A3A label. */
+ * 8px icon–label gap, 24px icon + 16px/600 #3A3A3A label. */
 const PILL = cn(
-  'flex h-12 w-full items-center justify-center gap-3 rounded-2xl bg-[#f1f1f1]',
+  'flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[#f1f1f1]',
   'text-base font-semibold text-[#3a3a3a]',
   'transition-[background-color,transform] duration-150 ease-out hover:bg-[#eaeaea] active:scale-[0.98]',
   'disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100',
@@ -391,9 +391,11 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
         animate={{ opacity: stage >= 1 ? 1 : 0, y: stage >= 1 ? 0 : CARD.offsetY }}
         transition={t(CARD.spring)}
       >
-        {/* Badge + heading */}
+        {/* Badge + heading — reference rhythm: 24px badge→heading, 8px
+            heading→subtitle (the subtitle block below owns the 40px drop
+            into the pills). */}
         <motion.div
-          className="mb-3 flex flex-col items-center gap-5"
+          className="mb-2 flex flex-col items-center gap-6"
           initial={{ opacity: 0, y: IDENTITY.offsetY }}
           animate={{ opacity: stage >= 2 ? 1 : 0, y: stage >= 2 ? 0 : IDENTITY.offsetY }}
           transition={t(IDENTITY.spring)}
@@ -414,7 +416,7 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
             occupy the same cell and crossfade SIMULTANEOUSLY on the page-swap
             curve (mode="wait" made the swap feel sequential). */}
         <motion.div
-          className="mb-10 grid justify-items-center text-center text-base leading-snug text-[#b4b4b4]"
+          className="mb-10 grid justify-items-center text-balance text-center text-base leading-snug text-[#b4b4b4]"
           initial={{ opacity: 0 }}
           animate={{ opacity: stage >= 3 ? 1 : 0 }}
           transition={t(FADE.spring)}
@@ -428,7 +430,9 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
               exit={{ opacity: 0, filter: 'blur(4px)', y: -2 }}
               transition={t(PAGE.t)}
             >
-              {view === 'signin' ? 'Your hub for tasks, docs, and payments' : 'Join the team!'}
+              {view === 'signin'
+                ? 'Everything the studio runs on — tasks, docs, and payments in one place'
+                : 'Enter the invite code from your email to join the studio'}
             </motion.p>
           </AnimatePresence>
         </motion.div>
