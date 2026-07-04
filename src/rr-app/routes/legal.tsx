@@ -190,14 +190,18 @@ export function LegalRoute() {
             aria-current={i === activeSection ? 'true' : undefined}
             className="group/tick relative flex w-8 items-center py-[5px]"
           >
-            <span
+            {/* Tick expands to full length on hover/focus (spring, interruptible),
+                not just a tint — the peeked tick reads as "this one". */}
+            <motion.span
               aria-hidden
-              className={cn(
-                'h-[2px] rounded-full transition-[width,background-color] duration-200',
-                i === activeSection
-                  ? 'w-6 bg-[#1c1c1c]'
-                  : 'w-3.5 bg-[#dcdcdc] group-hover/tick:bg-[#a0a0a0]',
-              )}
+              className="h-[2px] rounded-full"
+              animate={{
+                width: i === activeSection || peekedSection === i ? 24 : 14,
+                backgroundColor:
+                  i === activeSection ? '#1c1c1c' : peekedSection === i ? '#8a8a8a' : '#dcdcdc',
+              }}
+              transition={reduceMotion ? { duration: 0 } : springs.snappy}
+              initial={false}
             />
             {/* Label floats beside the tick (absolute — reveals cause zero
                 layout shift). Spring entrance with a 2px blur bridge; exit is
