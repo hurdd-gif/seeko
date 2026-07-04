@@ -26,18 +26,18 @@ export function LoginRouteContent() {
   const callbackError = errorCode ? CALLBACK_ERROR_MESSAGES[errorCode] ?? 'Sign-in failed. Please try again.' : null;
 
   return (
-    <div className="overview-light relative flex min-h-dvh flex-col bg-[var(--ov-bg)] px-4 antialiased pb-[env(safe-area-inset-bottom)]">
-      {/* Top bar — wordmark left, help right */}
-      <header className="absolute inset-x-0 top-0 flex items-center justify-between px-5 py-5 pt-[max(1.25rem,env(safe-area-inset-top))] sm:px-8 sm:py-7">
-        <div className="flex items-center gap-2.5">
-          <img src="/seeko-logo.png" alt="SEEKO" className="size-7 rounded-md" />
-          <span className="text-[15px] font-medium text-[#686868]">Studio</span>
+    <div className="overview-light relative flex min-h-dvh flex-col bg-white px-4 antialiased pb-[env(safe-area-inset-bottom)]">
+      {/* Top bar — reference geometry: 32px mark + 16px #686868 labels, 32/40 padding */}
+      <header className="absolute inset-x-0 top-0 flex items-center justify-between px-6 py-6 pt-[max(1.5rem,env(safe-area-inset-top))] sm:px-10 sm:py-8">
+        <div className="flex items-center gap-3">
+          <img src="/seeko-logo.png" alt="SEEKO" className="size-8 rounded-md" />
+          <span className="text-base font-medium text-[#686868]">Studio</span>
         </div>
         <a
           href="mailto:ykartix@gmail.com?subject=SEEKO%20Studio%20sign-in%20help"
-          className="flex items-center gap-1.5 text-[14px] text-[#808080] transition-colors hover:text-[#3a3a3a]"
+          className="flex items-center gap-2 text-base text-[#686868] transition-colors duration-150 hover:text-[#3a3a3a]"
         >
-          <CircleHelp className="size-4" strokeWidth={1.75} />
+          <CircleHelp className="size-[18px]" strokeWidth={1.75} />
           Help &amp; Support
         </a>
       </header>
@@ -48,8 +48,8 @@ export function LoginRouteContent() {
       <main className="mx-auto my-auto flex w-full max-w-[420px] flex-col items-center py-24">
         <LoginForm initialError={callbackError} />
 
-        {/* Legal footnote */}
-        <p className="mt-8 max-w-[300px] text-center text-[13px] leading-relaxed text-[#969696]">
+        {/* Legal footnote — reference: 14px #969696, max 300px, 32px below card */}
+        <p className="mt-8 max-w-[300px] text-pretty text-center text-sm leading-snug text-[#969696]">
           Access is invite-only. By signing in you agree to the SEEKO Studio NDA.
         </p>
       </main>

@@ -20,9 +20,11 @@
  * heading, muted subtitle, stacked #f1f1f1 provider pills, "or" divider, then
  * the email/password pair with the black-pill CTA. The old Sign in / Invite
  * code tab pill is gone; the invite path survives as a footer link that swaps
- * the card body to the ORIGINAL <InviteCodeForm> (logic untouched). Ink colors
- * come from the app light kit (#111 headings, #808080 muted), not the
- * reference's Phantom grays.
+ * the card body to the ORIGINAL <InviteCodeForm> (logic untouched). Geometry
+ * and inks follow the reference exactly: 8px card radius + #E8E8E8BF hairline
+ * + 0 10px 20px #D1D1D126 shadow, #515151 heading, #B4B4B4 subcopy, 16px-radius
+ * 48px pills with 24px icons. (The 16px-inside-8px radius inversion is the
+ * reference's own call — fidelity beats the concentric rule here.)
  * ────────────────────────────────────────────────────────── */
 
 import { useState, useEffect } from 'react';
@@ -71,15 +73,15 @@ const FADE = {
 
 const FIELD_LABEL = 'block text-xs font-medium text-[#808080] mb-1.5';
 const FIELD_INPUT = cn(
-  'w-full px-3 py-2 text-sm transition-[border-color,box-shadow] duration-150 focus-visible:outline-none',
+  'h-11 w-full px-3 text-sm transition-[border-color,box-shadow] duration-150 focus-visible:outline-none',
   LIGHT_INPUT,
 );
 
-/* Provider pill — the reference's 48px #f1f1f1 button, radius matched to the
- * kit's 14px control family (BTN_BASE) so it nests inside the rounded-2xl card. */
+/* Provider pill — reference geometry verbatim: 48px tall, #F1F1F1, 16px radius,
+ * 24px icon + 16px/600 #3A3A3A label. */
 const PILL = cn(
-  'flex h-12 w-full items-center justify-center gap-2.5 rounded-[14px] bg-[#f1f1f1]',
-  'text-[15px] font-semibold text-[#3a3a3a]',
+  'flex h-12 w-full items-center justify-center gap-3 rounded-2xl bg-[#f1f1f1]',
+  'text-base font-semibold text-[#3a3a3a]',
   'transition-[background-color,transform] duration-150 ease-out hover:bg-[#eaeaea] active:scale-[0.98]',
   'disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100',
   LIGHT_FOCUS_RING,
@@ -91,7 +93,7 @@ const SUBTLE_LINK =
 /* Official Google "G" (standard brand colors), from the reference frame. */
 function GoogleGlyph() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" className="shrink-0">
+    <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" className="shrink-0">
       <path fill="#4285F4" d="M21.6 12.227c0-.709-.064-1.391-.182-2.045H12v3.868h5.382a4.6 4.6 0 0 1-1.996 3.018v2.509h3.232c1.891-1.741 2.982-4.304 2.982-7.35Z" />
       <path fill="#34A853" d="M12 22c2.7 0 4.963-.895 6.618-2.422l-3.232-2.509c-.895.6-2.041.954-3.386.954-2.605 0-4.809-1.759-5.596-4.123H3.063v2.591C4.709 19.759 8.091 22 12 22Z" />
       <path fill="#FBBC05" d="M6.405 13.901A5.99 5.99 0 0 1 6.091 12c0-.659.114-1.3.314-1.9V7.51H3.064A9.99 9.99 0 0 0 2 12c0 1.613.386 3.141 1.064 4.491l3.341-2.59Z" />
@@ -220,14 +222,14 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
 
       {/* Card */}
       <motion.div
-        className="relative rounded-2xl border border-black/[0.06] bg-white p-8 shadow-seeko"
+        className="relative rounded-lg border border-[#E8E8E8]/75 bg-white px-6 py-10 shadow-[0_10px_20px_#D1D1D126]"
         initial={{ opacity: 0, y: CARD.offsetY }}
         animate={{ opacity: stage >= 1 ? 1 : 0, y: stage >= 1 ? 0 : CARD.offsetY }}
         transition={CARD.spring}
       >
         {/* Badge + heading */}
         <motion.div
-          className="mb-2.5 flex flex-col items-center gap-5"
+          className="mb-3 flex flex-col items-center gap-5"
           initial={{ opacity: 0, y: IDENTITY.offsetY }}
           animate={{ opacity: stage >= 2 ? 1 : 0, y: stage >= 2 ? 0 : IDENTITY.offsetY }}
           transition={IDENTITY.spring}
@@ -237,7 +239,7 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
           <div className="flex size-16 shrink-0 items-center justify-center rounded-full bg-[#525252]">
             <img src="/seeko-s.png" alt="" width={32} height={32} className="h-8 w-auto object-contain" />
           </div>
-          <h1 className="text-[22px] font-semibold tracking-[-0.02em] text-[#111]">
+          <h1 className="text-balance text-[22px] font-semibold tracking-[-0.02em] text-[#515151]">
             Sign in to SEEKO
           </h1>
         </motion.div>
@@ -246,7 +248,7 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
         {/* mode="wait" mounts one subtitle at a time, so the container can
             auto-size — no fixed height to overflow when the copy wraps. */}
         <motion.div
-          className="mb-7 text-center text-[15px] leading-snug text-[#808080]"
+          className="mb-10 text-center text-base leading-snug text-[#b4b4b4]"
           initial={{ opacity: 0 }}
           animate={{ opacity: stage >= 3 ? 1 : 0 }}
           transition={FADE.spring}
@@ -300,7 +302,7 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
                   disabled={googleBusy || passkeyBusy}
                   className={PILL}
                 >
-                  {googleBusy ? <Loader2 className="size-5 animate-spin" /> : <GoogleGlyph />}
+                  {googleBusy ? <Loader2 className="size-6 animate-spin" /> : <GoogleGlyph />}
                   {googleBusy ? 'Redirecting…' : 'Continue with Google'}
                 </button>
                 {passkeySupported && (
@@ -311,8 +313,8 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
                     className={PILL}
                   >
                     {passkeyBusy
-                      ? <Loader2 className="size-5 animate-spin" />
-                      : <Fingerprint className="size-5" strokeWidth={2} />}
+                      ? <Loader2 className="size-6 animate-spin" />
+                      : <Fingerprint className="size-6" strokeWidth={1.75} />}
                     {passkeyBusy ? 'Waiting for passkey…' : 'Continue with passkey'}
                   </button>
                 )}
@@ -377,7 +379,7 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
                   className={cn(
                     BTN_PRIMARY,
                     LIGHT_FOCUS_RING,
-                    'h-10 w-full text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50',
+                    'h-12 w-full rounded-2xl text-base font-semibold disabled:cursor-not-allowed disabled:opacity-50',
                   )}
                   initial={{ opacity: 0, y: FIELD.offsetY }}
                   animate={{ opacity: stage >= 8 ? 1 : 0, y: stage >= 8 ? 0 : FIELD.offsetY }}
