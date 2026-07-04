@@ -195,7 +195,7 @@ export function LegalRoute() {
             nav's entrance animation. origin-left keeps the rail pinned to the
             margin while it scales; ticks, spacing, and label all magnify. */}
         <motion.div
-          className="flex origin-left flex-col"
+          className="relative flex origin-left flex-col"
           animate={{ scale: railEngaged ? 1.25 : 1 }}
           transition={reduceMotion ? { duration: 0 } : springs.snappy}
           initial={false}
@@ -234,31 +234,33 @@ export function LegalRoute() {
               transition={reduceMotion ? { duration: 0 } : springs.snappy}
               initial={false}
             />
-            {/* Label floats beside the tick (absolute — reveals cause zero
-                layout shift). Spring entrance with a 2px blur bridge; exit is
-                a quicker, quieter fade per the subtle-exits rule. */}
-            <AnimatePresence>
-              {peekedSection === i && (
-                <motion.span
-                  initial={reduceMotion ? { opacity: 1 } : { opacity: 0, x: -6, filter: 'blur(2px)' }}
-                  animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
-                  exit={
-                    reduceMotion
-                      ? { opacity: 0, transition: { duration: 0 } }
-                      : { opacity: 0, x: -3, filter: 'blur(2px)', transition: { duration: 0.12, ease: 'easeOut' } }
-                  }
-                  transition={reduceMotion ? { duration: 0 } : springs.snappy}
-                  className={cn(
-                    'pointer-events-none absolute left-10 max-w-[320px] truncate whitespace-nowrap text-left text-[12px] leading-none',
-                    i === activeSection ? 'font-medium text-[#1c1c1c]' : 'text-[#5f5f5f]',
-                  )}
-                >
-                  {section.heading}
-                </motion.span>
-              )}
-            </AnimatePresence>
           </button>
         ))}
+        {/* ONE label for the whole rail, sliding to the hovered row (12px per
+            row: 2px tick + 5px padding each side). Sweeping across sections
+            swaps the text in place while the spring carries the movement — no
+            per-section enter/exit (the old per-tick blur cascade read as
+            flicker). It only fades in/out at the rail boundary. */}
+        <AnimatePresence>
+          {peekedSection !== null && (
+            <motion.span
+              initial={
+                reduceMotion
+                  ? { opacity: 1, y: peekedSection * 12 }
+                  : { opacity: 0, x: -4, y: peekedSection * 12 }
+              }
+              animate={{ opacity: 1, x: 0, y: peekedSection * 12 }}
+              exit={{ opacity: 0, transition: reduceMotion ? { duration: 0 } : { duration: 0.12, ease: 'easeOut' } }}
+              transition={reduceMotion ? { duration: 0 } : springs.snappy}
+              className={cn(
+                'pointer-events-none absolute left-10 top-0 flex h-3 max-w-[320px] items-center text-[12px] leading-none',
+                peekedSection === activeSection ? 'font-medium text-[#1c1c1c]' : 'text-[#5f5f5f]',
+              )}
+            >
+              <span className="truncate whitespace-nowrap">{doc.sections[peekedSection].heading}</span>
+            </motion.span>
+          )}
+        </AnimatePresence>
         </motion.div>
       </motion.nav>
 
