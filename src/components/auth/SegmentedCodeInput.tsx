@@ -7,7 +7,7 @@
  *   user types → digit fills cell, scale-bounce
  *   auto-advance to next cell on entry
  *   on paste → all cells fill with stagger (40ms each)
- *   on complete → cells glow with accent ring
+ *   on complete → cells settle to the quiet filled state
  * ───────────────────────────────────────────────────────── */
 
 import React, { useState, useRef, useCallback, useEffect, type KeyboardEvent, type ClipboardEvent } from 'react';
@@ -85,15 +85,11 @@ export function SegmentedCodeInput({ value, onChange, disabled, light = false, i
     return () => clearTimeout(timer);
   }, [focusCell]);
 
-  const isComplete = value.replace(/\D/g, '').length === CELL_COUNT;
-  const filledCount = value.replace(/\D/g, '').length;
-
   return (
-    <motion.div
-      animate={{ scale: filledCount > 0 ? 1.05 : 1 }}
-      transition={springs.firm}
-      className="flex items-center justify-center gap-1 sm:gap-1.5 w-full max-w-sm mx-auto px-1.5"
-    >
+    // Static container — the group used to zoom 1.05x once anything was
+    // typed, which read as the whole control lurching. State now lives in
+    // the cells alone.
+    <div className="flex items-center justify-center gap-1 sm:gap-1.5 w-full max-w-sm mx-auto px-1.5">
       {digits.map((digit, i) => (
         <React.Fragment key={i}>
           {i === 4 && (
@@ -122,30 +118,30 @@ export function SegmentedCodeInput({ value, onChange, disabled, light = false, i
               onPaste={handlePaste}
               onFocus={() => setFocusedIndex(i)}
               onBlur={() => setFocusedIndex(-1)}
+              // One quiet state per cell, matching lightKit's input language
+              // (hairline border, azure BORDER on focus — no ring glow). The
+              // old "complete" state ringed all 8 cells at once, which is the
+              // main thing that read as noise; a full code now just settles
+              // to the filled look and lets the CTA carry the affordance.
               className={cn(
-                'w-full aspect-square rounded-lg sm:rounded-xl border text-center text-base sm:text-lg font-semibold font-mono transition-[border-color,box-shadow,background-color] duration-150',
+                'w-full aspect-square rounded-[10px] border text-center text-base sm:text-[17px] font-medium font-mono tabular-nums transition-[border-color,background-color] duration-150 ease-out',
                 'focus:outline-none caret-transparent disabled:opacity-50',
-                light ? 'bg-white text-[#111]' : 'bg-white/5 text-foreground',
-                // Rejected code: red rings take priority over complete/focus azure.
+                light ? 'bg-white text-[#1c1c1c]' : 'bg-white/5 text-foreground',
                 invalid
                   ? light
-                    ? 'border-[#d4503e]/60 ring-1 ring-[#d4503e]/20'
-                    : 'border-red-400/60 ring-1 ring-red-400/20'
+                    ? 'border-[#d4503e]/70 bg-[#fff7f6]'
+                    : 'border-red-400/60'
                   : light
-                    ? isComplete
-                      ? 'border-[#0d7aff]/50 ring-1 ring-[#0d7aff]/20'
-                      : focusedIndex === i
-                        ? 'border-[#0d7aff] ring-2 ring-[#0d7aff]/20'
-                        : digit
-                          ? 'border-black/[0.16]'
-                          : 'border-black/[0.10]'
-                    : isComplete
-                      ? 'border-seeko-accent/50 ring-1 ring-seeko-accent/20'
-                      : focusedIndex === i
-                        ? 'border-foreground/40 ring-2 ring-foreground/10'
-                        : digit
-                          ? 'border-border/80'
-                          : 'border-border',
+                    ? focusedIndex === i
+                      ? 'border-[#0d7aff]'
+                      : digit
+                        ? 'border-black/[0.16]'
+                        : 'border-black/[0.08]'
+                    : focusedIndex === i
+                      ? 'border-foreground/40'
+                      : digit
+                        ? 'border-border/80'
+                        : 'border-border',
               )}
               aria-invalid={invalid || undefined}
               aria-label={`Digit ${i + 1}`}
@@ -153,6 +149,6 @@ export function SegmentedCodeInput({ value, onChange, disabled, light = false, i
           </motion.div>
         </React.Fragment>
       ))}
-    </motion.div>
+    </div>
   );
 }
