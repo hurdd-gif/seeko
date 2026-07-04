@@ -31,9 +31,10 @@ export function LoginRouteContent() {
       <header className="absolute inset-x-0 top-0 flex items-center justify-between px-6 py-6 pt-[max(1.5rem,env(safe-area-inset-top))] sm:px-10 sm:py-8">
         <div className="flex items-center gap-2.5">
           {/* Refined gray mark (#6E6E6E) exported from the Paper reference
-              header (27P-0) — replaces the outdated heavy black PNG. Tight
-              24×24 viewBox, so it sits square at the reference's 32px. */}
-          <img src="/seeko-mark.svg" alt="SEEKO" className="size-8" />
+              header (27P-0) — replaces the outdated heavy black PNG. 24px
+              keeps it proportionate to the 16px label (glyph sits inside
+              the box with padding, so 32px read oversized). */}
+          <img src="/seeko-mark.svg" alt="SEEKO" className="size-6" />
           <span className="text-base font-medium text-[#686868]">Studio</span>
         </div>
         <a
