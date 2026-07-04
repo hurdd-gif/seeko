@@ -194,19 +194,28 @@ export function InviteCodeForm() {
         </AnimatePresence>
       </div>
 
-      {/* CTA fades into black the moment the 8th digit lands: resting state
-          is a muted gray pill, and completion crossfades bg + label color
-          (150ms ease-out) rather than snapping opacity. */}
-      <button
+      {/* CTA springs into black the moment the 8th digit lands: resting state
+          is a muted gray pill; completion crossfades bg + label on a slow
+          spring (gentle, 200/20) so the arrival has weight instead of a flat
+          timed fade. Hover darkening runs its own quick 150ms so it never
+          feels gated by the slow spring; press keeps a 150ms CSS transform. */}
+      <motion.button
         type="submit"
         disabled={loading || token.length < 8}
+        initial={false}
+        animate={{
+          backgroundColor: token.length === 8 ? '#111111' : '#f1f1f1',
+          color: token.length === 8 ? '#ffffff' : '#9a9a9a',
+        }}
+        transition={reduceMotion ? { duration: 0 } : springs.gentle}
+        {...(token.length === 8
+          ? { whileHover: { backgroundColor: '#2a2a2a', transition: { duration: 0.15, ease: 'easeOut' as const } } }
+          : {})}
         className={cn(
           LIGHT_FOCUS_RING,
           'flex h-10 w-full items-center justify-center gap-2 rounded-[14px] text-sm font-semibold active:scale-[0.98]',
-          '[transition:background-color_150ms_ease-out,color_150ms_ease-out,transform_150ms_ease-out]',
-          token.length === 8
-            ? 'bg-[#111] text-white hover:bg-[#2a2a2a]'
-            : 'cursor-not-allowed bg-[#f1f1f1] text-[#9a9a9a]',
+          '[transition:transform_150ms_ease-out]',
+          token.length < 8 && 'cursor-not-allowed',
         )}
       >
         {loading ? (
@@ -217,7 +226,7 @@ export function InviteCodeForm() {
         ) : (
           'Continue'
         )}
-      </button>
+      </motion.button>
     </form>
   );
 }
