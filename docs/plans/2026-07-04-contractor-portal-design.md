@@ -100,18 +100,25 @@ inline progress bar, status pill. Priority is surfaced only via ordering within 
 padding) into a detail panel:
 - description (read-only)
 - deadline restated
-- **progress slider** — the contractor's primary write action → `PATCH /api/tasks/:id` `{ progress }`
-- **deliverable upload** — reuses existing `TaskDeliverable` flow (file → storage → `deliverable_uploaded` notification)
+- **progress slider** — the contractor's primary write action → a NEW `PATCH /api/tasks/:id/progress` route (see §6)
+- **deliverable upload** — reuses the existing `POST /api/tasks/:id/deliverables` flow (file → storage → `deliverable_uploaded` notification), which already authorizes the task's assignee
 - the spine node fills proportionally to progress as a visual reward
 
 ## 6. Data flow (no schema changes)
 
-- **Read:** `fetchTasksForAssignee(contractor.id)` (`src/lib/supabase/data.ts:194`) returns the
-  contractor's own tasks joined with assignee as `TaskWithAssignee[]`. No other rows are fetched.
-- **Write — progress:** existing `PATCH /api/tasks/:id` with `{ progress }`. Server must verify the
-  task's `assignee_id === session user id` before allowing a contractor to write (see §8).
-- **Write — deliverable:** existing `TaskDeliverable` upload path (`task_id`, `file_name`,
-  `storage_path`, `uploaded_by`, `download_url`) and its `deliverable_uploaded` notification.
+- **Read:** the `/api/contractor-index` builder returns the caller's own tasks — queried server-side
+  via the service client filtered to `assignee_id === session user id` (the secure api-server
+  equivalent of `fetchTasksForAssignee` at `src/lib/supabase/data.ts:194`, which runs on the Next
+  request-scoped RLS client). No other rows are fetched.
+- **Write — progress:** a NEW `PATCH /api/tasks/:id/progress` api-server route. Net-new: no
+  task-`progress` write path exists in the codebase today (task mutations are otherwise client-side,
+  RLS-gated, and `progress` is never written). Authorized via the existing `canAccessTask`
+  (assignee-or-admin) helper in `src/api-server/routes/tasks.ts:329`; validates `0 ≤ progress ≤ 100`.
+- **Write — deliverable:** the existing `POST /api/tasks/:id/deliverables` route
+  (`src/api-server/routes/tasks.ts:219`) already authorizes the task's assignee via `canAccessTask`,
+  uploads to the `task-deliverables` bucket, inserts a `task_deliverables` row, and fires the
+  `deliverable_uploaded` notification — reused as-is, no change. (Listing/download of deliverables
+  stays admin-only; see §11.)
 - **Fields used:** `Task.name`, `.department`, `.status`, `.priority`, `.deadline`, `.progress`,
   `.description` (`src/lib/types.ts`). `bounty` is intentionally **not** shown (payment surface is
   separate and out of scope).
@@ -131,16 +138,18 @@ padding) into a detail panel:
 - **Route:** `/contractor` registered top-level in `src/rr-app/routes.tsx` (outside `RootLayout`),
   rendering its own `LightShell`, with `ErrorBoundary: StandaloneErrorBoundary` — same shape as the
   investor cluster.
-- **Loader gate:** the route loader `fetch`es `/api/contractor`; maps `401 → redirect('/login')`,
-  `403 | 404 → forbidden card`. No client-side guard component.
+- **Loader gate:** the route loader `fetch`es `/api/contractor-index`; maps `401 → redirect('/login')`,
+  `403 | 404 → forbidden card`. No client-side guard component (mirrors `investorLayoutLoader`).
 - **Server authorization:** a new `src/lib/contractor-index.ts` builder mirrors `investor-index.ts`:
   it resolves the session profile and throws unless `profile.is_contractor === true` **or**
   `profile.is_admin === true`. The `/api/contractor` route returns the contractor's deliverables via
   `fetchTasksForAssignee`. The progress `PATCH` additionally enforces `assignee_id` ownership so a
   contractor can only move their own tasks.
-- **Post-login redirect:** after successful auth, contractors route to `/contractor` instead of
-  `/tasks`. Investors already win the redirect race to `/investor`; contractor takes precedence over
-  the default `/tasks` but not over investor (a user is realistically one or the other).
+- **Post-login redirect:** net-new. Today every authenticated user lands on `/tasks` unconditionally —
+  no role branch exists (verified across the password, passkey, and OAuth-callback paths; investors
+  do not auto-land either). This plan adds a shared `resolvePostLoginDestination` that resolves
+  role → `/contractor` (contractor) > `/investor` (investor) > `/tasks` (default), applied at the two
+  client auth sites (`LoginForm.tsx`) and in the OAuth callback (`src/api-server/routes/auth.ts`).
 
 ## 9. Security & privacy constraints
 
@@ -163,3 +172,5 @@ padding) into a detail panel:
 - Contractor-visible payment/bounty view (separate surface, separate decision).
 - Threaded comments or check-in notes distinct from deadlines.
 - Contractor invite/onboarding copy changes.
+- Listing/downloading previously-uploaded deliverables from the portal (the GET/DELETE deliverable
+  endpoints are admin-only today; upload + optimistic confirmation is enough for v1).
