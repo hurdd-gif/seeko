@@ -36,6 +36,30 @@ describe('DeliverableRow', () => {
     await waitFor(() => expect(onProgressCommit).toHaveBeenCalledWith('t1', 70));
   });
 
+  it('does not commit when released without changing the value', async () => {
+    const onProgressCommit = vi.fn().mockResolvedValue(undefined);
+    render(<DeliverableRow deliverable={base} onProgressCommit={onProgressCommit} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /main menu wireframes/i }));
+    const slider = await screen.findByRole('slider', { name: /progress/i });
+    fireEvent.pointerUp(slider);
+
+    expect(onProgressCommit).not.toHaveBeenCalled();
+  });
+
+  it('commits the changed value exactly once on release', async () => {
+    const onProgressCommit = vi.fn().mockResolvedValue(undefined);
+    render(<DeliverableRow deliverable={base} onProgressCommit={onProgressCommit} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /main menu wireframes/i }));
+    const slider = await screen.findByRole('slider', { name: /progress/i });
+    fireEvent.change(slider, { target: { value: '70' } });
+    fireEvent.pointerUp(slider);
+
+    await waitFor(() => expect(onProgressCommit).toHaveBeenCalledTimes(1));
+    expect(onProgressCommit).toHaveBeenCalledWith('t1', 70);
+  });
+
   it('uploads a deliverable file through the injected handler', async () => {
     const onUpload = vi.fn().mockResolvedValue(undefined);
     render(<DeliverableRow deliverable={base} onUpload={onUpload} />);

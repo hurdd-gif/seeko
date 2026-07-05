@@ -61,20 +61,29 @@ export function DeliverableRow({
   const [uploadState, setUploadState] = useState<'idle' | 'uploading' | 'done' | 'error'>('idle');
   const fileInputId = useId();
   const committed = useRef(deliverable.progress);
+  const latest = useRef(deliverable.progress);
+  const committing = useRef(false);
 
   const dotColor = overdue && !delivered ? '#f87171' : STATUS_DOT[deliverable.status] ?? '#c4c4c4';
   const deptBadge = deliverable.department ? LIGHT_DEPT_BADGE[deliverable.department] : undefined;
   const dueLabel = deliverable.deadline ? formatDueLabel(parseDeadline(deliverable.deadline)) : 'No deadline';
 
   async function commitProgress() {
-    if (progress === committed.current) return;
+    if (committing.current) return; // a drain loop is already running; it will pick up latest
+    if (latest.current === committed.current) return;
+    committing.current = true;
     setSaving('saving');
     try {
-      await onProgressCommit(deliverable.id, progress);
-      committed.current = progress;
+      while (latest.current !== committed.current) {
+        const target = latest.current;
+        await onProgressCommit(deliverable.id, target);
+        committed.current = target;
+      }
       setSaving('idle');
     } catch {
       setSaving('error');
+    } finally {
+      committing.current = false;
     }
   }
 
@@ -150,7 +159,11 @@ export function DeliverableRow({
                 step={5}
                 value={progress}
                 aria-label="Progress"
-                onChange={(e) => setProgress(Number(e.target.value))}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  setProgress(v);
+                  latest.current = v;
+                }}
                 onPointerUp={commitProgress}
                 onKeyUp={commitProgress}
                 onBlur={commitProgress}
