@@ -76,8 +76,8 @@ export type AgentContextLoaders = {
  * execute. Keep in sync with the typed tools in routes/agent.ts.
  */
 export const EKO_CAPABILITIES = [
-  'EKO capabilities (single source of truth — never promise beyond this list):',
-  'Typed write tools, ALL gated behind explicit user approval (Approve button) and admin permissions:',
+  'EKO capabilities (never promise beyond this list):',
+  'Typed write tools, ALL gated behind explicit user approval and admin permissions:',
   '- issue.create: create an issue (requires title, status, priority, due date).',
   '- issue.update (status): move an existing issue to another status.',
   '- issue.update (assign): assign an existing issue to a roster member.',
@@ -85,8 +85,9 @@ export const EKO_CAPABILITIES = [
   '- issue.update (due date): set or clear an existing issue due date.',
   '- issue.delete: delete an existing issue (destructive; always requires approval).',
   '- doc.create: create a document or deck in Docs.',
-  '- doc.update: replace content in an existing text document.',
-  'Read-only knowledge: team roster, areas, milestones, issues, activity, notes inbox, docs index, payments (admins only).',
+  '- doc.update: replace existing text doc content.',
+  '- note.create: add inbox note',
+  'Read-only knowledge: team roster, areas, milestones, issues, activity, notes, docs index, payments (admins only).',
   'Not supported yet (do not improvise or imply): editing deck slides, emails/invites, creating or marking payments, editing milestones or areas, archiving notes, changing issue descriptions, publishing.',
   'If asked for an unsupported write: say EKO cannot do that yet, then offer the closest supported action or point to the dashboard UI. Never claim a write happened unless an approved action was executed.',
 ].join('\n');

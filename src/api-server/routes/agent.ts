@@ -20,6 +20,7 @@ type AgentApprovalDraft = {
   docType?: string;
   docTitle?: string;
   content?: string;
+  noteBody?: string;
   taskName?: string;
   /** Board task_number as a string — the unique, user-facing task reference. */
   taskNumber?: string;
@@ -28,7 +29,7 @@ type AgentApprovalDraft = {
   assigneeName?: string;
 };
 type AgentApproval = {
-  kind: 'issue.create' | 'issue.update' | 'issue.delete' | 'doc.create' | 'doc.update' | 'generic';
+  kind: 'issue.create' | 'issue.update' | 'issue.delete' | 'doc.create' | 'doc.update' | 'note.create' | 'generic';
   title: string;
   copy: string;
   draft?: AgentApprovalDraft;
@@ -350,6 +351,7 @@ function parseApproval(value: unknown): AgentApproval | undefined {
     record.kind === 'issue.delete' ||
     record.kind === 'doc.create' ||
     record.kind === 'doc.update' ||
+    record.kind === 'note.create' ||
     record.kind === 'generic'
       ? record.kind
       : null;
@@ -375,6 +377,9 @@ function parseApprovalDraft(value: unknown): AgentApprovalDraft | undefined {
   }
   if (typeof record.content === 'string' && record.content.trim()) {
     draft.content = record.content.trim().slice(0, 5_000);
+  }
+  if (typeof record.noteBody === 'string' && record.noteBody.trim()) {
+    draft.noteBody = record.noteBody.trim().slice(0, 1_000);
   }
   return Object.keys(draft).length ? draft : undefined;
 }
@@ -442,6 +447,9 @@ async function runAgentChat(
 
   const contextualDetail = answerLocalMissingDetail(input, dashboardContext);
   if (contextualDetail) return contextualDetail;
+
+  const localNotePlan = planLocalNoteWrite(input);
+  if (localNotePlan) return localNotePlan;
 
   const localDocumentPlan = planLocalDocumentWrite(input);
   if (localDocumentPlan) return localDocumentPlan;
@@ -570,6 +578,10 @@ async function executeTypedApproval(approval: AgentApproval, user: Authenticated
 
   if (approval.kind === 'doc.update') {
     return executeDocumentUpdateDraft(approval.draft, user);
+  }
+
+  if (approval.kind === 'note.create') {
+    return executeNoteCreateDraft(approval.draft, user);
   }
 
   return null;
@@ -726,6 +738,38 @@ type DocumentWriteDraft = {
   docType?: 'doc' | 'deck';
   content?: string;
 };
+
+type NoteWriteDraft = {
+  noteBody?: string;
+};
+
+export function planLocalNoteWrite(input: AgentChatInput): AgentChatResult | null {
+  if (input.mode === 'approval') return null;
+
+  const draft = parseNoteCreateDraft(input.message.trim());
+  if (!draft) return null;
+  if (!draft.noteBody) {
+    return {
+      reply: 'What should EKO add to the notes inbox?',
+      provider: 'openai',
+      model: 'eko-local-planner',
+      intent: 'clarification',
+    };
+  }
+
+  return {
+    reply: 'Ready for approval: add note to inbox.',
+    provider: 'openai',
+    model: 'eko-local-planner',
+    intent: 'approval_required',
+    approval: {
+      kind: 'note.create',
+      title: 'Add note',
+      copy: `Add this note to the inbox: ${draft.noteBody}`,
+      draft,
+    },
+  };
+}
 
 export function planLocalDocumentWrite(input: AgentChatInput): AgentChatResult | null {
   if (input.mode === 'approval') return null;
@@ -1196,6 +1240,47 @@ async function executeDocumentUpdateDraft(
   };
 }
 
+async function executeNoteCreateDraft(
+  draft: AgentApprovalDraft | NoteWriteDraft | undefined,
+  user: AuthenticatedUser,
+): Promise<AgentChatResult | null> {
+  const noteBody = draft?.noteBody;
+  if (!noteBody) {
+    return {
+      reply: 'Add note text before EKO can capture it. No dashboard changes were made.',
+      provider: 'openai',
+      model: 'eko-local-approval',
+      intent: 'details_needed',
+      approval: {
+        kind: 'note.create',
+        title: 'Add note',
+        copy: 'Add the note text so EKO can capture it in the inbox.',
+        draft,
+      },
+    };
+  }
+
+  await assertAdminUser(user.id);
+  const service = getServiceClient();
+  const { error } = await service
+    .from('notes')
+    .insert({
+      body: noteBody,
+      source: 'web',
+      created_by: user.id,
+    } as never)
+    .select('id, body, status, source')
+    .single();
+  if (error) throw new AgentProviderError('EKO could not add the note.', 500);
+
+  return {
+    reply: 'Added note to inbox.',
+    provider: 'openai',
+    model: 'eko-local-write',
+    intent: 'executed',
+  };
+}
+
 async function executeIssueStatusDraft(
   draft: Pick<IssueWriteDraft, 'taskName' | 'status'>,
   user: AuthenticatedUser,
@@ -1488,6 +1573,19 @@ function parseDocumentCreateDraft(value: string): DocumentWriteDraft | null {
   return { title: title || undefined, docType: type };
 }
 
+function parseNoteCreateDraft(value: string): NoteWriteDraft | null {
+  if (!/\b(?:add|capture|save|remember|log)\b/i.test(value)) return null;
+  if (!/\b(?:note|notes inbox|quick note|sticky note|memo)\b/i.test(value)) return null;
+  if (/\b(?:doc|document|deck|presentation|slides?)\b/i.test(value)) return null;
+
+  const afterColon = value.match(/:\s*([\s\S]+)$/)?.[1];
+  const afterThat = value.match(/\b(?:that|to|saying)\s+([\s\S]+)$/i)?.[1];
+  const quoted = value.match(/["“]([^"”]{2,500})["”]/)?.[1];
+  const noteBody = cleanNoteBody(afterColon || quoted || afterThat || '');
+
+  return { noteBody: noteBody || undefined };
+}
+
 function parseDocumentUpdateDraft(value: string): DocumentWriteDraft | null {
   if (!/\b(update|edit|replace|rewrite|add to|append to)\b/i.test(value)) return null;
   if (!/\b(doc|docs|document|note|notes|brief|memo)\b/i.test(value)) return null;
@@ -1750,6 +1848,13 @@ function cleanDocumentTitle(value: string) {
 }
 
 function cleanDocumentContent(value: string) {
+  return value
+    .replace(/^["“]|["”]$/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function cleanNoteBody(value: string) {
   return value
     .replace(/^["“]|["”]$/g, '')
     .replace(/\s+/g, ' ')
