@@ -38,6 +38,7 @@
   - `bucketDeliverables(items: ContractorDeliverable[], now: Date): Bucket[]`
   - `summarizeDeliverables(items: ContractorDeliverable[], now: Date): { count: number; nextDueLabel: string | null }`
   - `formatDueLabel(d: Date): string`
+  - `parseDeadline(deadline: string): Date` — parses a date-only string as **local** midnight (matches `src/lib/format-deadline.ts`), so bucketing and labels use the local calendar day. Exported for reuse by later tasks.
   - `greetingFor(hours: number): string`
 
 - [ ] **Step 1: Write the failing test**
@@ -161,12 +162,22 @@ function startOfDay(d: Date): number {
   return x.getTime();
 }
 
+/**
+ * Parse a `YYYY-MM-DD` deadline as LOCAL midnight. A bare `new Date('2026-07-08')`
+ * parses as UTC midnight, which shifts back a day when read in a UTC-negative
+ * timezone — so buckets and labels would show the wrong calendar day. Appending
+ * `T00:00:00` pins it to the local day (same fix as src/lib/format-deadline.ts).
+ */
+export function parseDeadline(deadline: string): Date {
+  return new Date(`${deadline}T00:00:00`);
+}
+
 function priorityRank(p: string | null): number {
   return p === 'High' ? 0 : p === 'Medium' ? 1 : p === 'Low' ? 2 : 3;
 }
 
 function deadlineMs(d: ContractorDeliverable): number {
-  return d.deadline ? new Date(d.deadline).getTime() : Number.POSITIVE_INFINITY;
+  return d.deadline ? parseDeadline(d.deadline).getTime() : Number.POSITIVE_INFINITY;
 }
 
 function sortByDeadlineThenPriority(a: ContractorDeliverable, b: ContractorDeliverable): number {
@@ -196,7 +207,7 @@ export function bucketDeliverables(items: ContractorDeliverable[], now: Date): B
       groups.upcoming.push(item);
       continue;
     }
-    const due = startOfDay(new Date(item.deadline));
+    const due = startOfDay(parseDeadline(item.deadline));
     if (due < today) groups.overdue.push(item);
     else if (due < weekAhead) groups.thisWeek.push(item);
     else groups.upcoming.push(item);
@@ -222,10 +233,10 @@ export function summarizeDeliverables(
   const active = items.filter((i) => !DELIVERED[i.status] && !HIDDEN[i.status]);
   const next = active
     .filter((i) => i.deadline != null)
-    .sort((a, b) => new Date(a.deadline!).getTime() - new Date(b.deadline!).getTime())[0];
+    .sort((a, b) => parseDeadline(a.deadline!).getTime() - parseDeadline(b.deadline!).getTime())[0];
   return {
     count: active.length,
-    nextDueLabel: next ? formatDueLabel(new Date(next.deadline!)) : null,
+    nextDueLabel: next ? formatDueLabel(parseDeadline(next.deadline!)) : null,
   };
 }
 
@@ -813,7 +824,7 @@ Expected: FAIL — cannot resolve `../DeliverableRow`.
 import { useId, useRef, useState } from 'react';
 import type { ContractorDeliverable } from '@/lib/contractor-index';
 import { CARD_DESC, CARD_TITLE, LIGHT_DEPT_BADGE, LIGHT_FOCUS_RING } from '@/components/dashboard/lightKit';
-import { formatDueLabel } from '@/lib/contractor-buckets';
+import { formatDueLabel, parseDeadline } from '@/lib/contractor-buckets';
 
 const STATUS_DOT: Record<string, string> = {
   Backlog: '#c4c4c4',
@@ -875,7 +886,7 @@ export function DeliverableRow({
 
   const dotColor = overdue && !delivered ? '#f87171' : STATUS_DOT[deliverable.status] ?? '#c4c4c4';
   const deptBadge = deliverable.department ? LIGHT_DEPT_BADGE[deliverable.department] : undefined;
-  const dueLabel = deliverable.deadline ? formatDueLabel(new Date(deliverable.deadline)) : 'No deadline';
+  const dueLabel = deliverable.deadline ? formatDueLabel(parseDeadline(deliverable.deadline)) : 'No deadline';
 
   async function commitProgress() {
     if (progress === committed.current) return;
