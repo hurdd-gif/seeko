@@ -1001,8 +1001,9 @@ describe('contractor steps QA route', () => {
     // group headings
     expect(screen.getByText('Main menu wireframes')).toBeInTheDocument();
     expect(screen.getByText('Onboarding flow')).toBeInTheDocument();
-    // states present across the seed
-    expect(screen.getByText('In review')).toBeInTheDocument();
+    // states present across the seed ("In review" shows on both the node and its
+    // rollup heading for a focal-in_review deliverable, hence getAllByText)
+    expect(screen.getAllByText('In review').length).toBeGreaterThan(0);
     expect(screen.getByText(/days overdue/i)).toBeInTheDocument();
     expect(screen.getByText(/no steps yet/i)).toBeInTheDocument();
     // compaction toggle + timeline zone

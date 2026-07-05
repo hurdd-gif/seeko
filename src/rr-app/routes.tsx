@@ -797,6 +797,31 @@ export const router = createBrowserRouter([
     },
   },
   {
+    // No-backend visual-QA preview (no loader gate) for the contractor portal's
+    // pinned-deliverables + collapsing-timeline layout. Standalone. Not in routeInventory.
+    path: '/contractor/qa',
+    ErrorBoundary: StandaloneErrorBoundary,
+    lazy: async () => {
+      const route = await import('./routes/contractor-qa');
+      return {
+        Component: route.ContractorQaRoute,
+      };
+    },
+  },
+  {
+    // No-backend visual-QA preview for the breadcrumb-steps model. Standalone.
+    // Not in routeInventory. Retired once /contractor/qa adopts the step model
+    // (plan Task 10).
+    path: '/contractor/steps-qa',
+    ErrorBoundary: StandaloneErrorBoundary,
+    lazy: async () => {
+      const route = await import('./routes/contractor-steps-qa');
+      return {
+        Component: route.ContractorStepsQaRoute,
+      };
+    },
+  },
+  {
     path: '/login',
     lazy: async () => {
       const route = await import('./routes/login');
