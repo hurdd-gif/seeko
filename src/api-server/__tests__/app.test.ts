@@ -648,6 +648,34 @@ describe('API server', () => {
     });
   });
 
+  it('answers owner/status/priority follow-ups from the referenced recent task before provider routing', () => {
+    const context = [
+      'Issues context: 3 tasks, 1 overdue, 2 staff, 0 areas, 0 milestones.',
+      'All issues: #18 UI Extension (In Progress, High priority, due 2026-07-10, assigned to Member Example); #19 Gem Vector (Todo, Low priority).',
+      'Recent activity task details: UI Extension (In Progress, #18, High priority, due 2026-07-10, assigned to Member Example).',
+    ].join('\n');
+    const recentHistory = [
+      { role: 'user' as const, text: 'What is the most recently added task?' },
+      { role: 'eko' as const, text: 'The most recently added task is UI Extension.' },
+    ];
+
+    expect(answerLocalContextFollowUp({ message: 'Who owns it?', clientContext: { recentHistory } }, context)).toMatchObject({
+      reply: 'UI Extension is assigned to Member Example.',
+      provider: 'openai',
+      model: 'eko-local-context',
+    });
+    expect(answerLocalContextFollowUp({ message: 'What status is it?', clientContext: { recentHistory } }, context)).toMatchObject({
+      reply: 'UI Extension is In Progress.',
+      provider: 'openai',
+      model: 'eko-local-context',
+    });
+    expect(answerLocalContextFollowUp({ message: 'What priority is it?', clientContext: { recentHistory } }, context)).toMatchObject({
+      reply: 'UI Extension is High priority.',
+      provider: 'openai',
+      model: 'eko-local-context',
+    });
+  });
+
   it('routes risky EKO write prep to Claude in hybrid mode', async () => {
     vi.stubEnv('EKO_AGENT_PROVIDER', 'hybrid');
     vi.stubEnv('OPENAI_API_KEY', 'openai-key');

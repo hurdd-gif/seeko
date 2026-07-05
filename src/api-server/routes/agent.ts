@@ -1701,6 +1701,8 @@ function parseStaffIndex(dashboardContext: string) {
 type ContextTask = {
   name: string;
   status?: string;
+  priority?: string;
+  assigneeName?: string;
   deadline?: string;
   raw: string;
 };
@@ -1725,11 +1727,53 @@ export function answerLocalContextFollowUp(input: AgentChatInput, dashboardConte
     };
   }
 
+  if (asksForAssignee(message)) {
+    return {
+      reply: referencedTask.assigneeName
+        ? `${referencedTask.name} is assigned to ${referencedTask.assigneeName}.`
+        : `${referencedTask.name} is currently unassigned. Would you like EKO to prepare assigning it for approval?`,
+      provider: 'openai',
+      model: 'eko-local-context',
+    };
+  }
+
+  if (asksForStatus(message)) {
+    return {
+      reply: referencedTask.status
+        ? `${referencedTask.name} is ${referencedTask.status}.`
+        : `${referencedTask.name} does not have a visible status in the current dashboard context.`,
+      provider: 'openai',
+      model: 'eko-local-context',
+    };
+  }
+
+  if (asksForPriority(message)) {
+    return {
+      reply: referencedTask.priority
+        ? `${referencedTask.name} is ${referencedTask.priority} priority.`
+        : `${referencedTask.name} does not have a priority set in the current dashboard context.`,
+      provider: 'openai',
+      model: 'eko-local-context',
+    };
+  }
+
   return null;
 }
 
 function asksForDueDate(message: string) {
   return /\b(?:when|due|deadline|date)\b/i.test(message);
+}
+
+function asksForAssignee(message: string) {
+  return /\b(?:who|owner|owns|assigned|assignee|responsible)\b/i.test(message);
+}
+
+function asksForStatus(message: string) {
+  return /\b(?:status|stage|state|progress|where is it|where's it)\b/i.test(message);
+}
+
+function asksForPriority(message: string) {
+  return /\b(?:priority|urgent|urgency|how important)\b/i.test(message);
 }
 
 function parseContextTasks(dashboardContext: string): ContextTask[] {
@@ -1759,7 +1803,9 @@ function parseContextTasks(dashboardContext: string): ContextTask[] {
       tasks.push({
         name,
         raw,
-        status: meta.split(',').map((item) => item.trim()).find(Boolean),
+        status: meta.split(',').map((item) => item.trim()).find((item) => item && !item.startsWith('#') && !/\b(?:urgent|high|medium|low) priority\b/i.test(item) && !/^due\b/i.test(item) && !/^assigned to\b/i.test(item)),
+        priority: meta.match(/\b(Urgent|High|Medium|Low) priority\b/i)?.[1],
+        assigneeName: meta.match(/\bassigned to ([^,)]+)/i)?.[1]?.trim(),
         deadline: meta.match(/\bdue\s+(\d{4}-\d{2}-\d{2})\b/i)?.[1],
       });
     }
