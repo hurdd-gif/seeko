@@ -555,6 +555,19 @@ export const router = createBrowserRouter([
     ],
   },
   {
+    // Contractor portal — its own light Paper surface built from the login
+    // reference (not the investor shell). Loader-gated on is_contractor.
+    path: '/contractor',
+    ErrorBoundary: StandaloneErrorBoundary,
+    lazy: async () => {
+      const route = await import('./routes/contractor');
+      return {
+        loader: route.contractorLoader,
+        Component: route.ContractorRoute,
+      };
+    },
+  },
+  {
     // Investor settings is a full-bleed Paper page: it renders the SHARED
     // <SettingsPanel>, which owns its own fixed-inset <LightShell>. Like the team
     // /settings route it mounts OUTSIDE the investor sidebar chrome (the panel's
