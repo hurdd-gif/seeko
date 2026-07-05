@@ -740,7 +740,7 @@ Claude-Session: https://claude.ai/code/session_0196JisyLwptT87JmYuDmsMs"
 - Test: `src/components/contractor/__tests__/DeliverableRow.test.tsx`
 
 **Interfaces:**
-- Consumes: `ContractorDeliverable` from `@/lib/contractor-index`; `GaugeBar` pattern (inline); `lightKit` (`LIGHT_DEPT_BADGE`, `LIGHT_FOCUS_RING`, `CARD_TITLE`, `CARD_DESC`, `BTN_SECONDARY`) from `@/components/dashboard/lightKit`.
+- Consumes: `ContractorDeliverable` from `@/lib/contractor-index`; `formatDueLabel` from `@/lib/contractor-buckets`; inline progress-meter pattern (from `investor.tsx` `GaugeBar`); `lightKit` (`LIGHT_DEPT_BADGE`, `LIGHT_FOCUS_RING`, `CARD_TITLE`, `CARD_DESC`) from `@/components/dashboard/lightKit`.
 - Produces:
   - `type DeliverableRowProps = { deliverable: ContractorDeliverable; overdue?: boolean; delivered?: boolean; onProgressCommit?: (id: string, progress: number) => Promise<void>; onUpload?: (id: string, files: File[]) => Promise<void> }`
   - `DeliverableRow(props: DeliverableRowProps): JSX.Element`
@@ -767,10 +767,11 @@ const base: ContractorDeliverable = {
 };
 
 describe('DeliverableRow', () => {
-  it('renders name, department, and progress in the collapsed row', () => {
+  it('renders name, department, status pill, and progress in the collapsed row', () => {
     render(<DeliverableRow deliverable={base} />);
     expect(screen.getByText('Main menu wireframes')).toBeInTheDocument();
     expect(screen.getByText('UI/UX')).toBeInTheDocument();
+    expect(screen.getByText('In Progress')).toBeInTheDocument();
     expect(screen.getByText('45%')).toBeInTheDocument();
   });
 
@@ -911,29 +912,34 @@ export function DeliverableRow({
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
-          className={`flex w-full items-center gap-3 px-4 py-3 text-left ${LIGHT_FOCUS_RING} rounded-[14px]`}
+          className={`flex w-full flex-col gap-1.5 px-4 py-3 text-left ${LIGHT_FOCUS_RING} rounded-[14px]`}
         >
-          <span className="min-w-0 flex-1">
-            <span className={`block truncate ${CARD_TITLE}`}>{deliverable.name}</span>
-            <span className={`mt-0.5 flex items-center gap-2 ${CARD_DESC}`}>
-              {deptBadge && (
-                <span className={`inline-flex items-center rounded-full px-1.5 text-[10px] ${deptBadge}`}>
-                  {deliverable.department}
-                </span>
-              )}
-              <span className={overdue && !delivered ? 'text-[#d4503e] tabular-nums' : 'tabular-nums'}>
-                due {dueLabel}
-              </span>
+          <span className="flex w-full items-center gap-3">
+            <span className={`min-w-0 flex-1 truncate ${CARD_TITLE}`}>{deliverable.name}</span>
+            <span
+              className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-medium ${STATUS_PILL[deliverable.status] ?? STATUS_PILL.Todo}`}
+            >
+              {deliverable.status}
             </span>
           </span>
-          <span className="flex shrink-0 items-center gap-2">
-            <span className="h-1.5 w-16 overflow-hidden rounded-full bg-black/[0.06]">
-              <span
-                className="block h-full rounded-full transition-[width] duration-500 ease-out motion-reduce:transition-none"
-                style={{ width: `${Math.max(2, Math.min(100, progress))}%`, backgroundColor: dotColor }}
-              />
+          <span className={`flex items-center gap-2 ${CARD_DESC}`}>
+            {deptBadge && (
+              <span className={`inline-flex items-center rounded-full px-1.5 text-[10px] ${deptBadge}`}>
+                {deliverable.department}
+              </span>
+            )}
+            <span className={overdue && !delivered ? 'text-[#d4503e] tabular-nums' : 'tabular-nums'}>
+              due {dueLabel}
             </span>
-            <span className="w-9 text-right text-[11px] tabular-nums text-[#808080]">{progress}%</span>
+            <span className="ml-auto flex items-center gap-2">
+              <span className="h-1.5 w-16 overflow-hidden rounded-full bg-black/[0.06]">
+                <span
+                  className="block h-full rounded-full transition-[width] duration-500 ease-out motion-reduce:transition-none"
+                  style={{ width: `${Math.max(2, Math.min(100, progress))}%`, backgroundColor: dotColor }}
+                />
+              </span>
+              <span className="w-9 text-right text-[11px] tabular-nums text-[#808080]">{progress}%</span>
+            </span>
           </span>
         </button>
 
@@ -992,7 +998,7 @@ export function DeliverableRow({
 }
 ```
 
-> The collapsed row shows a `status`-derived progress meter and department badge; `STATUS_PILL` is defined for a future explicit pill and is exported-free (local). Keep the two `STATUS_*` maps local to this file for now (a shared `LIGHT_TASK_STATUS` in `lightKit.ts` is a later refactor, out of scope).
+> The collapsed row renders name + status pill (top line) and department badge · due · progress meter (second line), matching design §5. Both `STATUS_DOT` (node/meter color) and `STATUS_PILL` (pill classes) are used. Keep the two `STATUS_*` maps local to this file for now (a shared `LIGHT_TASK_STATUS` in `lightKit.ts` is a later refactor, out of scope).
 
 - [ ] **Step 4: Run test to verify it passes**
 
