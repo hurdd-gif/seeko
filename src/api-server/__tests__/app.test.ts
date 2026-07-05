@@ -124,6 +124,79 @@ describe('API server', () => {
     });
   });
 
+  it('prepares a due-date approval when the user answers EKO missing-detail prompt with a date', async () => {
+    const testApp = createApiApp({
+      agentAuthResolver: async () => ({ id: 'user-1', email: 'member@example.invalid' }),
+      agentContextLoader: async () => [
+        'Issues context: 1 tasks, 0 overdue, 1 staff, 0 areas, 0 milestones.',
+        'Recent activity task details: UI Extension (Todo).',
+      ].join('\n'),
+    });
+
+    const response = await testApp.request('/api/agent/chat', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        message: 'Today',
+        clientContext: {
+          recentHistory: [
+            { role: 'eko', text: 'What due date should EKO set for UI Extension?' },
+          ],
+        },
+      }),
+    });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      reply: 'Ready for approval: set UI Extension to due Today.',
+      provider: 'openai',
+      model: 'eko-local-context',
+      intent: 'approval_required',
+      approval: {
+        kind: 'issue.update',
+        title: 'Update UI Extension due date',
+        draft: { taskName: 'UI Extension', dueDate: 'Today' },
+      },
+    });
+  });
+
+  it('prepares an assignee approval when the user answers EKO missing-detail prompt with a staff member', async () => {
+    const testApp = createApiApp({
+      agentAuthResolver: async () => ({ id: 'user-1', email: 'member@example.invalid' }),
+      agentContextLoader: async () => [
+        'Issues context: 1 tasks, 0 overdue, 1 staff, 0 areas, 0 milestones.',
+        'Staff: Member Example (Coding).',
+        'Recent activity task details: UI Extension (Todo).',
+      ].join('\n'),
+    });
+
+    const response = await testApp.request('/api/agent/chat', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        message: 'Member Example',
+        clientContext: {
+          recentHistory: [
+            { role: 'eko', text: 'Who should EKO assign UI Extension to?' },
+          ],
+        },
+      }),
+    });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      reply: 'Ready for approval: assign UI Extension to Member Example.',
+      provider: 'openai',
+      model: 'eko-local-context',
+      intent: 'approval_required',
+      approval: {
+        kind: 'issue.update',
+        title: 'Assign UI Extension',
+        draft: { taskName: 'UI Extension', assigneeName: 'Member Example' },
+      },
+    });
+  });
+
   it('runs EKO through an injected agent runner', async () => {
     const testApp = createApiApp({
       agentAuthResolver: async () => ({ id: 'user-1', email: 'member@example.invalid' }),

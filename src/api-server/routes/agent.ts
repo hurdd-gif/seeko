@@ -431,6 +431,10 @@ async function runAgentChat(
       intent: 'clarification',
     };
   }
+
+  const contextualDetail = answerLocalMissingDetail(input, dashboardContext);
+  if (contextualDetail) return contextualDetail;
+
   const localWritePlan = planLocalIssueWrite(input, dashboardContext);
   if (localWritePlan) return localWritePlan;
 
@@ -1816,6 +1820,56 @@ function answerLocalContextualConfirmation(input: AgentChatInput, dashboardConte
         title: `Assign ${referencedTask.name}`,
         copy: `Assign ${referencedTask.name} after you provide the assignee.`,
         draft: { taskName: referencedTask.name },
+      },
+    };
+  }
+
+  return null;
+}
+
+function answerLocalMissingDetail(input: AgentChatInput, dashboardContext: string): AgentChatResult | null {
+  if (input.mode === 'approval') return null;
+
+  const lastEkoReply = [...(input.clientContext?.recentHistory ?? [])]
+    .reverse()
+    .find((item) => item.role === 'eko')?.text;
+  if (!lastEkoReply) return null;
+
+  const tasks = parseContextTasks(dashboardContext);
+  const [referencedTask] = findReferencedContextTasks(input, tasks);
+  if (!referencedTask) return null;
+
+  if (/^what due date should EKO set for\b/i.test(lastEkoReply)) {
+    const dueDate = parseDueDate(input.message);
+    if (!dueDate) return null;
+    const dueLabel = /no date/i.test(dueDate) ? 'no due date' : `due ${dueDate}`;
+    return {
+      reply: `Ready for approval: set ${referencedTask.name} to ${dueLabel}.`,
+      provider: 'openai',
+      model: 'eko-local-context',
+      intent: 'approval_required',
+      approval: {
+        kind: 'issue.update',
+        title: `Update ${referencedTask.name} due date`,
+        copy: `Set ${referencedTask.name} to ${dueLabel}.`,
+        draft: { taskName: referencedTask.name, dueDate },
+      },
+    };
+  }
+
+  if (/^who should EKO assign\b/i.test(lastEkoReply)) {
+    const staff = parseStaffFromText(input.message, dashboardContext);
+    if (!staff) return null;
+    return {
+      reply: `Ready for approval: assign ${referencedTask.name} to ${staff.name}.`,
+      provider: 'openai',
+      model: 'eko-local-context',
+      intent: 'approval_required',
+      approval: {
+        kind: 'issue.update',
+        title: `Assign ${referencedTask.name}`,
+        copy: `Assign ${referencedTask.name} to ${staff.name}.`,
+        draft: { taskName: referencedTask.name, assigneeName: staff.name },
       },
     };
   }
