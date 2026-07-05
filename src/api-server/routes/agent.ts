@@ -3,7 +3,7 @@ import { loadTasksBoard, type TasksBoardData } from '@/lib/tasks-board';
 import { loadDocsIndex, type DocsIndexData } from '@/lib/docs-index';
 import { loadPaymentsIndex, type PaymentsIndexData } from '@/lib/payments-index';
 import { getServiceClient } from '@/lib/supabase/service';
-import type { MilestoneHealth, Priority, TaskStatus } from '@/lib/types';
+import type { MilestoneHealth, PaymentStatus, Priority, TaskStatus } from '@/lib/types';
 import { getAuthenticatedUser, type AuthenticatedUser } from '../supabase';
 import { buildAgentDashboardContext } from '../agent/context';
 
@@ -33,9 +33,11 @@ type AgentApprovalDraft = {
   /** Comma-separated task_numbers for bulk writes ("10,12,13"). */
   taskNumbers?: string;
   assigneeName?: string;
+  paymentId?: string;
+  recipientName?: string;
 };
 type AgentApproval = {
-  kind: 'issue.create' | 'issue.update' | 'issue.delete' | 'area.update' | 'milestone.create' | 'milestone.update' | 'milestone.link' | 'milestone.unlink' | 'doc.create' | 'doc.update' | 'doc.delete' | 'note.create' | 'note.archive' | 'generic';
+  kind: 'issue.create' | 'issue.update' | 'issue.delete' | 'area.update' | 'milestone.create' | 'milestone.update' | 'milestone.link' | 'milestone.unlink' | 'doc.create' | 'doc.update' | 'doc.delete' | 'note.create' | 'note.archive' | 'payment.update' | 'generic';
   title: string;
   copy: string;
   draft?: AgentApprovalDraft;
@@ -365,6 +367,7 @@ function parseApproval(value: unknown): AgentApproval | undefined {
     record.kind === 'doc.delete' ||
     record.kind === 'note.create' ||
     record.kind === 'note.archive' ||
+    record.kind === 'payment.update' ||
     record.kind === 'generic'
       ? record.kind
       : null;
@@ -384,7 +387,7 @@ function parseApprovalDraft(value: unknown): AgentApprovalDraft | undefined {
   if (!value || typeof value !== 'object') return undefined;
   const record = value as Record<string, unknown>;
   const draft: AgentApprovalDraft = {};
-  for (const key of ['title', 'areaName', 'milestoneName', 'status', 'priority', 'health', 'progress', 'phase', 'dueDate', 'targetDate', 'docType', 'docTitle', 'taskName', 'taskNumber', 'taskNumbers', 'assigneeName'] as const) {
+  for (const key of ['title', 'areaName', 'milestoneName', 'status', 'priority', 'health', 'progress', 'phase', 'dueDate', 'targetDate', 'docType', 'docTitle', 'taskName', 'taskNumber', 'taskNumbers', 'assigneeName', 'paymentId', 'recipientName'] as const) {
     const field = record[key];
     if (typeof field === 'string' && field.trim()) draft[key] = field.trim().slice(0, 140);
   }
@@ -472,6 +475,9 @@ async function runAgentChat(
 
   const localMilestonePlan = planLocalMilestoneWrite(input, dashboardContext);
   if (localMilestonePlan) return localMilestonePlan;
+
+  const localPaymentPlan = planLocalPaymentWrite(input, dashboardContext);
+  if (localPaymentPlan) return localPaymentPlan;
 
   const localWritePlan = planLocalIssueWrite(input, dashboardContext);
   if (localWritePlan) return localWritePlan;
@@ -625,6 +631,10 @@ async function executeTypedApproval(approval: AgentApproval, user: Authenticated
 
   if (approval.kind === 'note.archive') {
     return executeNoteArchiveDraft(approval.draft, user);
+  }
+
+  if (approval.kind === 'payment.update') {
+    return executePaymentUpdateDraft(approval.draft, user);
   }
 
   return null;
@@ -803,6 +813,24 @@ type DocumentWriteDraft = {
 
 type NoteWriteDraft = {
   noteBody?: string;
+};
+
+type PaymentWriteDraft = {
+  paymentId?: string;
+  recipientName?: string;
+  status?: Extract<PaymentStatus, 'paid' | 'cancelled'>;
+};
+
+type PaymentCandidate = {
+  id: string;
+  status: PaymentStatus;
+  amount: number | string | null;
+  currency: string | null;
+  description?: string | null;
+  recipient?: {
+    id?: string | null;
+    display_name?: string | null;
+  } | null;
 };
 
 export function planLocalNoteWrite(input: AgentChatInput): AgentChatResult | null {
@@ -1088,6 +1116,46 @@ export function planLocalMilestoneWrite(input: AgentChatInput, dashboardContext:
       kind: 'milestone.update',
       title: `Update ${draft.milestoneName}`,
       copy: `Update milestone ${draft.milestoneName}: ${updates.join(', ')}.`,
+      draft,
+    },
+  };
+}
+
+export function planLocalPaymentWrite(input: AgentChatInput, dashboardContext: string): AgentChatResult | null {
+  if (input.mode === 'approval') return null;
+
+  const draft = parsePaymentUpdateDraft(input.message.trim(), dashboardContext);
+  if (!draft) return null;
+
+  const statusLabel = draft.status ?? 'paid';
+  if (!draft.recipientName && !draft.paymentId) {
+    return {
+      reply: `Which pending payment should EKO mark ${statusLabel}?`,
+      provider: 'openai',
+      model: 'eko-local-planner',
+      intent: 'clarification',
+    };
+  }
+
+  if (!draft.status) {
+    return {
+      reply: `Should EKO mark ${draft.recipientName ?? `payment ${draft.paymentId}`} paid or cancelled?`,
+      provider: 'openai',
+      model: 'eko-local-planner',
+      intent: 'clarification',
+    };
+  }
+
+  const target = draft.recipientName ?? `payment ${draft.paymentId}`;
+  return {
+    reply: `Ready for approval: mark ${target} payment ${draft.status}.`,
+    provider: 'openai',
+    model: 'eko-local-planner',
+    intent: 'approval_required',
+    approval: {
+      kind: 'payment.update',
+      title: `Mark ${target} payment ${draft.status}`,
+      copy: `Mark pending payment for ${target} as ${draft.status}.`,
       draft,
     },
   };
@@ -1655,6 +1723,84 @@ async function executeNoteArchiveDraft(
 
   return {
     reply: 'Archived note from inbox.',
+    provider: 'openai',
+    model: 'eko-local-write',
+    intent: 'executed',
+  };
+}
+
+async function executePaymentUpdateDraft(
+  draft: AgentApprovalDraft | PaymentWriteDraft | undefined,
+  user: AuthenticatedUser,
+): Promise<AgentChatResult | null> {
+  const status = parsePaymentWriteStatus(draft?.status ?? '');
+  const paymentId = draft?.paymentId;
+  const recipientName = draft?.recipientName;
+
+  if (!status || (!paymentId && !recipientName)) {
+    return {
+      reply: `Add ${formatList([
+        status ? null : 'payment status',
+        paymentId || recipientName ? null : 'payment recipient or ID',
+      ].filter(Boolean))} before EKO can update the payment. No dashboard changes were made.`,
+      provider: 'openai',
+      model: 'eko-local-approval',
+      intent: 'details_needed',
+      approval: {
+        kind: 'payment.update',
+        title: recipientName ? `Update ${recipientName} payment` : 'Update payment',
+        copy: 'Add the pending payment target and status so EKO can prepare the update for approval.',
+        draft,
+      },
+    };
+  }
+
+  await assertAdminUser(user.id);
+  const service = getServiceClient();
+  const { data, error } = await (service as any)
+    .from('payments')
+    .select('id, status, amount, currency, description, recipient_id, recipient:profiles!payments_recipient_id_fkey(id, display_name)')
+    .eq('status', 'pending');
+  if (error) throw new AgentProviderError('EKO could not read pending payments.', 500);
+
+  const pending = ((data ?? []) as PaymentCandidate[]).filter((payment) =>
+    paymentId ? payment.id === paymentId : matchesPaymentRecipient(payment, recipientName ?? ''),
+  );
+
+  if (pending.length !== 1) {
+    return {
+      reply: pending.length
+        ? `EKO found ${pending.length} pending payments for ${recipientName}. No dashboard changes were made; use the exact payment ID.`
+        : `Approval recorded, but EKO could not find a pending payment for ${recipientName ?? paymentId}. No dashboard changes were made.`,
+      provider: 'openai',
+      model: 'eko-local-approval',
+      intent: 'details_needed',
+    };
+  }
+
+  const payment = pending[0];
+  const updatePayload: Record<string, unknown> = { status };
+  if (status === 'paid') updatePayload.paid_at = new Date().toISOString();
+
+  const { data: updated, error: updateError } = await (service as any)
+    .from('payments')
+    .update(updatePayload)
+    .eq('id', payment.id)
+    .eq('status', 'pending')
+    .select()
+    .single();
+  if (updateError || !updated) throw new AgentProviderError('EKO could not update the payment.', 500);
+
+  const label = getPaymentRecipientLabel(payment);
+  await service.from('activity_log').insert({
+    user_id: user.id,
+    action: 'Updated payment',
+    target: `payment: ${label} -> ${status} ${formatPaymentAmount(payment.amount)} ${payment.currency ?? 'USD'}`,
+    source: 'eko',
+  } as never);
+
+  return {
+    reply: `Marked payment for ${label} as ${status}.`,
     provider: 'openai',
     model: 'eko-local-write',
     intent: 'executed',
@@ -2347,6 +2493,18 @@ function parseMilestoneLinkDraft(value: string, dashboardContext: string): Miles
   };
 }
 
+function parsePaymentUpdateDraft(value: string, dashboardContext: string): PaymentWriteDraft | null {
+  if (!/\b(payment|payments|payout|payouts|invoice|invoices)\b/i.test(value)) return null;
+  if (!/\b(mark|set|change|update|cancel|cancelled|void|pay|paid)\b/i.test(value)) return null;
+  if (/\b(create|add|make|new|request)\b/i.test(value)) return null;
+
+  return {
+    status: parsePaymentWriteStatus(value),
+    paymentId: parsePaymentIdRef(value),
+    recipientName: findMentionedPaymentRecipientName(value, dashboardContext) || undefined,
+  };
+}
+
 function parseIssueCreateDraft(value: string): IssueWriteDraft | null {
   if (!/\b(create|add|make|new)\b/i.test(value) || !/\b(task|issue|todo|work item)\b/i.test(value)) return null;
   const quoted = value.match(/["“]([^"”]{2,80})["”]/)?.[1];
@@ -2540,6 +2698,21 @@ function parsePriority(value: string): Priority | undefined {
   if (/\bmedium\b/i.test(value)) return 'Medium';
   if (/\blow\b/i.test(value)) return 'Low';
   return undefined;
+}
+
+function parsePaymentWriteStatus(value: string | undefined): PaymentWriteDraft['status'] {
+  if (!value) return undefined;
+  if (/\b(cancel|cancelled|canceled|void|deny|denied)\b/i.test(value)) return 'cancelled';
+  if (/\b(paid|pay|approve|approved|mark)\b/i.test(value)) return 'paid';
+  return undefined;
+}
+
+function parsePaymentIdRef(value: string): string | undefined {
+  const ref = value.match(/\b(?:payment|payout|invoice)\s+#?([a-z0-9][a-z0-9_-]{2,})\b/i)?.[1];
+  if (!ref) return undefined;
+  if (/^(?:paid|pay|cancel|cancelled|canceled|void|invoice|payment|payout)$/i.test(ref)) return undefined;
+  if (!/[\d_-]/.test(ref) && !/^(?:pay|payment|payout|invoice)/i.test(ref)) return undefined;
+  return ref;
 }
 
 function parseAreaStatus(value: string): string | undefined {
@@ -2843,6 +3016,13 @@ function findMentionedMilestoneName(value: string, dashboardContext: string) {
     .find((milestone) => normalized.includes(milestone.name.toLowerCase()))?.name;
 }
 
+function findMentionedPaymentRecipientName(value: string, dashboardContext: string) {
+  const normalized = value.toLowerCase();
+  return parseDashboardPaymentRosterIndex(dashboardContext)
+    .sort((a, b) => b.name.length - a.name.length)
+    .find((payment) => normalized.includes(payment.name.toLowerCase()))?.name;
+}
+
 function findTaskInBoard(value: string, board: TasksBoardData | null) {
   if (!board) return null;
   const normalized = value.toLowerCase();
@@ -2922,6 +3102,42 @@ function parseDashboardTaskIndex(dashboardContext: string) {
     }
   }
   return [...tasks.values()];
+}
+
+function parseDashboardPaymentRosterIndex(dashboardContext: string) {
+  const line = dashboardContext
+    .split('\n')
+    .find((entry) => /^Payment roster:/i.test(entry));
+  if (!line) return [] as Array<{ name: string }>;
+
+  return line
+    .slice(line.indexOf(':') + 1)
+    .split(';')
+    .map((part) => {
+      const name = part
+        .trim()
+        .replace(/\.$/, '')
+        .replace(/\s+pending\s+[-\d,.]+.*$/i, '')
+        .trim();
+      return name && !/^none visible$/i.test(name) ? { name } : null;
+    })
+    .filter((entry): entry is { name: string } => Boolean(entry));
+}
+
+function matchesPaymentRecipient(payment: PaymentCandidate, recipientName: string) {
+  const target = recipientName.trim().toLowerCase();
+  if (!target) return false;
+  const label = getPaymentRecipientLabel(payment).toLowerCase();
+  return label === target || label.includes(target) || target.includes(label);
+}
+
+function getPaymentRecipientLabel(payment: PaymentCandidate) {
+  return payment.recipient?.display_name || payment.description || payment.id;
+}
+
+function formatPaymentAmount(value: PaymentCandidate['amount']) {
+  const num = Number(value);
+  return Number.isFinite(num) ? String(num) : '0';
 }
 
 function parseDashboardAreaIndex(dashboardContext: string) {

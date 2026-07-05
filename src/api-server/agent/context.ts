@@ -93,8 +93,9 @@ export const EKO_CAPABILITIES = [
   '- doc.delete: delete doc/deck.',
   '- note.create: add inbox note',
   '- note.archive: archive one open inbox note.',
-  'Read-only: roster, areas, milestones, issues, activity, notes, docs, payments (admins only).',
-  'Not supported yet (do not improvise): editing deck slides, emails/invites, creating or marking payments, deleting milestones, changing issue descriptions, publishing.',
+  '- payment.update: mark pending payment paid/cancelled',
+  'Read: roster, areas, milestones, issues, activity, notes, docs, payments.',
+  'Not supported yet: editing deck slides, emails/invites, creating payments, deleting milestones, changing issue descriptions, publishing.',
   'If asked for an unsupported write: say EKO cannot do that yet, then offer the closest supported action or point to the dashboard UI. Never claim a write happened unless an approved action was executed.',
 ].join('\n');
 

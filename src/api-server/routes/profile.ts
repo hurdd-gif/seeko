@@ -23,6 +23,41 @@ export function createProfileRoutes(options: ProfileRoutesOptions = {}) {
   const onboardingUpdater = options.onboardingUpdater ?? completeOnboardingProfile;
 
   return new Hono()
+  .get('/profile', async (c) => {
+    const user = await authResolver(c);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+    const service = getServiceClient();
+    const { data, error } = await service
+      .from('profiles')
+      .select('id, email, display_name, is_admin, is_investor')
+      .eq('id', user.id)
+      .single();
+
+    if (error) {
+      console.error('[hono profile] load failed:', error);
+      return c.json({ error: 'Failed to load profile' }, 500);
+    }
+    if (!data) return c.json({ error: 'profile_not_found' }, 404);
+
+    const profile = data as {
+      id: string;
+      email: string | null;
+      display_name: string | null;
+      is_admin: boolean | null;
+      is_investor: boolean | null;
+    };
+
+    return c.json({
+      profile: {
+        id: profile.id,
+        email: profile.email ?? user.email ?? null,
+        displayName: profile.display_name,
+        isAdmin: Boolean(profile.is_admin),
+        isInvestor: Boolean(profile.is_investor),
+      },
+    });
+  })
   .patch('/profile', async (c) => {
     const user = await authResolver(c);
     if (!user) return c.json({ error: 'Unauthorized' }, 401);

@@ -5,6 +5,7 @@ import { Toaster } from 'sonner';
 import './globals.css';
 import './styles.css';
 import { CookieNotice } from '@/components/CookieNotice';
+import { GlobalEkoAgent } from '@/components/dashboard/GlobalEkoAgent';
 import { LiveToastProvider } from '@/components/dashboard/notifications/LiveToastContext';
 import { initScrollEdgeBlurDamper } from '@/lib/scroll-blur';
 import { router } from './routes';
@@ -25,6 +26,7 @@ createRoot(root).render(
   <StrictMode>
     <LiveToastProvider>
       <RouterProvider router={router} />
+      <GlobalEkoAgent onNavigate={(path) => void router.navigate(path)} />
       {/* First-visit cookie notice — sits outside the router (it survives
           navigation and uses a plain <a> to reach /legal/privacy). Shows once,
           bottom-right, until acknowledged. Notice-only by legal review: the
