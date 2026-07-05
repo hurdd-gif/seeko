@@ -9,6 +9,7 @@ import { createExternalSigningAdminRoutes } from './routes/external-signing-admi
 import { createExternalSigningRoutes } from './routes/external-signing';
 import { createInvoiceRoutes } from './routes/invoice';
 import { createInvestorRoutes } from './routes/investor';
+import { createContractorRoutes } from './routes/contractor';
 import { createPaymentsRoutes } from './routes/payments';
 import { createProfileRoutes } from './routes/profile';
 import { createTasksRoutes } from './routes/tasks';
@@ -44,6 +45,10 @@ import {
   type InvestorSettingsData,
   type InvestorSettingsInput,
 } from '@/lib/investor-index';
+import {
+  loadContractorOverview,
+  type ContractorOverviewData,
+} from '@/lib/contractor-index';
 import {
   completeOnboardingProfile,
   loadOnboardingProfile,
@@ -90,6 +95,8 @@ type ApiDependencies = {
   investorPaymentsLoader?: (user: AuthenticatedUser) => Promise<InvestorPaymentsData>;
   investorSettingsLoader?: (user: AuthenticatedUser) => Promise<InvestorSettingsData>;
   investorSettingsUpdater?: (user: AuthenticatedUser, input: InvestorSettingsInput) => Promise<InvestorSettingsData>;
+  contractorAuthResolver?: (c: Context) => Promise<AuthenticatedUser | null>;
+  contractorOverviewLoader?: (user: AuthenticatedUser) => Promise<ContractorOverviewData>;
   paymentsAuthResolver?: (c: Context) => Promise<PaymentsAuthResult>;
   paymentsIndexLoader?: (user: { id: string; email?: string | null }) => Promise<PaymentsIndexData>;
   profileAuthResolver?: (c: Context) => Promise<AuthenticatedUser | null>;
@@ -119,6 +126,7 @@ export function createApiApp(dependencies: ApiDependencies = {}) {
   const investorPaymentsLoader = dependencies.investorPaymentsLoader ?? loadInvestorPayments;
   const investorSettingsLoader = dependencies.investorSettingsLoader ?? loadInvestorSettings;
   const investorSettingsUpdater = dependencies.investorSettingsUpdater ?? updateInvestorSettings;
+  const contractorOverviewLoader = dependencies.contractorOverviewLoader ?? loadContractorOverview;
   const onboardingLoader = dependencies.onboardingLoader ?? loadOnboardingProfile;
   const onboardingUpdater = dependencies.onboardingUpdater ?? completeOnboardingProfile;
   const paymentsIndexLoader = dependencies.paymentsIndexLoader ?? loadPaymentsIndex;
@@ -155,6 +163,10 @@ export function createApiApp(dependencies: ApiDependencies = {}) {
       investorPaymentsLoader,
       investorSettingsLoader,
       investorSettingsUpdater,
+    }))
+    .route('/api', createContractorRoutes({
+      authResolver: dependencies.contractorAuthResolver,
+      contractorOverviewLoader,
     }))
     .route('/api', createPaymentsRoutes({ paymentsAuthResolver: dependencies.paymentsAuthResolver, paymentsIndexLoader }))
     .route('/api', createProfileRoutes({
