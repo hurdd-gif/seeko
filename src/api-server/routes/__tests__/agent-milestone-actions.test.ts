@@ -185,4 +185,272 @@ describe('EKO milestone actions', () => {
       },
     });
   });
+
+  it('prepares linking an issue to a milestone as a gated dashboard write', () => {
+    const context = [
+      dashboardContext,
+      'All issues: #42 UI Extension (In Progress).',
+    ].join('\n');
+
+    expect(planLocalMilestoneWrite({ message: 'Link UI Extension to Vertical Slice milestone' }, context)).toEqual({
+      reply: 'Ready for approval: link UI Extension to milestone Vertical Slice.',
+      provider: 'openai',
+      model: 'eko-local-planner',
+      intent: 'approval_required',
+      approval: {
+        kind: 'milestone.link',
+        title: 'Link UI Extension to Vertical Slice',
+        copy: 'Link issue UI Extension to milestone Vertical Slice.',
+        draft: {
+          taskName: 'UI Extension',
+          milestoneName: 'Vertical Slice',
+        },
+      },
+    });
+  });
+
+  it('prepares unlinking an issue from a milestone as a gated dashboard write', () => {
+    const context = [
+      dashboardContext,
+      'All issues: #42 UI Extension (In Progress).',
+    ].join('\n');
+
+    expect(planLocalMilestoneWrite({ message: 'Unlink UI Extension from Vertical Slice milestone' }, context)).toMatchObject({
+      reply: 'Ready for approval: unlink UI Extension from milestone Vertical Slice.',
+      intent: 'approval_required',
+      approval: {
+        kind: 'milestone.unlink',
+        title: 'Unlink UI Extension from Vertical Slice',
+        copy: 'Unlink issue UI Extension from milestone Vertical Slice.',
+        draft: {
+          taskName: 'UI Extension',
+          milestoneName: 'Vertical Slice',
+        },
+      },
+    });
+  });
+
+  it('links an issue to a milestone only after approval and brands the trigger row as EKO', async () => {
+    const inserts: Array<{ table: string; payload: Record<string, unknown> }> = [];
+    const activityUpdates: Array<Record<string, unknown>> = [];
+    mocks.loadTasksBoard.mockResolvedValue({
+      projectMilestones: [
+        { id: 'milestone-1', name: 'Vertical Slice', health: 'at_risk', target_date: '2026-08-01', sort_order: 0, created_at: '2026-06-01' },
+      ],
+      tasks: [
+        { id: 'task-1', name: 'UI Extension', status: 'In Progress', priority: 'High' },
+      ],
+      areas: [],
+      team: [],
+    });
+    mocks.getServiceClient.mockReturnValue({
+      from: vi.fn((table: string) => {
+        if (table === 'agent_chat_messages') {
+          const query = {
+            select: vi.fn(() => query),
+            eq: vi.fn(() => query),
+            order: vi.fn(() => query),
+            limit: vi.fn(async () => ({ data: [], error: null })),
+            insert: vi.fn(async (rows: Array<Record<string, unknown>>) => {
+              for (const row of rows) inserts.push({ table, payload: row });
+              return { error: null };
+            }),
+          };
+          return query;
+        }
+
+        if (table === 'profiles') {
+          const query = {
+            select: vi.fn(() => query),
+            eq: vi.fn(() => query),
+            maybeSingle: vi.fn(async () => ({ data: { is_admin: true }, error: null })),
+          };
+          return query;
+        }
+
+        if (table === 'task_milestone') {
+          return {
+            insert: vi.fn(async (payload: Record<string, unknown>) => {
+              inserts.push({ table, payload });
+              return { error: null };
+            }),
+          };
+        }
+
+        if (table === 'activity_log') {
+          const query = {
+            select: vi.fn(() => query),
+            eq: vi.fn(() => query),
+            order: vi.fn(() => query),
+            limit: vi.fn(async () => ({ data: [{ id: 'activity-1' }], error: null })),
+            update: vi.fn((payload: Record<string, unknown>) => {
+              activityUpdates.push(payload);
+              return query;
+            }),
+          };
+          return query;
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      }),
+    });
+
+    const input: AgentChatInput = {
+      message: 'Link UI Extension to Vertical Slice milestone',
+      mode: 'approval',
+      decision: 'approve',
+      suggestion: {
+        title: 'Link UI Extension to Vertical Slice',
+        approval: {
+          kind: 'milestone.link' as never,
+          title: 'Link UI Extension to Vertical Slice',
+          copy: 'Link issue UI Extension to milestone Vertical Slice.',
+          draft: {
+            taskName: 'UI Extension',
+            milestoneName: 'Vertical Slice',
+          },
+        },
+      },
+    };
+
+    const response = await createAgentApp().request('/api/agent/chat', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(input),
+    });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      reply: 'Linked issue "UI Extension" to milestone "Vertical Slice".',
+      provider: 'openai',
+      model: 'eko-local-write',
+      intent: 'executed',
+    });
+    expect(inserts).toContainEqual({
+      table: 'task_milestone',
+      payload: {
+        task_id: 'task-1',
+        milestone_id: 'milestone-1',
+      },
+    });
+    expect(activityUpdates).toContainEqual({
+      source: 'eko',
+      user_id: 'user-1',
+    });
+  });
+
+  it('unlinks an issue from a milestone only after approval and brands the trigger row as EKO', async () => {
+    const deletes: Array<{ table: string; taskId?: string; milestoneId?: string }> = [];
+    const activityUpdates: Array<Record<string, unknown>> = [];
+    mocks.loadTasksBoard.mockResolvedValue({
+      projectMilestones: [
+        { id: 'milestone-1', name: 'Vertical Slice', health: 'at_risk', target_date: '2026-08-01', sort_order: 0, created_at: '2026-06-01' },
+      ],
+      tasks: [
+        { id: 'task-1', name: 'UI Extension', status: 'In Progress', priority: 'High' },
+      ],
+      areas: [],
+      team: [],
+    });
+    mocks.getServiceClient.mockReturnValue({
+      from: vi.fn((table: string) => {
+        if (table === 'agent_chat_messages') {
+          const query = {
+            select: vi.fn(() => query),
+            eq: vi.fn(() => query),
+            order: vi.fn(() => query),
+            limit: vi.fn(async () => ({ data: [], error: null })),
+            insert: vi.fn(async () => ({ error: null })),
+          };
+          return query;
+        }
+
+        if (table === 'profiles') {
+          const query = {
+            select: vi.fn(() => query),
+            eq: vi.fn(() => query),
+            maybeSingle: vi.fn(async () => ({ data: { is_admin: true }, error: null })),
+          };
+          return query;
+        }
+
+        if (table === 'task_milestone') {
+          const query = {
+            delete: vi.fn(() => query),
+            eq: vi.fn((column: string, value: string) => {
+              const entry = deletes[deletes.length - 1] ?? { table };
+              if (!deletes.length) deletes.push(entry);
+              if (column === 'task_id') entry.taskId = value;
+              if (column === 'milestone_id') entry.milestoneId = value;
+              return query;
+            }),
+            then: undefined,
+          };
+          return {
+            delete: vi.fn(() => {
+              deletes.push({ table });
+              return query;
+            }),
+          };
+        }
+
+        if (table === 'activity_log') {
+          const query = {
+            select: vi.fn(() => query),
+            eq: vi.fn(() => query),
+            order: vi.fn(() => query),
+            limit: vi.fn(async () => ({ data: [{ id: 'activity-2' }], error: null })),
+            update: vi.fn((payload: Record<string, unknown>) => {
+              activityUpdates.push(payload);
+              return query;
+            }),
+          };
+          return query;
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      }),
+    });
+
+    const input: AgentChatInput = {
+      message: 'Unlink UI Extension from Vertical Slice milestone',
+      mode: 'approval',
+      decision: 'approve',
+      suggestion: {
+        title: 'Unlink UI Extension from Vertical Slice',
+        approval: {
+          kind: 'milestone.unlink' as never,
+          title: 'Unlink UI Extension from Vertical Slice',
+          copy: 'Unlink issue UI Extension from milestone Vertical Slice.',
+          draft: {
+            taskName: 'UI Extension',
+            milestoneName: 'Vertical Slice',
+          },
+        },
+      },
+    };
+
+    const response = await createAgentApp().request('/api/agent/chat', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(input),
+    });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      reply: 'Unlinked issue "UI Extension" from milestone "Vertical Slice".',
+      provider: 'openai',
+      model: 'eko-local-write',
+      intent: 'executed',
+    });
+    expect(deletes).toContainEqual({
+      table: 'task_milestone',
+      taskId: 'task-1',
+      milestoneId: 'milestone-1',
+    });
+    expect(activityUpdates).toContainEqual({
+      source: 'eko',
+      user_id: 'user-1',
+    });
+  });
 });

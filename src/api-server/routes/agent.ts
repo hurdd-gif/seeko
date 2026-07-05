@@ -35,7 +35,7 @@ type AgentApprovalDraft = {
   assigneeName?: string;
 };
 type AgentApproval = {
-  kind: 'issue.create' | 'issue.update' | 'issue.delete' | 'area.update' | 'milestone.update' | 'doc.create' | 'doc.update' | 'doc.delete' | 'note.create' | 'note.archive' | 'generic';
+  kind: 'issue.create' | 'issue.update' | 'issue.delete' | 'area.update' | 'milestone.update' | 'milestone.link' | 'milestone.unlink' | 'doc.create' | 'doc.update' | 'doc.delete' | 'note.create' | 'note.archive' | 'generic';
   title: string;
   copy: string;
   draft?: AgentApprovalDraft;
@@ -357,6 +357,8 @@ function parseApproval(value: unknown): AgentApproval | undefined {
     record.kind === 'issue.delete' ||
     record.kind === 'area.update' ||
     record.kind === 'milestone.update' ||
+    record.kind === 'milestone.link' ||
+    record.kind === 'milestone.unlink' ||
     record.kind === 'doc.create' ||
     record.kind === 'doc.update' ||
     record.kind === 'doc.delete' ||
@@ -596,6 +598,10 @@ async function executeTypedApproval(approval: AgentApproval, user: Authenticated
     return executeMilestoneUpdateDraft(approval.draft, user, board);
   }
 
+  if (approval.kind === 'milestone.link' || approval.kind === 'milestone.unlink') {
+    return executeMilestoneLinkDraft(approval.draft, user, board, approval.kind === 'milestone.unlink' ? 'unlink' : 'link');
+  }
+
   if (approval.kind === 'doc.create') {
     return executeDocumentCreateDraft(approval.draft, user);
   }
@@ -775,6 +781,12 @@ type MilestoneWriteDraft = {
   milestoneName?: string;
   health?: string;
   targetDate?: string;
+};
+
+type MilestoneLinkDraft = {
+  action: 'link' | 'unlink';
+  taskName?: string;
+  milestoneName?: string;
 };
 
 type DocumentWriteDraft = {
@@ -968,6 +980,52 @@ export function planLocalAreaWrite(input: AgentChatInput, dashboardContext: stri
 
 export function planLocalMilestoneWrite(input: AgentChatInput, dashboardContext: string): AgentChatResult | null {
   if (input.mode === 'approval') return null;
+
+  const linkDraft = parseMilestoneLinkDraft(input.message.trim(), dashboardContext);
+  if (linkDraft) {
+    if (!linkDraft.taskName && !linkDraft.milestoneName) {
+      return {
+        reply: `Which issue and milestone should EKO ${linkDraft.action}?`,
+        provider: 'openai',
+        model: 'eko-local-planner',
+        intent: 'clarification',
+      };
+    }
+    if (!linkDraft.taskName) {
+      return {
+        reply: `Which issue should EKO ${linkDraft.action} ${linkDraft.action === 'link' ? 'to' : 'from'} ${linkDraft.milestoneName}?`,
+        provider: 'openai',
+        model: 'eko-local-planner',
+        intent: 'clarification',
+      };
+    }
+    if (!linkDraft.milestoneName) {
+      return {
+        reply: `Which milestone should EKO ${linkDraft.action} ${linkDraft.taskName} ${linkDraft.action === 'link' ? 'to' : 'from'}?`,
+        provider: 'openai',
+        model: 'eko-local-planner',
+        intent: 'clarification',
+      };
+    }
+
+    const verb = linkDraft.action === 'unlink' ? 'unlink' : 'link';
+    const preposition = linkDraft.action === 'unlink' ? 'from' : 'to';
+    return {
+      reply: `Ready for approval: ${verb} ${linkDraft.taskName} ${preposition} milestone ${linkDraft.milestoneName}.`,
+      provider: 'openai',
+      model: 'eko-local-planner',
+      intent: 'approval_required',
+      approval: {
+        kind: linkDraft.action === 'unlink' ? 'milestone.unlink' : 'milestone.link',
+        title: `${capitalize(verb)} ${linkDraft.taskName} ${preposition} ${linkDraft.milestoneName}`,
+        copy: `${capitalize(verb)} issue ${linkDraft.taskName} ${preposition} milestone ${linkDraft.milestoneName}.`,
+        draft: {
+          taskName: linkDraft.taskName,
+          milestoneName: linkDraft.milestoneName,
+        },
+      },
+    };
+  }
 
   const draft = parseMilestoneUpdateDraft(input.message.trim(), dashboardContext);
   if (!draft) return null;
@@ -1956,6 +2014,72 @@ async function executeMilestoneUpdateDraft(
   };
 }
 
+async function executeMilestoneLinkDraft(
+  draft: AgentApprovalDraft | undefined,
+  user: AuthenticatedUser,
+  board: TasksBoardData | null,
+  action: 'link' | 'unlink',
+): Promise<AgentChatResult | null> {
+  if (!draft?.taskName || !draft.milestoneName) {
+    return {
+      reply: 'Approval recorded, but EKO needs both an issue and a milestone before changing milestone links. No dashboard changes were made.',
+      provider: 'openai',
+      model: 'eko-local-approval',
+      intent: 'details_needed',
+    };
+  }
+
+  const task = findTaskInBoard(draft.taskName, board);
+  if (!task) {
+    return {
+      reply: `Approval recorded, but EKO could not find issue "${draft.taskName}". No dashboard changes were made.`,
+      provider: 'openai',
+      model: 'eko-local-approval',
+      intent: 'details_needed',
+    };
+  }
+
+  const milestone = findMilestoneInBoard(draft.milestoneName, board);
+  if (!milestone) {
+    return {
+      reply: `Approval recorded, but EKO could not find milestone "${draft.milestoneName}". No dashboard changes were made.`,
+      provider: 'openai',
+      model: 'eko-local-approval',
+      intent: 'details_needed',
+    };
+  }
+
+  await assertAdminUser(user.id);
+  const service = getServiceClient();
+  if (action === 'link') {
+    const { error } = await (service as any)
+      .from('task_milestone')
+      .insert({ task_id: task.id, milestone_id: milestone.id });
+    if (error) throw new AgentProviderError('EKO could not link the milestone.', 500);
+    await markLatestTaskActivityAsEko({ taskId: task.id, userId: user.id, kind: 'milestone_linked' });
+    return {
+      reply: `Linked issue "${task.name}" to milestone "${milestone.name}".`,
+      provider: 'openai',
+      model: 'eko-local-write',
+      intent: 'executed',
+    };
+  }
+
+  const { error } = await (service as any)
+    .from('task_milestone')
+    .delete()
+    .eq('task_id', task.id)
+    .eq('milestone_id', milestone.id);
+  if (error) throw new AgentProviderError('EKO could not unlink the milestone.', 500);
+  await markLatestTaskActivityAsEko({ taskId: task.id, userId: user.id, kind: 'milestone_unlinked' });
+  return {
+    reply: `Unlinked issue "${task.name}" from milestone "${milestone.name}".`,
+    provider: 'openai',
+    model: 'eko-local-write',
+    intent: 'executed',
+  };
+}
+
 function withTypedIntent(input: AgentChatInput, result: AgentChatResult): AgentChatResult {
   if (result.intent) return result;
   const reply = result.reply;
@@ -2105,6 +2229,19 @@ function parseMilestoneUpdateDraft(value: string, dashboardContext: string): Mil
     milestoneName: milestoneName || undefined,
     ...(health ? { health } : {}),
     ...(targetDate ? { targetDate } : {}),
+  };
+}
+
+function parseMilestoneLinkDraft(value: string, dashboardContext: string): MilestoneLinkDraft | null {
+  const action = /\b(unlink|detach|remove)\b/i.test(value) ? 'unlink' : /\b(link|attach|connect|add)\b/i.test(value) ? 'link' : null;
+  if (!action) return null;
+  if (!/\b(milestone|checkpoint)\b/i.test(value)) return null;
+  if (/\b(doc|document|deck|note|payment|invoice|area|studio progress)\b/i.test(value)) return null;
+
+  return {
+    action,
+    taskName: findMentionedTaskName(value, dashboardContext) || undefined,
+    milestoneName: findMentionedMilestoneName(value, dashboardContext) || undefined,
   };
 }
 
@@ -2374,6 +2511,10 @@ function formatMilestoneHealthForReply(value: string) {
   return value.replace(/_/g, ' ');
 }
 
+function capitalize(value: string) {
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
 function parseDueDate(value: string): string | undefined {
   const iso = value.match(/\b\d{4}-\d{2}-\d{2}\b/)?.[0];
   if (iso) return iso;
@@ -2498,14 +2639,12 @@ async function markLatestTaskActivityAsEko({
   let query = service
     .from('activity_log')
     .select('id')
-    .eq('task_id', taskId)
-    .order('created_at', { ascending: false })
-    .limit(1);
+    .eq('task_id', taskId);
 
   if (kind) query = query.eq('kind', kind);
   if (action) query = query.eq('action', action);
 
-  const { data } = await query;
+  const { data } = await query.order('created_at', { ascending: false }).limit(1);
   const id = (data as Array<{ id: string }> | null)?.[0]?.id;
   if (!id) return;
 

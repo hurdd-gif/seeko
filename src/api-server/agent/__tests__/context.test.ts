@@ -387,6 +387,7 @@ describe('EKO_CAPABILITIES', () => {
     expect(EKO_CAPABILITIES).toContain('issue.delete');
     expect(EKO_CAPABILITIES).toContain('area.update');
     expect(EKO_CAPABILITIES).toContain('milestone.update');
+    expect(EKO_CAPABILITIES).toContain('milestone.link/unlink');
     expect(EKO_CAPABILITIES).toContain('doc.create');
     expect(EKO_CAPABILITIES).toContain('doc.update');
     expect(EKO_CAPABILITIES).toContain('doc.delete');
