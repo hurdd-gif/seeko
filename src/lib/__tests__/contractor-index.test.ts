@@ -20,9 +20,13 @@ describe('assertContractorAccess', () => {
     }
   });
 
-  it('rejects null flags', () => {
-    expect(() => assertContractorAccess({ is_contractor: null, is_admin: null })).toThrow(
-      ContractorAccessError,
-    );
+  it('rejects null flags with contractor_required', () => {
+    try {
+      assertContractorAccess({ is_contractor: null, is_admin: null });
+      throw new Error('should have thrown');
+    } catch (err) {
+      expect(err).toBeInstanceOf(ContractorAccessError);
+      expect((err as ContractorAccessError).code).toBe('contractor_required');
+    }
   });
 });
