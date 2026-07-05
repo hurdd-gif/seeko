@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { Link } from '@/lib/react-router-adapters';
 import { Map } from 'lucide-react';
 import type { Area } from '@/lib/types';
 import { SectionEyebrow } from './SectionEyebrow';

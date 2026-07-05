@@ -4,7 +4,7 @@ import { forwardRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { CheckCheck, CheckCircle2, X } from 'lucide-react';
 import { SHEET_SPRING, MOBILE_ROW_STAGGER } from './constants';
-import { NotificationStack } from './NotificationStack';
+import { InboxRow } from './InboxRow';
 import { GroupedNotification, DisplayNotification } from './types';
 import { acquireScrollLock, releaseScrollLock } from '@/lib/scroll-lock';
 
@@ -16,13 +16,11 @@ interface MobileNotificationSheetProps {
   onClose: () => void;
   onMarkAllRead: () => void;
   onTap: (notif: DisplayNotification) => void;
-  onDismiss: (ids: string[]) => void;
-  onMarkRead?: (ids: string[]) => void;
 }
 
 export const MobileNotificationSheet = forwardRef<HTMLDivElement, MobileNotificationSheetProps>(
   function MobileNotificationSheet(
-    { open, grouped, isEmpty, unreadCount, onClose, onMarkAllRead, onTap, onDismiss, onMarkRead },
+    { open, grouped, isEmpty, unreadCount, onClose, onMarkAllRead, onTap },
     ref
   ) {
     let rowIndex = 0;
@@ -55,9 +53,9 @@ export const MobileNotificationSheet = forwardRef<HTMLDivElement, MobileNotifica
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
               transition={SHEET_SPRING}
-              className="fixed inset-x-0 bottom-0 z-[9999] flex flex-col rounded-t-2xl overflow-hidden"
+              className="fixed inset-x-0 bottom-0 z-[9999] flex flex-col rounded-t-[20px] overflow-hidden shadow-[0_0_0_0.5px_rgba(0,0,0,0.04),0_-8px_28px_rgba(0,0,0,0.12)]"
               style={{
-                backgroundColor: '#1a1a1a',
+                backgroundColor: '#ffffff',
                 maxHeight: '85dvh',
                 paddingTop: 'env(safe-area-inset-top)',
                 paddingBottom: 'env(safe-area-inset-bottom)',
@@ -71,17 +69,17 @@ export const MobileNotificationSheet = forwardRef<HTMLDivElement, MobileNotifica
             >
               {/* Drag handle */}
               <div className="flex justify-center pt-2 pb-1">
-                <div className="w-9 h-1 rounded-full bg-white/20" />
+                <div className="w-9 h-1 rounded-full bg-[#0000001f]" />
               </div>
 
               {/* Header */}
-              <div className="flex items-center justify-between px-5 py-3">
-                <h3 className="text-base font-semibold text-foreground">Notifications</h3>
+              <div className="flex items-center justify-between px-4 py-3">
+                <h3 className="text-[15px] font-medium tracking-[-0.28px] text-[#0d0d0d]">Inbox</h3>
                 <div className="flex items-center gap-3">
                   {unreadCount > 0 && (
                     <button
                       onClick={onMarkAllRead}
-                      className="inline-flex items-center gap-1.5 text-xs text-muted-foreground active:text-foreground transition-colors"
+                      className="inline-flex items-center gap-1.5 text-[13px] text-[#808080] active:text-[#0d0d0d] transition-colors"
                     >
                       <CheckCheck className="size-3.5" />
                       Mark all read
@@ -89,42 +87,43 @@ export const MobileNotificationSheet = forwardRef<HTMLDivElement, MobileNotifica
                   )}
                   <button
                     onClick={onClose}
-                    className="flex size-8 items-center justify-center rounded-full bg-white/[0.08] text-muted-foreground active:bg-white/[0.15]"
+                    className="flex size-8 items-center justify-center rounded-full bg-[#0000000d] text-[#808080] active:bg-[#0000001a]"
                   >
                     <X className="size-4" />
                   </button>
                 </div>
               </div>
 
+              <div className="mx-4 h-px bg-[#0000000d]" />
+
               {/* Notification list */}
               <div
-                className="flex-1 overflow-y-auto overscroll-contain touch-auto px-2"
+                className="flex-1 overflow-y-auto overscroll-contain touch-auto px-2 [mask-image:linear-gradient(to_bottom,#000_calc(100%-20px),transparent)]"
                 onPointerDown={(e) => e.stopPropagation()}
               >
                 {isEmpty ? (
                   <div className="flex flex-col items-center justify-center py-16 text-center">
-                    <CheckCircle2 className="size-10 text-muted-foreground/20" />
-                    <p className="mt-3 text-sm text-muted-foreground">You&apos;re all caught up</p>
+                    <CheckCircle2 className="size-10 text-[#0000001f]" />
+                    <p className="mt-3 text-[13px] text-[#808080]">You&apos;re all caught up</p>
                   </div>
                 ) : (
                   <AnimatePresence mode="popLayout">
                     {grouped.map((group, gi) => (
-                      <div key={group.label} className={gi > 0 ? 'mt-2' : ''}>
-                        <div className="px-5 pt-3 pb-1.5 text-[10px] font-medium uppercase tracking-widest text-muted-foreground/40">
+                      <div key={group.label} className={gi > 0 ? 'mt-1' : ''}>
+                        {gi > 0 && <div className="mx-4 mb-1 h-px bg-[#0000000d]" />}
+                        <div className="px-4 pt-2 pb-1.5 text-[13px] text-[#808080]">
                           {group.label}
                         </div>
-                        {group.items.map(notif => {
+                        {group.items.map((notif) => {
                           const idx = rowIndex++;
                           return (
-                            <NotificationStack
+                            <InboxRow
                               key={notif.id}
                               notification={notif}
                               group={group.label}
                               index={idx}
                               stagger={MOBILE_ROW_STAGGER}
                               onTap={onTap}
-                              onDismiss={onDismiss}
-                              onMarkRead={onMarkRead}
                             />
                           );
                         })}

@@ -1,5 +1,7 @@
 # Tasks Redesign — Design
 
+> **⚠️ SUPERSEDED** by `docs/plans/2026-05-19-tasks-board-redesign.md` (board view, 2026-05-19). This document describes the flat table design that preceded the board pivot.
+
 **Date:** 2026-03-06
 **Scope:** Visual simplification of TaskList component
 **Theme:** Dark (existing OKLCH tokens), clean table aesthetic inspired by reference

@@ -1,5 +1,6 @@
+import { cache } from 'react';
 import { createClient } from './server';
-import type { Task, Area, Profile, Doc, TaskHandoff, Note, NoteSource, Priority } from '../types';
+import type { Task, Area, Profile, Doc, TaskHandoff, Note, NoteSource, Priority, Milestone, TaskActivity } from '../types';
 
 export type ActivityItem = {
   id: string;
@@ -12,7 +13,7 @@ export type ActivityItem = {
   profiles?: Pick<Profile, 'display_name' | 'avatar_url'>;
 };
 
-export async function fetchTasks(assigneeId?: string): Promise<Task[]> {
+export const fetchTasks = cache(async (assigneeId?: string): Promise<Task[]> => {
   const supabase = await createClient();
 
   let query = supabase
@@ -27,9 +28,9 @@ export async function fetchTasks(assigneeId?: string): Promise<Task[]> {
   const { data, error } = await query;
   if (error) throw error;
   return (data ?? []) as Task[];
-}
+});
 
-export async function fetchAreas(): Promise<Area[]> {
+export const fetchAreas = cache(async (): Promise<Area[]> => {
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -39,10 +40,10 @@ export async function fetchAreas(): Promise<Area[]> {
     .order('name', { ascending: true });
 
   if (error) throw error;
-  return (data ?? []) as Area[];
-}
+  return (data ?? []) as unknown as Area[];
+});
 
-export async function fetchTeam(): Promise<Profile[]> {
+export const fetchTeam = cache(async (): Promise<Profile[]> => {
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -54,9 +55,9 @@ export async function fetchTeam(): Promise<Profile[]> {
   const all = (data ?? []) as Profile[];
   // Investors are not shown on the team roster (discreet).
   return all.filter(p => !p.is_investor);
-}
+});
 
-export async function fetchDocs(parentId?: string): Promise<Doc[]> {
+export const fetchDocs = cache(async (parentId?: string): Promise<Doc[]> => {
   const supabase = await createClient();
 
   let query = supabase
@@ -73,9 +74,9 @@ export async function fetchDocs(parentId?: string): Promise<Doc[]> {
   const { data, error } = await query;
   if (error) throw error;
   return (data ?? []) as Doc[];
-}
+});
 
-export async function fetchAllDocs(): Promise<Doc[]> {
+export const fetchAllDocs = cache(async (): Promise<Doc[]> => {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from('docs')
@@ -83,9 +84,29 @@ export async function fetchAllDocs(): Promise<Doc[]> {
     .order('sort_order', { ascending: true });
   if (error) throw error;
   return (data ?? []) as Doc[];
-}
+});
 
-export async function fetchActivity(limit = 20): Promise<ActivityItem[]> {
+// Lightweight projection of `docs` for the global CommandPalette in the
+// dashboard layout. The layout only needs the access-filter fields plus the
+// id/title/type used to split docs vs decks — it never touches `content` or
+// `slides`, so we omit those (large) columns here to avoid over-fetching on
+// every dashboard route. Use `fetchAllDocs` when full doc content is required.
+export type PaletteDoc = Pick<
+  Doc,
+  'id' | 'title' | 'type' | 'restricted_department' | 'granted_user_ids'
+>;
+
+export const fetchDocsForPalette = cache(async (): Promise<PaletteDoc[]> => {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('docs')
+    .select('id, title, type, restricted_department, granted_user_ids')
+    .order('sort_order', { ascending: true });
+  if (error) throw error;
+  return (data ?? []) as PaletteDoc[];
+});
+
+export const fetchActivity = cache(async (limit = 20): Promise<ActivityItem[]> => {
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -96,9 +117,52 @@ export async function fetchActivity(limit = 20): Promise<ActivityItem[]> {
 
   if (error) throw error;
   return (data ?? []) as ActivityItem[];
-}
+});
 
-export async function fetchProfile(userId: string): Promise<Profile | null> {
+export const fetchMilestones = cache(async (taskId?: string): Promise<Milestone[]> => {
+  const supabase = await createClient();
+
+  if (taskId) {
+    const { data, error } = await (supabase as any)
+      .from('task_milestone')
+      .select('milestone:milestones(id, name, target_date, area_id, sort_order, health, created_at)')
+      .eq('task_id', taskId);
+    if (error) throw error;
+    return ((data ?? [])
+      .map((r: { milestone: Milestone | Milestone[] | null }) =>
+        Array.isArray(r.milestone) ? r.milestone[0] : r.milestone,
+      )
+      .filter(Boolean) as Milestone[]).sort((a, b) => a.sort_order - b.sort_order);
+  }
+
+  const { data, error } = await (supabase as any)
+    .from('milestones')
+    .select('id, name, target_date, area_id, sort_order, health, created_at')
+    .order('sort_order', { ascending: true });
+  if (error) throw error;
+  return (data ?? []) as unknown as Milestone[];
+});
+
+export const fetchTaskActivity = cache(async (
+  taskId: string,
+  limit = 10,
+): Promise<TaskActivity[]> => {
+  const supabase = await createClient();
+
+  const { data, error } = await (supabase as any)
+    .from('activity_log')
+    .select(
+      'id, user_id, action, target, task_id, doc_id, kind, before_value, after_value, source, created_at, profiles(display_name, avatar_url)',
+    )
+    .eq('task_id', taskId)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error) throw error;
+  return (data ?? []) as unknown as TaskActivity[];
+});
+
+export const fetchProfile = cache(async (userId: string): Promise<Profile | null> => {
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -109,9 +173,9 @@ export async function fetchProfile(userId: string): Promise<Profile | null> {
 
   if (error) return null;
   return data as Profile;
-}
+});
 
-export async function fetchAllTasksWithAssignees(): Promise<import('../types').TaskWithAssignee[]> {
+export const fetchAllTasksWithAssignees = cache(async (): Promise<import('../types').TaskWithAssignee[]> => {
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -121,6 +185,50 @@ export async function fetchAllTasksWithAssignees(): Promise<import('../types').T
 
   if (error) throw error;
   return (data ?? []) as import('../types').TaskWithAssignee[];
+});
+
+// Same select+join+order as fetchAllTasksWithAssignees, but scoped to a single
+// assignee server-side. Used by the tasks board for non-admins so we no longer
+// fetch every row and filter in memory. Keeps the assignee join intact so board
+// cards still render avatar chips and the shape stays TaskWithAssignee[].
+export const fetchTasksForAssignee = cache(async (
+  assigneeId: string,
+): Promise<import('../types').TaskWithAssignee[]> => {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from('tasks')
+    .select('*, assignee:profiles!tasks_assignee_id_fkey(id, display_name, avatar_url)')
+    .eq('assignee_id', assigneeId)
+    .order('deadline', { ascending: true, nullsFirst: false });
+
+  if (error) throw error;
+  return (data ?? []) as import('../types').TaskWithAssignee[];
+});
+
+export async function fetchTaskById(
+  id: string,
+): Promise<import('../types').TaskWithAssignee | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('tasks')
+    .select('*, assignee:profiles!tasks_assignee_id_fkey(id, display_name, avatar_url)')
+    .eq('id', id)
+    .maybeSingle();
+  if (error) return null;
+  return (data ?? null) as import('../types').TaskWithAssignee | null;
+}
+
+export async function fetchTaskMilestones(taskId: string): Promise<Milestone[]> {
+  const supabase = await createClient();
+  const { data, error } = await (supabase as any)
+    .from('task_milestone')
+    .select('milestone:milestones(*)')
+    .eq('task_id', taskId);
+  if (error) return [];
+  return ((data ?? []) as unknown as { milestone: Milestone | null }[])
+    .map((r) => r.milestone)
+    .filter((m): m is Milestone => !!m);
 }
 
 export async function fetchTaskHandoffs(taskId: string): Promise<TaskHandoff[]> {
@@ -152,7 +260,7 @@ export async function fetchTaskComments(taskId: string): Promise<import('../type
   return (data ?? []) as import('../types').TaskComment[];
 }
 
-export async function fetchNotifications(userId: string, limit = 20): Promise<import('../types').Notification[]> {
+export const fetchNotifications = cache(async (userId: string, limit = 20): Promise<import('../types').Notification[]> => {
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -164,9 +272,9 @@ export async function fetchNotifications(userId: string, limit = 20): Promise<im
 
   if (error) throw error;
   return (data ?? []) as import('../types').Notification[];
-}
+});
 
-export async function fetchUnreadNotificationCount(userId: string): Promise<number> {
+export const fetchUnreadNotificationCount = cache(async (userId: string): Promise<number> => {
   const supabase = await createClient();
 
   const { count, error } = await supabase
@@ -177,9 +285,9 @@ export async function fetchUnreadNotificationCount(userId: string): Promise<numb
 
   if (error) return 0;
   return count ?? 0;
-}
+});
 
-export async function fetchTeamWithPaypalEmails(): Promise<(Profile & { paypal_email?: string })[]> {
+export const fetchTeamWithPaypalEmails = cache(async (): Promise<(Profile & { paypal_email?: string })[]> => {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from('profiles')
@@ -188,7 +296,7 @@ export async function fetchTeamWithPaypalEmails(): Promise<(Profile & { paypal_e
 
   if (error) throw error;
   return (data ?? []) as (Profile & { paypal_email?: string })[];
-}
+});
 
 export async function fetchInboxNotes(): Promise<Note[]> {
   const supabase = await createClient();
@@ -239,7 +347,7 @@ export async function convertNoteToTask(
   const supabase = await createClient();
   const { data: created, error: insertErr } = await supabase
     .from('tasks')
-    .insert({ ...task, status: 'In Progress', priority: task.priority ?? 'Medium' })
+    .insert({ ...task, status: 'In Progress', priority: task.priority ?? 'Medium' } as never)
     .select('*')
     .single();
   if (insertErr) throw insertErr;
@@ -253,7 +361,7 @@ export async function convertNoteToTask(
 
 export type RecentItem = {
   id: string;
-  kind: 'task' | 'doc' | 'area';
+  kind: 'task';
   title: string;
   updated_at: string;
   href: string;
@@ -261,35 +369,19 @@ export type RecentItem = {
 
 export async function fetchRecentItems(_userId: string, limit = 6): Promise<RecentItem[]> {
   const supabase = await createClient();
-  const [{ data: tasks }, { data: docs }, { data: areas }] = await Promise.all([
-    supabase.from('tasks').select('id, name, updated_at').order('updated_at', { ascending: false }).limit(limit),
-    supabase.from('docs').select('id, title, updated_at').order('updated_at', { ascending: false }).limit(limit),
-    supabase.from('areas').select('id, name, updated_at').order('updated_at', { ascending: false }).limit(limit),
-  ]);
-  const items: RecentItem[] = [
-    ...((tasks ?? []) as { id: string; name: string; updated_at: string }[]).map((t) => ({
+  const { data: tasks } = await supabase
+    .from('tasks')
+    .select('id, name, created_at')
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  return ((tasks ?? []) as { id: string; name: string; created_at: string }[])
+    .map((t) => ({
       id: t.id,
       kind: 'task' as const,
       title: t.name,
-      updated_at: t.updated_at,
+      updated_at: t.created_at,
       href: `/tasks/${t.id}`,
-    })),
-    ...((docs ?? []) as { id: string; title: string; updated_at: string }[]).map((d) => ({
-      id: d.id,
-      kind: 'doc' as const,
-      title: d.title,
-      updated_at: d.updated_at,
-      href: `/docs/${d.id}`,
-    })),
-    ...((areas ?? []) as { id: string; name: string; updated_at: string }[]).map((a) => ({
-      id: a.id,
-      kind: 'area' as const,
-      title: a.name,
-      updated_at: a.updated_at,
-      href: `/areas/${a.id}`,
-    })),
-  ];
-  return items
+    }))
     .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
     .slice(0, limit);
 }

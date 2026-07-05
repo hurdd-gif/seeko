@@ -1,38 +1,60 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
-import { useSearchParams, useRouter, usePathname } from 'next/navigation';
-import { FileText, Lock, Pencil, Trash2, Plus, Search, Clock, ChevronDown, Presentation, Share2, XCircle, RotateCcw, Eye, Calendar, Loader2 } from 'lucide-react';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { useSearchParams, useRouter, usePathname } from '@/lib/react-router-adapters';
+import { FileText, Pencil, Trash2, Plus, Search, Clock, ChevronDown, Presentation, Share2, XCircle, RotateCcw, Eye, Calendar, Loader2, MoreHorizontal, Lock, Braces, Palette, PenTool, Clapperboard, Package, type LucideIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { Doc } from '@/lib/types';
 import type { Profile } from '@/lib/types';
 import { Dialog, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
+import { SidePanel } from '@/components/ui/side-panel';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
+import { dynamic } from '@/lib/react-router-adapters';
+import { TAB_PILL_SPRING } from '@/lib/motion';
 import { Stagger, StaggerItem } from '@/components/motion';
-import { LIGHT_INPUT, BTN_PRIMARY } from '@/components/dashboard/lightKit';
-import { DocEditor } from './DocEditor';
-import { DeckEditor } from './DeckEditor';
-import { DeckViewer } from './DeckViewer';
+import { BTN_PRIMARY, LIGHT_SIGNING_STATUS } from '@/components/dashboard/lightKit';
 import { DocDeleteConfirm } from './DocDeleteConfirm';
 import { DocContent } from './DocContent';
 import { DocShareDialog } from './DocShareDialog';
 import { DatePicker } from '@/components/ui/date-picker';
 import { useHaptics } from '@/components/HapticsProvider';
 
-/** Strip HTML tags and decode common entities for plain-text previews */
-const _decodeEl = typeof document !== 'undefined' ? document.createElement('textarea') : null;
-function stripHtml(html: string): string {
-  const text = html.replace(/<[^>]*>/g, '');
-  if (_decodeEl) { _decodeEl.innerHTML = text; return _decodeEl.value; }
-  return text.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, ' ');
-}
+/* ─────────────────────────────────────────────────────────
+ * Code-split the heavy editor/viewer surfaces. DocEditor and
+ * DeckEditor pull in TipTap/ProseMirror; DeckViewer pulls in
+ * its own slide machinery. All three are only mounted behind
+ * user interaction (Edit/New, or opening a doc) and live behind
+ * auth, so we lazy-load their JS and skip SSR — they are never
+ * present in the server-rendered or first-paint client tree
+ * (deep-link `?doc=` opens the viewer only post-mount via a
+ * client effect, never on initial render).
+ * ───────────────────────────────────────────────────────── */
+const EditorFallback = () => (
+  <div className="flex items-center justify-center py-16">
+    <Loader2 className="size-5 animate-spin text-[#9a9a9a]" />
+  </div>
+);
+
+const DocEditor = dynamic(() => import('./DocEditor').then(m => m.DocEditor), {
+  loading: EditorFallback,
+  ssr: false,
+});
+const DeckEditor = dynamic(() => import('./DeckEditor').then(m => m.DeckEditor), {
+  loading: EditorFallback,
+  ssr: false,
+});
+const DeckViewer = dynamic(() => import('./DeckViewer').then(m => m.DeckViewer), {
+  loading: EditorFallback,
+  ssr: false,
+});
 
 const DEPARTMENTS = ['Coding', 'Visual Art', 'UI/UX', 'Animation', 'Asset Creation'] as const;
 
@@ -49,7 +71,7 @@ function timeAgo(dateStr: string | undefined | null): string {
   if (hours < 24) return `${hours}h ago`;
   const days = Math.floor(hours / 24);
   if (days < 7) return `${days}d ago`;
-  return new Date(dateStr).toLocaleDateString();
+  return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
 function timeUntil(dateStr: string | undefined | null): string {
@@ -73,38 +95,80 @@ function isRecentlyUpdated(doc: Doc): boolean {
 /* ─────────────────────────────────────────────────────────
  * ANIMATION STORYBOARD
  *
- *    0ms   list container visible
- *   70ms   stagger between each doc row (fade + rise)
- *  Hover   row tints (hover:bg-black/[0.02])
+ *    0ms   ledger card visible
+ *   50ms   stagger between each doc row (fade + rise)
+ *  Hover   row tints; trailing "…" menu fades in (opacity only)
  * ───────────────────────────────────────────────────────── */
 
 const LIST = {
-  staggerMs: 70,   // ms between each row
+  staggerMs: 50,   // ms between each row
   delayMs:   0,    // ms before first row
 };
 
 const TAB_ORDER: Record<string, number> = { docs: 0, decks: 1, shared: 2 };
 
+/* Tab continuity: outgoing and incoming content overlap (popLayout) and
+   cross-slide with a light blur so the swap reads as one motion, not two. */
 const tabSlideVariants = {
-  enter: (d: number) => ({ opacity: 0, x: d * 40 }),
-  active: { opacity: 1, x: 0 },
-  exit: (d: number) => ({ opacity: 0, x: d * -40 }),
+  enter: (d: number) => ({ opacity: 0, x: d * 32, filter: 'blur(2px)' }),
+  active: { opacity: 1, x: 0, filter: 'blur(0px)' },
+  exit: (d: number) => ({ opacity: 0, x: d * -32, filter: 'blur(2px)' }),
+};
+
+const tabFadeVariants = {
+  enter: { opacity: 0 },
+  active: { opacity: 1 },
+  exit: { opacity: 0 },
 };
 
 const tabSlideTransition = {
-  type: 'spring' as const,
-  stiffness: 400,
-  damping: 32,
-  opacity: { duration: 0.15 },
+  duration: 0.26,
+  ease: [0.77, 0, 0.175, 1] as const,
 };
 
-/* Light status chips — bg tint + restrained ink (no borders). */
-const SHARE_STATUS_COLORS: Record<string, string> = {
-  pending: 'bg-[#f5a623]/10 text-[#b8801a]',
-  verified: 'bg-[#0d7aff]/10 text-[#0d7aff]',
-  expired: 'bg-black/[0.04] text-[#9a9a9a]',
-  revoked: 'bg-[#d4503e]/10 text-[#d4503e]',
+/* Document glyphs relay the owning team. Color is hover-revealed: `hoverInk`
+   colors the glyph and `glow` tints the glass overlay when the row is hovered. */
+const DEPT_DOC_ICON: Record<string, { Icon: LucideIcon; ink: string; hoverInk: string; glow: string }> = {
+  'Coding':         { Icon: Braces,       ink: 'text-[#0d7aff]', hoverInk: 'group-hover:text-[#0d7aff] group-focus-visible:text-[#0d7aff]', glow: '#0d7aff' },
+  'Visual Art':     { Icon: Palette,      ink: 'text-[#4757e6]', hoverInk: 'group-hover:text-[#4757e6] group-focus-visible:text-[#4757e6]', glow: '#4757e6' },
+  'UI/UX':          { Icon: PenTool,      ink: 'text-[#7c3aed]', hoverInk: 'group-hover:text-[#7c3aed] group-focus-visible:text-[#7c3aed]', glow: '#7c3aed' },
+  'Animation':      { Icon: Clapperboard, ink: 'text-[#b45309]', hoverInk: 'group-hover:text-[#b45309] group-focus-visible:text-[#b45309]', glow: '#f59e0b' },
+  'Asset Creation': { Icon: Package,      ink: 'text-[#e0447e]', hoverInk: 'group-hover:text-[#e0447e] group-focus-visible:text-[#e0447e]', glow: '#e0447e' },
 };
+
+/* Glass-chip icon tile. On a flat light canvas there is nothing behind the
+   chip to refract, so the color lives INSIDE the glass: a tinted body the
+   dept hue soaks through, a defined crescent glare across the top (the
+   light-catch that makes it read as glass rather than a gradient), grain,
+   and a bright inner ring + dense tinted bottom edge (pane thickness).
+   No drop shadow — the chip sits flush on the canvas (user call). */
+const GLASS_TILE =
+  'relative flex shrink-0 items-center justify-center rounded-[12px]';
+
+const GLASS_NOISE =
+  `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='96' height='96' filter='url(%23n)' opacity='0.06'/%3E%3C/svg%3E")`;
+
+function glassTileStyle(glow?: string): React.CSSProperties {
+  const tintTop = glow ? `${glow}1c` : 'rgba(0,0,0,0.02)';
+  const tintBottom = glow ? `${glow}40` : 'rgba(0,0,0,0.05)';
+  return {
+    background: [
+      GLASS_NOISE,
+      'radial-gradient(130% 95% at 50% -35%, rgba(255,255,255,0.8) 38%, rgba(255,255,255,0.06) 68%, rgba(255,255,255,0) 75%)',
+      `linear-gradient(180deg, ${tintTop}, ${tintBottom})`,
+    ].join(', '),
+    boxShadow: [
+      'inset 0 1px 1px rgba(255,255,255,0.9)',
+      'inset 0 0 0 1px rgba(255,255,255,0.45)',
+      glow ? `inset 0 -2px 3px ${glow}52` : 'inset 0 -2px 3px rgba(0,0,0,0.05)',
+      glow ? `0 0 0 1px ${glow}47` : '0 0 0 1px rgba(0,0,0,0.07)',
+    ].join(', '),
+  };
+}
+
+/* Icon-button used across the Shared table rows */
+const ROW_ICON_BTN =
+  'flex size-8 items-center justify-center rounded-[10px] text-[#8a8a8a] transition-[color,background-color,transform] duration-150 hover:bg-black/[0.045] hover:text-[#111] active:scale-[0.97]';
 
 /* ─────────────────────────────────────────────────────────
  * FilterPill (light — sentence-case, no uppercase eyebrow)
@@ -126,26 +190,22 @@ function FilterPill({
       <DropdownMenuTrigger asChild>
         <button
           className={cn(
-            'inline-flex h-9 items-center gap-1.5 rounded-full border px-4 text-[13px] font-medium transition-[color,background-color,border-color] duration-150',
+            'inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full pl-4 pr-3 text-[13px] font-medium transition-[color,background-color] duration-150',
             value !== 'all'
-              ? 'border-black/15 bg-black/[0.04] text-[#111]'
-              : 'border-black/[0.08] text-[#808080] hover:text-[#111] hover:border-black/15'
+              ? 'bg-black/[0.06] text-[#111]'
+              : 'bg-black/[0.035] text-[#808080] hover:bg-black/[0.055] hover:text-[#111]'
           )}
         >
           {value !== 'all' ? options.find(o => o.value === value)?.label ?? label : label}
           <ChevronDown className="size-3 text-[#9a9a9a]" />
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent
-        align="start"
-        className="border-black/[0.06] bg-white/95 text-[#111] shadow-seeko-pop"
-      >
+      <DropdownMenuContent light align="end" className="min-w-[176px]">
         {options.map(opt => (
           <DropdownMenuItem
             key={opt.value}
             onClick={() => onChange(opt.value)}
             selected={opt.value === value}
-            className="text-[13px] text-[#505050] hover:bg-black/[0.04] hover:text-[#111] focus:bg-black/[0.04] focus:text-[#111]"
           >
             {opt.label}
           </DropdownMenuItem>
@@ -180,6 +240,7 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, is
   const tabParam = searchParams.get('tab');
   const viewMode: ViewMode = VALID_TABS.includes(tabParam as ViewMode) ? (tabParam as ViewMode) : 'docs';
   const [tabDirection, setTabDirection] = useState(1);
+  const reduce = useReducedMotion();
 
   const setViewMode = (mode: ViewMode) => {
     setTabDirection(TAB_ORDER[mode] > TAB_ORDER[viewMode] ? 1 : -1);
@@ -194,6 +255,10 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, is
   };
 
   const [selected, setSelected] = useState<Doc | null>(null);
+  // Last non-null selection — keeps the read panel populated during its exit slide.
+  const lastSelectedRef = useRef<Doc | null>(null);
+  if (selected) lastSelectedRef.current = selected;
+  const readDoc = selected ?? lastSelectedRef.current;
   const [editingDoc, setEditingDoc] = useState<Doc | 'new' | null>(null);
   const [editingDeck, setEditingDeck] = useState<Doc | 'new' | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -230,33 +295,6 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, is
     if (departmentFilter === 'all') return bySearch;
     return bySearch.filter(d => d.restricted_department?.includes(departmentFilter));
   }, [docs, viewMode, searchQuery, departmentFilter, isAdmin, userDepartment, currentUserId]);
-
-  /** Group docs: unlocked by department, locked collected at end */
-  const grouped = useMemo(() => {
-    const unlocked: Doc[] = [];
-    const locked: Doc[] = [];
-    for (const d of sortedDocs) {
-      if (isLocked(d)) locked.push(d);
-      else unlocked.push(d);
-    }
-
-    // Group unlocked docs by primary department (or "Shared" if none)
-    const groups = new Map<string, Doc[]>();
-    for (const d of unlocked) {
-      const dept = d.restricted_department?.length ? d.restricted_department[0] : 'Shared';
-      if (!groups.has(dept)) groups.set(dept, []);
-      groups.get(dept)!.push(d);
-    }
-
-    // Sort: Shared first, then alphabetical
-    const sorted = Array.from(groups.entries()).sort(([a], [b]) => {
-      if (a === 'Shared') return -1;
-      if (b === 'Shared') return 1;
-      return a.localeCompare(b);
-    });
-
-    return { groups: sorted, locked };
-  }, [sortedDocs]);
 
   useEffect(() => {
     const docId = searchParams.get('doc');
@@ -347,25 +385,31 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, is
 
   const handleDelete = (id: string) => {
     setDocs(prev => prev.filter(d => d.id !== id));
+    // If the deleted doc is open in the read panel, slide it closed too.
+    setSelected(prev => (prev?.id === id ? null : prev));
     setDeletingId(null);
     toast.success('Document deleted');
     trigger('success');
   };
 
-  /* ── Render: unlocked doc/deck row (inside a divide-y group card) ── */
+  /* ── Render: one two-line row inside the ledger card.
+   * The whole row opens the read dialog (Quartz/Linear pattern);
+   * admin actions live in a hover/focus-revealed "…" menu so the
+   * resting state carries zero button chrome. ── */
   const renderDocRow = (doc: Doc) => {
     const recent = isRecentlyUpdated(doc);
     const isDeck = doc.type === 'deck';
-    const hasThumb = isDeck && !!doc.slides?.[0];
-    const handleEdit = (e: React.MouseEvent) => {
-      e.stopPropagation();
-      if (isDeck) setEditingDeck(doc);
-      else setEditingDoc(doc);
-    };
+    const thumb = isDeck ? doc.slides?.[0] : undefined;
+    const locked = isLocked(doc);
+    const updated = doc.updated_at ?? doc.created_at;
+    const restrictedTo = doc.restricted_department ?? [];
+    const deptIcon = !isDeck && !locked ? DEPT_DOC_ICON[restrictedTo[0] ?? ''] : undefined;
+    const DocGlyph = deptIcon?.Icon ?? FileText;
+    const openDoc = () => { if (!locked) setSelected(doc); };
     return (
       <StaggerItem key={doc.id}>
         {deletingId === doc.id ? (
-          <div className="px-4 py-3">
+          <div className="px-5 py-3">
             <DocDeleteConfirm
               docId={doc.id}
               docTitle={doc.title}
@@ -375,440 +419,498 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, is
           </div>
         ) : (
           <div
-            role="button"
-            tabIndex={0}
-            onClick={() => setSelected(doc)}
-            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelected(doc); } }}
-            className="group flex cursor-pointer items-start gap-3.5 px-4 py-3.5 transition-colors duration-150 hover:bg-black/[0.02] focus-visible:bg-black/[0.02] focus-visible:outline-none"
+            role={locked ? undefined : 'button'}
+            tabIndex={locked ? undefined : 0}
+            onClick={openDoc}
+            onKeyDown={(e) => { if (!locked && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); openDoc(); } }}
+            className={cn(
+              'group flex items-center gap-4 rounded-[14px] px-4 py-3.5 transition-[background-color] duration-150 focus-visible:outline-none',
+              locked
+                ? 'cursor-default'
+                : 'cursor-pointer hover:bg-black/[0.025] active:bg-black/[0.045] focus-visible:bg-black/[0.035]',
+            )}
           >
-            {/* Left: deck thumbnail or icon container */}
-            {hasThumb ? (
-              <div className="relative h-10 w-[68px] shrink-0 overflow-hidden rounded-md bg-[#f4f4f4] outline outline-1 -outline-offset-1 outline-black/[0.06]">
-                <img src={doc.slides![0].url} alt="" className="h-full w-full object-cover" />
-                {recent && (
-                  <span className="absolute right-1 top-1 size-2 rounded-full bg-[#0d7aff] ring-2 ring-white" />
+            {thumb ? (
+              <div className="relative shrink-0">
+                {/* back sheet — peeks below multi-slide decks so they read as a stack */}
+                {(doc.slides?.length ?? 0) > 1 && (
+                  <div className="absolute inset-x-1.5 -bottom-[3px] h-full rounded-[10px] bg-white shadow-[0_0_0_1px_rgba(0,0,0,0.05)]" />
                 )}
+                <div className="relative h-14 w-[100px] overflow-hidden rounded-[10px] bg-white shadow-[0_0_0_1px_rgba(0,0,0,0.07),0_1px_3px_rgba(0,0,0,0.06)]">
+                  <img
+                    src={thumb.thumbnail_url ?? thumb.url}
+                    alt=""
+                    width={100}
+                    height={56}
+                    loading="lazy"
+                    decoding="async"
+                    className="h-full w-full object-cover transition-transform duration-200 ease-out group-hover:scale-[1.04]"
+                  />
+                  {recent && (
+                    <span className="absolute right-1 top-1 size-2 rounded-full bg-[#0d7aff] ring-2 ring-white" />
+                  )}
+                </div>
               </div>
             ) : (
-              <div className="relative flex size-9 shrink-0 items-center justify-center rounded-md bg-[#f4f4f4]">
-                {isDeck ? <Presentation className="size-4 text-[#808080]" /> : <FileText className="size-4 text-[#808080]" />}
+              <div
+                className={cn(GLASS_TILE, 'size-10', locked && 'opacity-60')}
+                style={glassTileStyle(undefined)}
+              >
+                {/* Tiles rest uniform-neutral; the dept tint lives on an overlay
+                    that fades in on row hover (gradients can't transition, opacity can). */}
+                {!locked && deptIcon && (
+                  <span
+                    aria-hidden
+                    className="absolute inset-0 rounded-[12px] opacity-0 transition-opacity duration-200 ease-out group-hover:opacity-100 group-focus-visible:opacity-100"
+                    style={glassTileStyle(deptIcon.glow)}
+                  />
+                )}
+                {locked
+                  ? <Lock className="size-[15px] text-[#9a9a9a]" />
+                  : isDeck
+                    ? <Presentation className="relative size-4 text-[#8a8a8a]" />
+                    : (
+                      <DocGlyph
+                        className={cn(
+                          'relative size-4 text-[#8a8a8a] transition-colors duration-200 ease-out',
+                          deptIcon?.hoverInk,
+                        )}
+                      />
+                    )}
                 {recent && (
                   <span className="absolute -right-0.5 -top-0.5 size-2 rounded-full bg-[#0d7aff] ring-2 ring-white" />
                 )}
               </div>
             )}
 
-            {/* Right: title + meta */}
-            <div className="flex min-w-0 flex-1 flex-col gap-1">
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex min-w-0 flex-wrap items-center gap-2">
-                  <p className="truncate text-[14px] font-medium text-[#111]">{doc.title}</p>
-                  {isDeck && doc.slides && (
-                    <span className="font-mono text-[10px] tabular-nums text-[#b0b0b0]">{doc.slides.length} slides</span>
-                  )}
-                  {recent && (
-                    <span className="shrink-0 rounded-full bg-[#0d7aff]/10 px-2 py-0.5 text-[10px] font-medium text-[#0d7aff]">Updated</span>
-                  )}
-                  {doc.restricted_department?.map(dept => (
-                    <span key={dept} className="shrink-0 rounded-full bg-black/[0.04] px-2 py-0.5 text-[11px] font-medium text-[#808080]">{dept}</span>
-                  ))}
-                </div>
-                <div className="flex shrink-0 items-center gap-1.5">
-                  {(doc.updated_at || doc.created_at) && (
-                    <span className="hidden text-[11px] tabular-nums text-[#9a9a9a] sm:inline">
-                      {timeAgo(doc.updated_at ?? doc.created_at!)}
-                    </span>
-                  )}
-                  {isAdmin && (
-                    <>
-                      <button
-                        type="button"
-                        title="Edit"
-                        onClick={handleEdit}
-                        className="flex size-7 items-center justify-center rounded-md text-[#9a9a9a] opacity-0 transition-[color,background-color,opacity] duration-150 hover:bg-black/[0.04] hover:text-[#111] group-hover:opacity-100"
-                      >
-                        <Pencil className="size-3.5" />
-                      </button>
-                      <button
-                        type="button"
-                        title="Delete"
-                        onClick={(e) => { e.stopPropagation(); setDeletingId(doc.id); }}
-                        className="flex size-7 items-center justify-center rounded-md text-[#9a9a9a] opacity-0 transition-[color,background-color,opacity] duration-150 hover:bg-[#d4503e]/10 hover:text-[#d4503e] group-hover:opacity-100"
-                      >
-                        <Trash2 className="size-3.5" />
-                      </button>
-                    </>
-                  )}
-                </div>
+            <div className="min-w-0 flex-1">
+              <p className={cn('truncate text-[14px] font-medium', locked ? 'text-[#9a9a9a]' : 'text-[#111]')}>
+                {doc.title}
+              </p>
+              <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[12.5px] text-[#969696]">
+                <span>{isDeck ? (doc.slides?.length ? `Deck · ${doc.slides.length} ${doc.slides.length === 1 ? 'slide' : 'slides'}` : 'Deck') : 'Document'}</span>
+                {locked ? (
+                  <>
+                    <span className="text-[#d0d0d0]">·</span>
+                    <span>Restricted</span>
+                  </>
+                ) : restrictedTo.length > 0 ? (
+                  <>
+                    <span className="text-[#d0d0d0]">·</span>
+                    <span className="truncate">{restrictedTo[0]}</span>
+                  </>
+                ) : null}
               </div>
-              {isAdmin && doc.granted_user_ids?.length ? (
-                <p className="text-[11px] text-[#9a9a9a]">
-                  Also granted: {team.filter(p => doc.granted_user_ids?.includes(p.id)).map(p => p.display_name ?? 'Unknown').join(', ')}
-                </p>
-              ) : null}
-              {doc.content ? (
-                <p className={cn('text-[13px] leading-relaxed text-[#808080]', isDeck ? 'line-clamp-1' : 'line-clamp-2')}>
-                  {stripHtml(doc.content).slice(0, isDeck ? 100 : 200)}
-                </p>
-              ) : null}
             </div>
+
+            <span className="shrink-0 text-[12px] tabular-nums text-[#a0a0a0]">
+              {updated ? timeAgo(updated) : ''}
+            </span>
+
+            {isAdmin && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label={`Actions for ${doc.title}`}
+                    onClick={(e) => e.stopPropagation()}
+                    className={cn(
+                      ROW_ICON_BTN,
+                      'shrink-0 opacity-0 transition-[opacity,color,background-color,transform] group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100',
+                    )}
+                  >
+                    <MoreHorizontal className="size-4" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent light align="end" className="min-w-[152px]">
+                  <DropdownMenuItem onClick={() => setSelected(doc)}>
+                    <Eye className="size-3.5 text-[#9a9a9a]" />
+                    Open
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => isDeck ? setEditingDeck(doc) : setEditingDoc(doc)}>
+                    <Pencil className="size-3.5 text-[#9a9a9a]" />
+                    Edit
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setShareDoc(doc)}>
+                    <Share2 className="size-3.5 text-[#9a9a9a]" />
+                    Share
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => setDeletingId(doc.id)}
+                    className="text-[#b4432f] hover:bg-[#d4503e]/[0.08] hover:text-[#b4432f] focus:bg-[#d4503e]/[0.08] focus:text-[#b4432f]"
+                  >
+                    <Trash2 className="size-3.5" />
+                    Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
         )}
       </StaggerItem>
     );
   };
 
-  const docCount = docs.filter(d => d.type !== 'deck').length;
-  const deckCount = docs.filter(d => d.type === 'deck').length;
   const sharedCount = sharedLinks.length;
+  const baseModeCount = docs.filter(d => viewMode === 'decks' ? d.type === 'deck' : d.type !== 'deck').length;
 
-  /* Light segmented tab — active chip is white-on-tint with shadow-seeko. */
-  const tabBtn = (active: boolean) =>
-    cn(
-      'rounded-full px-3.5 h-8 text-[13px] font-medium transition-[color,background-color,box-shadow] duration-150',
-      active ? 'bg-white text-[#111] shadow-seeko' : 'text-[#808080] hover:text-[#111]'
-    );
+  /* Light segmented tab. The active chip is a single shared-layout element
+     (layoutId) that springs between tabs instead of cross-fading per-button —
+     it auto-resizes to each tab's width as it slides. */
+  const TABS = [
+    { key: 'docs' as const, label: 'Documents' },
+    { key: 'decks' as const, label: 'Decks' },
+    ...(isAdmin ? [{ key: 'shared' as const, label: 'Shared' }] : []),
+  ];
+  const pillTransition = reduce ? { duration: 0 } : TAB_PILL_SPRING;
 
   return (
     <>
-      {/* Tab toggle + New button */}
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <div className="inline-flex items-center gap-1 rounded-full bg-black/[0.04] p-1">
-          <button type="button" onClick={() => setViewMode('docs')} className={tabBtn(viewMode === 'docs')}>
-            Documents{docCount > 0 && <span className="ml-1 tabular-nums text-[#9a9a9a]">{docCount}</span>}
-          </button>
-          <button type="button" onClick={() => setViewMode('decks')} className={tabBtn(viewMode === 'decks')}>
-            Decks{deckCount > 0 && <span className="ml-1 tabular-nums text-[#9a9a9a]">{deckCount}</span>}
-          </button>
-          {isAdmin && (
-            <button type="button" onClick={() => setViewMode('shared')} className={tabBtn(viewMode === 'shared')}>
-              Shared{sharedCount > 0 && <span className="ml-1 tabular-nums text-[#9a9a9a]">{sharedCount}</span>}
-            </button>
-          )}
-        </div>
-        {isAdmin && viewMode !== 'shared' && (
-          <button
-            type="button"
-            aria-label={viewMode === 'decks' ? 'New Deck' : 'New Document'}
-            onClick={() => viewMode === 'decks' ? setEditingDeck('new') : setEditingDoc('new')}
-            className={cn(BTN_PRIMARY, 'inline-flex items-center gap-1.5 pl-3.5 pr-4')}
-          >
-            <Plus className="size-3.5" />
-            <span className="hidden sm:inline">{viewMode === 'decks' ? 'New Deck' : 'New Document'}</span>
-          </button>
-        )}
-      </div>
-
-      {/* ── Tab content with directional slide ────────────── */}
-      <AnimatePresence mode="wait" custom={tabDirection}>
-      {viewMode === 'shared' && isAdmin && (
-        <motion.div
-          key="shared"
-          custom={tabDirection}
-          variants={tabSlideVariants}
-          initial="enter"
-          animate="active"
-          exit="exit"
-          transition={tabSlideTransition}
-          className="flex flex-col gap-2"
-        >
-          {sharedLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="size-5 animate-spin rounded-full border-2 border-black/10 border-t-[#808080]" />
-            </div>
-          ) : sharedLinks.length === 0 ? (
-            <p className="py-8 text-center text-[13px] text-[#808080]">No shared links yet</p>
-          ) : (
-            <>
-              {(sharedExpanded ? sharedLinks : sharedLinks.slice(0, 3)).map(link => (
-                  <div key={link.id} className="overflow-hidden rounded-xl bg-white shadow-seeko">
-                    <div className="flex items-center gap-3 p-3">
-                      <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-[#f4f4f4]">
-                        {link.doc_type === 'deck' ? (
-                          <Presentation className="size-3.5 text-[#808080]" />
-                        ) : (
-                          <FileText className="size-3.5 text-[#808080]" />
-                        )}
-                      </div>
-                      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                        <div className="flex items-center gap-2">
-                          <p className="truncate text-sm font-medium text-[#111]">{link.doc_title ?? 'Untitled'}</p>
-                          <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-medium capitalize', SHARE_STATUS_COLORS[link.status] ?? SHARE_STATUS_COLORS.expired)}>
-                            {link.status}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-3 text-[11px] text-[#9a9a9a]">
-                          <span className="truncate">{link.recipient_email}</span>
-                          <span className="flex shrink-0 items-center gap-1 tabular-nums">
-                            <Eye className="size-3" />
-                            {link.view_count ?? 0}
-                          </span>
-                          <span className="shrink-0 tabular-nums">{timeAgo(link.created_at)}</span>
-                          {link.expires_at && (link.status === 'pending' || link.status === 'verified') && (
-                            <span className="flex shrink-0 items-center gap-1 tabular-nums">
-                              <Clock className="size-3" />
-                              {timeUntil(link.expires_at)}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex shrink-0 items-center gap-1.5">
-                        {(link.status === 'pending' || link.status === 'verified') && (
-                          <button
-                            type="button"
-                            title="Revoke"
-                            onClick={() => handleRevoke(link.id)}
-                            className="flex size-7 items-center justify-center rounded-md text-[#9a9a9a] transition-[color,background-color] duration-150 hover:bg-[#d4503e]/10 hover:text-[#d4503e]"
-                          >
-                            <XCircle className="size-3.5" />
-                          </button>
-                        )}
-                        {link.status === 'pending' && (
-                          <button
-                            type="button"
-                            title="Resend"
-                            onClick={() => handleResend(link.id)}
-                            className="flex size-7 items-center justify-center rounded-md text-[#9a9a9a] transition-[color,background-color] duration-150 hover:bg-black/[0.04] hover:text-[#111]"
-                          >
-                            <RotateCcw className="size-3.5" />
-                          </button>
-                        )}
-                        {(link.status === 'pending' || link.status === 'verified') && (
-                          <button
-                            type="button"
-                            title="Edit deadline"
-                            onClick={() => {
-                              const current = link.expires_at ? new Date(link.expires_at).toISOString().split('T')[0] : '';
-                              setDeadlineDate(current);
-                              setEditingDeadlineId(editingDeadlineId === link.id ? null : link.id);
-                            }}
-                            className="flex size-7 items-center justify-center rounded-md text-[#9a9a9a] transition-[color,background-color] duration-150 hover:bg-black/[0.04] hover:text-[#111]"
-                          >
-                            <Calendar className="size-3.5" />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                    <AnimatePresence>
-                      {editingDeadlineId === link.id && (
-                        <motion.div
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: 'auto' }}
-                          exit={{ opacity: 0, height: 0 }}
-                          transition={{ type: 'spring', visualDuration: 0.3, bounce: 0 }}
-                          className="overflow-hidden border-t border-black/[0.06]"
-                        >
-                          <div className="flex flex-col gap-2 p-3">
-                            <p className="text-xs text-[#808080]">
-                              Current expiry: {link.expires_at ? new Date(link.expires_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'None'}
-                            </p>
-                            <DatePicker
-                              value={deadlineDate}
-                              onChange={setDeadlineDate}
-                              minDate={(() => { const d = new Date(); d.setDate(d.getDate() + 1); d.setHours(0,0,0,0); return d; })()}
-                              dateLabel="New deadline"
-                            />
-                            <div className="mt-1 flex items-center gap-2">
-                              <button
-                                type="button"
-                                disabled={!deadlineDate || deadlineLoading}
-                                onClick={() => handleUpdateDeadline(link.id, deadlineDate)}
-                                className={cn(BTN_PRIMARY, 'inline-flex items-center gap-1.5 disabled:opacity-50')}
-                              >
-                                {deadlineLoading ? <Loader2 className="size-3 animate-spin" /> : null}
-                                Update
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => { setEditingDeadlineId(null); setDeadlineDate(''); }}
-                                className="rounded-full px-4 h-9 text-[13px] font-medium text-[#808080] transition-colors duration-150 hover:text-[#111]"
-                              >
-                                Cancel
-                              </button>
-                            </div>
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
-              ))}
-              {sharedLinks.length > 3 && (
+      <div className="relative">
+        {/* ── Toolbar row — tabs left, search + filter + create right, all on canvas ── */}
+        <div className="flex flex-wrap items-center gap-2.5">
+          <div className="inline-flex items-center gap-1 rounded-full bg-black/[0.04] p-1">
+            {TABS.map(({ key, label }) => {
+              const active = viewMode === key;
+              return (
                 <button
+                  key={key}
                   type="button"
-                  onClick={() => setSharedExpanded(prev => !prev)}
-                  className="py-1.5 text-[13px] text-[#808080] transition-colors duration-150 hover:text-[#111]"
+                  data-testid={`${label} tab`}
+                  onClick={() => setViewMode(key)}
+                  className={cn(
+                    'relative inline-flex h-8 items-center justify-center rounded-full px-3.5 text-[13px] font-medium transition-[color,transform] duration-150 active:scale-[0.97]',
+                    active ? 'text-[#111]' : 'text-[#808080] hover:text-[#111]'
+                  )}
                 >
-                  {sharedExpanded ? 'Show less' : `Show ${sharedLinks.length - 3} more`}
+                  {active && (
+                    <motion.span
+                      layoutId="docsTabPill"
+                      initial={false}
+                      transition={pillTransition}
+                      className="absolute inset-0 rounded-full bg-white shadow-seeko"
+                    />
+                  )}
+                  <span className="relative z-10">{label}</span>
                 </button>
-              )}
-            </>
-          )}
-        </motion.div>
-      )}
+              );
+            })}
+          </div>
 
-      {viewMode !== 'shared' && (sortedDocs.length === 0 && docs.filter(d => viewMode === 'decks' ? d.type === 'deck' : d.type !== 'deck').length === 0 ? (
-        <motion.div
-          key={viewMode}
-          custom={tabDirection}
-          variants={tabSlideVariants}
-          initial="enter"
-          animate="active"
-          exit="exit"
-          transition={tabSlideTransition}
-        >
-          {/* Empty state — custom light (shared EmptyState bakes near-white text) */}
-          <div className="flex flex-col items-center gap-3 rounded-2xl bg-white px-8 py-14 text-center shadow-seeko">
-            <div className="flex size-12 items-center justify-center rounded-full bg-[#0d7aff]/10">
-              <FileText className="size-5 text-[#0d7aff]" />
-            </div>
-            <div className="flex flex-col gap-1">
-              <p className="text-[15px] font-semibold text-[#111]">
-                {viewMode === 'decks' ? 'No decks yet' : 'No documents yet'}
-              </p>
-              <p className="max-w-sm text-[13px] text-[#808080]">
-                {isAdmin
-                  ? (viewMode === 'decks'
-                    ? 'Upload a PDF to create your first deck.'
-                    : 'Create your first document to share specs and resources with the team.')
-                  : (viewMode === 'decks'
-                    ? 'Decks will appear here when the team uploads them.'
-                    : 'Your lead can add team documents. Check back later or ask them to create one.')}
-              </p>
-            </div>
+          <div className="ml-auto flex items-center gap-2">
+            {viewMode !== 'shared' && (
+              <>
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-3.5 top-1/2 size-3.5 -translate-y-1/2 text-[#9a9a9a]" />
+                  <input
+                    type="search"
+                    placeholder={viewMode === 'decks' ? 'Search decks...' : 'Search documents...'}
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    className="h-9 w-[210px] rounded-full bg-black/[0.035] pl-9 pr-4 text-[13px] text-[#2a2a2a] outline-none transition-[background-color] duration-150 placeholder:text-[#9a9a9a] hover:bg-black/[0.055] focus:bg-black/[0.055] focus-visible:ring-2 focus-visible:ring-[#0d7aff]/40 max-sm:w-[150px]"
+                  />
+                </div>
+                <FilterPill
+                  label="Department"
+                  value={departmentFilter}
+                  options={[
+                    { value: 'all', label: 'All departments' },
+                    ...DEPARTMENTS.map(d => ({ value: d, label: d })),
+                  ]}
+                  onChange={setDepartmentFilter}
+                />
+              </>
+            )}
             {isAdmin && (
-              <button
-                type="button"
-                onClick={() => viewMode === 'decks' ? setEditingDeck('new') : setEditingDoc('new')}
-                className={cn(BTN_PRIMARY, 'mt-1 inline-flex items-center gap-1.5 pl-3.5 pr-4')}
-              >
-                <Plus className="size-3.5" />
-                {viewMode === 'decks' ? 'Upload a deck' : 'Create your first document'}
-              </button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    className={cn(BTN_PRIMARY, 'inline-flex shrink-0 items-center gap-1.5 pl-3.5')}
+                  >
+                    <Plus className="size-3.5" />
+                    New
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent light align="end" className="min-w-[152px]">
+                  <DropdownMenuItem onClick={() => setEditingDoc('new')}>
+                    <FileText className="size-3.5 text-[#9a9a9a]" />
+                    Document
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setEditingDeck('new')}>
+                    <Presentation className="size-3.5 text-[#9a9a9a]" />
+                    Deck
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
           </div>
-        </motion.div>
-      ) : (
-        <motion.div
-          key={viewMode}
-          custom={tabDirection}
-          variants={tabSlideVariants}
-          initial="enter"
-          animate="active"
-          exit="exit"
-          transition={tabSlideTransition}
-        >
-          {/* Search + filter row */}
-          <div className="mb-5 flex flex-wrap items-center gap-2">
-            <div className="relative min-w-[200px] flex-1">
-              <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-[#9a9a9a]" />
-              <input
-                type="search"
-                placeholder={viewMode === 'decks' ? 'Search decks…' : 'Search documents…'}
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                className={cn(LIGHT_INPUT, 'h-9 w-full pl-9 pr-3 text-[13px] outline-none')}
-              />
-            </div>
-            <FilterPill
-              label="Department"
-              value={departmentFilter}
-              options={[
-                { value: 'all', label: 'All' },
-                ...DEPARTMENTS.map(d => ({ value: d, label: d })),
-              ]}
-              onChange={setDepartmentFilter}
-            />
-          </div>
+        </div>
 
-          {sortedDocs.length === 0 ? (
-            <p className="py-8 text-center text-[13px] text-[#808080]">
-              No documents match your search or filter.
-            </p>
-          ) : (
-            <div className="flex flex-col gap-7">
-              {/* Grouped unlocked docs — one white card per department, divide-y rows */}
-              {grouped.groups.map(([dept, deptDocs]) => (
-                <div key={dept}>
-                  <div className="mb-2.5 flex items-center gap-2 px-1">
-                    <span className="text-[13px] font-medium text-[#808080]">{dept}</span>
-                    <span className="text-[12px] tabular-nums text-[#9a9a9a]">{deptDocs.length}</span>
-                  </div>
-                  <section className="overflow-hidden rounded-2xl bg-white shadow-seeko">
-                    <Stagger
-                      className="divide-y divide-black/[0.06]"
-                      staggerMs={LIST.staggerMs / 1000}
-                      delayMs={LIST.delayMs / 1000}
-                    >
-                      {deptDocs.map(renderDocRow)}
-                    </Stagger>
-                  </section>
-                </div>
-              ))}
-
-              {/* Condensed locked docs */}
-              {grouped.locked.length > 0 && (
+        {/* ── Content — one white ledger card per tab ── */}
+        <AnimatePresence mode="popLayout" custom={tabDirection} initial={false}>
+          {viewMode === 'shared' && isAdmin && (
+            <motion.div
+              key="shared"
+              custom={tabDirection}
+              variants={reduce ? tabFadeVariants : tabSlideVariants}
+              initial="enter"
+              animate="active"
+              exit="exit"
+              transition={tabSlideTransition}
+              className="mt-4 rounded-[20px] bg-white p-5 shadow-seeko"
+            >
+              <div className="mb-3 flex items-center justify-between gap-3">
                 <div>
-                  <div className="mb-2.5 flex items-center gap-2 px-1">
-                    <span className="text-[13px] font-medium text-[#9a9a9a]">Restricted</span>
-                    <span className="text-[12px] tabular-nums text-[#b0b0b0]">{grouped.locked.length}</span>
+                  <h2 className="text-[15px] font-medium text-[#111]">External access</h2>
+                  <p className="mt-0.5 text-[12px] text-[#8a8a8a]">Share links, recipient state, and expiry controls.</p>
+                </div>
+                <span className="rounded-full bg-black/[0.04] px-2.5 py-1 text-[12px] tabular-nums text-[#777777]">{sharedCount} total</span>
+              </div>
+
+              {sharedLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="size-5 animate-spin rounded-full border-2 border-black/10 border-t-[#808080]" />
+                </div>
+              ) : sharedLinks.length === 0 ? (
+                <p className="rounded-[14px] bg-black/[0.025] py-10 text-center text-[13px] text-[#808080]">No shared links yet</p>
+              ) : (
+                <div className="overflow-hidden rounded-[14px] bg-white shadow-[0_0_0_1px_rgba(0,0,0,0.06)]">
+                  <div className="grid grid-cols-[minmax(0,1fr)_160px_104px_112px] gap-4 border-b border-black/[0.06] px-4 py-2 text-[12px] font-medium text-[#9a9a9a] max-lg:hidden">
+                    <span>Document</span>
+                    <span>Recipient</span>
+                    <span>Status</span>
+                    <span className="text-right">Actions</span>
                   </div>
-                  <section className="overflow-hidden rounded-2xl bg-white shadow-seeko">
-                    <div className="divide-y divide-black/[0.06]">
-                      {grouped.locked.map(doc => (
-                        <div
-                          key={doc.id}
-                          className="flex cursor-default items-center gap-2.5 px-4 py-3"
-                        >
-                          <Lock className="size-3.5 shrink-0 text-[#b0b0b0]" />
-                          <p className="flex-1 truncate text-[13px] text-[#9a9a9a]">{doc.title}</p>
-                          {doc.restricted_department?.map(dept => (
-                            <span key={dept} className="shrink-0 text-[11px] text-[#b0b0b0]">{dept}</span>
-                          ))}
+                  <div className="divide-y divide-black/[0.06]">
+                    {(sharedExpanded ? sharedLinks : sharedLinks.slice(0, 6)).map(link => (
+                      <div key={link.id} className="grid grid-cols-[minmax(0,1fr)_160px_104px_112px] items-center gap-4 px-4 py-3 max-lg:grid-cols-[minmax(0,1fr)_112px]">
+                        <div className="flex min-w-0 items-center gap-3">
+                          <div className="flex size-9 shrink-0 items-center justify-center rounded-[10px] bg-[#f1f1f1]">
+                            {link.doc_type === 'deck' ? (
+                              <Presentation className="size-4 text-[#8a8a8a]" />
+                            ) : (
+                              <FileText className="size-4 text-[#8a8a8a]" />
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="truncate text-[13.5px] font-medium text-[#111]">{link.doc_title ?? 'Untitled'}</p>
+                            <div className="mt-0.5 flex items-center gap-2 text-[11px] text-[#9a9a9a]">
+                              <span className="flex items-center gap-1 tabular-nums"><Eye className="size-3" />{link.view_count ?? 0}</span>
+                              <span className="tabular-nums">{timeAgo(link.created_at)}</span>
+                              {link.expires_at && (link.status === 'pending' || link.status === 'verified') && (
+                                <span className="flex items-center gap-1 tabular-nums"><Clock className="size-3" />{timeUntil(link.expires_at)}</span>
+                              )}
+                            </div>
+                          </div>
                         </div>
-                      ))}
-                    </div>
-                  </section>
+                        <span className="truncate text-[12px] text-[#777777] max-lg:hidden">{link.recipient_email}</span>
+                        <span className={cn('w-fit rounded-full border px-2 py-0.5 text-[10px] font-medium capitalize', LIGHT_SIGNING_STATUS[link.status] ?? LIGHT_SIGNING_STATUS.expired)}>
+                          {link.status}
+                        </span>
+                        <div className="flex justify-end gap-1.5">
+                          {(link.status === 'pending' || link.status === 'verified') && (
+                            <button type="button" title="Revoke" onClick={() => handleRevoke(link.id)} className={cn(ROW_ICON_BTN, 'hover:bg-[#d4503e]/10 hover:text-[#d4503e]')}>
+                              <XCircle className="size-3.5" />
+                            </button>
+                          )}
+                          {link.status === 'pending' && (
+                            <button type="button" title="Resend" onClick={() => handleResend(link.id)} className={ROW_ICON_BTN}>
+                              <RotateCcw className="size-3.5" />
+                            </button>
+                          )}
+                          {(link.status === 'pending' || link.status === 'verified') && (
+                            <button
+                              type="button"
+                              title="Edit deadline"
+                              onClick={() => {
+                                const current = link.expires_at ? new Date(link.expires_at).toISOString().split('T')[0] : '';
+                                setDeadlineDate(current);
+                                setEditingDeadlineId(editingDeadlineId === link.id ? null : link.id);
+                              }}
+                              className={ROW_ICON_BTN}
+                            >
+                              <Calendar className="size-3.5" />
+                            </button>
+                          )}
+                        </div>
+                        <AnimatePresence>
+                          {editingDeadlineId === link.id && (
+                            <motion.div
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: 'auto' }}
+                              exit={{ opacity: 0, height: 0 }}
+                              transition={{ type: 'spring', visualDuration: 0.3, bounce: 0 }}
+                              className="col-span-full overflow-hidden border-t border-black/[0.06]"
+                            >
+                              <div className="flex flex-col gap-2 py-3">
+                                <p className="text-xs text-[#808080]">
+                                  Current expiry: {link.expires_at ? new Date(link.expires_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'None'}
+                                </p>
+                                <DatePicker
+                                  value={deadlineDate}
+                                  onChange={setDeadlineDate}
+                                  minDate={(() => { const d = new Date(); d.setDate(d.getDate() + 1); d.setHours(0,0,0,0); return d; })()}
+                                  dateLabel="New deadline"
+                                />
+                                <div className="mt-1 flex items-center gap-2">
+                                  <button type="button" disabled={!deadlineDate || deadlineLoading} onClick={() => handleUpdateDeadline(link.id, deadlineDate)} className={cn(BTN_PRIMARY, 'inline-flex items-center gap-1.5 disabled:opacity-50')}>
+                                    {deadlineLoading ? <Loader2 className="size-3 animate-spin" /> : null}
+                                    Update
+                                  </button>
+                                  <button type="button" onClick={() => { setEditingDeadlineId(null); setDeadlineDate(''); }} className="h-9 rounded-full px-4 text-[13px] font-medium text-[#808080] transition-colors duration-150 hover:text-[#111]">
+                                    Cancel
+                                  </button>
+                                </div>
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
-            </div>
+              {sharedLinks.length > 6 && (
+                <button type="button" onClick={() => setSharedExpanded(prev => !prev)} className="mt-3 py-1.5 text-[13px] text-[#808080] transition-colors duration-150 hover:text-[#111]">
+                  {sharedExpanded ? 'Show less' : `Show ${sharedLinks.length - 6} more`}
+                </button>
+              )}
+            </motion.div>
           )}
-        </motion.div>
-      ))}
-      </AnimatePresence>
 
-      {/* Read dialog */}
-      <Dialog
+          {viewMode !== 'shared' && (
+            <motion.div
+              key={viewMode}
+              custom={tabDirection}
+              variants={reduce ? tabFadeVariants : tabSlideVariants}
+              initial="enter"
+              animate="active"
+              exit="exit"
+              transition={tabSlideTransition}
+              className="mt-4"
+            >
+              {baseModeCount === 0 ? (
+                <div className="flex flex-col items-center rounded-[20px] bg-white px-8 py-16 text-center shadow-seeko">
+                  <p className="text-balance text-[15px] font-semibold text-[#111]">{viewMode === 'decks' ? 'No decks yet' : 'No documents yet'}</p>
+                  <p className="mt-1.5 max-w-[44ch] text-pretty text-[13px] leading-relaxed text-[#808080]">
+                    {isAdmin
+                      ? (viewMode === 'decks' ? 'Upload a PDF to create your first deck.' : 'Create your first document to share specs and resources with the team.')
+                      : (viewMode === 'decks' ? 'Decks will appear here when the team uploads them.' : 'Your lead can add team documents. Check back later or ask them to create one.')}
+                  </p>
+                  {isAdmin && (
+                    <button type="button" onClick={() => viewMode === 'decks' ? setEditingDeck('new') : setEditingDoc('new')} className={cn(BTN_PRIMARY, 'mt-6 inline-flex items-center gap-1.5 pl-3.5 pr-4')}>
+                      <Plus className="size-3.5" />
+                      {viewMode === 'decks' ? 'Upload a deck' : 'Create your first document'}
+                    </button>
+                  )}
+                </div>
+              ) : sortedDocs.length === 0 ? (
+                <div className="rounded-[20px] bg-white py-14 text-center shadow-seeko">
+                  <p className="text-[13px] text-[#808080]">No {viewMode === 'decks' ? 'decks' : 'documents'} match your search or filter.</p>
+                </div>
+              ) : (
+                <section>
+                  <Stagger className="divide-y divide-black/[0.05]" staggerMs={LIST.staggerMs / 1000} delayMs={LIST.delayMs / 1000}>
+                    {sortedDocs.map(renderDocRow)}
+                  </Stagger>
+                </section>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* Read panel — left slide-over. `readDoc` snapshots the last opened doc
+          so content stays mounted while the panel eases back out; switching
+          docs while open crossfades header + body (keyed on doc id). */}
+      <SidePanel
         open={!!selected}
         onOpenChange={() => setSelected(null)}
-        resizable
-        light
-        actions={isAdmin && selected ? (
-          <button
-            type="button"
-            title="Share externally"
-            onClick={() => setShareDoc(selected)}
-            className="flex size-8 items-center justify-center rounded-md text-[#505050] transition-[background-color,opacity] duration-150 hover:bg-black/[0.04] focus:outline-none"
-          >
-            <Share2 className="size-3.5" />
-          </button>
+        scrollKey={readDoc?.id}
+        header={readDoc && (
+          <AnimatePresence mode="popLayout" initial={false}>
+            <motion.div
+              key={readDoc.id}
+              className="flex min-w-0 items-center gap-2"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0, transition: { duration: 0.06, ease: 'easeOut' } }}
+              transition={{ duration: 0.1, ease: 'easeOut' }}
+            >
+              {(() => {
+                const di = readDoc.type === 'deck' ? undefined : DEPT_DOC_ICON[readDoc.restricted_department?.[0] ?? ''];
+                const Glyph = readDoc.type === 'deck' ? Presentation : (di?.Icon ?? FileText);
+                return (
+                  <div className={cn(GLASS_TILE, 'size-7 rounded-[8px]')} style={glassTileStyle(di?.glow)}>
+                    <Glyph className={cn('size-3.5', di ? di.ink : 'text-[#808080]')} />
+                  </div>
+                );
+              })()}
+              <h2 className="truncate text-[13px] font-medium text-[#575757]">{readDoc.title}</h2>
+            </motion.div>
+          </AnimatePresence>
+        )}
+        actions={isAdmin && readDoc ? (
+          <>
+            <button
+              type="button"
+              title="Share externally"
+              onClick={() => setShareDoc(readDoc)}
+              className="flex size-8 items-center justify-center rounded-lg text-[#6f6f6f] transition-[background-color,color] duration-150 ease-out hover:bg-black/[0.05] hover:text-[#111] active:bg-black/[0.08] focus:outline-none focus-visible:ring-2 focus-visible:ring-black/15"
+            >
+              <Share2 className="size-4" />
+            </button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  aria-label={`Actions for ${readDoc.title}`}
+                  className="flex size-8 items-center justify-center rounded-lg text-[#6f6f6f] transition-[background-color,color] duration-150 ease-out hover:bg-black/[0.05] hover:text-[#111] active:bg-black/[0.08] focus:outline-none focus-visible:ring-2 focus-visible:ring-black/15"
+                >
+                  <MoreHorizontal className="size-4" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent light align="end" className="min-w-[152px]">
+                <DropdownMenuItem onClick={() => readDoc.type === 'deck' ? setEditingDeck(readDoc) : setEditingDoc(readDoc)}>
+                  <Pencil className="size-3.5 text-[#9a9a9a]" />
+                  Edit
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setShareDoc(readDoc)}>
+                  <Share2 className="size-3.5 text-[#9a9a9a]" />
+                  Share
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => setDeletingId(readDoc.id)}
+                  className="text-[#b4432f] hover:bg-[#d4503e]/[0.08] hover:text-[#b4432f] focus:bg-[#d4503e]/[0.08] focus:text-[#b4432f]"
+                >
+                  <Trash2 className="size-3.5" />
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </>
         ) : undefined}
       >
-        {selected && (
-          <>
-            <DialogClose onClose={() => setSelected(null)} />
-            <DialogHeader>
-              <div className="flex items-center gap-2 pr-20">
-                <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-[#f4f4f4]">
-                  {selected.type === 'deck' ? <Presentation className="size-4 text-[#808080]" /> : <FileText className="size-4 text-[#808080]" />}
-                </div>
-                <DialogTitle>{selected.title}</DialogTitle>
-              </div>
-            </DialogHeader>
-            <div className="doc-read-body min-w-0 overflow-x-auto px-2 pt-4 pb-8 max-w-3xl mx-auto">
-              {selected.type === 'deck' && selected.slides ? (
-                <DeckViewer slides={selected.slides} title={selected.title} notes={selected.content} orientation={selected.deck_orientation} />
-              ) : selected.content ? (
-                <DocContent html={selected.content} />
+        {readDoc && (
+          <AnimatePresence mode="popLayout" initial={false}>
+            <motion.div
+              key={readDoc.id}
+              /* Frameless: the document sits directly on the grey pane — no
+                 white sheet behind it (user call, matching the frameless
+                 list rows). */
+              className="doc-read-body min-w-0 overflow-x-auto px-3 pt-2 pb-9"
+              initial={{ opacity: 0, filter: 'blur(2px)' }}
+              animate={{ opacity: 1, filter: 'blur(0px)' }}
+              exit={{ opacity: 0, filter: 'blur(2px)', transition: { duration: 0.06, ease: 'easeOut' } }}
+              transition={{ duration: 0.1, ease: 'easeOut' }}
+            >
+              {readDoc.type === 'deck' && readDoc.slides ? (
+                <DeckViewer slides={readDoc.slides} title={readDoc.title} notes={readDoc.content} orientation={readDoc.deck_orientation} />
+              ) : readDoc.content ? (
+                <DocContent html={readDoc.content} />
               ) : (
                 <div className="flex flex-col items-center gap-3 py-16 text-center">
                   <div className="flex size-12 items-center justify-center rounded-xl bg-[#f4f4f4]">
@@ -821,18 +923,18 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, is
                   {isAdmin && (
                     <button
                       type="button"
-                      onClick={() => { setSelected(null); setEditingDoc(selected); }}
-                      className="mt-2 text-xs font-medium text-[#0d7aff] hover:text-[#0a63cc] transition-colors"
+                      onClick={() => { setSelected(null); setEditingDoc(readDoc); }}
+                      className="mt-2 text-xs font-medium text-[#0a63cc] hover:text-[#08509f] transition-colors"
                     >
                       Edit document
                     </button>
                   )}
                 </div>
               )}
-            </div>
-          </>
+            </motion.div>
+          </AnimatePresence>
         )}
-      </Dialog>
+      </SidePanel>
 
       {/* Edit / New document dialog */}
       <Dialog open={editingDoc !== null} onOpenChange={() => setEditingDoc(null)} resizable light>

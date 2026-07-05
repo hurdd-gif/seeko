@@ -362,7 +362,7 @@ export function TourProvider({
               <div className="flex items-center justify-between gap-2">
                 <div>
                   {currentStep > 0 && (
-                    <Button variant="ghost" size="sm" onClick={previousStep}>
+                    <Button variant="ghost" size="sm" className="pl-2.5" onClick={previousStep}>
                       <ChevronLeft className="size-3.5" />
                       Previous
                     </Button>
@@ -382,7 +382,7 @@ export function TourProvider({
                   <Button
                     size="sm"
                     onClick={nextStep}
-                    className={`min-w-[90px] gap-1.5 ${
+                    className={`min-w-[90px] gap-1.5 pr-2.5 ${
                       currentStep === steps.length - 1
                         ? 'bg-seeko-accent text-background hover:bg-seeko-accent/90'
                         : ''

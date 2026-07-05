@@ -6,7 +6,7 @@
  * --ov-bg gray surface with a gap-3 vertical rhythm — same
  * vocabulary as the SEEKO overview page tiles.
  *
- * The task header (DIH-N + name + close button) sits as plain
+ * The task header (task number + name + close button) sits as plain
  * chrome above the card stack — not in a card.
  *
  * ANIMATION STORYBOARD
@@ -324,7 +324,7 @@ export function TaskDetailRail({
                   {loadingDetail && taskActivity.length === 0 ? (
                     <div className="text-[12.5px] text-[#9a9a9a]">Loading…</div>
                   ) : (
-                    <ActivitySection activity={taskActivity} limit={taskActivityLimit} />
+                    <ActivitySection activity={taskActivity} limit={taskActivityLimit} team={team} />
                   )}
                 </RailSection>
               </div>
@@ -365,7 +365,7 @@ export function TaskDetailRail({
                 </RailSection>
 
                 <RailSection title="Recent activity" defaultOpen>
-                  <ActivitySection activity={projectActivity} limit={5} />
+                  <ActivitySection activity={projectActivity} limit={5} team={team} />
                 </RailSection>
               </div>
             </motion.div>

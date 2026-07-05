@@ -12,31 +12,36 @@
  *  650ms   recent payments card fades in
  * ───────────────────────────────────────────────────────── */
 
-import { useState, useEffect, useCallback, type ComponentType } from 'react';
-import Link from 'next/link';
-import { motion, AnimatePresence } from 'motion/react';
+import { useState, useEffect, useCallback, type ComponentType, type ReactNode } from 'react';
+import { Link, useRouter, useSearchParams, usePathname } from '@/lib/react-router-adapters';
+import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import {
-  Users, CheckCircle2, Clock,
+  Users, CheckCircle2,
   CreditCard, Plus, ChevronDown, ChevronUp, ChevronLeft, Check, X as XIcon,
-  TrendingUp, DollarSign, FileText, RotateCw, Ban, Loader2,
+  FileText, RotateCw, Ban, Loader2,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { FadeRise, Stagger, StaggerItem, HoverCard, springs } from '@/components/motion';
+import { InputCopy } from '@/components/ui/input-copy';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { FadeRise, Stagger, StaggerItem, springs } from '@/components/motion';
+import { Dialog, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
 import { LightShell } from '@/components/dashboard/LightShell';
-import { BTN_PRIMARY, BTN_SECONDARY, LIGHT_INVOICE_STATUS } from '@/components/dashboard/lightKit';
+import { BTN_PRIMARY, LIGHT_INVOICE_STATUS, LIGHT_INPUT, DIALOG_SAVE, DIALOG_CANCEL } from '@/components/dashboard/lightKit';
 import { PaymentsPasskeyGate } from '@/components/dashboard/PaymentsPasskeyGate';
 import { PaymentCreateDialog } from '@/components/dashboard/PaymentCreateDialog';
-import { InvoiceRequestForm } from '@/components/dashboard/InvoiceRequestForm';
+import { PaymentsChart } from '@/components/dashboard/PaymentsChart';
 import type { Profile, Payment } from '@/lib/types';
+import { TAB_PILL_SPRING } from '@/lib/motion';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
 /* ── Timing config (ms → seconds for motion) ── */
 const TIMING = {
   hero: 0,
+  chart: 120, // outflow chart rises with the strip settled; bars stagger internally
   stats: 120,
   statsStagger: 60,
   pending: 350,
@@ -47,6 +52,9 @@ const TIMING = {
 };
 
 const d = (ms: number) => ms / 1000;
+const PAYMENT_MAIN_SURFACE = 'rounded-[20px] border-0 bg-surface-1 shadow-surface-1';
+const PAYMENT_RAIL_SURFACE = 'rounded-[18px] border-0 bg-surface-1 shadow-surface-1';
+const PAYMENT_SECTION_HEAD = 'px-5 py-3.5 border-b border-black/[0.06]';
 
 /* ── Helpers ── */
 function getInitials(name: string): string {
@@ -55,6 +63,16 @@ function getInitials(name: string): string {
 
 function fmt(amount: number): string {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+}
+
+function externalRecipientLabel(email?: string | null): string {
+  const local = email?.split('@')[0]?.trim();
+  if (!local) return 'External recipient';
+  const cleaned = local
+    .replace(/[._-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return cleaned || 'External recipient';
 }
 
 /* Local light empty block — the shared <EmptyState> bakes a `text-foreground` title that
@@ -77,6 +95,28 @@ function LightEmpty({ icon: Icon, title, description }: {
   );
 }
 
+/* Compact one-line empty row — empty sections shouldn't outrank live ones with
+ * a full-height empty state; this keeps them present but visually demoted. */
+function LightEmptyRow({ icon: Icon, text }: {
+  icon: ComponentType<{ className?: string }>;
+  text: string;
+}) {
+  return (
+    <div className="flex items-center gap-2.5 py-3 px-1">
+      <Icon className="size-4 shrink-0 text-[#c8c8c8]" />
+      <p className="text-xs text-[#9a9a9a]">{text}</p>
+    </div>
+  );
+}
+
+function PaymentActionBeam({ children }: { children: ReactNode }) {
+  return (
+    <span className="payment-action-beam rounded-[16px]">
+      {children}
+    </span>
+  );
+}
+
 type TeamMember = Profile & { paypal_email?: string };
 
 interface InvoiceRequest {
@@ -93,24 +133,42 @@ interface InvoiceRequest {
 
 interface PaymentsAdminProps {
   team: TeamMember[];
+  viewerMode?: boolean;
 }
 
-export function PaymentsAdmin({ team }: PaymentsAdminProps) {
-  const [authenticated, setAuthenticated] = useState(false);
+export function PaymentsAdmin({ team, viewerMode = false }: PaymentsAdminProps) {
+  // The passkey gate is a UX layer over the *server's* decision — the API is the
+  // real gate (401 without a valid payments token). So we ASK the server on mount
+  // whether it will serve payments: it returns 200 when a valid token cookie
+  // exists OR when DEV_AUTH_BYPASS is active (see api-server/payments-auth.ts).
+  //
+  // The old `import.meta.env.MODE === 'development'` check failed locally because
+  // we QA the *built* bundle served by the API on :8788, where MODE is baked to
+  // 'production' at build time — so the dev bypass never fired even though the
+  // server was granting access. A runtime probe unlocks correctly on the Vite dev
+  // server AND the local build, and still shows the gate in real production (no
+  // bypass + no cookie → 401 → locked). 'checking' avoids a gate flash on unlock.
+  const [access, setAccess] = useState<'checking' | 'granted' | 'locked'>(
+    viewerMode ? 'granted' : 'checking'
+  );
   const [payments, setPayments] = useState<Payment[]>([]);
   const [stats, setStats] = useState<{
     pendingTotal: number;
     paidThisMonth: number;
     peopleOwed: number;
     paymentsThisMonth: number;
+    // viewer-only extras — investors get an all-time lens instead of admin queues
+    allTimePaid?: number;
+    totalPayments?: number;
   } | null>(null);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'owed' | 'paid'>('all');
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [invoiceFormOpen, setInvoiceFormOpen] = useState(false);
   const [selectedRecipient, setSelectedRecipient] = useState<TeamMember | null>(null);
   const [invoiceRequests, setInvoiceRequests] = useState<InvoiceRequest[]>([]);
   const [invoicesExpanded, setInvoicesExpanded] = useState(false);
+  const reduce = useReducedMotion();
+  const pillTransition = reduce ? { duration: 0 } : TAB_PILL_SPRING;
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -119,36 +177,99 @@ export function PaymentsAdmin({ team }: PaymentsAdminProps) {
       const [paymentsRes, statsRes, invoiceRes] = await Promise.all([
         fetch('/api/payments'),
         fetch('/api/payments/stats'),
-        fetch('/api/invoice-request/list'),
+        viewerMode ? Promise.resolve(new Response('[]', { status: 200 })) : fetch('/api/invoice-request/list'),
       ]);
 
       if (paymentsRes.status === 401 || statsRes.status === 401) {
-        setAuthenticated(false);
+        // Token expired mid-session (the 1h window lapsed) — fall back to the gate.
+        setAccess('locked');
         return;
       }
 
-      const [paymentsData, statsData, invoiceData] = await Promise.all([
+      const [paymentsData, statsRaw, invoiceData] = await Promise.all([
         paymentsRes.json(),
         statsRes.json(),
         invoiceRes.ok ? invoiceRes.json() : [],
       ]);
 
       setPayments(paymentsData);
-      setStats(statsData);
+      setStats(viewerMode
+        ? {
+            pendingTotal: 0,
+            paidThisMonth: Number(statsRaw.thisMonth ?? 0),
+            peopleOwed: Number(statsRaw.peoplePaid ?? 0),
+            paymentsThisMonth: paymentsData.filter((payment: Payment) => payment.status === 'paid').length,
+            allTimePaid: Number(statsRaw.allTime ?? 0),
+            totalPayments: Number(statsRaw.paymentCount ?? 0),
+          }
+        : statsRaw);
       setInvoiceRequests(invoiceData);
     } catch {
       // Network error
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [viewerMode]);
+
+  // Probe the server's own gate once on mount (non-viewer). 200 means the server
+  // will serve payments — a valid token cookie OR the local dev bypass — so we
+  // skip the passkey UI. 401/network → show the gate. This replaces the removed
+  // compile-time MODE check and works identically on the Vite dev server and the
+  // locally-served production build.
+  useEffect(() => {
+    if (access !== 'checking') return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/api/payments/stats');
+        if (!cancelled) setAccess(res.ok ? 'granted' : 'locked');
+      } catch {
+        if (!cancelled) setAccess('locked');
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [access]);
 
   useEffect(() => {
-    if (authenticated) fetchData();
-  }, [authenticated, fetchData]);
+    if (access === 'granted') fetchData();
+  }, [access, fetchData]);
 
-  if (!authenticated) {
-    return <PaymentsPasskeyGate onAuthenticated={() => setAuthenticated(true)} />;
+  // Deep link from the dashboard chrome: /payments?new=1 opens the create
+  // dialog once the passkey gate has passed, then strips the param so a
+  // refresh doesn't re-open it.
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const wantsNewPayment = searchParams.get('new') === '1';
+  // The mount path is the ground truth for where "back" belongs: anything under
+  // /investor returns to the investor dashboard, regardless of admin/viewer status
+  // or whether a ?from param happened to ride along. The query param stays as a
+  // secondary signal for links that deep-link into /payments from the investor UI.
+  const inInvestorContext = pathname.startsWith('/investor') || searchParams.get('from') === 'investor';
+  useEffect(() => {
+    if (access !== 'granted' || !wantsNewPayment) return;
+    setSelectedRecipient(null);
+    setCreateDialogOpen(true);
+    router.replace('/payments');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [access, wantsNewPayment]);
+
+  if (access === 'checking') {
+    // Neutral placeholder in the same shell the gate/content use, so resolving to
+    // either one is a crossfade of the body — never a layout jump.
+    return (
+      <LightShell fill bordered>
+        <div className="flex min-h-full flex-1 items-center justify-center text-[#9a9a9a]">
+          <Loader2 className="size-4 animate-spin" />
+        </div>
+      </LightShell>
+    );
+  }
+
+  if (access === 'locked') {
+    return <PaymentsPasskeyGate onAuthenticated={() => setAccess('granted')} />;
   }
 
   /* ── Derived data ── */
@@ -200,27 +321,86 @@ export function PaymentsAdmin({ team }: PaymentsAdminProps) {
     fetchData();
   };
 
+  // Never flash "$0.00 · All caught up" before the first stats fetch resolves —
+  // a false all-clear on a money page. Values render as an em dash until ready;
+  // refetches keep the previous stats visible, so this only gates first load.
+  const statsReady = stats !== null;
   const pendingTotal = stats?.pendingTotal ?? 0;
-  const statCards = [
+  // Invites not yet submitted (pending/verified, unexpired) are pipeline the
+  // payments table can't see — fold them into the summary so "All caught up"
+  // stays truthful while invoices are still out.
+  const openInvoiceCount = invoiceRequests.filter(inv =>
+    (inv.status === 'pending' || inv.status === 'verified') &&
+    new Date(inv.expires_at) >= new Date()
+  ).length;
+  const pendingSubtitle = !statsReady
+    ? ' '
+    : [
+        pendingTotal > 0 ? `${stats?.peopleOwed ?? 0} people owed` : null,
+        openInvoiceCount > 0 ? `${openInvoiceCount} invoice${openInvoiceCount !== 1 ? 's' : ''} awaiting submission` : null,
+  ].filter(Boolean).join(' · ') || 'All caught up';
+  const refundedPayments = payments.filter(p => p.status === 'paid' && Number(p.refund_amount ?? 0) > 0);
+  const revokedInvoices = invoiceRequests.filter(inv => inv.status === 'revoked').length;
+  const exceptionCount = refundedPayments.length + revokedInvoices;
+  // Investors read paid outflow, not the admin work queue: Pending / Invoices /
+  // Exceptions are all zero for a viewer (they only receive paid rows), so the
+  // strip shows an all-time lens instead — same visual grammar, honest numbers.
+  const summarySignals = viewerMode
+    ? [
+        {
+          label: 'Paid this month',
+          value: statsReady ? fmt(stats?.paidThisMonth ?? 0) : '—',
+          detail: statsReady
+            ? `${stats?.paymentsThisMonth ?? 0} payment${(stats?.paymentsThisMonth ?? 0) !== 1 ? 's' : ''}`
+            : ' ',
+          active: statsReady && (stats?.paidThisMonth ?? 0) > 0,
+        },
+        {
+          label: 'All-time paid',
+          value: statsReady ? fmt(stats?.allTimePaid ?? 0) : '—',
+          detail: statsReady
+            ? `${stats?.totalPayments ?? 0} payout${(stats?.totalPayments ?? 0) !== 1 ? 's' : ''} total`
+            : ' ',
+          active: statsReady && (stats?.allTimePaid ?? 0) > 0,
+        },
+        {
+          label: 'People paid',
+          value: statsReady ? String(stats?.peopleOwed ?? 0) : '—',
+          detail: 'team members across the studio',
+          active: statsReady && (stats?.peopleOwed ?? 0) > 0,
+        },
+      ]
+    : [
     {
       label: 'Pending',
-      value: pendingTotal,
-      icon: Clock,
-      accent: pendingTotal > 0,
-      format: true,
-      subtitle: pendingTotal > 0
-        ? `${stats?.peopleOwed ?? 0} people owed`
-        : 'All caught up',
+      value: statsReady ? fmt(pendingTotal) : '—',
+      detail: pendingSubtitle,
+      active: statsReady && pendingTotal > 0,
     },
     {
-      label: 'Paid This Month',
-      value: stats?.paidThisMonth ?? 0,
-      icon: TrendingUp,
-      accent: false,
-      format: true,
-      subtitle: `${stats?.paymentsThisMonth ?? 0} transaction${(stats?.paymentsThisMonth ?? 0) !== 1 ? 's' : ''}`,
+      label: 'Paid this month',
+      value: statsReady ? fmt(stats?.paidThisMonth ?? 0) : '—',
+      detail: statsReady
+        ? `${stats?.paymentsThisMonth ?? 0} transaction${(stats?.paymentsThisMonth ?? 0) !== 1 ? 's' : ''}`
+        : ' ',
+      active: statsReady && (stats?.paidThisMonth ?? 0) > 0,
+    },
+    {
+      label: 'Invoices',
+      value: `${openInvoiceCount} open`,
+      detail: `${invoiceRequests.length} total request${invoiceRequests.length !== 1 ? 's' : ''}`,
+      active: openInvoiceCount > 0,
+    },
+    {
+      label: 'Exceptions',
+      value: String(exceptionCount),
+      detail: `${refundedPayments.length} refunded · ${revokedInvoices} revoked`,
+      active: exceptionCount > 0,
+      danger: exceptionCount > 0,
     },
   ];
+  const visibleInvoiceRequests = invoicesExpanded ? invoiceRequests : invoiceRequests.slice(0, 8);
+  const invoiceQueueScrollable = invoicesExpanded && invoiceRequests.length > 8;
 
   const filterOptions = [
     { label: 'All', value: 'all' as const, count: peopleWithPending.length },
@@ -228,118 +408,104 @@ export function PaymentsAdmin({ team }: PaymentsAdminProps) {
     { label: 'Paid', value: 'paid' as const, count: peopleWithPending.filter(p => p.pendingAmount === 0 && p.hasPaid).length },
   ];
 
+  const paymentActions = viewerMode ? null : (
+    <div className="flex items-center gap-2">
+      <PaymentActionBeam>
+        <button
+          type="button"
+          onClick={() => { setSelectedRecipient(null); setCreateDialogOpen(true); }}
+          className={`${BTN_PRIMARY} inline-flex min-h-9 items-center gap-1.5 pl-3.5 pr-4 active:scale-[0.96]`}
+        >
+          <Plus className="size-4" />
+          <span className="hidden sm:inline">New Payment</span>
+          <span className="sm:hidden">Payment</span>
+        </button>
+      </PaymentActionBeam>
+    </div>
+  );
+  const backHref = inInvestorContext || viewerMode ? '/investor' : '/tasks';
+  const backLabel = inInvestorContext || viewerMode ? 'Investor dashboard' : 'Payments';
+
   return (
     <LightShell
       fill
       bordered
+      actions={paymentActions}
       leftSlot={
         <Link
-          href="/"
+          href={backHref}
           className="flex items-center gap-1 text-[13px] text-[#9a9a9a] transition-colors hover:text-[#3a3a3a]"
         >
           <ChevronLeft className="size-3.5" />
-          <span>Payments</span>
+          <span>{backLabel}</span>
         </Link>
       }
     >
-    <main className="min-h-0 flex-1 overflow-y-auto">
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-6 py-10">
-      {/* ── Hero ── */}
+    <main className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto">
+    <div className="mx-auto w-full max-w-[1180px] px-5 pt-8 pb-16 sm:px-6 lg:px-8">
+      {/* ── Header ── */}
       <FadeRise delay={d(TIMING.hero)}>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-[#111] text-balance">Payments</h1>
-            <p className="hidden sm:block text-sm text-[#808080] mt-1">Track and manage team payments.</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <button type="button" onClick={() => setInvoiceFormOpen(true)} className={`${BTN_SECONDARY} inline-flex items-center gap-1.5`}>
-              <FileText className="size-3.5" />
-              <span className="hidden sm:inline">Request Invoice</span>
-              <span className="sm:hidden">Invoice</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => { setSelectedRecipient(null); setCreateDialogOpen(true); }}
-              className={`${BTN_PRIMARY} inline-flex items-center gap-1.5`}
-            >
-              <Plus className="size-4" />
-              <span className="hidden sm:inline">New Payment</span>
-              <span className="sm:hidden">Payment</span>
-            </button>
+        <div>
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-y border-black/[0.06] py-3">
+            {summarySignals.map((signal) => (
+              <div key={signal.label} className="flex min-w-0 items-baseline gap-2 text-[13px]">
+                <span className="shrink-0 text-[#858585]">{signal.label}</span>
+                <span className={cn(
+                  'shrink-0 font-semibold tabular-nums',
+                  signal.danger ? 'text-[#d4503e]' : signal.active ? 'text-[#111]' : 'text-[#a0a0a0]'
+                )}>
+                  {signal.value}
+                </span>
+                <span className="hidden min-w-0 truncate text-[#9a9a9a] md:inline">{signal.detail}</span>
+              </div>
+            ))}
           </div>
         </div>
       </FadeRise>
 
-      {/* ── Stat Cards ── */}
-      <Stagger
-        className="grid grid-cols-2 gap-4"
-        delayMs={d(TIMING.stats)}
-        staggerMs={d(TIMING.statsStagger)}
-      >
-        {statCards.map(stat => (
-          <StaggerItem key={stat.label}>
-            <HoverCard>
-              <Card className={cn(
-                'relative overflow-hidden rounded-2xl border-0 bg-white shadow-seeko',
-                stat.accent && 'ring-1 ring-[#0a63cc]/20'
-              )}>
-                <CardContent className="pt-5 pb-4 px-5">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-[13px] font-medium text-[#808080]">
-                      {stat.label}
-                    </span>
-                    <div className={cn(
-                      'flex size-8 items-center justify-center rounded-lg',
-                      stat.accent ? 'bg-[#0a63cc]/10' : 'bg-[#f4f4f4]'
-                    )}>
-                      <stat.icon className={cn('size-4', stat.accent ? 'text-[#0a63cc]' : 'text-[#808080]')} />
-                    </div>
-                  </div>
-                  <p className={cn(
-                    'font-semibold tracking-tight tabular-nums',
-                    stat.accent ? 'text-3xl text-[#0a63cc]' : 'text-2xl text-[#111]'
-                  )}>
-                    {stat.format ? fmt(stat.value) : stat.value}
-                  </p>
-                  <p className="text-[11px] text-[#9a9a9a] mt-1">{stat.subtitle}</p>
-                </CardContent>
-              </Card>
-            </HoverCard>
-          </StaggerItem>
-        ))}
-      </Stagger>
+      {/* ── Outflow chart — first area of impact; loading mirrors the strip's
+            no-false-all-clear rule (shimmer until the first fetch resolves) ── */}
+      <FadeRise delay={d(TIMING.chart)}>
+        <PaymentsChart
+          payments={payments}
+          loading={loading && stats === null}
+          className="mt-5"
+        />
+      </FadeRise>
+
+      {/* Admin gets the two-column console (work queue + rail). A viewer has no
+          left-column content (pending/invoice are admin-only), so the read-only
+          page collapses to one full-width column: chart → Recent payments. */}
+      <div className={cn('mt-5', viewerMode ? 'space-y-5' : 'grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-start')}>
+        {!viewerMode && (
+        <div className="min-w-0 space-y-5">
 
       {/* ── Pending Requests ── */}
       <AnimatePresence>
-        {pendingRequests.length > 0 && (
+        {!viewerMode && pendingRequests.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 20, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -10, scale: 0.98 }}
             transition={{ ...springs.smooth, delay: d(TIMING.pending) }}
           >
-            <Card className="rounded-2xl border-0 bg-white shadow-seeko ring-1 ring-[#b8801a]/20">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="flex size-9 items-center justify-center rounded-lg bg-[#b8801a]/10">
-                      <DollarSign className="size-4.5 text-[#946a00]" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-base font-semibold text-[#111]">
-                        Payment Requests
-                      </CardTitle>
-                      <CardDescription className="text-xs text-[#808080]">
-                        Team members requesting payment approval.
-                      </CardDescription>
-                    </div>
+            <Card className={cn(PAYMENT_MAIN_SURFACE, 'shadow-[0_1px_2px_rgba(0,0,0,0.035),0_0_0_1px_rgba(184,128,26,0.22)]')}>
+              <CardHeader className={PAYMENT_SECTION_HEAD}>
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <CardTitle className="text-[15px] font-semibold text-[#111]">
+                      Needs review
+                    </CardTitle>
+                    <CardDescription className="mt-0.5 text-xs text-[#808080]">
+                      Team-submitted payment requests waiting on an admin decision.
+                    </CardDescription>
                   </div>
-                  <Badge variant="outline" className="text-[#946a00] border-[#b8801a]/40 bg-[#b8801a]/10 tabular-nums">
+                  <Badge variant="outline" className="border-[#b8801a]/35 bg-[#b8801a]/10 text-[#946a00] tabular-nums">
                     {pendingRequests.length}
                   </Badge>
                 </div>
               </CardHeader>
-              <CardContent className="pt-0">
+              <CardContent className="px-5 py-0">
                 <div className="divide-y divide-black/[0.06]">
                   {pendingRequests.map((payment, i) => (
                     <motion.div
@@ -362,36 +528,52 @@ export function PaymentsAdmin({ team }: PaymentsAdminProps) {
       </AnimatePresence>
 
       {/* ── Invoice Requests ── */}
-      {invoiceRequests.length > 0 && (
+      {!viewerMode && invoiceRequests.length > 0 && (
         <FadeRise delay={d(TIMING.invoiceRequests)}>
-          <Card className="rounded-2xl border-0 bg-white shadow-seeko">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="flex size-9 items-center justify-center rounded-lg bg-[#0a63cc]/10">
-                    <FileText className="size-4.5 text-[#0a63cc]" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-base font-semibold text-[#111]">Invoice Requests</CardTitle>
-                    <CardDescription className="text-xs text-[#808080]">Outbound invoice links sent to external recipients.</CardDescription>
-                  </div>
+          <Card className={PAYMENT_MAIN_SURFACE}>
+            <CardHeader className={PAYMENT_SECTION_HEAD}>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <CardTitle className="text-[15px] font-semibold text-[#111]">Invoice queue</CardTitle>
+                  <CardDescription className="mt-0.5 text-xs text-[#808080]">Review external submissions and payout outcomes.</CardDescription>
                 </div>
-                <Badge variant="outline" className="text-[#808080] border-black/[0.08] tabular-nums">
-                  {invoiceRequests.length}
-                </Badge>
+                <div className="flex items-center gap-2 text-[11px] text-[#8a8a8a]">
+                  <span className="tabular-nums">{openInvoiceCount} open</span>
+                  <span className="text-[#d0d0d0]">/</span>
+                  <span className="tabular-nums">{invoiceRequests.length} total</span>
+                </div>
               </div>
             </CardHeader>
-            <CardContent className="pt-0">
-              <div className="divide-y divide-black/[0.06]">
-                {(invoicesExpanded ? invoiceRequests : invoiceRequests.slice(0, 3)).map((inv, i) => (
-                  <InvoiceRequestRow key={inv.id} invite={inv} index={i} onAction={fetchData} />
-                ))}
+            <CardContent className="px-5 py-0">
+              <div className="hidden grid-cols-[minmax(0,1fr)_92px_116px_112px] gap-3 border-b border-black/[0.06] px-3 py-2.5 text-[11px] font-medium text-[#a0a0a0] sm:grid">
+                <span>Recipient</span>
+                <span className="text-left">Date</span>
+                <span className="text-right">Amount</span>
+                <span className="text-right">Status</span>
               </div>
-              {invoiceRequests.length >= 4 && (
+              {invoiceQueueScrollable ? (
+                <div className="relative">
+                  <ScrollArea className="h-[min(560px,calc(100vh-360px))] rounded-b-[16px]" viewportClassName="pr-3 pb-14">
+                    <div className="divide-y divide-black/[0.06]">
+                      {visibleInvoiceRequests.map((inv, i) => (
+                        <InvoiceRequestRow key={inv.id} invite={inv} index={i} onAction={fetchData} />
+                      ))}
+                    </div>
+                  </ScrollArea>
+                  <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-white/80 via-white/35 to-transparent" />
+                </div>
+              ) : (
+                <div className="divide-y divide-black/[0.06]">
+                  {visibleInvoiceRequests.map((inv, i) => (
+                    <InvoiceRequestRow key={inv.id} invite={inv} index={i} onAction={fetchData} />
+                  ))}
+                </div>
+              )}
+              {invoiceRequests.length > 8 && (
                 <button
                   type="button"
                   onClick={() => setInvoicesExpanded((v) => !v)}
-                  className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-medium text-[#808080] transition-colors hover:bg-black/[0.03] hover:text-[#111]"
+                  className="my-3 flex w-full items-center justify-center gap-1.5 rounded-[14px] py-2 text-xs font-medium text-[#808080] transition-[background-color,color,transform] hover:bg-black/[0.03] hover:text-[#111] active:scale-[0.96]"
                 >
                   {invoicesExpanded ? 'Show less' : `Show all ${invoiceRequests.length}`}
                   <ChevronDown className={`size-3.5 transition-transform ${invoicesExpanded ? 'rotate-180' : ''}`} />
@@ -402,50 +584,66 @@ export function PaymentsAdmin({ team }: PaymentsAdminProps) {
         </FadeRise>
       )}
 
+        </div>
+        )}
+
+        <aside className={cn('space-y-5', !viewerMode && 'xl:sticky xl:top-6')}>
+
       {/* ── People ── */}
+      {!viewerMode && (
       <FadeRise delay={d(TIMING.people)}>
-        <Card className="rounded-2xl border-0 bg-white shadow-seeko">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="flex size-9 items-center justify-center rounded-lg bg-[#f4f4f4]">
-                  <Users className="size-4.5 text-[#808080]" />
-                </div>
+        <Card className={PAYMENT_RAIL_SURFACE}>
+          <CardHeader className={PAYMENT_SECTION_HEAD}>
+            <div className="space-y-3">
+              <div className="flex items-start justify-between gap-3">
                 <div>
-                  <CardTitle className="text-base font-semibold text-[#111]">People</CardTitle>
-                  <CardDescription className="text-xs text-[#808080]">Team members and their payment status.</CardDescription>
+                  <CardTitle className="text-[15px] font-semibold text-[#111]">People</CardTitle>
+                  <CardDescription className="mt-0.5 text-xs text-[#808080]">Team payment status.</CardDescription>
                 </div>
+                <span className="rounded-md bg-[#f5f5f5] px-2 py-1 text-[11px] text-[#808080] tabular-nums">{peopleWithPending.length}</span>
               </div>
               {/* Filter pills — only show when team is large enough to warrant filtering */}
               {peopleWithPending.length >= 5 && (
-                <div className="flex gap-1">
-                  {filterOptions.map(opt => (
-                    <button
-                      key={opt.value}
-                      onClick={() => setFilter(opt.value)}
-                      className={cn(
-                        'rounded-full px-2.5 py-1 text-xs font-medium transition-colors duration-200',
-                        filter === opt.value
-                          ? 'bg-[#0a63cc]/10 text-[#0a63cc]'
-                          : 'text-[#808080] hover:text-[#111] hover:bg-black/[0.04]'
-                      )}
-                    >
-                      {opt.label}
-                      {opt.count > 0 && (
-                        <span className={cn(
-                          'ml-1 tabular-nums',
-                          filter === opt.value ? 'text-[#0a63cc]/70' : 'text-[#9a9a9a]'
-                        )}>
-                          {opt.count}
+                <div className="flex flex-wrap gap-1">
+                  {filterOptions.map(opt => {
+                    const active = filter === opt.value;
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => setFilter(opt.value)}
+                        className={cn(
+                          'relative rounded-full px-2.5 py-1 text-xs font-medium transition-[color,transform] duration-150 active:scale-[0.97]',
+                          active ? 'text-[#0a63cc]' : 'text-[#808080] hover:text-[#111]'
+                        )}
+                      >
+                        {active && (
+                          <motion.span
+                            layoutId="paymentsFilterPill"
+                            initial={false}
+                            transition={pillTransition}
+                            className="absolute inset-0 rounded-full bg-[#0a63cc]/10"
+                          />
+                        )}
+                        <span className="relative z-10 inline-flex items-center">
+                          {opt.label}
+                          {opt.count > 0 && (
+                            <span className={cn(
+                              'ml-1 tabular-nums',
+                              active ? 'text-[#0a63cc]/70' : 'text-[#9a9a9a]'
+                            )}>
+                              {opt.count}
+                            </span>
+                          )}
                         </span>
-                      )}
-                    </button>
-                  ))}
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </div>
           </CardHeader>
-          <CardContent className="pt-0">
+          <CardContent className="px-5 py-0">
             {loading ? (
               <div className="flex items-center justify-center py-12">
                 <div className="flex flex-col items-center gap-3">
@@ -504,52 +702,64 @@ export function PaymentsAdmin({ team }: PaymentsAdminProps) {
           </CardContent>
         </Card>
       </FadeRise>
+      )}
 
       {/* ── Recent Payments ── */}
       <FadeRise delay={d(TIMING.recent)}>
-        <Card className="rounded-2xl border-0 bg-white shadow-seeko">
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-3">
-              <div className="flex size-9 items-center justify-center rounded-lg bg-[#f4f4f4]">
-                <CreditCard className="size-4.5 text-[#808080]" />
-              </div>
+        <Card className={cn(PAYMENT_RAIL_SURFACE, 'overflow-hidden')}>
+          <CardHeader className={PAYMENT_SECTION_HEAD}>
+            <div className="flex items-start justify-between gap-3">
               <div>
-                <CardTitle className="text-base font-semibold text-[#111]">Recent Payments</CardTitle>
-                <CardDescription className="text-xs text-[#808080]">Completed payments.</CardDescription>
+                <CardTitle className="text-[15px] font-semibold text-[#111]">Recent payments</CardTitle>
+                <CardDescription className="mt-0.5 text-xs text-[#808080]">Completed payouts and refunds.</CardDescription>
               </div>
+              <span className="rounded-md bg-[#f5f5f5] px-2 py-1 text-[11px] text-[#808080] tabular-nums">{recentPaid.length}</span>
             </div>
           </CardHeader>
-          <CardContent className="pt-0">
+          <CardContent className="px-5 py-0">
             {recentPaid.length === 0 ? (
-              <LightEmpty icon={CreditCard} title="No completed payments" description="Payments will appear here once marked as paid." />
+              <LightEmptyRow icon={CreditCard} text="No completed payments yet." />
             ) : (
-              <div className="divide-y divide-black/[0.06]">
-                {recentPaid.map(payment => (
-                  <PaidPaymentRow
-                    key={payment.id}
-                    payment={payment}
-                    externalPaypalEmail={paypalEmailByPaymentId.get(payment.id) ?? null}
-                  />
-                ))}
+              <div className="relative">
+                <ScrollArea className="h-[clamp(340px,calc(100vh-500px),650px)]" viewportClassName="pr-2 pb-12">
+                  <div className="divide-y divide-black/[0.06]">
+                    {recentPaid.map(payment => (
+                      <PaidPaymentRow
+                        key={payment.id}
+                        payment={payment}
+                        externalPaypalEmail={paypalEmailByPaymentId.get(payment.id) ?? null}
+                        onAction={fetchData}
+                        readOnly={viewerMode}
+                      />
+                    ))}
+                  </div>
+                </ScrollArea>
+                {recentPaid.length > 5 && (
+                  <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-white via-white/70 to-transparent" />
+                )}
               </div>
             )}
           </CardContent>
         </Card>
       </FadeRise>
 
+        </aside>
+      </div>
+
+      {/* Invoice requests are sent from inside this dialog too (Invoice mode),
+          so closing it always refetches — the invoice queue may have changed
+          even when no payment was recorded. */}
       <PaymentCreateDialog
         open={createDialogOpen}
-        onOpenChange={setCreateDialogOpen}
+        onOpenChange={(open) => {
+          setCreateDialogOpen(open);
+          if (!open) fetchData();
+        }}
         team={team}
         recipient={selectedRecipient}
         token={null}
         onCreated={handlePaymentCreated}
       />
-
-      <InvoiceRequestForm open={invoiceFormOpen} onOpenChange={(open) => {
-        setInvoiceFormOpen(open);
-        if (!open) fetchData();
-      }} />
     </div>
     </main>
     </LightShell>
@@ -557,40 +767,152 @@ export function PaymentsAdmin({ team }: PaymentsAdminProps) {
 }
 
 /* ── Paid Payment Row (expandable) ── */
-function PaidPaymentRow({ payment, externalPaypalEmail }: { payment: Payment; externalPaypalEmail: string | null }) {
+function PaidPaymentRow({
+  payment,
+  externalPaypalEmail,
+  onAction,
+  readOnly = false,
+}: {
+  payment: Payment;
+  externalPaypalEmail: string | null;
+  onAction: () => void;
+  // Investor viewers get a read-only row: no refund menu, and recipient
+  // payout emails stay hidden — that PayPal address is team-member PII.
+  readOnly?: boolean;
+}) {
   const [expanded, setExpanded] = useState(false);
+  const [refundLoading, setRefundLoading] = useState(false);
+  const [refundOpen, setRefundOpen] = useState(false);
+  const [refundMenu, setRefundMenu] = useState<{ x: number; y: number } | null>(null);
   const paypalEmail = payment.recipient?.paypal_email ?? externalPaypalEmail;
-  const title = payment.recipient?.display_name ?? payment.recipient_email ?? 'External';
-  const fallbackInitials = payment.recipient?.display_name
+  const showPaypalEmail = Boolean(paypalEmail) && !readOnly;
+  const firstItemLabel = payment.items?.[0]?.label?.trim();
+  const hasTeamRecipient = Boolean(payment.recipient_id && payment.recipient?.display_name);
+  const isManualExternal = !hasTeamRecipient && Boolean(payment.payee_name);
+  const compactTitle = hasTeamRecipient
+    ? payment.recipient!.display_name!
+    : payment.payee_name ?? externalRecipientLabel(payment.recipient_email ?? paypalEmail);
+  const compactContext = firstItemLabel ?? (
+    payment.description && payment.description.toLowerCase() !== 'external invoice'
+      ? payment.description
+      : null
+  );
+  const fallbackInitials = hasTeamRecipient && payment.recipient?.display_name
     ? getInitials(payment.recipient.display_name)
-    : (payment.recipient_email ?? '?').slice(0, 2).toUpperCase();
+    : (compactTitle ?? '?').slice(0, 2).toUpperCase();
+  const amount = Number(payment.amount);
+  const refundAmount = Math.min(Number(payment.refund_amount ?? 0), amount);
+  const hasRefund = refundAmount > 0;
+  const fullyRefunded = refundAmount >= amount;
+  const netAmount = Math.max(amount - refundAmount, 0);
+
+  async function updateRefund(refund_amount: number, refund_note?: string | null): Promise<boolean> {
+    setRefundLoading(true);
+    try {
+      const res = await fetch(`/api/payments/${payment.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refund_amount, refund_note }),
+      });
+      if (res.ok) {
+        toast.success(refund_amount > 0 ? 'Refund status updated' : 'Refund cleared');
+        onAction();
+        return true;
+      }
+      const data = await res.json();
+      toast.error(data.error ?? 'Failed to update refund');
+      return false;
+    } catch {
+      toast.error('Network error');
+      return false;
+    } finally {
+      setRefundLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!refundMenu) return;
+    function close() {
+      setRefundMenu(null);
+    }
+    function closeOnEscape(e: KeyboardEvent) {
+      if (e.key === 'Escape') close();
+    }
+    document.addEventListener('mousedown', close);
+    document.addEventListener('keydown', closeOnEscape);
+    return () => {
+      document.removeEventListener('mousedown', close);
+      document.removeEventListener('keydown', closeOnEscape);
+    };
+  }, [refundMenu]);
 
   return (
-    <div>
+    <div
+      onContextMenu={readOnly ? undefined : (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setRefundMenu({
+          x: Math.min(e.clientX, window.innerWidth - 220),
+          y: Math.min(e.clientY, window.innerHeight - 176),
+        });
+      }}
+    >
       <span
         role="button"
         tabIndex={0}
         onClick={() => setExpanded(!expanded)}
         onKeyDown={e => { if (e.key === 'Enter') setExpanded(!expanded); }}
-        className="flex items-center justify-between py-3 px-1 w-full text-left hover:bg-black/[0.03] transition-colors cursor-pointer rounded-md -mx-1"
+        className="flex items-center justify-between py-3 px-1 w-full text-left hover:bg-black/[0.03] transition-colors cursor-pointer rounded-[14px] -mx-1"
       >
         <div className="flex items-center gap-3 min-w-0">
-          <Avatar className="size-8 outline outline-1 -outline-offset-1 outline-black/[0.06]">
-            <AvatarImage src={payment.recipient?.avatar_url ?? undefined} />
-            <AvatarFallback className="bg-[#f4f4f4] text-[#505050] text-[10px]">
-              {fallbackInitials}
-            </AvatarFallback>
-          </Avatar>
+          {hasTeamRecipient ? (
+            <Avatar className="size-8 outline outline-1 -outline-offset-1 outline-black/[0.06]">
+              <AvatarImage src={payment.recipient?.avatar_url ?? undefined} />
+              <AvatarFallback className="bg-[#f4f4f4] text-[#505050] text-[10px]">
+                {fallbackInitials}
+              </AvatarFallback>
+            </Avatar>
+          ) : isManualExternal ? (
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#f4f4f4] text-[10px] font-medium text-[#505050] outline outline-1 -outline-offset-1 outline-black/[0.06]">
+              {getInitials(payment.payee_name!)}
+            </div>
+          ) : (
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#f4f4f4] outline outline-1 -outline-offset-1 outline-black/[0.06]">
+              <FileText className="size-3.5 text-[#808080]" />
+            </div>
+          )}
           <div className="min-w-0">
-            <p className="text-sm font-medium text-[#111] truncate">{title}</p>
-            <p className="text-[11px] text-[#808080]">
-              {payment.items?.length ?? 0} item{(payment.items?.length ?? 0) !== 1 ? 's' : ''}
-              {payment.description && <span className="ml-1.5 text-[#9a9a9a]">· {payment.description}</span>}
+            <p className="text-sm font-medium text-[#111] truncate">{compactTitle}</p>
+            <p className="text-[11px] text-[#808080] truncate">
+              {compactContext ?? `${payment.items?.length ?? 0} item${(payment.items?.length ?? 0) !== 1 ? 's' : ''}`}
+              <span className="ml-1.5 text-[#9a9a9a]">
+                · {hasTeamRecipient ? 'Payment' : isManualExternal ? 'External' : 'External invoice'}
+              </span>
             </p>
           </div>
         </div>
         <div className="flex items-center gap-3 shrink-0">
-          <span className="text-sm font-medium text-[#111] tabular-nums">{fmt(Number(payment.amount))}</span>
+          <div className="text-right">
+            <span className={cn(
+              'block text-sm font-medium tabular-nums',
+              hasRefund ? 'text-[#808080] line-through' : 'text-[#111]'
+            )}>
+              {fmt(amount)}
+            </span>
+            {hasRefund && (
+              <span className="block text-[11px] font-medium text-[#111] tabular-nums">
+                {fullyRefunded ? 'Refunded' : `${fmt(netAmount)} net`}
+              </span>
+            )}
+          </div>
+          {hasRefund && (
+            <Badge variant="outline" className={cn(
+              'border-[#b8801a]/30 bg-[#b8801a]/10 text-[10px] text-[#946a00]',
+              fullyRefunded && 'border-[#d4503e]/25 bg-[#d4503e]/10 text-[#b8341f]'
+            )}>
+              {fullyRefunded ? 'Refunded' : 'Partial refund'}
+            </Badge>
+          )}
           <span className="text-[11px] text-[#9a9a9a] tabular-nums">
             {new Date(payment.paid_at!).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
           </span>
@@ -612,42 +934,212 @@ function PaidPaymentRow({ payment, externalPaypalEmail }: { payment: Payment; ex
             className="overflow-hidden"
           >
             <div className="pb-3 px-1 pt-1 space-y-2">
-              {paypalEmail && (
-                <div className="flex items-center justify-between gap-3 rounded-lg bg-[#f7f7f7] px-3 py-2 text-xs">
-                  <span className="text-[10px] text-[#9a9a9a]">PayPal</span>
-                  <span
-                    role="button"
-                    tabIndex={0}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigator.clipboard.writeText(paypalEmail);
-                      toast.success('PayPal email copied');
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') { e.stopPropagation(); navigator.clipboard.writeText(paypalEmail); toast.success('PayPal email copied'); }
-                    }}
-                    className="font-mono text-[#2a2a2a] truncate hover:text-[#0a63cc] transition-colors cursor-copy"
-                    title="Click to copy"
-                  >
-                    {paypalEmail}
-                  </span>
+              {hasRefund && (
+                <div className="rounded-[14px] bg-[#fff7eb] px-3 py-2 text-xs text-[#946a00]">
+                  <div className="flex items-center justify-between gap-3">
+                    <span>{fullyRefunded ? 'Fully refunded' : 'Partially refunded'}</span>
+                    <span className="font-medium tabular-nums">{fmt(refundAmount)} of {fmt(amount)}</span>
+                  </div>
+                  {payment.refund_note && (
+                    <p className="mt-1 text-[11px] text-[#946a00]/75">{payment.refund_note}</p>
+                  )}
                 </div>
               )}
-              {payment.items && payment.items.length > 0 && (
-                <div className="rounded-lg bg-[#f7f7f7] p-3 space-y-2">
-                  {payment.items.map(item => (
-                    <div key={item.id} className="flex items-center justify-between text-xs">
-                      <span className="text-[#808080]">{item.label}</span>
-                      <span className="text-[#111] font-medium tabular-nums">{fmt(Number(item.amount))}</span>
+              {(showPaypalEmail || (payment.items && payment.items.length > 0)) && (
+                <div className="overflow-hidden rounded-[14px] bg-[#f7f7f7] text-xs">
+                  {payment.items && payment.items.length > 0 && (
+                    <div className="space-y-2 px-3 py-2">
+                      {payment.items.map(item => (
+                        <div key={item.id} className="flex items-center justify-between gap-3">
+                          <span className="min-w-0 truncate text-[#808080]">{item.label}</span>
+                          <span className="font-medium tabular-nums text-[#111]">{fmt(Number(item.amount))}</span>
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  )}
+                  {showPaypalEmail && (
+                    <div className={cn('px-3 py-2', payment.items && payment.items.length > 0 && 'border-t border-black/[0.04]')}>
+                      <InputCopy
+                        value={paypalEmail}
+                        variant="icon"
+                        showTooltip={false}
+                        monospace={false}
+                        className="min-w-0 max-w-full flex-1"
+                        onClick={(e) => e.stopPropagation()}
+                        onCopy={() => toast.success('PayPal email copied')}
+                      />
+                    </div>
+                  )}
                 </div>
               )}
             </div>
           </motion.div>
         )}
       </AnimatePresence>
+      <AnimatePresence>
+        {refundMenu && !readOnly && (
+          <>
+            <motion.div
+              key="refund-menu-scrim"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.12, ease: 'easeOut' }}
+              className="fixed inset-0 z-40 bg-black/[0.045]"
+              onMouseDown={() => setRefundMenu(null)}
+            />
+            <motion.div
+              key="refund-menu"
+              initial={{ opacity: 0, scale: 0.97, y: -2 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.98, y: -2 }}
+              transition={{ type: 'spring', duration: 0.18, bounce: 0 }}
+              className="fixed z-50 w-[228px] rounded-[18px] bg-white p-1.5 shadow-[0_0_0_1px_rgba(0,0,0,0.08),0_10px_28px_rgba(0,0,0,0.14)]"
+              style={{ left: refundMenu.x, top: refundMenu.y, transformOrigin: 'top left' }}
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="px-2.5 py-2">
+                <p className="text-xs font-medium text-[#505050]">Refund status</p>
+                <p className="mt-0.5 truncate text-xs text-[#8a8a8a]">
+                  {hasRefund ? `${fmt(refundAmount)} recorded` : 'No refund recorded'}
+                </p>
+              </div>
+              <button
+                type="button"
+                className="flex w-full items-center gap-2.5 rounded-[14px] px-2.5 py-2 text-left text-xs font-medium text-[#7a5a00] transition-[background-color,transform] hover:bg-[#b8801a]/10 active:scale-[0.98] disabled:opacity-50"
+                onClick={() => { setRefundMenu(null); setRefundOpen(true); }}
+                disabled={refundLoading}
+              >
+                <span className="flex size-6 shrink-0 items-center justify-center rounded-[9px] bg-[#b8801a]/10">
+                  <RotateCw className="size-3.5" />
+                </span>
+                {hasRefund ? 'Edit partial refund' : 'Record partial refund'}
+              </button>
+              <button
+                type="button"
+                className="flex w-full items-center gap-2.5 rounded-[14px] px-2.5 py-2 text-left text-xs font-medium text-[#c43f30] transition-[background-color,transform] hover:bg-[#d4503e]/10 active:scale-[0.98] disabled:opacity-50"
+                onClick={() => { setRefundMenu(null); updateRefund(amount, payment.refund_note ?? 'Full refund'); }}
+                disabled={refundLoading || fullyRefunded}
+              >
+                <span className="flex size-6 shrink-0 items-center justify-center rounded-[9px] bg-[#d4503e]/10">
+                  <Ban className="size-3.5" />
+                </span>
+                Mark fully refunded
+              </button>
+              {hasRefund && (
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-2.5 rounded-[14px] px-2.5 py-2 text-left text-xs font-medium text-[#707070] transition-[background-color,transform] hover:bg-black/[0.04] hover:text-[#111] active:scale-[0.98] disabled:opacity-50"
+                  onClick={() => { setRefundMenu(null); updateRefund(0, null); }}
+                  disabled={refundLoading}
+                >
+                  <span className="flex size-6 shrink-0 items-center justify-center rounded-[9px] bg-black/[0.04]">
+                    <XIcon className="size-3.5" />
+                  </span>
+                  Clear refund status
+                </button>
+              )}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+      <RefundDialog
+        open={refundOpen}
+        onOpenChange={setRefundOpen}
+        max={amount}
+        initialAmount={hasRefund ? refundAmount : null}
+        initialNote={payment.refund_note ?? ''}
+        loading={refundLoading}
+        onSubmit={updateRefund}
+      />
     </div>
+  );
+}
+
+/* ── Refund Dialog (replaces the old window.prompt flow) ── */
+function RefundDialog({ open, onOpenChange, max, initialAmount, initialNote, loading, onSubmit }: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  max: number;
+  initialAmount: number | null;
+  initialNote: string;
+  loading: boolean;
+  onSubmit: (amount: number, note: string | null) => Promise<boolean>;
+}) {
+  const [amount, setAmount] = useState('');
+  const [note, setNote] = useState('');
+  const [error, setError] = useState<string | null>(null);
+
+  // Re-seed the fields each time the dialog opens (values can change between opens)
+  useEffect(() => {
+    if (open) {
+      setAmount(initialAmount !== null ? String(initialAmount) : '');
+      setNote(initialNote);
+      setError(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const parsed = Number(amount);
+    if (!amount.trim() || !Number.isFinite(parsed) || parsed < 0 || parsed > max) {
+      setError(`Enter an amount between $0.00 and ${fmt(max)}.`);
+      return;
+    }
+    const ok = await onSubmit(parsed, note.trim() || null);
+    if (ok) onOpenChange(false);
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange} contentClassName="max-w-sm" light>
+      <DialogHeader>
+        <DialogTitle>Refund payment</DialogTitle>
+        <p className="text-[13px] text-[#808080]">Refund part or all of {fmt(max)}.</p>
+      </DialogHeader>
+      <DialogClose onClose={() => onOpenChange(false)} />
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <label className="flex flex-col gap-1.5">
+          <span className="text-xs font-medium text-[#505050]">Amount</span>
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-[#9a9a9a]">$</span>
+            <input
+              type="number"
+              min={0}
+              max={max}
+              step="0.01"
+              value={amount}
+              onChange={(e) => { setAmount(e.target.value); setError(null); }}
+              autoFocus
+              className={`flex h-9 w-full pl-7 pr-3 text-sm tabular-nums focus-visible:outline-none ${LIGHT_INPUT} ${error ? 'border-[#d4503e] focus-visible:ring-[#d4503e]/30' : ''}`}
+            />
+          </div>
+          {error && <span className="text-[11px] text-[#d4503e]">{error}</span>}
+        </label>
+        <label className="flex flex-col gap-1.5">
+          <span className="text-xs font-medium text-[#505050]">
+            Note <span className="font-normal text-[#9a9a9a]">(optional)</span>
+          </span>
+          <input
+            type="text"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Reason for the refund"
+            className={`flex h-9 w-full px-3 text-sm focus-visible:outline-none ${LIGHT_INPUT}`}
+          />
+        </label>
+        <div className="flex justify-end gap-2 pt-1">
+          <Button type="button" variant="ghost" className={DIALOG_CANCEL} onClick={() => onOpenChange(false)} disabled={loading}>
+            Cancel
+          </Button>
+          <Button type="submit" className={cn('gap-1.5', DIALOG_SAVE)} disabled={loading}>
+            {loading && <Loader2 className="size-3.5 animate-spin" />}
+            Refund
+          </Button>
+        </div>
+      </form>
+    </Dialog>
   );
 }
 
@@ -691,30 +1183,22 @@ function PendingRequestRow({ payment, onAction }: { payment: Payment; onAction: 
           <Avatar className="size-8 outline outline-1 -outline-offset-1 outline-[#b8801a]/25">
             <AvatarImage src={payment.recipient?.avatar_url ?? undefined} />
             <AvatarFallback className="bg-[#b8801a]/10 text-[#946a00] text-[10px]">
-              {(payment.recipient?.display_name ?? payment.recipient_email ?? '?').split(' ').map(p => p[0]).join('').toUpperCase().slice(0, 2)}
+              {(payment.recipient?.display_name ?? payment.payee_name ?? payment.recipient_email ?? '?').split(' ').map(p => p[0]).join('').toUpperCase().slice(0, 2)}
             </AvatarFallback>
           </Avatar>
           <div className="min-w-0">
             <p className="text-sm font-medium text-[#111] truncate">
-              {payment.recipient?.display_name ?? payment.recipient_email ?? 'External'}
+              {payment.recipient?.display_name ?? payment.payee_name ?? payment.recipient_email ?? 'External'}
             </p>
             {payment.recipient?.paypal_email ? (
-              <span
-                role="button"
-                tabIndex={0}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  navigator.clipboard.writeText(payment.recipient!.paypal_email!);
-                  toast.success('PayPal email copied');
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') { e.stopPropagation(); navigator.clipboard.writeText(payment.recipient!.paypal_email!); toast.success('PayPal email copied'); }
-                }}
-                className="text-[11px] text-[#9a9a9a] font-mono truncate hover:text-[#0a63cc] transition-colors cursor-copy block"
-                title="Click to copy"
-              >
-                {payment.recipient.paypal_email}
-              </span>
+              <InputCopy
+                value={payment.recipient.paypal_email}
+                variant="icon"
+                showTooltip={false}
+                className="max-w-[240px]"
+                onClick={(e) => e.stopPropagation()}
+                onCopy={() => toast.success('PayPal email copied')}
+              />
             ) : payment.recipient_email ? (
               <span className="text-[11px] text-[#9a9a9a] font-mono truncate block">
                 {payment.recipient_email}
@@ -839,16 +1323,16 @@ function InvoiceRequestRow({ invite, index, onAction }: { invite: InvoiceRequest
     <motion.div
       initial={{ opacity: 0, x: -8 }}
       animate={{ opacity: 1, x: 0 }}
-      transition={{ type: 'spring', visualDuration: 0.3, bounce: 0.1, delay: index * 0.04 }}
-      className="flex items-center justify-between py-3 px-1 hover:bg-black/[0.03] transition-colors rounded-md -mx-1"
+      transition={{ type: 'spring', visualDuration: 0.3, bounce: 0.1, delay: Math.min(index, 8) * 0.04 }}
+      className="grid min-w-0 gap-3 rounded-[12px] px-3 py-3.5 transition-colors hover:bg-black/[0.025] sm:grid-cols-[minmax(0,1fr)_92px_116px_112px] sm:items-center"
     >
-      <div className="flex items-center gap-3 min-w-0">
-        <div className="flex size-8 items-center justify-center rounded-full bg-[#f4f4f4] outline outline-1 -outline-offset-1 outline-black/[0.06]">
+      <div className="flex min-w-0 items-center gap-3">
+        <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#f4f4f4] outline outline-1 -outline-offset-1 outline-black/[0.06]">
           <FileText className="size-3.5 text-[#808080]" />
         </div>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="text-sm font-medium text-[#111] font-mono truncate">{invite.recipient_email}</p>
-          <div className="flex items-center gap-2 text-[11px] text-[#808080]">
+          <div className="flex items-center gap-2 text-[11px] text-[#808080] sm:hidden">
             <span>{new Date(invite.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
             {prefilledTotal > 0 && (
               <>
@@ -857,31 +1341,30 @@ function InvoiceRequestRow({ invite, index, onAction }: { invite: InvoiceRequest
               </>
             )}
           </div>
-          {invite.paypal_email && (
-            <div className="flex items-center gap-1.5 mt-0.5 text-[11px] text-[#9a9a9a]">
-              <span className="text-[9px] text-[#b3b3b3]">PayPal</span>
-              <span
-                role="button"
-                tabIndex={0}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  navigator.clipboard.writeText(invite.paypal_email!);
-                  toast.success('PayPal email copied');
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') { e.stopPropagation(); navigator.clipboard.writeText(invite.paypal_email!); toast.success('PayPal email copied'); }
-                }}
-                className="font-mono truncate hover:text-[#0a63cc] transition-colors cursor-copy"
-                title="Click to copy"
-              >
-                {invite.paypal_email}
-              </span>
+          {/* Only worth a line when it differs from the recipient email above */}
+          {invite.paypal_email && invite.paypal_email.trim().toLowerCase() !== invite.recipient_email.trim().toLowerCase() && (
+            <div className="mt-1 max-w-full sm:max-w-[300px]">
+              <InputCopy
+                value={invite.paypal_email}
+                variant="icon"
+                showTooltip={false}
+                compact
+                className="min-w-0 max-w-full"
+                onClick={(e) => e.stopPropagation()}
+                onCopy={() => toast.success('PayPal email copied')}
+              />
             </div>
           )}
         </div>
       </div>
-      <div className="flex items-center gap-2.5 shrink-0">
-        <Badge variant="outline" className={cn('text-[10px] capitalize', LIGHT_INVOICE_STATUS[displayStatus])}>
+      <span className="hidden text-left text-xs text-[#808080] tabular-nums sm:block">
+        {new Date(invite.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+      </span>
+      <span className="hidden text-right text-sm font-medium text-[#111] tabular-nums sm:block">
+        {prefilledTotal > 0 ? fmt(prefilledTotal) : '—'}
+      </span>
+      <div className="flex items-center justify-between gap-2.5 sm:justify-end">
+        <Badge variant="outline" className={cn('min-w-[72px] justify-center text-[10px] capitalize', LIGHT_INVOICE_STATUS[displayStatus])}>
           {INVOICE_STATUS_LABEL[displayStatus] ?? displayStatus}
         </Badge>
         {canAct && !isExpired && (

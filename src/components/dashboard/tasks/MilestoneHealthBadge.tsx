@@ -11,10 +11,24 @@
 
 import type { MilestoneHealth } from '@/lib/types';
 
+// Dark issues-rail palette (default). Tuned for the dark /tasks surface; the
+// MilestoneEditPopover + MilestonesSection consumers depend on these.
 const COLOR: Record<MilestoneHealth, string> = {
   on_track: '#22c55e',
   at_risk: '#f59e0b',
   off_track: '#ef4444',
+};
+
+// AA-on-white palette for the light Overview card (opt-in `light`). The dark
+// greens/ambers fall ~2.1:1 on #fff — below the 3:1 graphic-contrast floor —
+// so the relayed glyph would be faint. These clear ≥3:1 and reuse the same
+// validated signal palette as the Overview priority chevrons (#bd7e10 amber,
+// #f04438 red); on_track deepens to green-600 #16a34a (~3.3:1, still reads as a
+// healthy green, not forest).
+const LIGHT_COLOR: Record<MilestoneHealth, string> = {
+  on_track: '#16a34a',
+  at_risk: '#bd7e10',
+  off_track: '#f04438',
 };
 
 const LABEL: Record<MilestoneHealth, string> = {
@@ -23,8 +37,16 @@ const LABEL: Record<MilestoneHealth, string> = {
   off_track: 'Off track',
 };
 
-function Glyph({ level, className }: { level: MilestoneHealth; className?: string }) {
-  const color = COLOR[level];
+function Glyph({
+  level,
+  className,
+  light = false,
+}: {
+  level: MilestoneHealth;
+  className?: string;
+  light?: boolean;
+}) {
+  const color = (light ? LIGHT_COLOR : COLOR)[level];
 
   if (level === 'on_track') {
     return (
@@ -72,19 +94,23 @@ function Glyph({ level, className }: { level: MilestoneHealth; className?: strin
 export function MilestoneHealthBadge({
   level,
   showLabel = false,
+  light = false,
   className,
 }: {
   level: MilestoneHealth | null | undefined;
   showLabel?: boolean;
+  // Relight the glyph for the white Overview card. Default false keeps the dark
+  // issues-rail consumers (MilestoneEditPopover, MilestonesSection) unchanged.
+  light?: boolean;
   className?: string;
 }) {
   if (!level) return null;
   if (!showLabel) {
-    return <Glyph level={level} className={className ?? 'size-3.5 shrink-0'} />;
+    return <Glyph level={level} light={light} className={className ?? 'size-3.5 shrink-0'} />;
   }
   return (
     <span className="inline-flex items-center gap-1.5">
-      <Glyph level={level} className="size-3.5 shrink-0" />
+      <Glyph level={level} light={light} className="size-3.5 shrink-0" />
       <span className="text-[12px] text-[#2a2a2a]">{LABEL[level]}</span>
     </span>
   );

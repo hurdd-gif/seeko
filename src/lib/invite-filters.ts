@@ -24,10 +24,11 @@ export function filterBySearch(
 }
 
 /**
- * The signing products (`preset` + `custom`) within the shared
- * `external_signing_invites` table, which serves three sibling products
- * (signing / invoice / doc-share). Used by `isSigningInvite` below — the per-row
- * cross-product isolation guard every signing route runs before acting on a token.
+ * Keep only the signing products (`preset` + `custom`) for the External Signing
+ * admin table. `external_signing_invites` is a shared table across three sibling
+ * products (signing / invoice / doc-share); an allow-list — rather than the old
+ * `excludeDocShare` deny-list — guarantees invoice rows (and any future purpose
+ * added to the table) can never leak into the signing view.
  */
 export const SIGNING_TEMPLATE_TYPES = new Set<ExternalSigningInvite['template_type']>(['preset', 'custom']);
 
@@ -46,6 +47,15 @@ export function isSigningInvite<T extends { template_type: ExternalSigningInvite
   invite: T | null | undefined,
 ): invite is T {
   return !!invite && SIGNING_TEMPLATE_TYPES.has(invite.template_type);
+}
+
+export function isLocalSigningInvite<
+  T extends {
+    template_type: ExternalSigningInvite['template_type'];
+    signing_provider?: ExternalSigningInvite['signing_provider'] | string | null;
+  }
+>(invite: T | null | undefined): invite is T {
+  return isSigningInvite(invite) && invite.signing_provider !== 'docusign';
 }
 
 export function filterSigningInvites(invites: ExternalSigningInvite[]): ExternalSigningInvite[] {

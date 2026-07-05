@@ -38,18 +38,33 @@ Every authenticated user gets a profile row automatically on signup. This double
 
 ### 2. tasks
 
-| Column      | Type             | Notes                                     |
-|-------------|------------------|-------------------------------------------|
-| id          | uuid (PK)        | Auto-generated                            |
-| name        | text             | Task name                                 |
-| department  | department enum  | Coding, Visual Art, UI/UX, Animation, Asset Creation |
-| status      | task_status enum | Complete, In Progress, In Review, Blocked |
-| priority    | priority enum    | High, Medium, Low                         |
-| area_id     | uuid (FK)        | → areas.id                                |
-| assignee_id | uuid (FK)        | → profiles.id                             |
-| deadline    | date             |                                           |
-| description | text             |                                           |
-| created_at  | timestamptz      |                                           |
+| Column      | Type             | Notes                                                                |
+|-------------|------------------|----------------------------------------------------------------------|
+| id          | uuid (PK)        | Auto-generated                                                       |
+| task_number | bigint           | Auto from `task_number_seq`; displayed as the bare number in the board (no prefix)     |
+| name        | text             | Task name                                                            |
+| department  | department enum  | Coding, Visual Art, UI/UX, Animation, Asset Creation                 |
+| status      | task_status enum | Backlog, Todo, In Progress, In Review, Done, Canceled, Duplicate     |
+| priority    | priority enum    | High, Medium, Low                                                    |
+| area_id     | uuid (FK)        | → areas.id                                                           |
+| assignee_id | uuid (FK)        | → profiles.id                                                        |
+| deadline    | date             |                                                                      |
+| description | text             |                                                                      |
+| bounty      | numeric          | Optional payment amount                                              |
+| progress    | smallint         | 0–100, default 0                                                     |
+| created_at  | timestamptz      |                                                                      |
+| updated_at  | timestamptz      | Auto-touched by BEFORE UPDATE trigger                                |
+
+AFTER INSERT/UPDATE/DELETE on `tasks` write typed rows to `activity_log` (kind = `created`, `status_changed`, `assignee_changed`, `progress_changed`; legacy text rows for priority/department/assigned/deleted).
+
+#### Milestones
+
+| Table             | Columns                                                                   |
+|-------------------|---------------------------------------------------------------------------|
+| `milestones`      | id, name, target_date, area_id (FK areas, null on delete), sort_order, created_at |
+| `task_milestone`  | task_id (FK tasks, cascade), milestone_id (FK milestones, cascade), PK both |
+
+RLS: any authenticated user can SELECT; only `profiles.is_admin = true` can INSERT/UPDATE/DELETE. AFTER INSERT/DELETE on `task_milestone` write `milestone_linked`/`milestone_unlinked` rows to `activity_log`.
 
 ---
 
@@ -83,11 +98,13 @@ Every authenticated user gets a profile row automatically on signup. This double
 
 ### 5. payments
 
-| Column       | Type             | Notes                                  |
-|--------------|------------------|----------------------------------------|
-| id           | uuid (PK)        | Auto-generated                         |
-| recipient_id | uuid (FK)        | → profiles.id                          |
-| amount       | decimal          | Total payment amount                   |
+| Column          | Type             | Notes                                                       |
+|-----------------|------------------|-------------------------------------------------------------|
+| id              | uuid (PK)        | Auto-generated                                              |
+| recipient_id    | uuid (FK, null)  | → profiles.id (null for external payees/invoices)           |
+| recipient_email | text (null)      | External invoice flow identity                              |
+| payee_name      | text (null)      | Manual external payee (vendor/subscription); XOR w/ recipient_id, at least one identity of the three required (check constraints) |
+| amount          | decimal          | Total payment amount                                        |
 | currency     | text             | Default 'USD'                          |
 | description  | text             | Summary of what payment covers         |
 | status       | payment_status   | pending, paid, cancelled               |
@@ -158,16 +175,17 @@ RLS: admin-only `select` / `insert` / `update` (checked against `profiles.is_adm
 
 ## Enum Types (dropdowns in Table Editor)
 
-| Enum           | Values                                                    |
-|----------------|-----------------------------------------------------------|
-| department     | Coding, Visual Art, UI/UX, Animation, Asset Creation      |
-| task_status    | Complete, In Progress, In Review, Blocked                 |
-| priority       | High, Medium, Low                                         |
-| area_status    | Active, Planned, Complete                                 |
-| area_phase     | Alpha, Beta, Launch                                       |
-| payment_status | pending, paid, cancelled                                  |
-| note_status    | open, archived                                            |
-| note_source    | web, telegram                                             |
+| Enum                | Values                                                                       |
+|---------------------|------------------------------------------------------------------------------|
+| department          | Coding, Visual Art, UI/UX, Animation, Asset Creation                         |
+| task_status         | Backlog, Todo, In Progress, In Review, Done, Canceled, Duplicate             |
+| task_activity_kind  | created, status_changed, assignee_changed, milestone_linked, milestone_unlinked, progress_changed |
+| priority            | High, Medium, Low                                                            |
+| area_status         | Active, Planned, Complete                                                    |
+| area_phase          | Alpha, Beta, Launch                                                          |
+| payment_status      | pending, paid, cancelled                                                     |
+| note_status         | open, archived                                                               |
+| note_source         | web, telegram                                                                |
 
 ---
 
@@ -193,7 +211,7 @@ Supabase (seeko-studio project)
 ## Task Taxonomy
 
 **Departments:** Coding · Visual Art · UI/UX · Animation · Asset Creation
-**Statuses:** Complete · In Progress · In Review · Blocked
+**Statuses:** Backlog · Todo · In Progress · In Review · Done · Canceled · Duplicate
 **Priorities:** High · Medium · Low
 **Game Areas:** Main Game · Fighting Club
 

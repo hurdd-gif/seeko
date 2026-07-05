@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname } from '@/lib/react-router-adapters';
 import { motion } from 'motion/react';
 import { Bug, ImagePlus, Loader2, X } from 'lucide-react';
 import { Dialog, DialogHeader, DialogTitle } from '@/components/ui/dialog';

@@ -94,11 +94,23 @@ export function PriorityIcon({ level, className, style }: Props) {
   );
 }
 
+// Loudness ladder, all AA-on-white (≥3:1, WCAG 1.4.11 graphics floor) so no
+// glyph disappears on the #ffffff board. Lightness is near-held (High/Medium
+// share oklch L≈0.64); urgency reads off chroma + hue, not weight:
+//   High   coral red  oklch(0.637 0.210  28)  3.76:1  — loud / alarm
+//   Medium amber gold oklch(0.643 0.133  73)  3.41:1  — caution (gold, not brown)
+//   Low    gray       oklch(0.417 0     ~90)  8.59:1  — quiet (achromatic → recedes)
+// High reuses the codebase's one "validated chevron red" #f04438 (= Milestone-
+// HealthBadge.off_track) — a single loud-red for "urgent/bad" everywhere, not a
+// near-duplicate per surface. Urgent keeps its own crimson (3.91:1); its filled-
+// square glyph already reads distinct from the bars, so color need not separate
+// it from High. Do NOT relight to brighter values (#ff6e5e ≈ 2.75:1, #ffce52 ≈
+// 1.3:1) — they fail the 3:1 floor; the PriorityIcon test guards this.
 export const PRIORITY_COLOR: Record<Priority, string> = {
   Urgent: '#e5484d',
-  High: '#1a1a1a',
-  Medium: '#1a1a1a',
-  Low: '#1a1a1a',
+  High: '#f04438',
+  Medium: '#bd7e10',
+  Low: '#4c4c4c',
 };
 
 export const PRIORITIES: Priority[] = ['Urgent', 'High', 'Medium', 'Low'];

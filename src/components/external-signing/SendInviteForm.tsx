@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { Send, Upload, FileText, Loader2, X, Eye, ChevronDown, ChevronUp, AlertCircle, Calendar, ShieldCheck } from 'lucide-react';
+import { useState, useEffect, useLayoutEffect } from 'react';
+import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
+import { Send, Upload, FileText, Loader2, X, Eye, ChevronDown, ChevronUp, AlertCircle, Calendar } from 'lucide-react';
 import { acquireScrollLock, releaseScrollLock } from '@/lib/scroll-lock';
 import { EXTERNAL_TEMPLATES } from '@/lib/external-agreement-templates';
 import { Button } from '@/components/ui/button';
@@ -10,17 +10,19 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { DatePicker } from '@/components/ui/date-picker';
 import { toast } from 'sonner';
-import DOMPurify from 'dompurify';
-import { springs } from '@/lib/motion';
+import { sanitizeHtml } from '@/lib/sanitize';
+import { springs, TAB_PILL_SPRING } from '@/lib/motion';
 import { LIGHT_INPUT, DIALOG_SAVE, DIALOG_CANCEL } from '@/components/dashboard/lightKit';
 
 const SPRING = springs.smooth;
 
 interface SendInviteFormProps {
   onInviteSent: () => void;
+  /** Drop the form's own card chrome — for rendering inside a dialog panel. */
+  bare?: boolean;
 }
 
-export function SendInviteForm({ onInviteSent }: SendInviteFormProps) {
+export function SendInviteForm({ onInviteSent, bare = false }: SendInviteFormProps) {
   const [email, setEmail] = useState('');
   const [templateMode, setTemplateMode] = useState<'preset' | 'upload'>('preset');
   const [templateId, setTemplateId] = useState(EXTERNAL_TEMPLATES[0]?.id || '');
@@ -35,6 +37,38 @@ export function SendInviteForm({ onInviteSent }: SendInviteFormProps) {
   const [showConfirm, setShowConfirm] = useState(false);
   const [showOptions, setShowOptions] = useState(false);
   const [isGuardianSigning, setIsGuardianSigning] = useState(false);
+  const reduce = useReducedMotion();
+
+  // Template↔Upload morph: the document region animates height (measured via
+  // ResizeObserver) while the two mode blocks slide/blur past each other in the
+  // toggle's left/right order — the guardian row and submit below never jump.
+  const [docDir, setDocDir] = useState(1);
+  const [docRegionEl, setDocRegionEl] = useState<HTMLDivElement | null>(null);
+  const [docRegionHeight, setDocRegionHeight] = useState<number | 'auto'>('auto');
+  useLayoutEffect(() => {
+    if (!docRegionEl) {
+      setDocRegionHeight('auto');
+      return;
+    }
+    setDocRegionHeight(docRegionEl.offsetHeight);
+    const ro = new ResizeObserver(() => setDocRegionHeight(docRegionEl.offsetHeight));
+    ro.observe(docRegionEl);
+    return () => ro.disconnect();
+  }, [docRegionEl]);
+
+  function switchTemplateMode(next: 'preset' | 'upload') {
+    if (next === templateMode) return;
+    setDocDir(next === 'upload' ? 1 : -1);
+    setTemplateMode(next);
+  }
+
+  const docSwap = {
+    enter: (dir: number) =>
+      reduce ? { opacity: 1 } : { opacity: 0, x: 24 * dir, scale: 0.97, filter: 'blur(2px)' },
+    center: reduce ? { opacity: 1 } : { opacity: 1, x: 0, scale: 1, filter: 'blur(0px)' },
+    exit: (dir: number) =>
+      reduce ? { opacity: 0 } : { opacity: 0, x: -24 * dir, scale: 0.97, filter: 'blur(2px)' },
+  };
 
   async function handlePdfUpload(file: File) {
     setParsing(true);
@@ -125,14 +159,11 @@ export function SendInviteForm({ onInviteSent }: SendInviteFormProps) {
   const selectedTemplate = EXTERNAL_TEMPLATES.find((t) => t.id === templateId);
 
   return (
-    <div className="overflow-visible rounded-2xl border-0 bg-white p-6 shadow-seeko">
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* ── Section 1: Recipient ── */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <div className="flex size-5 items-center justify-center rounded-full bg-[#111] text-white text-xs font-semibold">1</div>
-              <span className="text-sm font-medium text-[#111]">Recipient</span>
-            </div>
+    <div className={bare ? undefined : 'overflow-visible rounded-2xl border-0 bg-white p-6 shadow-seeko'}>
+        <form onSubmit={handleSubmit} className="space-y-5">
+          {/* ── Recipient ── */}
+          <div className="space-y-2">
+            <Label className="text-[11px] font-medium uppercase tracking-[0.08em] text-[#9a9a9a]" htmlFor="recipient-email">Recipient</Label>
             <Input
               id="recipient-email"
               type="email"
@@ -140,79 +171,106 @@ export function SendInviteForm({ onInviteSent }: SendInviteFormProps) {
               onChange={(e) => setEmail(e.target.value)}
               required
               placeholder="name@company.com"
-              className={LIGHT_INPUT}
+              className={`${LIGHT_INPUT} h-12 rounded-xl px-4 text-[15px]`}
             />
           </div>
 
-          <div className="h-px bg-black/[0.06]" />
-
-          {/* ── Section 2: Document ── */}
+          {/* ── Document ── */}
           <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <div className="flex size-5 items-center justify-center rounded-full bg-[#111] text-white text-xs font-semibold">2</div>
-              <span className="text-sm font-medium text-[#111]">Document</span>
-            </div>
+            <Label className="text-[11px] font-medium uppercase tracking-[0.08em] text-[#9a9a9a]">Document</Label>
 
-            {/* Template Mode Toggle */}
-            <div className="flex gap-1.5 rounded-lg bg-[#f4f4f4] border border-black/[0.06] p-1">
-              <button
-                type="button"
-                onClick={() => setTemplateMode('preset')}
-                className={`flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-1.5 text-sm transition-all ${
-                  templateMode === 'preset'
-                    ? 'bg-white text-[#111] font-medium shadow-seeko'
-                    : 'text-[#808080] hover:text-[#111]'
-                }`}
-              >
-                <FileText className="size-3.5" /> Template
-              </button>
-              <button
-                type="button"
-                onClick={() => setTemplateMode('upload')}
-                className={`flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-1.5 text-sm transition-all ${
-                  templateMode === 'upload'
-                    ? 'bg-white text-[#111] font-medium shadow-seeko'
-                    : 'text-[#808080] hover:text-[#111]'
-                }`}
-              >
-                <Upload className="size-3.5" /> Upload PDF
-              </button>
-            </div>
-
-            {/* Preset Templates */}
-            {templateMode === 'preset' && (
-              <div className="space-y-2">
-                {EXTERNAL_TEMPLATES.map((t) => (
-                  <label
-                    key={t.id}
-                    className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors ${
-                      templateId === t.id
-                        ? 'border-[#0a63cc]/40 bg-[#0a63cc]/[0.06]'
-                        : 'border-black/[0.08] hover:border-black/[0.12] hover:bg-black/[0.02]'
+            {/* Mode toggle — sliding pill (shared TAB_PILL_SPRING pattern) */}
+            <div className="flex rounded-[18px] bg-black/[0.04] p-1 ring-1 ring-inset ring-black/[0.03]">
+              {([['preset', 'Template', FileText], ['upload', 'Upload PDF', Upload]] as const).map(([value, label, Icon]) => {
+                const active = templateMode === value;
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => switchTemplateMode(value)}
+                    className={`relative flex min-h-9 flex-1 items-center justify-center gap-1.5 rounded-[14px] px-3 text-[13px] font-medium transition-[color,transform] duration-150 ease-out active:scale-[0.97] ${
+                      active ? 'text-[#111]' : 'text-[#808080] hover:text-[#111]'
                     }`}
                   >
-                    <input
-                      type="radio"
-                      name="template"
-                      value={t.id}
-                      checked={templateId === t.id}
-                      onChange={() => setTemplateId(t.id)}
-                      className="mt-0.5 accent-[#0a63cc]"
-                    />
-                    <div>
-                      <p className="text-sm font-medium text-[#111]">{t.name}</p>
-                      <p className="text-xs text-[#808080]">{t.description}</p>
-                    </div>
-                  </label>
-                ))}
-              </div>
-            )}
+                    {active && (
+                      <motion.span
+                        layoutId="docModePill"
+                        initial={false}
+                        transition={reduce ? { duration: 0 } : TAB_PILL_SPRING}
+                        className="absolute inset-0 rounded-[14px] bg-white shadow-[0_1px_3px_rgba(0,0,0,0.08)] ring-1 ring-black/[0.04]"
+                      />
+                    )}
+                    <Icon className="relative z-10 size-3.5" />
+                    <span className="relative z-10">{label}</span>
+                  </button>
+                );
+              })}
+            </div>
 
-            {/* PDF Upload */}
-            {templateMode === 'upload' && (
+            {/* Morph surface: height follows the measured contents while the
+                preset/upload blocks slide past each other (never a hard swap). */}
+            <motion.div
+              initial={false}
+              animate={{ height: docRegionHeight }}
+              transition={reduce ? { duration: 0 } : SPRING}
+              className="overflow-hidden"
+            >
+              <div ref={setDocRegionEl}>
+                <AnimatePresence mode="popLayout" initial={false} custom={docDir}>
+                  <motion.div
+                    key={templateMode}
+                    custom={docDir}
+                    variants={docSwap}
+                    initial="enter"
+                    animate="center"
+                    exit="exit"
+                    transition={reduce ? { duration: 0 } : SPRING}
+                  >
+                    {templateMode === 'preset' ? (
+              <div className="space-y-2">
+                {EXTERNAL_TEMPLATES.map((t) => {
+                  const selected = templateId === t.id;
+                  return (
+                    <label
+                      key={t.id}
+                      className={`flex cursor-pointer items-start gap-3 rounded-2xl p-4 transition-[background-color,box-shadow,transform] duration-150 ease-out active:scale-[0.99] ${
+                        selected
+                          ? 'bg-[#f8fbff] shadow-[inset_0_0_0_1px_rgba(10,99,204,0.24),0_10px_24px_-22px_rgba(10,99,204,0.75)]'
+                          : 'bg-white shadow-[inset_0_0_0_1px_rgba(0,0,0,0.08)] hover:bg-black/[0.015] hover:shadow-[inset_0_0_0_1px_rgba(0,0,0,0.14)]'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="template"
+                        value={t.id}
+                        checked={selected}
+                        onChange={() => setTemplateId(t.id)}
+                        className="sr-only"
+                      />
+                      <span
+                        aria-hidden
+                        className={`mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border transition-colors duration-150 ${
+                          selected ? 'border-[#0a63cc]' : 'border-black/25'
+                        }`}
+                      >
+                        <span
+                          className={`size-2 rounded-full transition-[transform,opacity] duration-150 ease-out ${
+                            selected ? 'scale-100 bg-[#0a63cc] opacity-100' : 'scale-50 bg-[#111] opacity-0'
+                          }`}
+                        />
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block text-[15px] font-semibold leading-tight text-[#111]">{t.name}</span>
+                        <span className="mt-1 block text-[13px] leading-snug text-[#808080]">{t.description}</span>
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+                    ) : (
               <div className="space-y-2">
                 {!customSections ? (
-                  <label className="flex cursor-pointer flex-col items-center gap-2 rounded-lg border-2 border-dashed border-black/[0.12] p-6 transition-colors hover:border-black/[0.2]">
+                  <label className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border border-dashed border-black/[0.16] p-7 transition-[border-color,background-color] duration-150 hover:border-black/[0.28] hover:bg-black/[0.015]">
                     {parsing ? (
                       <>
                         <Loader2 className="size-5 animate-spin text-[#9a9a9a]" />
@@ -236,7 +294,7 @@ export function SendInviteForm({ onInviteSent }: SendInviteFormProps) {
                     />
                   </label>
                 ) : (
-                  <div className="flex items-center justify-between rounded-lg border border-black/[0.06] bg-[#f7f7f7] px-3 py-2">
+                  <div className="flex items-center justify-between rounded-xl bg-[#f7f7f7] px-3.5 py-2.5">
                     <div className="flex items-center gap-2">
                       <FileText className="size-4 text-[#9a9a9a]" />
                       <span className="text-sm text-[#111]">{customTitle}</span>
@@ -262,11 +320,11 @@ export function SendInviteForm({ onInviteSent }: SendInviteFormProps) {
                       exit={{ height: 0, opacity: 0 }}
                       className="overflow-hidden"
                     >
-                      <div className="max-h-64 overflow-y-auto rounded-lg border border-black/[0.06] bg-[#f7f7f7] p-4 [scrollbar-width:thin]">
+                      <div className="max-h-64 overflow-y-auto rounded-xl bg-[#f7f7f7] p-4 [scrollbar-width:thin]">
                         {customSections.map((s) => (
                           <div key={s.number} className="mb-3">
                             <h4 className="text-sm font-semibold text-[#111]">{s.number}. {s.title}</h4>
-                            <div className="mt-1 text-xs text-[#808080] prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(s.content) }} />
+                            <div className="mt-1 text-xs text-[#808080] prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: sanitizeHtml(s.content) }} />
                           </div>
                         ))}
                       </div>
@@ -274,46 +332,56 @@ export function SendInviteForm({ onInviteSent }: SendInviteFormProps) {
                   )}
                 </AnimatePresence>
               </div>
-            )}
+                    )}
+                  </motion.div>
+                </AnimatePresence>
+              </div>
+            </motion.div>
           </div>
 
-          {/* ── Guardian toggle ── */}
+          {/* ── Guardian toggle — same card anatomy as the template options,
+                 checkbox instead of radio (optional flag, not a choice) ── */}
           <button
             type="button"
+            aria-pressed={isGuardianSigning}
             onClick={() => setIsGuardianSigning(!isGuardianSigning)}
-            className={`flex w-full cursor-pointer items-center gap-3 rounded-lg px-4 py-3 text-left transition-all ${
+            className={`flex w-full cursor-pointer items-start gap-3 rounded-2xl p-4 text-left transition-[background-color,box-shadow] duration-150 ease-out active:scale-[0.99] ${
               isGuardianSigning
-                ? 'bg-[#0a63cc]/[0.06] ring-1 ring-[#0a63cc]/25'
-                : 'bg-[#f7f7f7] hover:bg-black/[0.04]'
+                ? 'bg-[#f8fbff] shadow-[inset_0_0_0_1px_rgba(10,99,204,0.24)]'
+                : 'bg-white shadow-[inset_0_0_0_1px_rgba(0,0,0,0.08)] hover:bg-black/[0.015] hover:shadow-[inset_0_0_0_1px_rgba(0,0,0,0.14)]'
             }`}
           >
-            <div className={`flex size-8 shrink-0 items-center justify-center rounded-lg transition-colors ${
-              isGuardianSigning ? 'bg-[#0a63cc]/[0.12] text-[#0a63cc]' : 'bg-[#f4f4f4] text-[#808080]'
-            }`}>
-              <ShieldCheck className="size-4" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-[#111]">Guardian signing for a minor</p>
-              <p className="text-xs text-[#808080]">A parent or legal guardian will sign on behalf of someone under 18</p>
-            </div>
-            <div className={`flex size-5 shrink-0 items-center justify-center rounded-full border-2 transition-all ${
-              isGuardianSigning
-                ? 'border-[#0a63cc] bg-[#0a63cc]'
-                : 'border-black/20'
-            }`}>
-              {isGuardianSigning && (
-                <svg viewBox="0 0 12 12" className="size-3 text-white" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M2.5 6L5 8.5L9.5 3.5" />
-                </svg>
-              )}
-            </div>
+            <span
+              aria-hidden
+              className={`mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-[5px] border transition-colors duration-150 ${
+                isGuardianSigning ? 'border-[#0a63cc] bg-[#0a63cc]' : 'border-black/25'
+              }`}
+            >
+              <svg
+                viewBox="0 0 12 12"
+                className={`size-3 text-white transition-[transform,opacity] duration-150 ease-out ${
+                  isGuardianSigning ? 'scale-100 opacity-100' : 'scale-50 opacity-0'
+                }`}
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M2.5 6L5 8.5L9.5 3.5" />
+              </svg>
+            </span>
+            <span className="min-w-0">
+              <span className="block text-[15px] font-semibold leading-tight text-[#111]">Guardian signing for a minor</span>
+              <span className="mt-1 block text-[13px] leading-snug text-[#808080]">A parent or legal guardian will sign on behalf of someone under 18</span>
+            </span>
           </button>
 
           {/* ── Options toggle ── */}
           <button
             type="button"
             onClick={() => setShowOptions(!showOptions)}
-            className="flex items-center gap-1.5 text-xs text-[#808080] hover:text-[#111] transition-colors"
+            className="flex min-h-9 items-center gap-1.5 rounded-full px-1 text-[13px] font-medium text-[#808080] transition-colors hover:text-[#111]"
           >
             {showOptions ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}
             {showOptions ? 'Hide options' : 'Expiration & personal note'}
@@ -328,7 +396,7 @@ export function SendInviteForm({ onInviteSent }: SendInviteFormProps) {
                 transition={SPRING}
                 className="overflow-hidden"
               >
-                <div className="space-y-4 rounded-lg border border-black/[0.06] bg-[#f7f7f7] p-4">
+                <div className="space-y-4 rounded-xl bg-[#f7f7f7] p-4">
                   {/* Expiration */}
                   <div className="space-y-2">
                     <Label className="text-xs text-[#808080]">Expires in</Label>
@@ -343,10 +411,10 @@ export function SendInviteForm({ onInviteSent }: SendInviteFormProps) {
                           key={opt.value}
                           type="button"
                           onClick={() => setExpiration(opt.value)}
-                          className={`rounded-full px-3 py-1 text-xs font-medium transition-all ${
+                          className={`rounded-full px-3 py-1 text-xs font-medium transition-[background-color,color,transform] duration-150 ease-out active:scale-[0.96] ${
                             expiration === opt.value
                               ? 'bg-[#111] text-white'
-                              : 'bg-[#f4f4f4] text-[#808080] hover:text-[#111] ring-1 ring-black/[0.06]'
+                              : 'bg-white text-[#808080] shadow-[0_0_0_1px_rgba(0,0,0,0.06)] hover:text-[#111]'
                           }`}
                         >
                           {opt.label}
@@ -389,7 +457,7 @@ export function SendInviteForm({ onInviteSent }: SendInviteFormProps) {
           <Button
             type="submit"
             disabled={!canSubmit || sending}
-            className={`w-full gap-2 font-medium ${DIALOG_SAVE}`}
+            className={`h-12 w-full gap-2 rounded-full text-[15px] font-semibold shadow-seeko ${DIALOG_SAVE}`}
           >
             {sending ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
             Send Invite

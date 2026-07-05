@@ -10,12 +10,9 @@ export const DIALS = {
     tapScale: 0.77,
     spring: { type: 'spring' as const, stiffness: 500, damping: 30 },
   },
-  panel: {
-    spring: { type: 'spring' as const, visualDuration: 0.45, bounce: 0.45 },
-    initialScale: 0.91,
-    initialY: -9,
-    rowStagger: 0.05,
-  },
+  // NOTE: the desktop inbox dropdown no longer has its own dials — it derives its
+  // open/close motion from the shared canonical `DROPDOWN` (shellEntrance/rowEntrance
+  // in @/lib/motion), the single source of truth it shares with the "More" menu.
   card: {
     spring: { type: 'spring' as const, visualDuration: 0.5, bounce: 0.4 },
     entranceY: 20,

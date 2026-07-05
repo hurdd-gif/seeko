@@ -7,7 +7,7 @@ Load this file when working on: shadcn/ui components, Tailwind styling, animatio
 ## Visual Language
 
 - **Background:** `oklch(0.10 0 0)` (near-black)
-- **Success / Coding dept:** `#6ee7b7` (emerald green — `--color-seeko-accent`)
+- **Success / Coding dept:** `#0d7aff` (azure blue — `--color-seeko-accent`)
 - **Font for IDs/labels:** JetBrains Mono (monospace)
 - **Font for UI text:** Outfit (sans-serif)
 - **Dark mode:** always on — OKLCH token system in `globals.css`
@@ -18,7 +18,7 @@ Load this file when working on: shadcn/ui components, Tailwind styling, animatio
 
 | Department     | Color     |
 |----------------|-----------|
-| Coding         | `#6ee7b7` |
+| Coding         | `#0d7aff` |
 | Visual Art     | `#93c5fd` |
 | UI/UX          | `#c4b5fd` |
 | Animation      | `#fbbf24` |
@@ -30,7 +30,7 @@ Load this file when working on: shadcn/ui components, Tailwind styling, animatio
 
 | Status      | Color     | CSS Variable               |
 |-------------|-----------|----------------------------|
-| Complete    | `#6ee7b7` | `--color-status-complete`  |
+| Complete    | `#0d7aff` | `--color-status-complete`  |
 | In Progress | `#fbbf24` | `--color-status-progress`  |
 | In Review   | `#93c5fd` | `--color-status-review`    |
 | Blocked     | `#f87171` | `--color-status-blocked`   |
@@ -149,7 +149,7 @@ No `tailwind.config.ts` needed. Tailwind v4 uses CSS-based configuration in `glo
   --color-secondary:         oklch(0.18 0 0);
   --color-primary:           oklch(0.95 0 0);
   --color-sidebar:           oklch(0.12 0 0);
-  --color-seeko-accent:      #6ee7b7;
+  --color-seeko-accent:      #0d7aff;
   /* ... see globals.css for full token list */
 
   --font-sans: var(--font-outfit);

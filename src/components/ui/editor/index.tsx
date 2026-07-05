@@ -879,7 +879,7 @@ export function Editor({
         }}
       >
         <div className="flex flex-col gap-1">
-          <div className="border-black/[0.06] bg-white shadow-seeko-pop flex flex-nowrap items-center gap-0.5 overflow-x-auto rounded-md border p-1 whitespace-nowrap">
+          <div className="border-black/[0.06] bg-white shadow-seeko-pop flex flex-nowrap items-center gap-0.5 overflow-x-auto rounded-lg border p-1 whitespace-nowrap">
             <div className="group/native-select relative w-fit">
               <select
                 id="block-style"
@@ -945,7 +945,7 @@ export function Editor({
           {showLinkInput ? (
             <div
               data-state="open"
-              className="border-black/[0.06] bg-white data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=open]:slide-in-from-top-1 flex flex-nowrap items-center gap-0.5 overflow-x-auto rounded-md border p-1 shadow-sm duration-200 whitespace-nowrap"
+              className="border-black/[0.06] bg-white data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=open]:slide-in-from-top-1 flex flex-nowrap items-center gap-0.5 overflow-x-auto rounded-lg border p-1 shadow-sm duration-200 whitespace-nowrap"
             >
               <input
                 id="link-url"
@@ -981,7 +981,7 @@ export function Editor({
           {showAltInput && isOnImage ? (
             <div
               data-state="open"
-              className="border-black/[0.06] bg-white data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=open]:slide-in-from-top-1 flex flex-nowrap items-center gap-0.5 overflow-x-auto rounded-md border p-1 shadow-sm duration-200 whitespace-nowrap"
+              className="border-black/[0.06] bg-white data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=open]:slide-in-from-top-1 flex flex-nowrap items-center gap-0.5 overflow-x-auto rounded-lg border p-1 shadow-sm duration-200 whitespace-nowrap"
             >
               <input
                 id="image-alt"
@@ -1010,7 +1010,7 @@ export function Editor({
           {showTableActions && isInTable ? (
             <div
               data-state="open"
-              className="border-black/[0.06] bg-white data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=open]:slide-in-from-top-1 inline-flex w-fit flex-nowrap items-center gap-1 overflow-x-auto self-end rounded-md border p-1 shadow-sm duration-200 whitespace-nowrap"
+              className="border-black/[0.06] bg-white data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=open]:slide-in-from-top-1 inline-flex w-fit flex-nowrap items-center gap-1 overflow-x-auto self-end rounded-lg border p-1 shadow-sm duration-200 whitespace-nowrap"
             >
               <span className="text-sm ml-1 text-[#808080]">Rows:</span>
               {renderIconButton({

@@ -587,6 +587,9 @@ export type Database = {
           paid_at: string | null
           recipient_email: string | null
           recipient_id: string | null
+          refund_amount: number
+          refund_note: string | null
+          refunded_at: string | null
           status: Database["public"]["Enums"]["payment_status"]
         }
         Insert: {
@@ -599,6 +602,9 @@ export type Database = {
           paid_at?: string | null
           recipient_email?: string | null
           recipient_id?: string | null
+          refund_amount?: number
+          refund_note?: string | null
+          refunded_at?: string | null
           status?: Database["public"]["Enums"]["payment_status"]
         }
         Update: {
@@ -611,6 +617,9 @@ export type Database = {
           paid_at?: string | null
           recipient_email?: string | null
           recipient_id?: string | null
+          refund_amount?: number
+          refund_note?: string | null
+          refunded_at?: string | null
           status?: Database["public"]["Enums"]["payment_status"]
         }
         Relationships: [
@@ -1122,7 +1131,7 @@ export type Database = {
         | "task_handoff"
         | "user_joined"
       payment_status: "pending" | "paid" | "cancelled"
-      priority: "High" | "Medium" | "Low"
+      priority: "Urgent" | "High" | "Medium" | "Low"
       task_status: "Complete" | "In Progress" | "In Review" | "Blocked"
     }
     CompositeTypes: {
@@ -1281,7 +1290,7 @@ export const Constants = {
         "user_joined",
       ],
       payment_status: ["pending", "paid", "cancelled"],
-      priority: ["High", "Medium", "Low"],
+      priority: ["Urgent", "High", "Medium", "Low"],
       task_status: ["Complete", "In Progress", "In Review", "Blocked"],
     },
   },

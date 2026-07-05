@@ -29,7 +29,7 @@ const STEPS = [
 
 function Confetti({ active }: { active: boolean }) {
   const [particles] = useState(() => {
-    const colors = ['#ef4444', '#3b82f6', '#22c55e', '#eab308', '#a855f7', '#06b6d4', '#f97316', '#ec4899'];
+    const colors = ['#ef4444', '#3b82f6', '#0d7aff', '#eab308', '#a855f7', '#06b6d4', '#f97316', '#ec4899'];
     return Array.from({ length: 60 }, (_, i) => ({
       id: i,
       x: 20 + Math.random() * 60,

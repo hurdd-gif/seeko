@@ -52,8 +52,8 @@ export function BoardDisplayPopover({
   }, [open]);
 
   const triggerClass = (hasPinned || open)
-    ? 'flex size-9 items-center justify-center rounded-full bg-black/[0.05] text-[#3a3a3a] transition'
-    : 'flex size-9 items-center justify-center rounded-full text-[#9a9a9a] transition hover:bg-black/[0.04] hover:text-[#505050]';
+    ? 'flex size-9 items-center justify-center rounded-full bg-black/[0.05] text-[#3a3a3a] transition-[background-color,color,transform] duration-150 ease-out motion-safe:active:scale-[0.97]'
+    : 'flex size-9 items-center justify-center rounded-full text-[#6e6e6e] transition-[background-color,color,transform] duration-150 ease-out hover:bg-black/[0.04] hover:text-[#3a3a3a] motion-safe:active:scale-[0.97]';
 
   return (
     <div ref={wrapperRef} className="relative">

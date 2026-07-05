@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import { Link } from '@/lib/react-router-adapters';
 import { ChevronRight, ExternalLink } from 'lucide-react';
 import {
   DropdownMenu,

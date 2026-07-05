@@ -17,8 +17,9 @@
 /.next/
 /out/
 
-# production
+# production/build output
 /build
+/dist/
 
 # misc
 .DS_Store
@@ -42,9 +43,50 @@ next-env.d.ts
 
 # worktrees
 .worktrees
+.claude/worktrees/
 
 # local MCP config (may contain API tokens)
 .mcp.json
+
+# local agent/tool state
+.adal/
+.augment/
+.codebuddy/
+.commandcode/
+.continue/
+.cortex/
+.crush/
+.factory/
+.goose/
+.iflow/
+.junie/
+.kilocode/
+.kiro/
+.kode/
+.mcpjam/
+.mux/
+.neovate/
+.openhands/
+.pi/
+.playwright-mcp/
+.playwright-qa/
+.pochi/
+.qoder/
+.qwen/
+.roo/
+.trae/
+.vibe/
+.windsurf/
+.zencoder/
+.refine-relay.json
+.refine-relay.log
+
+# local QA screenshots
+.qa-screens/
+.qa-shots/
+/qa-*.png
+/login-redesign-*.png
+/404-short-window-*.png
 
 # documents
 *.pdf
@@ -54,3 +96,9 @@ next-env.d.ts
 *.xlsx
 *.ppt
 *.pptx
+.ds-sync/
+ds-bundle/
+.design-sync/.cache/
+.design-sync/learnings/
+/index.d.ts
+/types/

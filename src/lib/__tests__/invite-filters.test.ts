@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { filterByStatus, filterBySearch, filterSigningInvites, groupByRecipient, sortByActivePriority } from '../invite-filters';
+import { filterByStatus, filterBySearch, filterSigningInvites, isSigningInvite, groupByRecipient, sortByActivePriority } from '../invite-filters';
 import type { ExternalSigningInvite } from '../types';
 
 const makeInvite = (overrides: Partial<ExternalSigningInvite>): ExternalSigningInvite => ({
@@ -71,7 +71,7 @@ describe('filterBySearch', () => {
 });
 
 describe('filterSigningInvites', () => {
-  it('keeps only signing rows from the shared invite table', () => {
+  it('keeps only signing rows (preset + custom), dropping invoice and doc_share', () => {
     const invites = [
       makeInvite({ id: '1', template_type: 'preset' }),
       makeInvite({ id: '2', template_type: 'custom' }),
@@ -79,6 +79,45 @@ describe('filterSigningInvites', () => {
       makeInvite({ id: '4', template_type: 'doc_share' }),
     ];
     expect(filterSigningInvites(invites).map(i => i.id)).toEqual(['1', '2']);
+  });
+
+  it('is an allow-list: drops unknown/future template_types it does not recognize', () => {
+    const invites = [
+      makeInvite({ id: '1', template_type: 'preset' }),
+      makeInvite({ id: '2', template_type: 'some_future_purpose' as ExternalSigningInvite['template_type'] }),
+    ];
+    expect(filterSigningInvites(invites).map(i => i.id)).toEqual(['1']);
+  });
+});
+
+describe('isSigningInvite', () => {
+  it('returns false for null (unknown token → not a signing invite)', () => {
+    expect(isSigningInvite(null)).toBe(false);
+  });
+
+  it('returns false for undefined', () => {
+    expect(isSigningInvite(undefined)).toBe(false);
+  });
+
+  it('returns true for the signing template types (preset + custom)', () => {
+    expect(isSigningInvite(makeInvite({ template_type: 'preset' }))).toBe(true);
+    expect(isSigningInvite(makeInvite({ template_type: 'custom' }))).toBe(true);
+  });
+
+  it('returns false for sibling-product rows (invoice + doc_share)', () => {
+    expect(isSigningInvite(makeInvite({ template_type: 'invoice' }))).toBe(false);
+    expect(isSigningInvite(makeInvite({ template_type: 'doc_share' }))).toBe(false);
+  });
+
+  it('is an allow-list: returns false for unknown/future template_types', () => {
+    expect(
+      isSigningInvite(makeInvite({ template_type: 'some_future_purpose' as ExternalSigningInvite['template_type'] })),
+    ).toBe(false);
+  });
+
+  it('accepts a minimal { template_type } shape, not just full invite rows', () => {
+    expect(isSigningInvite({ template_type: 'preset' })).toBe(true);
+    expect(isSigningInvite({ template_type: 'invoice' })).toBe(false);
   });
 });
 

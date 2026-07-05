@@ -75,3 +75,31 @@ export function groupNotifications(notifications: Notification[]): GroupedNotifi
     .filter(label => groups.has(label))
     .map(label => ({ label, items: collapseNotifications(groups.get(label)!) }));
 }
+
+export function groupNotificationsFlat(notifications: Notification[]): GroupedNotification[] {
+  const groups = new Map<string, Notification[]>();
+  const order = ['Today', 'Yesterday', 'Earlier'];
+
+  for (const n of notifications) {
+    const group = getTimeGroup(n.created_at);
+    if (!groups.has(group)) groups.set(group, []);
+    groups.get(group)!.push(n);
+  }
+
+  return order
+    .filter((label) => groups.has(label))
+    .map((label) => ({
+      label,
+      items: groups.get(label)!.map((n) => ({
+        id: n.id,
+        kind: n.kind,
+        title: n.title,
+        body: n.body,
+        link: n.link,
+        read: n.read,
+        created_at: n.created_at,
+        count: 1,
+        ids: [n.id],
+      })),
+    }));
+}

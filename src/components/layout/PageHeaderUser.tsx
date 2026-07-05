@@ -11,20 +11,25 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import Link from 'next/link';
+import { Link } from '@/lib/react-router-adapters';
 import {
   Settings,
   LogOut,
   Users,
   FileSignature,
   TrendingUp,
+  CreditCard,
 } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Notification } from '@/lib/types';
 import { getInitials } from '@/lib/utils';
-import dynamic from 'next/dynamic';
+import { dynamic } from '@/lib/react-router-adapters';
 import { useHaptics } from '@/components/HapticsProvider';
 import { springs } from '@/lib/motion';
+import { QuickCreateMorph } from '@/components/dashboard/QuickCreateMorph';
+
+type PillTeamMember = { id: string; display_name?: string | null; avatar_url?: string | null };
+type PillArea = { id: string; name: string };
 
 const NotificationBell = dynamic(
   () => import('@/components/dashboard/NotificationBell').then(m => m.NotificationBell),
@@ -42,6 +47,8 @@ interface PageHeaderUserProps {
   isAdmin?: boolean;
   unreadCount?: number;
   notifications?: Notification[];
+  team?: PillTeamMember[];
+  areas?: PillArea[];
 }
 
 export function PageHeaderUser({
@@ -85,15 +92,30 @@ export function PageHeaderUser({
   }, [open]);
 
   return (
-    <div className="hidden md:flex items-center gap-3">
+    <>
+    <div className="relative hidden md:block">
+    <div
+      className="flex h-[54px] items-center gap-3 rounded-full bg-[#212020] pl-3 pr-4 antialiased"
+      style={{ borderWidth: '0.5px', borderStyle: 'solid', borderColor: '#F7F5F31F' }}
+    >
       {userId && (
-        <NotificationBell
-          userId={userId}
-          initialCount={unreadCount}
-          initialNotifications={notifications}
-        />
+        <span
+          className="flex size-7.5 items-center justify-center rounded-full"
+          style={{ borderWidth: '0.5px', borderStyle: 'solid', borderColor: '#F7F5F31F' }}
+        >
+          <NotificationBell
+            userId={userId}
+            initialCount={unreadCount}
+            initialNotifications={notifications}
+          />
+        </span>
       )}
-      <div className="relative">
+
+      {isAdmin && (
+        <QuickCreateMorph onOpenChange={(isOpen) => { if (isOpen) trigger('selection'); }} />
+      )}
+
+      <div className="flex items-center gap-1">
         <motion.button
           ref={avatarRef}
           onClick={() => { trigger('selection'); setOpen(prev => !prev); }}
@@ -102,7 +124,7 @@ export function PageHeaderUser({
           transition={SNAPPY}
           className="rounded-full"
         >
-          <Avatar className="size-8">
+          <Avatar className="size-7">
             <AvatarImage src={avatarUrl} alt={label} />
             <AvatarFallback className="bg-secondary text-foreground text-[10px]">
               {getInitials(label)}
@@ -110,39 +132,61 @@ export function PageHeaderUser({
           </Avatar>
         </motion.button>
 
+        <button
+          type="button"
+          aria-label="Open menu"
+          onClick={() => { trigger('selection'); setOpen((prev) => !prev); }}
+          className="-mr-1 flex size-7 items-center justify-center rounded-full transition-colors duration-100 ease-out hover:bg-white/5 active:scale-[0.95]"
+        >
+          <span className="flex flex-col items-center justify-center gap-[3px]">
+            <span className="block h-[1.5px] w-3.5 rounded-full bg-[#918F8F]" />
+            <span className="block h-[1.5px] w-3.5 rounded-full bg-[#918F8F]" />
+          </span>
+        </button>
+      </div>
+    </div>
+
         <AnimatePresence>
           {open && (
             <motion.div
               ref={popoverRef}
-              initial={{ opacity: 0, scale: 0.95, y: -4 }}
+              initial={{ opacity: 0, scale: 0.96, y: -4 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: -4 }}
+              exit={{ opacity: 0, scale: 0.96, y: -4 }}
               transition={SMOOTH}
-              className="absolute right-0 top-full mt-2 w-56 rounded-xl border border-white/[0.08] bg-popover backdrop-blur-xl backdrop-saturate-150 shadow-xl z-50 overflow-hidden"
+              style={{ transformOrigin: 'top center' }}
+              className="group/menu absolute inset-x-0 top-full z-50 mt-[9px] flex flex-col gap-1 overflow-hidden rounded-[20px] bg-white p-1 shadow-seeko"
             >
               {/* User info */}
-              <div className="px-3 py-3 border-b border-white/[0.06]">
+              <div className="px-4 py-3">
                 {displayName && (
-                  <p className="text-sm font-medium text-foreground truncate">{displayName}</p>
+                  <p className="truncate text-[14px] font-medium tracking-[-0.02em] text-[#0d0d0d]">{displayName}</p>
                 )}
-                <p className="text-xs text-muted-foreground truncate">{email}</p>
+                <p className="mt-0.5 truncate text-[13px] text-[#808080]">{email}</p>
               </div>
+
+              <div className="mx-4 h-px bg-[#0000000d]" />
 
               {/* Links */}
-              <div className="py-1">
+              <div className="flex flex-col">
                 <PopoverLink href="/team" icon={Users} label="Team" onClick={() => setOpen(false)} />
                 <PopoverLink href="/settings" icon={Settings} label="Settings" onClick={() => setOpen(false)} />
-                {isAdmin && (
-                  <>
-                    <div className="mx-3 my-1 h-px bg-white/[0.06]" />
+              </div>
+              {isAdmin && (
+                <>
+                  <div className="mx-4 h-px bg-[#0000000d]" />
+                  <div className="flex flex-col">
+                    <PopoverLink href="/payments" icon={CreditCard} label="Payments" onClick={() => setOpen(false)} />
                     <PopoverLink href="/admin/external-signing" icon={FileSignature} label="External Signing" onClick={() => setOpen(false)} />
                     <PopoverLink href="/investor" icon={TrendingUp} label="Investor Panel" onClick={() => setOpen(false)} />
-                  </>
-                )}
-              </div>
+                  </div>
+                </>
+              )}
+
+              <div className="mx-4 h-px bg-[#0000000d]" />
 
               {/* Sign out */}
-              <div className="border-t border-white/[0.06] py-1 overflow-hidden">
+              <div className="flex flex-col overflow-hidden">
                 <AnimatePresence mode="wait" initial={false}>
                   {confirmingSignOut ? (
                     <motion.div
@@ -151,18 +195,18 @@ export function PageHeaderUser({
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -8 }}
                       transition={{ ...SNAPPY, opacity: { duration: 0.12 } }}
-                      className="flex items-center justify-between px-3 py-2"
+                      className="flex items-center justify-between rounded-2xl px-4 py-3"
                     >
-                      <span className="text-xs text-muted-foreground">Sign out?</span>
-                      <div className="flex items-center gap-2">
+                      <span className="text-[14px] font-medium tracking-[-0.02em] text-[#808080]">Sign out?</span>
+                      <div className="flex items-center gap-3">
                         <form action="/auth/signout" method="post">
-                          <button type="submit" className="text-xs font-medium text-red-400 hover:text-red-300 transition-colors">
+                          <button type="submit" className="text-[14px] font-medium text-[#e5484d] transition-colors hover:text-[#d33b40]">
                             Yes
                           </button>
                         </form>
                         <button
                           onClick={() => setConfirmingSignOut(false)}
-                          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                          className="text-[14px] text-[#808080] transition-colors hover:text-[#0d0d0d]"
                         >
                           Cancel
                         </button>
@@ -176,10 +220,10 @@ export function PageHeaderUser({
                       exit={{ opacity: 0, y: 8 }}
                       transition={{ ...SNAPPY, opacity: { duration: 0.12 } }}
                       onClick={() => setConfirmingSignOut(true)}
-                      className="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-muted-foreground hover:text-red-400 hover:bg-white/[0.03] transition-colors"
+                      className="flex w-full items-center justify-between rounded-2xl px-4 py-3 text-[14px] font-medium tracking-[-0.02em] text-[#0d0d0d] opacity-100 transition-[color,background-color,opacity] group-hover/menu:opacity-20 hover:bg-[#0000000a] hover:text-[#e5484d] hover:opacity-100!"
                     >
-                      <LogOut className="size-3.5" />
-                      Sign out
+                      <span>Sign out</span>
+                      <LogOut className="size-5" />
                     </motion.button>
                   )}
                 </AnimatePresence>
@@ -187,8 +231,8 @@ export function PageHeaderUser({
             </motion.div>
           )}
         </AnimatePresence>
-      </div>
     </div>
+    </>
   );
 }
 
@@ -200,10 +244,10 @@ function PopoverLink({ href, icon: Icon, label, onClick }: { href: string; icon:
       <Link
         href={href}
         onClick={onClick}
-        className="flex items-center gap-2.5 px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-white/[0.03] transition-colors"
+        className="flex items-center justify-between rounded-2xl px-4 py-3 text-[14px] font-medium tracking-[-0.02em] text-[#0d0d0d] opacity-100 transition-[color,background-color,opacity] group-hover/menu:opacity-20 hover:bg-[#0000000a] hover:opacity-100!"
       >
-        <Icon className="size-3.5" />
-        {label}
+        <span>{label}</span>
+        <Icon className="size-5 text-[#808080]" />
       </Link>
     </motion.div>
   );

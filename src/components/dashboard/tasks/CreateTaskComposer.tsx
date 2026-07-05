@@ -35,14 +35,13 @@ import {
   useState,
   useTransition,
 } from 'react';
+import { toast } from 'sonner';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { X, Maximize2, Calendar as CalendarIcon, Folder } from 'lucide-react';
-import { createTask } from '@/app/(dashboard)/actions';
+import { createTask } from '@/lib/dashboard-actions';
 import type {
-  Area,
   Department,
   Priority,
-  Profile,
   TaskStatus,
 } from '@/lib/types';
 import { TASK_STATUSES } from '@/lib/types';
@@ -72,6 +71,17 @@ const DEPARTMENTS: Department[] = [
   'Asset Creation',
 ];
 
+type ComposerTeamMember = {
+  id: string;
+  display_name?: string | null;
+  avatar_url?: string | null;
+};
+
+type ComposerArea = {
+  id: string;
+  name: string;
+};
+
 function initial(name?: string | null) {
   return (name ?? '?').slice(0, 1).toUpperCase();
 }
@@ -91,7 +101,7 @@ function formatDeadline(iso?: string | null) {
  * no width:100% behaviour leaking from the row-style default). */
 function pillClass(active: boolean) {
   return [
-    'inline-flex h-[26px] min-w-[28px] cursor-pointer select-none items-center gap-1.5 rounded-full px-2.5 text-[12px] leading-4 transition-colors',
+    'inline-flex h-[26px] min-w-[28px] cursor-pointer select-none items-center gap-1.5 rounded-full pl-2 pr-2.5 text-[12px] leading-4 transition-colors',
     'ring-1 ring-inset ring-black/[0.07] hover:bg-black/[0.03]',
     active ? 'bg-white text-[#2a2a2a]' : 'bg-white text-[#7a7a7a]',
   ].join(' ');
@@ -107,8 +117,8 @@ export function CreateTaskComposer({
 }: {
   open: boolean;
   onClose: () => void;
-  team: Profile[];
-  areas: Area[];
+  team: ComposerTeamMember[];
+  areas: ComposerArea[];
   /** Pre-fill status (e.g. from a per-column "+" trigger). */
   defaultStatus?: TaskStatus;
   /** Called after a successful insert — board can opt-in to a refetch. */
@@ -261,6 +271,7 @@ export function CreateTaskComposer({
           deadline: deadline ?? undefined,
           description: description.trim() || undefined,
         });
+        toast.success('Issue created');
         onCreated?.();
         if (createMore) {
           // Reset just the title/description, keep property selections so

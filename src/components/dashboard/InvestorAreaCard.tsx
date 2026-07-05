@@ -21,7 +21,7 @@ import type { TaskStatus } from '@/lib/types';
 
 const AREA_PHASES = ['Alpha', 'Beta', 'Launch'] as const;
 const AREA_STATUSES = ['Active', 'Planned', 'Complete'] as const;
-const TASK_STATUSES: TaskStatus[] = ['In Progress', 'In Review', 'Blocked', 'Complete'];
+const TASK_STATUSES: TaskStatus[] = ['Backlog', 'Todo', 'In Progress', 'In Review', 'Done', 'Canceled', 'Duplicate'];
 
 function statusDotColor(status: string): string {
   if (status === 'Active') return 'var(--color-seeko-accent)';
@@ -134,7 +134,7 @@ export function InvestorAreaCard({ area, tasksInArea, isAdmin = false }: Investo
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-xs text-muted-foreground">Progress</span>
                         <span className="text-xs text-muted-foreground font-mono tabular-nums">
-                          {tasksInArea.filter(t => t.status === 'Complete').length}/{tasksInArea.length} tasks
+                          {tasksInArea.filter(t => t.status === 'Done').length}/{tasksInArea.length} tasks
                         </span>
                       </div>
                       {area.progress === 0 ? (
@@ -275,7 +275,7 @@ export function InvestorAreaCard({ area, tasksInArea, isAdmin = false }: Investo
                 max={100}
                 value={editProgress}
                 onChange={e => setEditProgress(Number(e.target.value))}
-                className="w-full h-2 rounded-full appearance-none bg-secondary cursor-pointer accent-[#6ee7b7] [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-seeko-accent [&::-webkit-slider-thumb]:shadow-md"
+                className="w-full h-2 rounded-full appearance-none bg-secondary cursor-pointer accent-[#0d7aff] [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-seeko-accent [&::-webkit-slider-thumb]:shadow-md"
               />
               <div className="w-full h-1.5 rounded-full bg-secondary overflow-hidden mt-1">
                 <div

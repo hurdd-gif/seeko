@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { createPortal } from "react-dom"
 import { motion, AnimatePresence } from "motion/react"
 import { cn } from "@/lib/utils"
 import { acquireScrollLock, releaseScrollLock } from "@/lib/scroll-lock"
@@ -30,6 +31,20 @@ const MAX_H_PCT = 94
 
 // Track open dialog close handlers as a stack — Escape only closes the topmost
 const dialogCloseStack: Array<() => void> = []
+
+/** Shared with SidePanel (side-panel.tsx) so Escape resolves the topmost layer
+ * across dialogs AND slide-over panels — e.g. a share dialog stacked over the
+ * doc read panel closes first, the panel second. */
+export function pushDialogClose(handler: () => void) {
+  dialogCloseStack.push(handler)
+  return () => {
+    const idx = dialogCloseStack.indexOf(handler)
+    if (idx >= 0) dialogCloseStack.splice(idx, 1)
+  }
+}
+export function isTopDialogClose(handler: () => void) {
+  return dialogCloseStack[dialogCloseStack.length - 1] === handler
+}
 
 type DialogFooterContextValue = {
   setFooter: (node: React.ReactNode) => void
@@ -175,7 +190,12 @@ function Dialog({ open, onOpenChange, children, resizable = false, contentClassN
     ? { width: size.w, height: size.h, maxWidth: 'none', maxHeight: 'none' as const }
     : undefined
 
-  return (
+  // Portal the overlay to <body>. A `position: fixed` element resolves against
+  // the nearest transformed/filtered ancestor, NOT the viewport — and our dialogs
+  // open inside transformed `motion` ancestors (e.g. FadeRise). Rendering inline
+  // there shrinks the backdrop to the content column and lets the fixed top bar
+  // bleed through. Escaping to <body> keeps the overlay truly viewport-fixed.
+  const overlay = (
     <AnimatePresence>
       {open && (
         <div className={cn("fixed inset-0 z-[60] flex items-end sm:items-center justify-center touch-none", className)}>
@@ -297,6 +317,9 @@ function Dialog({ open, onOpenChange, children, resizable = false, contentClassN
       )}
     </AnimatePresence>
   )
+
+  if (typeof document === "undefined") return null
+  return createPortal(overlay, document.body)
 }
 
 function DialogHeader({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {

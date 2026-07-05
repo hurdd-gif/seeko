@@ -22,7 +22,7 @@ export function PaymentConfetti({ active }: PaymentConfettiProps) {
       decay: 0.9,
       scalar: 1.3,
       origin: { y: 0.6 },
-      colors: ['#6ee7b7', '#34d399', '#a7f3d0', '#fbbf24', '#93c5fd', '#c4b5fd'],
+      colors: ['#0d7aff', '#4da3ff', '#a3cfff', '#fbbf24', '#93c5fd', '#c4b5fd'],
     };
 
     // Two quick bursts

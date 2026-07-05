@@ -2,7 +2,7 @@
 
 import { motion, useReducedMotion } from 'motion/react';
 import { ArrowRight } from 'lucide-react';
-import Link from 'next/link';
+import { Link } from '@/lib/react-router-adapters';
 import { cn } from '@/lib/utils';
 import { springs } from '@/lib/motion';
 

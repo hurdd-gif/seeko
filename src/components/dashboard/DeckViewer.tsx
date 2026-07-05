@@ -30,6 +30,7 @@ import { springs } from '@/lib/motion';
 
 interface Slide {
   url: string;
+  thumbnail_url?: string;
   sort_order: number;
 }
 
@@ -134,6 +135,8 @@ export function DeckViewer({ slides, title, notes, orientation = 'horizontal' }:
                   alt={`Page ${i + 1}`}
                   className="w-full"
                   draggable={false}
+                  loading="lazy"
+                  decoding="async"
                 />
               ))}
             </div>
@@ -193,6 +196,8 @@ export function DeckViewer({ slides, title, notes, orientation = 'horizontal' }:
                     alt={`Page ${i + 1}`}
                     className="w-full select-none"
                     draggable={false}
+                    loading="lazy"
+                    decoding="async"
                   />
                 ))}
               </div>
@@ -215,6 +220,7 @@ export function DeckViewer({ slides, title, notes, orientation = 'horizontal' }:
             alt={`Slide ${currentSlide + 1}`}
             className="w-full h-full object-contain"
             draggable={false}
+            decoding="async"
           />
 
           {/* Overlay bar — slide counter + present button */}
@@ -317,7 +323,7 @@ export function DeckViewer({ slides, title, notes, orientation = 'horizontal' }:
                   transition={{ duration: 0.2 }}
                   className="w-full h-full"
                 >
-                  <img src={slide.url} alt={`Slide ${i + 1}`} className="w-full h-full object-cover" />
+                  <img src={slide.thumbnail_url ?? slide.url} alt={`Slide ${i + 1}`} className="w-full h-full object-cover" loading="lazy" decoding="async" />
                 </motion.div>
                 <span className="absolute bottom-0.5 left-1 text-[9px] font-mono font-medium text-white/90 bg-black/60 backdrop-blur-sm px-1 rounded z-20">
                   {i + 1}
@@ -372,6 +378,7 @@ export function DeckViewer({ slides, title, notes, orientation = 'horizontal' }:
                 alt={`Slide ${currentSlide + 1}`}
                 className="max-h-[85vh] max-w-[95vw] object-contain select-none"
                 draggable={false}
+                decoding="async"
               />
             </div>
 

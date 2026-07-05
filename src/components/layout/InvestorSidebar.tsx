@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import Image from 'next/image';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { Image } from '@/lib/react-router-adapters';
+import { Link } from '@/lib/react-router-adapters';
+import { usePathname } from '@/lib/react-router-adapters';
 import { motion, LayoutGroup } from 'motion/react';
 import { LogOut, LayoutDashboard, FileDown, Settings, Home, DollarSign, FileText } from 'lucide-react';
 import { toast } from 'sonner';
@@ -259,12 +259,12 @@ export function InvestorSidebar({ email, displayName, avatarUrl, isAdmin = false
           <>
             {createPortal(
               <header
-                className={`md:hidden flex items-center justify-between px-4 h-14 w-full shrink-0 border-b border-border ${!useHeaderSlot ? 'fixed top-0 left-0 right-0 z-40 mobile-fixed-layer' : ''}`}
+                className={`md:hidden flex items-center justify-between px-4 h-14 w-full shrink-0 border-b border-border scroll-edge-blur ${!useHeaderSlot ? 'fixed top-0 left-0 right-0 z-40 mobile-fixed-layer' : ''}`}
                 style={{
                   background: 'rgba(26, 26, 26, 0.80)',
-                  backdropFilter: 'saturate(180%) blur(20px)',
-                  WebkitBackdropFilter: 'saturate(180%) blur(20px)',
-                }}
+                  '--edge-blur': '20px',
+                  '--edge-saturate': '180%',
+                } as React.CSSProperties}
               >
                 <div className="flex items-center gap-2.5 min-w-0">
                   <Image src="/seeko-s.png" alt="SEEKO" width={20} height={20} unoptimized />
@@ -283,13 +283,13 @@ export function InvestorSidebar({ email, displayName, avatarUrl, isAdmin = false
             )}
             {createPortal(
               <nav
-                className="md:hidden fixed bottom-0 left-0 right-0 z-50"
+                className="md:hidden fixed bottom-0 left-0 right-0 z-50 scroll-edge-blur"
                 style={{
                   background: 'rgba(26, 26, 26, 0.96)',
-                  backdropFilter: 'saturate(180%) blur(16px)',
-                  WebkitBackdropFilter: 'saturate(180%) blur(16px)',
+                  '--edge-blur': '16px',
+                  '--edge-saturate': '180%',
                   paddingBottom: 'env(safe-area-inset-bottom)',
-                }}
+                } as React.CSSProperties}
               >
                 <LayoutGroup id="investor-mobile-nav">
                   <div className="flex items-stretch h-14">

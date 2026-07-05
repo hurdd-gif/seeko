@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { createBrowserClient } from '@supabase/ssr';
-import { motion, AnimatePresence, LayoutGroup } from 'motion/react';
+import { motion, AnimatePresence, LayoutGroup, useReducedMotion } from 'motion/react';
 import {
   Clock,
   MessageSquare,
@@ -25,7 +25,7 @@ import {
   Reply,
   Paperclip,
 } from 'lucide-react';
-import Link from 'next/link';
+import { Link } from '@/lib/react-router-adapters';
 import { Task, TaskWithAssignee, TaskComment, TaskCommentAttachment, TaskCommentReaction, TaskDeliverable, TaskHandoff, Profile, Doc } from '@/lib/types';
 import { toast } from 'sonner';
 import { Dialog, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
@@ -36,7 +36,7 @@ import { cn, uuid } from '@/lib/utils';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { springs, DURATION_BACKDROP_MS, PANEL_SPRING, PANEL, SLIDEOUT, SLIDEOUT_SPRING } from '@/lib/motion';
+import { springs, TAB_PILL_SPRING, DURATION_BACKDROP_MS, PANEL_SPRING, PANEL, SLIDEOUT, SLIDEOUT_SPRING } from '@/lib/motion';
 import { formatDeadline, formatDeadlineFull } from '@/lib/format-deadline';
 import { acquireScrollLock, releaseScrollLock } from '@/lib/scroll-lock';
 
@@ -693,6 +693,8 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
   const [showExtForm, setShowExtForm] = useState(false);
   const [extUnit, setExtUnit] = useState<'hours' | 'days'>('days');
   const [extAmount, setExtAmount] = useState(1);
+  const reduce = useReducedMotion();
+  const pillTransition = reduce ? { duration: 0 } : TAB_PILL_SPRING;
   const [extSubmitting, setExtSubmitting] = useState(false);
   const [pendingExt, setPendingExt] = useState<{
     id: string;
@@ -1478,13 +1480,21 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
                     type="button"
                     onClick={() => { setExtUnit('days'); setExtAmount(preset.hours / 24); }}
                     className={cn(
-                      'rounded-full px-3 py-1 text-xs font-medium transition-colors',
+                      'relative rounded-full px-3 py-1 text-xs font-medium transition-[color,transform] active:scale-[0.97]',
                       isActive
-                        ? 'bg-foreground/10 text-foreground'
+                        ? 'text-foreground'
                         : 'text-muted-foreground hover:text-foreground hover:bg-white/[0.04]'
                     )}
                   >
-                    {preset.label}
+                    {isActive && (
+                      <motion.span
+                        className="absolute inset-0 rounded-full bg-foreground/10"
+                        layoutId="taskDetailSecondaryPill"
+                        initial={false}
+                        transition={pillTransition}
+                      />
+                    )}
+                    <span className="relative z-10">{preset.label}</span>
                   </button>
                 );
               })}
@@ -1492,13 +1502,21 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
                 type="button"
                 onClick={() => { setExtUnit('hours'); setExtAmount(12); }}
                 className={cn(
-                  'rounded-full px-3 py-1 text-xs font-medium transition-colors',
+                  'relative rounded-full px-3 py-1 text-xs font-medium transition-[color,transform] active:scale-[0.97]',
                   extUnit === 'hours'
-                    ? 'bg-foreground/10 text-foreground'
+                    ? 'text-foreground'
                     : 'text-muted-foreground hover:text-foreground hover:bg-white/[0.04]'
                 )}
               >
-                Custom
+                {extUnit === 'hours' && (
+                  <motion.span
+                    className="absolute inset-0 rounded-full bg-foreground/10"
+                    layoutId="taskDetailSecondaryPill"
+                    initial={false}
+                    transition={pillTransition}
+                  />
+                )}
+                <span className="relative z-10">Custom</span>
               </button>
             </div>
             {extUnit === 'hours' && (

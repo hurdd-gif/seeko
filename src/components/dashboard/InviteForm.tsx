@@ -58,7 +58,7 @@ export function InviteForm() {
   }
 
   return (
-    <Card className="overflow-hidden rounded-2xl border-0 bg-white shadow-seeko">
+    <Card className="overflow-hidden rounded-xl border-0 bg-white shadow-seeko">
       <button
         type="button"
         onClick={() => setExpanded(v => !v)}
@@ -123,7 +123,7 @@ export function InviteForm() {
                       <option value="investor">Investor</option>
                     </Select>
                   </div>
-                  <Button type="submit" disabled={sending || !email} className={`${BTN_PRIMARY} gap-2 shrink-0`}>
+                  <Button type="submit" disabled={sending || !email} className={`${BTN_PRIMARY} gap-2 pl-3 shrink-0`}>
                     {sending ? (
                       <Loader2 className="size-4 animate-spin" />
                     ) : (

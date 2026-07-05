@@ -47,6 +47,10 @@ function useDropdown() {
   return React.useContext(DropdownMenuContext)
 }
 
+/* Light pages opt in via <DropdownMenuContent light> — items/separators/labels
+   read the flag from context so call sites don't restate the palette. */
+const DropdownLightContext = React.createContext(false)
+
 /* ─── Root ──────────────────────────────────────────────── */
 
 const DropdownMenu = ({ children }: { children: React.ReactNode }) => {
@@ -127,11 +131,13 @@ function DropdownMenuContent({
   className,
   align = "end",
   side = "bottom",
+  light = false,
   children,
 }: {
   className?: string
   align?: "start" | "end"
   side?: "top" | "bottom"
+  light?: boolean
   children: React.ReactNode
 }) {
   const { open, itemCount, triggerRef, portalRef } = useDropdown()
@@ -194,13 +200,17 @@ function DropdownMenuContent({
             ...(align === "end" ? { right: document.documentElement.clientWidth - pos.left } : { left: pos.left }),
           }}
           className={cn(
-            "z-50 min-w-[8rem] rounded-xl border border-white/[0.08] p-1.5 shadow-xl",
-            "bg-popover/80 backdrop-blur-xl backdrop-saturate-150",
+            "z-50 min-w-[8rem]",
+            light
+              ? "rounded-[14px] bg-white p-1 shadow-seeko-pop"
+              : "rounded-xl border border-white/[0.08] bg-popover/80 p-1.5 shadow-xl backdrop-blur-xl backdrop-saturate-150",
             className
           )}
           onClick={(e) => e.stopPropagation()}
         >
-          {children}
+          <DropdownLightContext.Provider value={light}>
+            {children}
+          </DropdownLightContext.Provider>
         </motion.div>
       )}
     </AnimatePresence>,
@@ -217,6 +227,7 @@ interface DropdownMenuItemProps extends React.ButtonHTMLAttributes<HTMLButtonEle
 const DropdownMenuItem = React.forwardRef<HTMLButtonElement, DropdownMenuItemProps>(
   ({ className, children, selected, ...props }, ref) => {
     const { setOpen, activeIndex, setActiveIndex } = useDropdown()
+    const light = React.useContext(DropdownLightContext)
     const indexRef = React.useRef(-1)
     const internalRef = React.useRef<HTMLButtonElement>(null)
     const resolvedRef = (ref as React.RefObject<HTMLButtonElement>) || internalRef
@@ -251,11 +262,23 @@ const DropdownMenuItem = React.forwardRef<HTMLButtonElement, DropdownMenuItemPro
         ref={resolvedRef}
         role="menuitem"
         className={cn(
-          "flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm transition-colors",
-          "hover:bg-white/[0.08] hover:text-foreground",
-          "focus:bg-white/[0.08] focus:text-foreground focus:outline-none",
-          isActive && "bg-white/[0.08] text-foreground",
-          selected && "text-foreground",
+          "flex w-full items-center gap-2 px-2.5 py-1.5 transition-colors focus:outline-none",
+          light
+            ? [
+                // Concentric with the 14px light surface (4px padding → 10px items)
+                "rounded-[10px] text-[13px] text-[#505050]",
+                "hover:bg-black/[0.04] hover:text-[#111]",
+                "focus:bg-black/[0.04] focus:text-[#111]",
+                isActive && "bg-black/[0.04] text-[#111]",
+                selected && "text-[#111]",
+              ]
+            : [
+                "rounded-lg text-sm",
+                "hover:bg-white/[0.08] hover:text-foreground",
+                "focus:bg-white/[0.08] focus:text-foreground",
+                isActive && "bg-white/[0.08] text-foreground",
+                selected && "text-foreground",
+              ],
           className
         )}
         onMouseEnter={() => setActiveIndex(indexRef.current)}
@@ -292,8 +315,17 @@ function DropdownMenuLabel({
   className?: string
   children: React.ReactNode
 }) {
+  const light = React.useContext(DropdownLightContext)
   return (
-    <div className={cn("px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60", className)}>
+    <div
+      className={cn(
+        "px-2.5 py-1.5 text-[11px]",
+        light
+          ? "font-medium text-[#9a9a9a]"
+          : "font-semibold uppercase tracking-wider text-muted-foreground/60",
+        className
+      )}
+    >
       {children}
     </div>
   )
@@ -302,7 +334,8 @@ function DropdownMenuLabel({
 /* ─── Separator ─────────────────────────────────────────── */
 
 function DropdownMenuSeparator({ className }: { className?: string }) {
-  return <div className={cn("my-1 h-px bg-white/[0.06]", className)} />
+  const light = React.useContext(DropdownLightContext)
+  return <div className={cn("my-1 h-px", light ? "bg-black/[0.05]" : "bg-white/[0.06]", className)} />
 }
 
 export {

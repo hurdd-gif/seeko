@@ -19,7 +19,7 @@ describe('SplitPanel', () => {
         }
         right={
           <PanelList
-            rows={[{ id: '1', leading: 'Today', primary: 'Team standup', meta: '9 AM · Office' }]}
+            rows={[{ id: '1', leading: 'Today', primary: 'Team standup' }]}
           />
         }
       />

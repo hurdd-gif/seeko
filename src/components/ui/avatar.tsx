@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { cn } from '@/lib/utils';
+import { GradientAvatar } from './gradient-avatar';
 
 const Avatar = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => (
@@ -32,14 +33,33 @@ const AvatarImage = React.forwardRef<HTMLImageElement, AvatarImageProps>(
 );
 AvatarImage.displayName = 'AvatarImage';
 
-const AvatarFallback = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  ({ className, ...props }, ref) => (
-    <div
-      ref={ref}
-      className={cn('flex h-full w-full items-center justify-center rounded-full bg-secondary text-secondary-foreground text-xs font-medium', className)}
-      {...props}
-    />
-  )
+interface AvatarFallbackProps extends React.HTMLAttributes<HTMLDivElement> {
+  /**
+   * Stable per-user seed (a profile id or display name). When present — or when
+   * the children resolve to a plain string (e.g. initials) — the fallback
+   * renders a deterministic gradient instead of grey initials. Pass an explicit
+   * `hash` on identity surfaces so people with the same initials don't collide.
+   */
+  hash?: string;
+}
+
+const AvatarFallback = React.forwardRef<HTMLDivElement, AvatarFallbackProps>(
+  ({ className, hash, children, ...props }, ref) => {
+    const seed = hash ?? (typeof children === 'string' ? children : undefined);
+    if (seed) {
+      const label = typeof children === 'string' ? children : undefined;
+      return <GradientAvatar seed={seed} label={label} className={cn('rounded-full', className)} />;
+    }
+    return (
+      <div
+        ref={ref}
+        className={cn('flex h-full w-full items-center justify-center rounded-full bg-secondary text-secondary-foreground text-xs font-medium', className)}
+        {...props}
+      >
+        {children}
+      </div>
+    );
+  }
 );
 AvatarFallback.displayName = 'AvatarFallback';
 

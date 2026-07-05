@@ -34,14 +34,20 @@ export type PropertyOption<V extends string> = {
 };
 
 type Coords = { left: number; top: number };
+type Align = 'start' | 'end';
 
-function computeCoords(triggerRect: DOMRect, panelHeight: number): Coords {
+function computeCoords(
+  triggerRect: DOMRect,
+  panelHeight: number,
+  panelWidth: number,
+  align: Align,
+): Coords {
   const vw = window.innerWidth;
   const vh = window.innerHeight;
 
-  // Prefer left-aligned with trigger; clamp to viewport.
-  let left = triggerRect.left;
-  if (left + PANEL_WIDTH + EDGE > vw) left = vw - PANEL_WIDTH - EDGE;
+  // Prefer trigger-aligned; clamp to viewport.
+  let left = align === 'end' ? triggerRect.right - panelWidth : triggerRect.left;
+  if (left + panelWidth + EDGE > vw) left = vw - panelWidth - EDGE;
   if (left < EDGE) left = EDGE;
 
   // Prefer below the trigger; flip above if it would clip.
@@ -63,6 +69,12 @@ export function PropertyPopover<V extends string>({
   children,
   allowClear = false,
   triggerClassName,
+  panelWidth = PANEL_WIDTH,
+  align = 'start',
+  panelClassName,
+  optionClassName,
+  labelClassName,
+  leadingClassName,
 }: {
   value: V | null | undefined;
   options: PropertyOption<V>[];
@@ -75,6 +87,15 @@ export function PropertyPopover<V extends string>({
    *  replaces the default classes entirely — supply your own layout. Use
    *  for inline-flex pill triggers in the composer. */
   triggerClassName?: string;
+  /** Panel width in px. Defaults to the task-detail menu width. */
+  panelWidth?: number;
+  /** How the panel aligns to its trigger. */
+  align?: Align;
+  /** Optional styling overrides for smaller embedded popovers. */
+  panelClassName?: string;
+  optionClassName?: string;
+  labelClassName?: string;
+  leadingClassName?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [coords, setCoords] = useState<Coords | null>(null);
@@ -94,7 +115,7 @@ export function PropertyPopover<V extends string>({
       const rect = trigger.getBoundingClientRect();
       // Use panel's actual rendered height if available; otherwise assume a reasonable default.
       const panelH = panelRef.current?.offsetHeight ?? 320;
-      setCoords(computeCoords(rect, panelH));
+      setCoords(computeCoords(rect, panelH, panelWidth, align));
     }
     place();
     window.addEventListener('resize', place);
@@ -103,7 +124,7 @@ export function PropertyPopover<V extends string>({
       window.removeEventListener('resize', place);
       window.removeEventListener('scroll', place, true);
     };
-  }, [open]);
+  }, [open, panelWidth, align]);
 
   // Dismiss: click outside or Escape.
   useEffect(() => {
@@ -137,12 +158,16 @@ export function PropertyPopover<V extends string>({
           key="panel"
           role="menu"
           aria-label={ariaLabel}
+          data-property-popover-panel="true"
           initial={reduce ? false : { opacity: 0, y: -4 }}
           animate={{ opacity: 1, y: 0 }}
           exit={reduce ? { opacity: 0 } : { opacity: 0, y: -4 }}
           transition={reduce ? { duration: 0 } : SPRING}
-          style={{ position: 'fixed', left: coords.left, top: coords.top, width: PANEL_WIDTH }}
-          className="z-[200] origin-top-left overflow-hidden rounded-lg bg-white p-1 shadow-seeko-pop"
+          style={{ position: 'fixed', left: coords.left, top: coords.top, width: panelWidth }}
+          className={
+            panelClassName ??
+            'z-[200] origin-top-left overflow-hidden rounded-lg bg-white p-1 shadow-seeko-pop'
+          }
         >
           <div className="max-h-[360px] overflow-y-auto [scrollbar-width:thin]">
             {finalOptions.map((opt) => {
@@ -157,14 +182,27 @@ export function PropertyPopover<V extends string>({
                     onSelect(opt.value === '' ? null : (opt.value as V));
                     setOpen(false);
                   }}
-                  className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-black/[0.04]"
+                  className={
+                    optionClassName ??
+                    'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-black/[0.04]'
+                  }
                 >
                   {opt.leading && (
-                    <span className="flex size-3.5 shrink-0 items-center justify-center">
+                    <span
+                      className={
+                        leadingClassName ?? 'flex size-3.5 shrink-0 items-center justify-center'
+                      }
+                    >
                       {opt.leading}
                     </span>
                   )}
-                  <span className="flex-1 truncate text-[12.5px] text-[#1a1a1a]">{opt.label}</span>
+                  <span
+                    className={
+                      labelClassName ?? 'flex-1 truncate text-[12.5px] text-[#1a1a1a]'
+                    }
+                  >
+                    {opt.label}
+                  </span>
                   {selected && <Check className="size-3 text-[#0d7aff]" strokeWidth={3} />}
                 </button>
               );

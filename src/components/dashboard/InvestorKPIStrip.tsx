@@ -18,8 +18,13 @@ import { TrendingUp, AlertCircle, Map } from 'lucide-react';
 import { Dialog, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
 import { FadeRise, Stagger, StaggerItem, HoverCard } from '@/components/motion';
 
-const kpiSurface = 'rounded-2xl bg-[#222222] border-0 h-full';
-const kpiShadow = { boxShadow: '0 0 0 1px rgba(255,255,255,0.03), 0 4px 16px rgba(0,0,0,0.1)' };
+// Light Paper port: the investor KPI strip was dark-only (#222222 cards). It now
+// wears the migrated light surface — the `--ov-panel` card on the `--ov-shadow-panel`
+// floating shadow — so it sits natively inside the ShellFrame Paper canvas. The
+// progress ring, stagger storyboard, issues-glow state, and admin editor dialog
+// are preserved; only the palette moved dark→light.
+const kpiSurface = 'rounded-2xl bg-[var(--ov-panel)] border-0 h-full';
+const kpiShadow = { boxShadow: 'var(--ov-shadow-panel)' };
 import { toast } from 'sonner';
 import { useHaptics } from '@/components/HapticsProvider';
 
@@ -46,9 +51,9 @@ function ProgressRing({ pct }: { pct: number }) {
   const offset = circumference - (pct / 100) * circumference;
 
   return (
-    <div className="relative flex size-8 items-center justify-center rounded-lg bg-secondary shrink-0">
+    <div className="relative flex size-8 items-center justify-center rounded-lg bg-[var(--ov-chip-bg)] shrink-0">
       <svg className="size-6 -rotate-90" viewBox="0 0 26 26">
-        <circle cx="13" cy="13" r={r} fill="none" stroke="var(--color-muted-foreground)" opacity="0.3" strokeWidth="2.5" />
+        <circle cx="13" cy="13" r={r} fill="none" stroke="#000000" opacity="0.10" strokeWidth="2.5" />
         <circle
           cx="13" cy="13" r={r}
           fill="none"
@@ -73,7 +78,7 @@ function LargeProgressRing({ pct }: { pct: number }) {
   return (
     <div className="relative size-32 shrink-0 mx-auto">
       <svg className="size-full -rotate-90" viewBox="0 0 120 120">
-        <circle cx="60" cy="60" r={r} fill="none" stroke="var(--color-muted-foreground)" opacity="0.15" strokeWidth="8" />
+        <circle cx="60" cy="60" r={r} fill="none" stroke="#000000" opacity="0.08" strokeWidth="8" />
         <circle
           cx="60" cy="60" r={r}
           fill="none"
@@ -85,7 +90,7 @@ function LargeProgressRing({ pct }: { pct: number }) {
           className="transition-all duration-500"
         />
       </svg>
-      <span className="absolute inset-0 flex items-center justify-center text-2xl font-semibold text-foreground">
+      <span className="absolute inset-0 flex items-center justify-center text-2xl font-semibold text-[#111]">
         {pct}%
       </span>
     </div>
@@ -162,24 +167,24 @@ export function InvestorKPIStrip({
                 <button type="button" onClick={handleCompletionClick} className="w-full text-left">
                   <div className={kpiSurface} style={kpiShadow}>
                     <div className="flex flex-row items-center justify-between p-6 pb-2">
-                      <p className="text-sm font-medium text-muted-foreground">Completion</p>
+                      <p className="text-sm font-medium text-[#808080]">Completion</p>
                       <ProgressRing pct={liveOverallPct} />
                     </div>
                     <div className="p-6 pt-0">
-                      <span className="text-2xl font-semibold tracking-tight tabular-nums">{liveOverallPct}%</span>
-                      <p className="text-xs text-muted-foreground mt-0.5">overall progress</p>
+                      <span className="text-2xl font-semibold tracking-tight tabular-nums text-[#111]">{liveOverallPct}%</span>
+                      <p className="text-xs text-[#808080] mt-0.5">overall progress</p>
                     </div>
                   </div>
                 </button>
               ) : (
                 <div className={kpiSurface} style={kpiShadow}>
                   <div className="flex flex-row items-center justify-between p-6 pb-2">
-                    <p className="text-sm font-medium text-muted-foreground">Completion</p>
+                    <p className="text-sm font-medium text-[#808080]">Completion</p>
                     <ProgressRing pct={liveOverallPct} />
                   </div>
                   <div className="p-6 pt-0">
-                    <span className="text-2xl font-semibold tracking-tight tabular-nums">{liveOverallPct}%</span>
-                    <p className="text-xs text-muted-foreground mt-0.5">overall progress</p>
+                    <span className="text-2xl font-semibold tracking-tight tabular-nums text-[#111]">{liveOverallPct}%</span>
+                    <p className="text-xs text-[#808080] mt-0.5">overall progress</p>
                   </div>
                 </div>
               )}
@@ -191,14 +196,14 @@ export function InvestorKPIStrip({
             <HoverCard>
               <div className={kpiSurface} style={kpiShadow}>
                 <div className="flex flex-row items-center justify-between p-6 pb-2">
-                  <p className="text-sm font-medium text-muted-foreground">This Week</p>
-                  <div className="flex size-8 items-center justify-center rounded-lg bg-secondary">
-                    <TrendingUp className="size-4 text-muted-foreground" />
+                  <p className="text-sm font-medium text-[#808080]">This Week</p>
+                  <div className="flex size-8 items-center justify-center rounded-lg bg-[var(--ov-chip-bg)]">
+                    <TrendingUp className="size-4 text-[#808080]" />
                   </div>
                 </div>
                 <div className="p-6 pt-0">
-                  <span className="text-2xl font-semibold tracking-tight tabular-nums">{completedThisWeek}</span>
-                  <p className="text-xs text-muted-foreground mt-0.5">tasks completed</p>
+                  <span className="text-2xl font-semibold tracking-tight tabular-nums text-[#111]">{completedThisWeek}</span>
+                  <p className="text-xs text-[#808080] mt-0.5">tasks completed</p>
                 </div>
               </div>
             </HoverCard>
@@ -210,35 +215,35 @@ export function InvestorKPIStrip({
               <div
                 className="rounded-2xl border-0 h-full"
                 style={{
-                  backgroundColor: hasIssues ? 'rgba(127, 29, 29, 0.1)' : '#222222',
+                  backgroundColor: hasIssues ? 'rgba(255, 110, 94, 0.08)' : 'var(--ov-panel)',
                   boxShadow: hasIssues
-                    ? '0 0 0 1px rgba(185, 28, 28, 0.3), 0 4px 16px rgba(0,0,0,0.1)'
-                    : '0 0 0 1px rgba(255,255,255,0.03), 0 4px 16px rgba(0,0,0,0.1)',
+                    ? '0 0 0 1px rgba(212, 80, 62, 0.30), 0 8px 24px rgba(0,0,0,0.04)'
+                    : 'var(--ov-shadow-panel)',
                 }}
               >
                 <div className="flex flex-row items-center justify-between p-6 pb-2">
-                  <p className="text-sm font-medium text-muted-foreground">Issues</p>
-                  <div className={`flex size-8 items-center justify-center rounded-lg ${hasIssues ? 'bg-red-950/30' : 'bg-secondary'}`}>
-                    <AlertCircle className={`size-4 ${hasIssues ? 'text-red-400' : 'text-muted-foreground'}`} />
+                  <p className="text-sm font-medium text-[#808080]">Issues</p>
+                  <div className={`flex size-8 items-center justify-center rounded-lg ${hasIssues ? 'bg-[#d4503e]/10' : 'bg-[var(--ov-chip-bg)]'}`}>
+                    <AlertCircle className={`size-4 ${hasIssues ? 'text-[#d4503e]' : 'text-[#808080]'}`} />
                   </div>
                 </div>
                 <div className="p-6 pt-0">
                   {hasIssues ? (
                     <div className="flex items-baseline gap-2">
                       {blocked > 0 && (
-                        <span className="text-2xl font-semibold tracking-tight tabular-nums text-red-400">{blocked}</span>
+                        <span className="text-2xl font-semibold tracking-tight tabular-nums text-[#d4503e]">{blocked}</span>
                       )}
                       {blocked > 0 && overdue > 0 && (
-                        <span className="text-muted-foreground">/</span>
+                        <span className="text-[#808080]">/</span>
                       )}
                       {overdue > 0 && (
-                        <span className="text-2xl font-semibold tracking-tight tabular-nums text-amber-400">{overdue}</span>
+                        <span className="text-2xl font-semibold tracking-tight tabular-nums text-[#c77800]">{overdue}</span>
                       )}
                     </div>
                   ) : (
-                    <span className="text-2xl font-semibold tracking-tight tabular-nums">0</span>
+                    <span className="text-2xl font-semibold tracking-tight tabular-nums text-[#111]">0</span>
                   )}
-                  <p className="text-xs text-muted-foreground mt-0.5">
+                  <p className="text-xs text-[#808080] mt-0.5">
                     {blocked > 0 && overdue > 0
                       ? `${blocked} blocked · ${overdue} overdue`
                       : blocked > 0
@@ -257,14 +262,14 @@ export function InvestorKPIStrip({
             <HoverCard>
               <div className={kpiSurface} style={kpiShadow}>
                 <div className="flex flex-row items-center justify-between p-6 pb-2">
-                  <p className="text-sm font-medium text-muted-foreground">Active Areas</p>
-                  <div className="flex size-8 items-center justify-center rounded-lg bg-secondary">
-                    <Map className="size-4 text-muted-foreground" />
+                  <p className="text-sm font-medium text-[#808080]">Active Areas</p>
+                  <div className="flex size-8 items-center justify-center rounded-lg bg-[var(--ov-chip-bg)]">
+                    <Map className="size-4 text-[#808080]" />
                   </div>
                 </div>
                 <div className="p-6 pt-0">
-                  <span className="text-2xl font-semibold tracking-tight tabular-nums">{activeAreas}</span>
-                  <p className="text-xs text-muted-foreground mt-0.5">in development</p>
+                  <span className="text-2xl font-semibold tracking-tight tabular-nums text-[#111]">{activeAreas}</span>
+                  <p className="text-xs text-[#808080] mt-0.5">in development</p>
                 </div>
               </div>
             </HoverCard>
@@ -277,7 +282,7 @@ export function InvestorKPIStrip({
         <DialogClose onClose={() => setDialogOpen(false)} />
         <DialogHeader>
           <DialogTitle>Update Completion</DialogTitle>
-          <p className="text-sm text-muted-foreground">Adjust progress per area. Changes save individually.</p>
+          <p className="text-sm text-[#808080]">Adjust progress per area. Changes save individually.</p>
         </DialogHeader>
 
         <div className="flex flex-col items-center gap-6">
@@ -290,7 +295,7 @@ export function InvestorKPIStrip({
               return (
                 <div key={area.id} className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-foreground">{area.name}</span>
+                    <span className="text-sm font-medium text-[#111]">{area.name}</span>
                     <div className="flex items-center gap-0.5">
                       <input
                         type="number"
@@ -301,9 +306,9 @@ export function InvestorKPIStrip({
                           const n = Math.min(100, Math.max(0, Number(e.target.value) || 0));
                           setAreaValues(prev => ({ ...prev, [area.id]: n }));
                         }}
-                        className="w-10 text-right text-sm font-mono text-muted-foreground bg-transparent border-b border-transparent focus:border-seeko-accent focus:outline-none transition-colors [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                        className="w-10 text-right text-sm font-mono text-[#505050] bg-transparent border-b border-transparent focus:border-[#0d7aff] focus:outline-none transition-colors [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                       />
-                      <span className="text-sm text-muted-foreground">%</span>
+                      <span className="text-sm text-[#808080]">%</span>
                     </div>
                   </div>
                   <input
@@ -312,10 +317,10 @@ export function InvestorKPIStrip({
                     max={100}
                     value={value}
                     onChange={e => setAreaValues(prev => ({ ...prev, [area.id]: Number(e.target.value) }))}
-                    className="w-full h-2 rounded-full appearance-none bg-secondary cursor-pointer accent-[#6ee7b7] [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-seeko-accent [&::-webkit-slider-thumb]:shadow-md"
+                    className="w-full h-2 rounded-full appearance-none bg-black/[0.08] cursor-pointer accent-[#0d7aff] [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#0d7aff] [&::-webkit-slider-thumb]:shadow-md"
                   />
                   <div className="flex items-center justify-between">
-                    <div className="w-full h-1.5 rounded-full bg-secondary overflow-hidden">
+                    <div className="w-full h-1.5 rounded-full bg-black/[0.08] overflow-hidden">
                       <div
                         className="h-full rounded-full transition-all duration-200"
                         style={{ width: `${value}%`, backgroundColor: 'var(--color-seeko-accent)' }}
@@ -326,7 +331,7 @@ export function InvestorKPIStrip({
                         type="button"
                         onClick={() => handleSave(area.id)}
                         disabled={saving === area.id}
-                        className="ml-3 shrink-0 px-3 py-1 text-xs font-medium rounded-lg bg-seeko-accent text-[#1a1a1a] hover:bg-seeko-accent/90 disabled:opacity-50 transition-colors"
+                        className="ml-3 shrink-0 px-3 py-1 text-xs font-medium rounded-lg bg-[#0d7aff] text-white hover:bg-[#0a63cc] disabled:opacity-50 transition-colors"
                       >
                         {saving === area.id ? 'Saving…' : 'Save'}
                       </button>
