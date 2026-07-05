@@ -255,6 +255,43 @@ export function createTasksRoutes(options: TasksRoutesOptions = {}) {
       await notifyAdminsOfDeliverable(user.id, taskId);
       return c.json(inserted, 201);
     })
+    .patch('/tasks/:id/progress', async (c) => {
+      const user = await authResolver(c);
+      if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+      let body: unknown;
+      try {
+        body = await c.req.json();
+      } catch {
+        return c.json({ error: 'Invalid JSON' }, 400);
+      }
+      const progress = (body as { progress?: unknown }).progress;
+      if (
+        typeof progress !== 'number' ||
+        !Number.isFinite(progress) ||
+        progress < 0 ||
+        progress > 100
+      ) {
+        return c.json({ error: 'progress must be a number between 0 and 100' }, 400);
+      }
+
+      const taskId = c.req.param('id');
+      const access = await canAccessTask(user.id, taskId);
+      if (!access.found) return c.json({ error: 'Task not found' }, 404);
+      if (!access.allowed) {
+        return c.json({ error: 'Only the assignee or an admin can update this task' }, 403);
+      }
+
+      const service = getServiceClient();
+      const rounded = Math.round(progress);
+      const { error } = await service
+        .from('tasks')
+        .update({ progress: rounded } as never)
+        .eq('id', taskId);
+      if (error) return c.json({ error: 'Failed to update progress' }, 500);
+
+      return c.json({ id: taskId, progress: rounded });
+    })
     .delete('/tasks/:id/deliverables/:deliverableId', async (c) => {
       const user = await authResolver(c);
       if (!user) return c.json({ error: 'Forbidden' }, 403);
