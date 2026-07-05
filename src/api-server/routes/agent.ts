@@ -29,7 +29,7 @@ type AgentApprovalDraft = {
   assigneeName?: string;
 };
 type AgentApproval = {
-  kind: 'issue.create' | 'issue.update' | 'issue.delete' | 'doc.create' | 'doc.update' | 'note.create' | 'generic';
+  kind: 'issue.create' | 'issue.update' | 'issue.delete' | 'doc.create' | 'doc.update' | 'note.create' | 'note.archive' | 'generic';
   title: string;
   copy: string;
   draft?: AgentApprovalDraft;
@@ -352,6 +352,7 @@ function parseApproval(value: unknown): AgentApproval | undefined {
     record.kind === 'doc.create' ||
     record.kind === 'doc.update' ||
     record.kind === 'note.create' ||
+    record.kind === 'note.archive' ||
     record.kind === 'generic'
       ? record.kind
       : null;
@@ -584,6 +585,10 @@ async function executeTypedApproval(approval: AgentApproval, user: Authenticated
     return executeNoteCreateDraft(approval.draft, user);
   }
 
+  if (approval.kind === 'note.archive') {
+    return executeNoteArchiveDraft(approval.draft, user);
+  }
+
   return null;
 }
 
@@ -745,6 +750,31 @@ type NoteWriteDraft = {
 
 export function planLocalNoteWrite(input: AgentChatInput): AgentChatResult | null {
   if (input.mode === 'approval') return null;
+
+  const archiveDraft = parseNoteArchiveDraft(input.message.trim());
+  if (archiveDraft) {
+    if (!archiveDraft.noteBody) {
+      return {
+        reply: 'Which note should EKO archive?',
+        provider: 'openai',
+        model: 'eko-local-planner',
+        intent: 'clarification',
+      };
+    }
+
+    return {
+      reply: 'Ready for approval: archive note from inbox.',
+      provider: 'openai',
+      model: 'eko-local-planner',
+      intent: 'approval_required',
+      approval: {
+        kind: 'note.archive',
+        title: 'Archive note',
+        copy: `Archive this note from the inbox: ${archiveDraft.noteBody}`,
+        draft: archiveDraft,
+      },
+    };
+  }
 
   const draft = parseNoteCreateDraft(input.message.trim());
   if (!draft) return null;
@@ -1281,6 +1311,66 @@ async function executeNoteCreateDraft(
   };
 }
 
+async function executeNoteArchiveDraft(
+  draft: AgentApprovalDraft | NoteWriteDraft | undefined,
+  user: AuthenticatedUser,
+): Promise<AgentChatResult | null> {
+  const noteBody = draft?.noteBody;
+  if (!noteBody) {
+    return {
+      reply: 'Name the note EKO should archive. No dashboard changes were made.',
+      provider: 'openai',
+      model: 'eko-local-approval',
+      intent: 'details_needed',
+      approval: {
+        kind: 'note.archive',
+        title: 'Archive note',
+        copy: 'Name the note so EKO can archive it from the inbox.',
+        draft,
+      },
+    };
+  }
+
+  await assertAdminUser(user.id);
+  const service = getServiceClient();
+  const { data, error } = await service
+    .from('notes')
+    .select('id, body, status')
+    .eq('status', 'open')
+    .order('created_at', { ascending: false })
+    .limit(25);
+  if (error) throw new AgentProviderError('EKO could not read the notes inbox.', 500);
+
+  const matches = ((data ?? []) as Array<{ id: string; body: string; status: string }>).filter((note) =>
+    note.body.toLowerCase().includes(noteBody.toLowerCase()) || noteBody.toLowerCase().includes(note.body.toLowerCase()),
+  );
+
+  if (matches.length !== 1) {
+    return {
+      reply: matches.length
+        ? `EKO found ${matches.length} matching notes. Name the exact note text so EKO can archive one item.`
+        : `EKO could not find an open note matching "${noteBody}". No dashboard changes were made.`,
+      provider: 'openai',
+      model: 'eko-local-approval',
+      intent: 'details_needed',
+    };
+  }
+
+  const note = matches[0];
+  const { error: updateError } = await service
+    .from('notes')
+    .update({ status: 'archived' } as never)
+    .eq('id', note.id);
+  if (updateError) throw new AgentProviderError('EKO could not archive the note.', 500);
+
+  return {
+    reply: 'Archived note from inbox.',
+    provider: 'openai',
+    model: 'eko-local-write',
+    intent: 'executed',
+  };
+}
+
 async function executeIssueStatusDraft(
   draft: Pick<IssueWriteDraft, 'taskName' | 'status'>,
   user: AuthenticatedUser,
@@ -1582,6 +1672,18 @@ function parseNoteCreateDraft(value: string): NoteWriteDraft | null {
   const afterThat = value.match(/\b(?:that|to|saying)\s+([\s\S]+)$/i)?.[1];
   const quoted = value.match(/["“]([^"”]{2,500})["”]/)?.[1];
   const noteBody = cleanNoteBody(afterColon || quoted || afterThat || '');
+
+  return { noteBody: noteBody || undefined };
+}
+
+function parseNoteArchiveDraft(value: string): NoteWriteDraft | null {
+  if (!/\b(?:archive|clear|dismiss|remove)\b/i.test(value)) return null;
+  if (!/\b(?:note|notes inbox|quick note|sticky note|memo)\b/i.test(value)) return null;
+
+  const afterColon = value.match(/:\s*([\s\S]+)$/)?.[1];
+  const quoted = value.match(/["“]([^"”]{2,500})["”]/)?.[1];
+  const afterNote = value.match(/\b(?:note|memo)\s+(?:about|called|saying)?\s*([\s\S]+)$/i)?.[1];
+  const noteBody = cleanNoteBody(afterColon || quoted || afterNote || '');
 
   return { noteBody: noteBody || undefined };
 }

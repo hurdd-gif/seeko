@@ -87,7 +87,7 @@ type EkoApiResponse = {
   model?: string;
   intent?: 'answer' | 'clarification' | 'details_needed' | 'approval_required' | 'executed' | 'rejected';
   approval?: {
-    kind?: 'issue.create' | 'issue.update' | 'issue.delete' | 'doc.create' | 'doc.update' | 'note.create' | 'generic';
+    kind?: 'issue.create' | 'issue.update' | 'issue.delete' | 'doc.create' | 'doc.update' | 'note.create' | 'note.archive' | 'generic';
     title?: string;
     copy?: string;
     draft?: {

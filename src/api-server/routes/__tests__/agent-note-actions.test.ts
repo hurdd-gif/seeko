@@ -53,6 +53,32 @@ describe('EKO note actions', () => {
     });
   });
 
+  it('prepares note archiving as a gated dashboard write', () => {
+    expect(planLocalNoteWrite({ message: 'Archive note: Follow up on contractor invoice' })).toEqual({
+      reply: 'Ready for approval: archive note from inbox.',
+      provider: 'openai',
+      model: 'eko-local-planner',
+      intent: 'approval_required',
+      approval: {
+        kind: 'note.archive',
+        title: 'Archive note',
+        copy: 'Archive this note from the inbox: Follow up on contractor invoice',
+        draft: {
+          noteBody: 'Follow up on contractor invoice',
+        },
+      },
+    });
+  });
+
+  it('asks which note to archive before opening an archive approval', () => {
+    expect(planLocalNoteWrite({ message: 'Archive a note' })).toEqual({
+      reply: 'Which note should EKO archive?',
+      provider: 'openai',
+      model: 'eko-local-planner',
+      intent: 'clarification',
+    });
+  });
+
   it('captures a note only after approval', async () => {
     const inserts: Array<{ table: string; payload: Record<string, unknown> }> = [];
     mocks.getServiceClient.mockReturnValue({
@@ -141,6 +167,93 @@ describe('EKO note actions', () => {
         source: 'web',
         created_by: 'user-1',
       },
+    });
+  });
+
+  it('archives an open note only after approval', async () => {
+    const updates: Array<{ table: string; payload: Record<string, unknown> }> = [];
+    mocks.getServiceClient.mockReturnValue({
+      from: vi.fn((table: string) => {
+        if (table === 'agent_chat_messages') {
+          const query = {
+            select: vi.fn(() => query),
+            eq: vi.fn(() => query),
+            order: vi.fn(() => query),
+            limit: vi.fn(async () => ({ data: [], error: null })),
+            insert: vi.fn(async () => ({ error: null })),
+          };
+          return query;
+        }
+
+        if (table === 'profiles') {
+          const query = {
+            select: vi.fn(() => query),
+            eq: vi.fn(() => query),
+            maybeSingle: vi.fn(async () => ({ data: { is_admin: true }, error: null })),
+          };
+          return query;
+        }
+
+        if (table === 'notes') {
+          const query = {
+            select: vi.fn(() => query),
+            eq: vi.fn(() => query),
+            order: vi.fn(() => query),
+            limit: vi.fn(async () => ({
+              data: [
+                {
+                  id: 'note-1',
+                  body: 'Follow up on contractor invoice',
+                  status: 'open',
+                },
+              ],
+              error: null,
+            })),
+            update: vi.fn((payload: Record<string, unknown>) => {
+              updates.push({ table, payload });
+              return query;
+            }),
+          };
+          return query;
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      }),
+    });
+
+    const input: AgentChatInput = {
+      message: 'Archive note: Follow up on contractor invoice',
+      mode: 'approval',
+      decision: 'approve',
+      suggestion: {
+        title: 'Archive note',
+        approval: {
+          kind: 'note.archive',
+          title: 'Archive note',
+          copy: 'Archive this note from the inbox: Follow up on contractor invoice',
+          draft: {
+            noteBody: 'Follow up on contractor invoice',
+          },
+        },
+      },
+    };
+
+    const response = await createAgentApp().request('/api/agent/chat', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(input),
+    });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      reply: 'Archived note from inbox.',
+      provider: 'openai',
+      model: 'eko-local-write',
+      intent: 'executed',
+    });
+    expect(updates).toContainEqual({
+      table: 'notes',
+      payload: { status: 'archived' },
     });
   });
 });

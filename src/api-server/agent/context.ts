@@ -87,8 +87,9 @@ export const EKO_CAPABILITIES = [
   '- doc.create: create a document or deck in Docs.',
   '- doc.update: replace existing text doc content.',
   '- note.create: add inbox note',
+  '- note.archive: archive one open inbox note.',
   'Read-only knowledge: team roster, areas, milestones, issues, activity, notes, docs index, payments (admins only).',
-  'Not supported yet (do not improvise or imply): editing deck slides, emails/invites, creating or marking payments, editing milestones or areas, archiving notes, changing issue descriptions, publishing.',
+  'Not supported yet (do not improvise or imply): editing deck slides, emails/invites, creating or marking payments, editing milestones or areas, changing issue descriptions, publishing.',
   'If asked for an unsupported write: say EKO cannot do that yet, then offer the closest supported action or point to the dashboard UI. Never claim a write happened unless an approved action was executed.',
 ].join('\n');
 
