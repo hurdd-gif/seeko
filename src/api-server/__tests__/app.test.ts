@@ -87,6 +87,43 @@ describe('API server', () => {
     }
   });
 
+  it('uses recent context when a bare confirmation answers EKO asking to prepare a gated update', async () => {
+    const testApp = createApiApp({
+      agentAuthResolver: async () => ({ id: 'user-1', email: 'member@example.invalid' }),
+      agentContextLoader: async () => [
+        'Issues context: 1 tasks, 0 overdue, 1 staff, 0 areas, 0 milestones.',
+        'Recent activity task details: UI Extension (Todo).',
+      ].join('\n'),
+    });
+
+    const response = await testApp.request('/api/agent/chat', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        message: 'yes',
+        clientContext: {
+          recentHistory: [
+            { role: 'user', text: 'When is it due?' },
+            { role: 'eko', text: 'UI Extension does not have a due date. Would you like EKO to prepare adding one for approval?' },
+          ],
+        },
+      }),
+    });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      reply: 'What due date should EKO set for UI Extension?',
+      provider: 'openai',
+      model: 'eko-local-context',
+      intent: 'details_needed',
+      approval: {
+        kind: 'issue.update',
+        title: 'Update UI Extension due date',
+        draft: { taskName: 'UI Extension' },
+      },
+    });
+  });
+
   it('runs EKO through an injected agent runner', async () => {
     const testApp = createApiApp({
       agentAuthResolver: async () => ({ id: 'user-1', email: 'member@example.invalid' }),

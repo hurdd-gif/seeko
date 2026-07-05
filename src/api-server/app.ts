@@ -77,6 +77,7 @@ import type { AuthGuard } from './auth-utils';
 type ApiDependencies = {
   agentAuthResolver?: (c: Context) => Promise<AuthenticatedUser | null>;
   agentRunner?: (input: AgentChatInput, user: AuthenticatedUser) => Promise<AgentChatResult>;
+  agentContextLoader?: (user: AuthenticatedUser) => Promise<string>;
   authSignOut?: (c: Context) => Promise<void>;
   agreementAuthResolver?: (c: Context) => Promise<AuthenticatedUser | null>;
   agreementLoader?: (user: AuthenticatedUser) => Promise<AgreementIndexData>;
@@ -145,6 +146,7 @@ export function createApiApp(dependencies: ApiDependencies = {}) {
     .route('/api', createAgentRoutes({
       authResolver: dependencies.agentAuthResolver,
       agentRunner: dependencies.agentRunner,
+      contextLoader: dependencies.agentContextLoader,
     }))
     .route('/api', createAgreementRoutes({
       authResolver: dependencies.agreementAuthResolver,

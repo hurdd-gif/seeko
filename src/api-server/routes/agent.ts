@@ -100,10 +100,12 @@ export type AgentChatResult = {
 };
 
 type AgentRunner = (input: AgentChatInput, user: AuthenticatedUser) => Promise<AgentChatResult>;
+type AgentContextLoader = (user: AuthenticatedUser) => Promise<string>;
 
 type AgentRoutesOptions = {
   authResolver?: AuthResolver;
   agentRunner?: AgentRunner;
+  contextLoader?: AgentContextLoader;
 };
 
 class AgentConfigError extends Error {
@@ -139,7 +141,8 @@ const EKO_INSTRUCTIONS = [
 
 export function createAgentRoutes(options: AgentRoutesOptions = {}) {
   const authResolver = options.authResolver ?? getAuthenticatedUser;
-  const agentRunner = options.agentRunner ?? runAgentChat;
+  const contextLoader = options.contextLoader ?? loadAgentDashboardContext;
+  const agentRunner = options.agentRunner ?? ((input, user) => runAgentChat(input, user, contextLoader));
 
   return new Hono().get('/agent/history', async (c) => {
     const user = await authResolver(c);
@@ -395,7 +398,11 @@ function parseRecentHistory(value: unknown): RecentHistoryItem[] | undefined {
     .slice(-6);
 }
 
-async function runAgentChat(input: AgentChatInput, _user: AuthenticatedUser): Promise<AgentChatResult> {
+async function runAgentChat(
+  input: AgentChatInput,
+  _user: AuthenticatedUser,
+  contextLoader: AgentContextLoader = loadAgentDashboardContext,
+): Promise<AgentChatResult> {
   if (input.mode === 'approval' && input.decision) {
     return runApprovalDecision(input, _user);
   }
@@ -412,7 +419,11 @@ async function runAgentChat(input: AgentChatInput, _user: AuthenticatedUser): Pr
     };
   }
 
+  const dashboardContext = await contextLoader(_user);
+
   if (input.mode !== 'approval' && isBareConfirmationMessage(input.message)) {
+    const contextualConfirmation = answerLocalContextualConfirmation(input, dashboardContext);
+    if (contextualConfirmation) return contextualConfirmation;
     return {
       reply: 'Use the Approve button on the pending action, or tell EKO the specific action you want prepared. Writes stay gated until approved.',
       provider: 'openai',
@@ -420,15 +431,13 @@ async function runAgentChat(input: AgentChatInput, _user: AuthenticatedUser): Pr
       intent: 'clarification',
     };
   }
-
-  const providers = resolveProviderPlan(input);
-  const dashboardContext = await loadAgentDashboardContext(_user);
   const localWritePlan = planLocalIssueWrite(input, dashboardContext);
   if (localWritePlan) return localWritePlan;
 
   const localFollowUp = answerLocalContextFollowUp(input, dashboardContext);
   if (localFollowUp) return localFollowUp;
 
+  const providers = resolveProviderPlan(input);
   const prompt = buildPrompt(input, dashboardContext);
 
   let lastError: unknown;
@@ -1763,6 +1772,51 @@ export function answerLocalContextFollowUp(input: AgentChatInput, dashboardConte
         : `${referencedTask.name} does not have a priority set in the current dashboard context.`,
       provider: 'openai',
       model: 'eko-local-context',
+    };
+  }
+
+  return null;
+}
+
+function answerLocalContextualConfirmation(input: AgentChatInput, dashboardContext: string): AgentChatResult | null {
+  if (!isBareConfirmationMessage(input.message)) return null;
+
+  const lastEkoReply = [...(input.clientContext?.recentHistory ?? [])]
+    .reverse()
+    .find((item) => item.role === 'eko')?.text;
+  if (!lastEkoReply || !/\bwould you like EKO to prepare\b/i.test(lastEkoReply)) return null;
+
+  const tasks = parseContextTasks(dashboardContext);
+  const [referencedTask] = findReferencedContextTasks(input, tasks);
+  if (!referencedTask) return null;
+
+  if (/\b(?:due date|deadline|date)\b/i.test(lastEkoReply)) {
+    return {
+      reply: `What due date should EKO set for ${referencedTask.name}?`,
+      provider: 'openai',
+      model: 'eko-local-context',
+      intent: 'details_needed',
+      approval: {
+        kind: 'issue.update',
+        title: `Update ${referencedTask.name} due date`,
+        copy: `Set ${referencedTask.name} due date after you provide the date.`,
+        draft: { taskName: referencedTask.name },
+      },
+    };
+  }
+
+  if (/\bassign/i.test(lastEkoReply)) {
+    return {
+      reply: `Who should EKO assign ${referencedTask.name} to?`,
+      provider: 'openai',
+      model: 'eko-local-context',
+      intent: 'details_needed',
+      approval: {
+        kind: 'issue.update',
+        title: `Assign ${referencedTask.name}`,
+        copy: `Assign ${referencedTask.name} after you provide the assignee.`,
+        draft: { taskName: referencedTask.name },
+      },
     };
   }
 
