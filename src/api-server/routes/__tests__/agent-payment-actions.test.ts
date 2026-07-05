@@ -107,6 +107,35 @@ describe('EKO payment actions', () => {
     });
   });
 
+  it('prepares recording a refund on a paid payment as a gated dashboard write', () => {
+    expect(planLocalPaymentWrite({ message: 'Refund Mel payment $75 for duplicate charge' }, dashboardContext)).toEqual({
+      reply: 'Ready for approval: refund 75 USD for Mel.',
+      provider: 'openai',
+      model: 'eko-local-planner',
+      intent: 'approval_required',
+      approval: {
+        kind: 'payment.refund',
+        title: 'Refund Mel',
+        copy: 'Record 75 USD refund for Mel: duplicate charge.',
+        draft: {
+          recipientName: 'Mel',
+          amount: '75',
+          description: 'duplicate charge',
+          refundNote: 'duplicate charge',
+        },
+      },
+    });
+  });
+
+  it('asks for missing refund details instead of opening a vague approval', () => {
+    expect(planLocalPaymentWrite({ message: 'Refund Mel payment' }, dashboardContext)).toEqual({
+      reply: 'Add refund amount and refund reason before EKO can prepare the refund.',
+      provider: 'openai',
+      model: 'eko-local-planner',
+      intent: 'clarification',
+    });
+  });
+
   it('marks a single pending payment paid only after approval and records it as an EKO write', async () => {
     const inserts: Array<{ table: string; payload: Record<string, unknown> }> = [];
     const updates: Array<{ table: string; payload: Record<string, unknown> }> = [];
@@ -362,6 +391,133 @@ describe('EKO payment actions', () => {
         user_id: 'user-1',
         action: 'Created payment',
         target: 'payment: Mel -> pending 450 USD',
+        source: 'eko',
+      },
+    });
+  });
+
+  it('records a refund on a paid payment only after approval and records it as an EKO write', async () => {
+    const inserts: Array<{ table: string; payload: Record<string, unknown> }> = [];
+    const updates: Array<{ table: string; payload: Record<string, unknown> }> = [];
+    mocks.loadTasksBoard.mockResolvedValue({
+      projectMilestones: [],
+      projectActivity: [],
+      tasks: [],
+      areas: [],
+      team: [],
+      account: { notifications: [], unreadCount: 0 },
+    });
+    mocks.getServiceClient.mockReturnValue({
+      from: vi.fn((table: string) => {
+        if (table === 'agent_chat_messages') {
+          const query = {
+            select: vi.fn(() => query),
+            eq: vi.fn(() => query),
+            order: vi.fn(() => query),
+            limit: vi.fn(async () => ({ data: [], error: null })),
+            insert: vi.fn(async (rows: Array<Record<string, unknown>>) => {
+              for (const row of rows) inserts.push({ table, payload: row });
+              return { error: null };
+            }),
+          };
+          return query;
+        }
+
+        if (table === 'profiles') {
+          const query = {
+            select: vi.fn(() => query),
+            eq: vi.fn(() => query),
+            maybeSingle: vi.fn(async () => ({ data: { is_admin: true }, error: null })),
+          };
+          return query;
+        }
+
+        if (table === 'payments') {
+          const paidRows = [
+            {
+              id: 'payment-3',
+              status: 'paid',
+              amount: 450,
+              currency: 'USD',
+              description: 'UI milestone payout',
+              refund_amount: 0,
+              refund_note: null,
+              recipient_id: 'mel-1',
+              recipient: { id: 'mel-1', display_name: 'Mel' },
+            },
+          ];
+          const query = {
+            select: vi.fn(() => query),
+            eq: vi.fn(() => query),
+            update: vi.fn((payload: Record<string, unknown>) => {
+              updates.push({ table, payload });
+              return query;
+            }),
+            single: vi.fn(async () => ({ data: { ...paidRows[0], refund_amount: 75, refund_note: 'duplicate charge' }, error: null })),
+            then: (resolve: (value: { data: typeof paidRows; error: null }) => void) => resolve({ data: paidRows, error: null }),
+          };
+          return query;
+        }
+
+        if (table === 'activity_log') {
+          return {
+            insert: vi.fn(async (payload: Record<string, unknown>) => {
+              inserts.push({ table, payload });
+              return { error: null };
+            }),
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      }),
+    });
+
+    const input: AgentChatInput = {
+      message: 'Refund Mel payment $75 for duplicate charge',
+      mode: 'approval',
+      decision: 'approve',
+      suggestion: {
+        title: 'Refund Mel',
+        approval: {
+          kind: 'payment.refund' as never,
+          title: 'Refund Mel',
+          copy: 'Record 75 USD refund for Mel: duplicate charge.',
+          draft: {
+            recipientName: 'Mel',
+            amount: '75',
+            refundNote: 'duplicate charge',
+          },
+        },
+      },
+    };
+
+    const response = await createAgentApp().request('/api/agent/chat', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(input),
+    });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      reply: 'Recorded 75 USD refund for Mel.',
+      provider: 'openai',
+      model: 'eko-local-write',
+      intent: 'executed',
+    });
+    expect(updates).toContainEqual({
+      table: 'payments',
+      payload: {
+        refund_amount: 75,
+        refund_note: 'duplicate charge',
+        refunded_at: expect.any(String),
+      },
+    });
+    expect(inserts).toContainEqual({
+      table: 'activity_log',
+      payload: {
+        user_id: 'user-1',
+        action: 'Updated payment refund',
+        target: 'payment: Mel -> refund 75 USD',
         source: 'eko',
       },
     });

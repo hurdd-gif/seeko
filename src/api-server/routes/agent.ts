@@ -38,9 +38,10 @@ type AgentApprovalDraft = {
   amount?: string;
   description?: string;
   itemLabel?: string;
+  refundNote?: string;
 };
 type AgentApproval = {
-  kind: 'issue.create' | 'issue.update' | 'issue.delete' | 'area.update' | 'milestone.create' | 'milestone.update' | 'milestone.link' | 'milestone.unlink' | 'doc.create' | 'doc.update' | 'doc.delete' | 'note.create' | 'note.archive' | 'payment.create' | 'payment.update' | 'generic';
+  kind: 'issue.create' | 'issue.update' | 'issue.delete' | 'area.update' | 'milestone.create' | 'milestone.update' | 'milestone.link' | 'milestone.unlink' | 'doc.create' | 'doc.update' | 'doc.delete' | 'note.create' | 'note.archive' | 'payment.create' | 'payment.refund' | 'payment.update' | 'generic';
   title: string;
   copy: string;
   draft?: AgentApprovalDraft;
@@ -371,6 +372,7 @@ function parseApproval(value: unknown): AgentApproval | undefined {
     record.kind === 'note.create' ||
     record.kind === 'note.archive' ||
     record.kind === 'payment.create' ||
+    record.kind === 'payment.refund' ||
     record.kind === 'payment.update' ||
     record.kind === 'generic'
       ? record.kind
@@ -391,7 +393,7 @@ function parseApprovalDraft(value: unknown): AgentApprovalDraft | undefined {
   if (!value || typeof value !== 'object') return undefined;
   const record = value as Record<string, unknown>;
   const draft: AgentApprovalDraft = {};
-  for (const key of ['title', 'areaName', 'milestoneName', 'status', 'priority', 'health', 'progress', 'phase', 'dueDate', 'targetDate', 'docType', 'docTitle', 'taskName', 'taskNumber', 'taskNumbers', 'assigneeName', 'paymentId', 'recipientName', 'amount', 'description', 'itemLabel'] as const) {
+  for (const key of ['title', 'areaName', 'milestoneName', 'status', 'priority', 'health', 'progress', 'phase', 'dueDate', 'targetDate', 'docType', 'docTitle', 'taskName', 'taskNumber', 'taskNumbers', 'assigneeName', 'paymentId', 'recipientName', 'amount', 'description', 'itemLabel', 'refundNote'] as const) {
     const field = record[key];
     if (typeof field === 'string' && field.trim()) draft[key] = field.trim().slice(0, 140);
   }
@@ -641,6 +643,10 @@ async function executeTypedApproval(approval: AgentApproval, user: Authenticated
     return executePaymentCreateDraft(approval.draft, user);
   }
 
+  if (approval.kind === 'payment.refund') {
+    return executePaymentRefundDraft(approval.draft, user);
+  }
+
   if (approval.kind === 'payment.update') {
     return executePaymentUpdateDraft(approval.draft, user);
   }
@@ -838,6 +844,8 @@ type PaymentCandidate = {
   amount: number | string | null;
   currency: string | null;
   description?: string | null;
+  refund_amount?: number | string | null;
+  refund_note?: string | null;
   recipient?: {
     id?: string | null;
     display_name?: string | null;
@@ -1134,6 +1142,39 @@ export function planLocalMilestoneWrite(input: AgentChatInput, dashboardContext:
 
 export function planLocalPaymentWrite(input: AgentChatInput, dashboardContext: string): AgentChatResult | null {
   if (input.mode === 'approval') return null;
+
+  const refundDraft = parsePaymentRefundDraft(input.message.trim(), dashboardContext);
+  if (refundDraft) {
+    const missing = formatList([
+      refundDraft.recipientName || refundDraft.paymentId ? null : 'paid payment',
+      refundDraft.amount ? null : 'refund amount',
+      refundDraft.refundNote || refundDraft.description ? null : 'refund reason',
+    ].filter(Boolean));
+
+    if (missing) {
+      return {
+        reply: `Add ${missing} before EKO can prepare the refund.`,
+        provider: 'openai',
+        model: 'eko-local-planner',
+        intent: 'clarification',
+      };
+    }
+
+    const target = refundDraft.recipientName ?? `payment ${refundDraft.paymentId}`;
+    const amountLabel = refundDraft.amount === 'full' ? 'full' : `${formatPaymentAmount(refundDraft.amount)} USD`;
+    return {
+      reply: `Ready for approval: refund ${amountLabel} for ${target}.`,
+      provider: 'openai',
+      model: 'eko-local-planner',
+      intent: 'approval_required',
+      approval: {
+        kind: 'payment.refund',
+        title: `Refund ${target}`,
+        copy: `Record ${amountLabel} refund for ${target}: ${refundDraft.refundNote ?? refundDraft.description}.`,
+        draft: refundDraft,
+      },
+    };
+  }
 
   const createDraft = parsePaymentCreateDraft(input.message.trim(), dashboardContext);
   if (createDraft) {
@@ -1922,6 +1963,97 @@ async function executePaymentCreateDraft(
   };
 }
 
+async function executePaymentRefundDraft(
+  draft: AgentApprovalDraft | PaymentWriteDraft | undefined,
+  user: AuthenticatedUser,
+): Promise<AgentChatResult | null> {
+  const paymentId = draft?.paymentId;
+  const recipientName = draft?.recipientName;
+  const refundNote = cleanPaymentDescription(draft?.refundNote || draft?.description || '');
+
+  await assertAdminUser(user.id);
+  const service = getServiceClient();
+  const { data, error } = await (service as any)
+    .from('payments')
+    .select('id, status, amount, currency, description, refund_amount, refund_note, recipient_id, recipient:profiles!payments_recipient_id_fkey(id, display_name)')
+    .eq('status', 'paid');
+  if (error) throw new AgentProviderError('EKO could not read paid payments.', 500);
+
+  const paid = ((data ?? []) as PaymentCandidate[]).filter((payment) =>
+    paymentId ? payment.id === paymentId : matchesPaymentRecipient(payment, recipientName ?? ''),
+  );
+
+  if (!refundNote || (!paymentId && !recipientName) || !draft?.amount) {
+    return {
+      reply: `Add ${formatList([
+        paymentId || recipientName ? null : 'paid payment',
+        draft?.amount ? null : 'refund amount',
+        refundNote ? null : 'refund reason',
+      ].filter(Boolean))} before EKO can record the refund. No dashboard changes were made.`,
+      provider: 'openai',
+      model: 'eko-local-approval',
+      intent: 'details_needed',
+      approval: {
+        kind: 'payment.refund',
+        title: recipientName ? `Refund ${recipientName}` : 'Refund payment',
+        copy: 'Add the paid payment, refund amount, and reason so EKO can prepare this refund for approval.',
+        draft,
+      },
+    };
+  }
+
+  if (paid.length !== 1) {
+    return {
+      reply: paid.length
+        ? `EKO found ${paid.length} paid payments for ${recipientName}. No dashboard changes were made; use the exact payment ID.`
+        : `Approval recorded, but EKO could not find a paid payment for ${recipientName ?? paymentId}. No dashboard changes were made.`,
+      provider: 'openai',
+      model: 'eko-local-approval',
+      intent: 'details_needed',
+    };
+  }
+
+  const payment = paid[0];
+  const paymentAmount = Number(payment.amount);
+  const refundAmount = draft.amount === 'full' ? paymentAmount : parsePaymentAmount(draft.amount);
+  if (!Number.isFinite(paymentAmount) || refundAmount == null || refundAmount < 0 || refundAmount > paymentAmount) {
+    return {
+      reply: `Refund amount must be between 0 and ${formatPaymentAmount(payment.amount)} ${payment.currency ?? 'USD'}. No dashboard changes were made.`,
+      provider: 'openai',
+      model: 'eko-local-approval',
+      intent: 'details_needed',
+    };
+  }
+
+  const { data: updated, error: updateError } = await (service as any)
+    .from('payments')
+    .update({
+      refund_amount: refundAmount,
+      refund_note: refundNote,
+      refunded_at: refundAmount > 0 ? new Date().toISOString() : null,
+    })
+    .eq('id', payment.id)
+    .eq('status', 'paid')
+    .select()
+    .single();
+  if (updateError || !updated) throw new AgentProviderError('EKO could not update the refund.', 500);
+
+  const label = getPaymentRecipientLabel(payment);
+  await service.from('activity_log').insert({
+    user_id: user.id,
+    action: 'Updated payment refund',
+    target: `payment: ${label} -> refund ${formatPaymentAmount(refundAmount)} ${payment.currency ?? 'USD'}`,
+    source: 'eko',
+  } as never);
+
+  return {
+    reply: `Recorded ${formatPaymentAmount(refundAmount)} ${payment.currency ?? 'USD'} refund for ${label}.`,
+    provider: 'openai',
+    model: 'eko-local-write',
+    intent: 'executed',
+  };
+}
+
 async function executeIssueStatusDraft(
   draft: Pick<IssueWriteDraft, 'taskName' | 'status'>,
   user: AuthenticatedUser,
@@ -2608,6 +2740,22 @@ function parseMilestoneLinkDraft(value: string, dashboardContext: string): Miles
   };
 }
 
+function parsePaymentRefundDraft(value: string, dashboardContext: string): PaymentWriteDraft | null {
+  if (!/\b(refund|refunded|refunds|reimburse|reimbursement)\b/i.test(value)) return null;
+  if (!/\b(payment|payments|payout|payouts|invoice|invoices|paid)\b/i.test(value)) return null;
+
+  const description = parsePaymentDescription(value) || parseRefundReason(value);
+  return {
+    paymentId: parsePaymentIdRef(value),
+    recipientName: findMentionedPaymentRecipientName(value, dashboardContext) || parsePaymentRecipientName(value),
+    amount: /\b(full|all)\s+refund\b|\brefund\s+(?:the\s+)?(?:full|all)\b/i.test(value)
+      ? 'full'
+      : parsePaymentAmountText(value),
+    description,
+    refundNote: description,
+  };
+}
+
 function parsePaymentCreateDraft(value: string, dashboardContext: string): PaymentWriteDraft | null {
   if (!/\b(create|add|make|request|set up|setup)\b/i.test(value)) return null;
   if (!/\b(payment|payments|payout|payouts|invoice|invoices)\b/i.test(value)) return null;
@@ -2874,6 +3022,12 @@ function parsePaymentDescription(value: string): string | undefined {
   if (!clean || /\b(payment|payments|payout|invoice|invoices)\b/i.test(clean)) return undefined;
   if (/^\$?\d+(?:\.\d{1,2})?\s*(?:usd|dollars?)?$/i.test(clean)) return undefined;
   return clean;
+}
+
+function parseRefundReason(value: string): string | undefined {
+  const match = value.match(/\b(?:because|reason|note|for)\s+(.+?)(?:[,.]|$)/i)?.[1];
+  const clean = cleanPaymentDescription(match ?? '');
+  return clean || undefined;
 }
 
 function cleanPaymentRecipientName(value: string) {

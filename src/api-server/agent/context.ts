@@ -76,7 +76,7 @@ export type AgentContextLoaders = {
  * execute. Keep in sync with the typed tools in routes/agent.ts.
  */
 export const EKO_CAPABILITIES = [
-  'EKO capabilities (never promise beyond this list):',
+  'EKO capabilities:',
   'Typed writes gated behind explicit user approval:',
   '- issue.create: create issue (title, status, priority, due).',
   '- issue.update (status): move issue status.',
@@ -94,9 +94,10 @@ export const EKO_CAPABILITIES = [
   '- note.create: add inbox note',
   '- note.archive: archive one open inbox note.',
   '- payment.create: create pending payment',
+  '- payment.refund: record refund on paid payment',
   '- payment.update: mark pending payment paid/cancelled',
   'Read: roster, areas, milestones, issues, activity, notes, docs, payments.',
-  'Not supported yet: editing deck slides, emails/invites, deleting milestones, changing issue descriptions, publishing.',
+  'Not supported yet: deck slide edits, emails/invites, deleting milestones, issue descriptions, publishing.',
   'If asked for an unsupported write: say EKO cannot do that yet, then offer the closest supported action or point to the dashboard UI. Never claim a write happened unless an approved action was executed.',
 ].join('\n');
 
