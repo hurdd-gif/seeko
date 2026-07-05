@@ -68,6 +68,33 @@ describe('EKO milestone actions', () => {
     });
   });
 
+  it('prepares creating a milestone as a gated dashboard write', () => {
+    expect(planLocalMilestoneWrite({ message: 'Create milestone Launch Readiness due 2026-11-01' }, dashboardContext)).toEqual({
+      reply: 'Ready for approval: create milestone Launch Readiness due 2026-11-01.',
+      provider: 'openai',
+      model: 'eko-local-planner',
+      intent: 'approval_required',
+      approval: {
+        kind: 'milestone.create',
+        title: 'Create Launch Readiness',
+        copy: 'Create milestone Launch Readiness due 2026-11-01.',
+        draft: {
+          milestoneName: 'Launch Readiness',
+          targetDate: '2026-11-01',
+        },
+      },
+    });
+  });
+
+  it('asks for a milestone name before preparing a milestone create', () => {
+    expect(planLocalMilestoneWrite({ message: 'Create a milestone due 2026-11-01' }, dashboardContext)).toEqual({
+      reply: 'What should EKO call the milestone?',
+      provider: 'openai',
+      model: 'eko-local-planner',
+      intent: 'clarification',
+    });
+  });
+
   it('asks which milestone to update when the target is missing', () => {
     expect(planLocalMilestoneWrite({ message: 'Mark the milestone at risk' }, dashboardContext)).toEqual({
       reply: 'Which milestone should EKO update?',
@@ -186,6 +213,124 @@ describe('EKO milestone actions', () => {
     });
   });
 
+  it('creates a milestone only after approval and records it as an EKO write', async () => {
+    const inserts: Array<{ table: string; payload: Record<string, unknown> }> = [];
+    mocks.loadTasksBoard.mockResolvedValue({
+      projectMilestones: [
+        { id: 'milestone-1', name: 'Vertical Slice', health: 'at_risk', target_date: '2026-08-01', sort_order: 0, created_at: '2026-06-01' },
+        { id: 'milestone-2', name: 'Beta Cut', health: 'on_track', target_date: '2026-09-15', sort_order: 1, created_at: '2026-06-01' },
+      ],
+      tasks: [],
+      areas: [],
+    });
+    mocks.getServiceClient.mockReturnValue({
+      from: vi.fn((table: string) => {
+        if (table === 'agent_chat_messages') {
+          const query = {
+            select: vi.fn(() => query),
+            eq: vi.fn(() => query),
+            order: vi.fn(() => query),
+            limit: vi.fn(async () => ({ data: [], error: null })),
+            insert: vi.fn(async (rows: Array<Record<string, unknown>>) => {
+              for (const row of rows) inserts.push({ table, payload: row });
+              return { error: null };
+            }),
+          };
+          return query;
+        }
+
+        if (table === 'profiles') {
+          const query = {
+            select: vi.fn(() => query),
+            eq: vi.fn(() => query),
+            maybeSingle: vi.fn(async () => ({ data: { is_admin: true }, error: null })),
+          };
+          return query;
+        }
+
+        if (table === 'milestones') {
+          const query = {
+            insert: vi.fn((payload: Record<string, unknown>) => {
+              inserts.push({ table, payload });
+              return query;
+            }),
+            select: vi.fn(() => query),
+            single: vi.fn(async () => ({
+              data: {
+                id: 'milestone-3',
+                name: 'Launch Readiness',
+                target_date: '2026-11-01',
+                sort_order: 2,
+              },
+              error: null,
+            })),
+          };
+          return query;
+        }
+
+        if (table === 'activity_log') {
+          return {
+            insert: vi.fn(async (payload: Record<string, unknown>) => {
+              inserts.push({ table, payload });
+              return { error: null };
+            }),
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      }),
+    });
+
+    const input: AgentChatInput = {
+      message: 'Create milestone Launch Readiness due 2026-11-01',
+      mode: 'approval',
+      decision: 'approve',
+      suggestion: {
+        title: 'Create Launch Readiness',
+        approval: {
+          kind: 'milestone.create' as never,
+          title: 'Create Launch Readiness',
+          copy: 'Create milestone Launch Readiness due 2026-11-01.',
+          draft: {
+            milestoneName: 'Launch Readiness',
+            targetDate: '2026-11-01',
+          },
+        },
+      },
+    };
+
+    const response = await createAgentApp().request('/api/agent/chat', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(input),
+    });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      reply: 'Created milestone "Launch Readiness" due 2026-11-01.',
+      provider: 'openai',
+      model: 'eko-local-write',
+      intent: 'executed',
+    });
+    expect(inserts).toContainEqual({
+      table: 'milestones',
+      payload: {
+        name: 'Launch Readiness',
+        target_date: '2026-11-01',
+        sort_order: 2,
+      },
+    });
+    expect(inserts).toContainEqual({
+      table: 'activity_log',
+      payload: {
+        user_id: 'user-1',
+        action: 'Created milestone',
+        target: 'milestone: Launch Readiness → due 2026-11-01',
+        source: 'eko',
+      },
+    });
+  });
+
   it('prepares linking an issue to a milestone as a gated dashboard write', () => {
     const context = [
       dashboardContext,
@@ -201,6 +346,24 @@ describe('EKO milestone actions', () => {
         kind: 'milestone.link',
         title: 'Link UI Extension to Vertical Slice',
         copy: 'Link issue UI Extension to milestone Vertical Slice.',
+        draft: {
+          taskName: 'UI Extension',
+          milestoneName: 'Vertical Slice',
+        },
+      },
+    });
+  });
+
+  it('treats adding an existing issue to a milestone as a link, not a milestone create', () => {
+    const context = [
+      dashboardContext,
+      'All issues: #42 UI Extension (In Progress).',
+    ].join('\n');
+
+    expect(planLocalMilestoneWrite({ message: 'Add UI Extension to Vertical Slice milestone' }, context)).toMatchObject({
+      intent: 'approval_required',
+      approval: {
+        kind: 'milestone.link',
         draft: {
           taskName: 'UI Extension',
           milestoneName: 'Vertical Slice',

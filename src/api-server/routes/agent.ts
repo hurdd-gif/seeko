@@ -35,7 +35,7 @@ type AgentApprovalDraft = {
   assigneeName?: string;
 };
 type AgentApproval = {
-  kind: 'issue.create' | 'issue.update' | 'issue.delete' | 'area.update' | 'milestone.update' | 'milestone.link' | 'milestone.unlink' | 'doc.create' | 'doc.update' | 'doc.delete' | 'note.create' | 'note.archive' | 'generic';
+  kind: 'issue.create' | 'issue.update' | 'issue.delete' | 'area.update' | 'milestone.create' | 'milestone.update' | 'milestone.link' | 'milestone.unlink' | 'doc.create' | 'doc.update' | 'doc.delete' | 'note.create' | 'note.archive' | 'generic';
   title: string;
   copy: string;
   draft?: AgentApprovalDraft;
@@ -356,6 +356,7 @@ function parseApproval(value: unknown): AgentApproval | undefined {
     record.kind === 'issue.update' ||
     record.kind === 'issue.delete' ||
     record.kind === 'area.update' ||
+    record.kind === 'milestone.create' ||
     record.kind === 'milestone.update' ||
     record.kind === 'milestone.link' ||
     record.kind === 'milestone.unlink' ||
@@ -592,6 +593,10 @@ async function executeTypedApproval(approval: AgentApproval, user: Authenticated
 
   if (approval.kind === 'area.update') {
     return executeAreaUpdateDraft(approval.draft, user, board);
+  }
+
+  if (approval.kind === 'milestone.create') {
+    return executeMilestoneCreateDraft(approval.draft, user, board);
   }
 
   if (approval.kind === 'milestone.update') {
@@ -980,6 +985,32 @@ export function planLocalAreaWrite(input: AgentChatInput, dashboardContext: stri
 
 export function planLocalMilestoneWrite(input: AgentChatInput, dashboardContext: string): AgentChatResult | null {
   if (input.mode === 'approval') return null;
+
+  const createDraft = parseMilestoneCreateDraft(input.message.trim());
+  if (createDraft) {
+    if (!createDraft.milestoneName) {
+      return {
+        reply: 'What should EKO call the milestone?',
+        provider: 'openai',
+        model: 'eko-local-planner',
+        intent: 'clarification',
+      };
+    }
+
+    const dueText = createDraft.targetDate ? ` due ${createDraft.targetDate}` : '';
+    return {
+      reply: `Ready for approval: create milestone ${createDraft.milestoneName}${dueText}.`,
+      provider: 'openai',
+      model: 'eko-local-planner',
+      intent: 'approval_required',
+      approval: {
+        kind: 'milestone.create',
+        title: `Create ${createDraft.milestoneName}`,
+        copy: `Create milestone ${createDraft.milestoneName}${dueText}.`,
+        draft: createDraft,
+      },
+    };
+  }
 
   const linkDraft = parseMilestoneLinkDraft(input.message.trim(), dashboardContext);
   if (linkDraft) {
@@ -2014,6 +2045,59 @@ async function executeMilestoneUpdateDraft(
   };
 }
 
+async function executeMilestoneCreateDraft(
+  draft: AgentApprovalDraft | MilestoneWriteDraft | undefined,
+  user: AuthenticatedUser,
+  board: TasksBoardData | null,
+): Promise<AgentChatResult | null> {
+  const milestoneName = draft?.milestoneName ?? draft?.title;
+  if (!milestoneName) {
+    return {
+      reply: 'Add a milestone name before EKO can create it. No dashboard changes were made.',
+      provider: 'openai',
+      model: 'eko-local-approval',
+      intent: 'details_needed',
+      approval: {
+        kind: 'milestone.create',
+        title: 'Create milestone',
+        copy: 'Add a milestone name so EKO can prepare the milestone for approval.',
+        draft,
+      },
+    };
+  }
+
+  await assertAdminUser(user.id);
+  const targetDate = parseMilestoneTargetDate(draft?.targetDate ?? '');
+  const service = getServiceClient();
+  const sortOrder = board?.projectMilestones?.length ?? 0;
+  const insertRow: Record<string, unknown> = {
+    name: milestoneName,
+    sort_order: sortOrder,
+  };
+  if (targetDate) insertRow.target_date = targetDate;
+
+  const { data, error } = await (service as any)
+    .from('milestones')
+    .insert(insertRow)
+    .select('id, name, target_date, area_id, sort_order, created_at')
+    .single();
+  if (error || !data) throw new AgentProviderError('EKO could not create the milestone.', 500);
+
+  await service.from('activity_log').insert({
+    user_id: user.id,
+    action: 'Created milestone',
+    target: `milestone: ${milestoneName}${targetDate ? ` → due ${targetDate}` : ''}`,
+    source: 'eko',
+  } as never);
+
+  return {
+    reply: `Created milestone "${milestoneName}"${targetDate ? ` due ${targetDate}` : ''}.`,
+    provider: 'openai',
+    model: 'eko-local-write',
+    intent: 'executed',
+  };
+}
+
 async function executeMilestoneLinkDraft(
   draft: AgentApprovalDraft | undefined,
   user: AuthenticatedUser,
@@ -2228,6 +2312,24 @@ function parseMilestoneUpdateDraft(value: string, dashboardContext: string): Mil
   return {
     milestoneName: milestoneName || undefined,
     ...(health ? { health } : {}),
+    ...(targetDate ? { targetDate } : {}),
+  };
+}
+
+function parseMilestoneCreateDraft(value: string): MilestoneWriteDraft | null {
+  if (!/\b(?:create|make|new)\b.*\b(?:milestone|checkpoint)\b/i.test(value)
+    && !/\badd\s+(?:a|an|the|new)?\s*(?:milestone|checkpoint)\b/i.test(value)) return null;
+  if (!/\b(milestone|checkpoint)\b/i.test(value)) return null;
+  if (/\b(task|issue|todo|payment|invoice|doc|document|deck|note|area|studio progress)\b/i.test(value)) return null;
+
+  const quoted = value.match(/["“]([^"”]{2,80})["”]/)?.[1];
+  const afterNamed = value.match(/\b(?:called|named|titled)\s+([^,.]+?)(?:\s+(?:due|deadline|target date|target)\b|[,.]|$)/i)?.[1];
+  const afterType = value.match(/\b(?:create|add|make)\s+(?:a|an|the|new)?\s*(?:milestone|checkpoint)\s*([^,.]+?)(?:\s+(?:due|deadline|target date|target)\b|[,.]|$)/i)?.[1];
+  const targetDate = /\b(due|deadline|date|target)\b/i.test(value) ? parseMilestoneTargetDate(value) : undefined;
+  const milestoneName = cleanMilestoneTitle(quoted || afterNamed || afterType || '');
+
+  return {
+    milestoneName: milestoneName || undefined,
     ...(targetDate ? { targetDate } : {}),
   };
 }
@@ -2549,6 +2651,19 @@ function cleanDocumentTitle(value: string) {
   const clean = value
     .replace(/^(?:a|an|the)\s+/i, '')
     .replace(/\b(?:doc|docs|document|deck|presentation|slides?)\b/gi, '')
+    .replace(/\s+/g, ' ')
+    .replace(/[.?!:;,-]+$/g, '')
+    .trim()
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+  return /^(?:A|An|The)$/i.test(clean) ? '' : clean;
+}
+
+function cleanMilestoneTitle(value: string) {
+  const clean = value
+    .replace(/^(?:a|an|the)\s+/i, '')
+    .replace(/\b(?:milestone|checkpoint)\b/gi, '')
+    .replace(/\b(?:due|deadline|target date|target)\s+\d{4}-\d{2}-\d{2}\b/gi, '')
+    .replace(/\b(?:due|deadline|target date|target)\b/gi, '')
     .replace(/\s+/g, ' ')
     .replace(/[.?!:;,-]+$/g, '')
     .trim()
