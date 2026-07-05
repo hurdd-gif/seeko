@@ -35,9 +35,12 @@ type AgentApprovalDraft = {
   assigneeName?: string;
   paymentId?: string;
   recipientName?: string;
+  amount?: string;
+  description?: string;
+  itemLabel?: string;
 };
 type AgentApproval = {
-  kind: 'issue.create' | 'issue.update' | 'issue.delete' | 'area.update' | 'milestone.create' | 'milestone.update' | 'milestone.link' | 'milestone.unlink' | 'doc.create' | 'doc.update' | 'doc.delete' | 'note.create' | 'note.archive' | 'payment.update' | 'generic';
+  kind: 'issue.create' | 'issue.update' | 'issue.delete' | 'area.update' | 'milestone.create' | 'milestone.update' | 'milestone.link' | 'milestone.unlink' | 'doc.create' | 'doc.update' | 'doc.delete' | 'note.create' | 'note.archive' | 'payment.create' | 'payment.update' | 'generic';
   title: string;
   copy: string;
   draft?: AgentApprovalDraft;
@@ -367,6 +370,7 @@ function parseApproval(value: unknown): AgentApproval | undefined {
     record.kind === 'doc.delete' ||
     record.kind === 'note.create' ||
     record.kind === 'note.archive' ||
+    record.kind === 'payment.create' ||
     record.kind === 'payment.update' ||
     record.kind === 'generic'
       ? record.kind
@@ -387,7 +391,7 @@ function parseApprovalDraft(value: unknown): AgentApprovalDraft | undefined {
   if (!value || typeof value !== 'object') return undefined;
   const record = value as Record<string, unknown>;
   const draft: AgentApprovalDraft = {};
-  for (const key of ['title', 'areaName', 'milestoneName', 'status', 'priority', 'health', 'progress', 'phase', 'dueDate', 'targetDate', 'docType', 'docTitle', 'taskName', 'taskNumber', 'taskNumbers', 'assigneeName', 'paymentId', 'recipientName'] as const) {
+  for (const key of ['title', 'areaName', 'milestoneName', 'status', 'priority', 'health', 'progress', 'phase', 'dueDate', 'targetDate', 'docType', 'docTitle', 'taskName', 'taskNumber', 'taskNumbers', 'assigneeName', 'paymentId', 'recipientName', 'amount', 'description', 'itemLabel'] as const) {
     const field = record[key];
     if (typeof field === 'string' && field.trim()) draft[key] = field.trim().slice(0, 140);
   }
@@ -633,6 +637,10 @@ async function executeTypedApproval(approval: AgentApproval, user: Authenticated
     return executeNoteArchiveDraft(approval.draft, user);
   }
 
+  if (approval.kind === 'payment.create') {
+    return executePaymentCreateDraft(approval.draft, user);
+  }
+
   if (approval.kind === 'payment.update') {
     return executePaymentUpdateDraft(approval.draft, user);
   }
@@ -818,6 +826,9 @@ type NoteWriteDraft = {
 type PaymentWriteDraft = {
   paymentId?: string;
   recipientName?: string;
+  amount?: string;
+  description?: string;
+  itemLabel?: string;
   status?: Extract<PaymentStatus, 'paid' | 'cancelled'>;
 };
 
@@ -1123,6 +1134,37 @@ export function planLocalMilestoneWrite(input: AgentChatInput, dashboardContext:
 
 export function planLocalPaymentWrite(input: AgentChatInput, dashboardContext: string): AgentChatResult | null {
   if (input.mode === 'approval') return null;
+
+  const createDraft = parsePaymentCreateDraft(input.message.trim(), dashboardContext);
+  if (createDraft) {
+    const missing = formatList([
+      createDraft.recipientName ? null : 'payee',
+      createDraft.amount ? null : 'amount',
+      createDraft.description ? null : 'payment reason',
+    ].filter(Boolean));
+
+    if (missing) {
+      return {
+        reply: `Add ${missing} before EKO can prepare the payment.`,
+        provider: 'openai',
+        model: 'eko-local-planner',
+        intent: 'clarification',
+      };
+    }
+
+    return {
+      reply: `Ready for approval: create ${formatPaymentAmount(createDraft.amount)} USD payment for ${createDraft.recipientName}.`,
+      provider: 'openai',
+      model: 'eko-local-planner',
+      intent: 'approval_required',
+      approval: {
+        kind: 'payment.create',
+        title: `Create ${createDraft.recipientName} payment`,
+        copy: `Create pending payment for ${createDraft.recipientName}: ${formatPaymentAmount(createDraft.amount)} USD for ${createDraft.description}.`,
+        draft: createDraft,
+      },
+    };
+  }
 
   const draft = parsePaymentUpdateDraft(input.message.trim(), dashboardContext);
   if (!draft) return null;
@@ -1801,6 +1843,79 @@ async function executePaymentUpdateDraft(
 
   return {
     reply: `Marked payment for ${label} as ${status}.`,
+    provider: 'openai',
+    model: 'eko-local-write',
+    intent: 'executed',
+  };
+}
+
+async function executePaymentCreateDraft(
+  draft: AgentApprovalDraft | PaymentWriteDraft | undefined,
+  user: AuthenticatedUser,
+): Promise<AgentChatResult | null> {
+  const recipientName = draft?.recipientName?.trim();
+  const amount = parsePaymentAmount(draft?.amount);
+  const description = cleanPaymentDescription(draft?.description || draft?.itemLabel || '');
+
+  if (!recipientName || amount == null || !description) {
+    return {
+      reply: `Add ${formatList([
+        recipientName ? null : 'payee',
+        amount == null ? 'amount' : null,
+        description ? null : 'payment reason',
+      ].filter(Boolean))} before EKO can create the payment. No dashboard changes were made.`,
+      provider: 'openai',
+      model: 'eko-local-approval',
+      intent: 'details_needed',
+      approval: {
+        kind: 'payment.create',
+        title: recipientName ? `Create ${recipientName} payment` : 'Create payment',
+        copy: 'Add the payee, amount, and reason so EKO can prepare this payment for approval.',
+        draft,
+      },
+    };
+  }
+
+  await assertAdminUser(user.id);
+  const service = getServiceClient();
+  const recipient = await findPaymentRecipientProfile(recipientName);
+  const { data: payment, error: paymentError } = await (service as any)
+    .from('payments')
+    .insert({
+      recipient_id: recipient?.id ?? null,
+      payee_name: recipient ? null : recipientName,
+      amount,
+      currency: 'USD',
+      description,
+      status: 'pending',
+      paid_at: null,
+      created_by: user.id,
+    })
+    .select()
+    .single();
+
+  if (paymentError || !payment) throw new AgentProviderError('EKO could not create the payment.', 500);
+
+  const { error: itemError } = await (service as any)
+    .from('payment_items')
+    .insert({
+      payment_id: payment.id,
+      task_id: null,
+      label: description,
+      amount,
+    });
+
+  if (itemError) throw new AgentProviderError('EKO created the payment but could not save its line item.', 500);
+
+  await service.from('activity_log').insert({
+    user_id: user.id,
+    action: 'Created payment',
+    target: `payment: ${recipientName} -> pending ${formatPaymentAmount(amount)} USD`,
+    source: 'eko',
+  } as never);
+
+  return {
+    reply: `Created pending payment for ${recipientName}: ${formatPaymentAmount(amount)} USD.`,
     provider: 'openai',
     model: 'eko-local-write',
     intent: 'executed',
@@ -2493,6 +2608,22 @@ function parseMilestoneLinkDraft(value: string, dashboardContext: string): Miles
   };
 }
 
+function parsePaymentCreateDraft(value: string, dashboardContext: string): PaymentWriteDraft | null {
+  if (!/\b(create|add|make|request|set up|setup)\b/i.test(value)) return null;
+  if (!/\b(payment|payments|payout|payouts|invoice|invoices)\b/i.test(value)) return null;
+
+  const recipientName = findMentionedPaymentRecipientName(value, dashboardContext)
+    || parsePaymentRecipientName(value);
+  const description = parsePaymentDescription(value);
+
+  return {
+    recipientName,
+    amount: parsePaymentAmountText(value),
+    description,
+    itemLabel: description,
+  };
+}
+
 function parsePaymentUpdateDraft(value: string, dashboardContext: string): PaymentWriteDraft | null {
   if (!/\b(payment|payments|payout|payouts|invoice|invoices)\b/i.test(value)) return null;
   if (!/\b(mark|set|change|update|cancel|cancelled|void|pay|paid)\b/i.test(value)) return null;
@@ -2707,12 +2838,62 @@ function parsePaymentWriteStatus(value: string | undefined): PaymentWriteDraft['
   return undefined;
 }
 
+function parsePaymentAmountText(value: string): string | undefined {
+  const match = value.match(/(?:\$|usd\s*)\s*([0-9][0-9,]*(?:\.\d{1,2})?)|([0-9][0-9,]*(?:\.\d{1,2})?)\s*(?:usd|dollars?)\b/i);
+  return (match?.[1] ?? match?.[2])?.replace(/,/g, '');
+}
+
+function parsePaymentAmount(value: string | undefined): number | null {
+  if (!value) return null;
+  const num = Number(value.replace(/,/g, ''));
+  if (!Number.isFinite(num) || num <= 0 || num > 50_000) return null;
+  return Math.round(num * 100) / 100;
+}
+
 function parsePaymentIdRef(value: string): string | undefined {
   const ref = value.match(/\b(?:payment|payout|invoice)\s+#?([a-z0-9][a-z0-9_-]{2,})\b/i)?.[1];
   if (!ref) return undefined;
   if (/^(?:paid|pay|cancel|cancelled|canceled|void|invoice|payment|payout)$/i.test(ref)) return undefined;
   if (!/[\d_-]/.test(ref) && !/^(?:pay|payment|payout|invoice)/i.test(ref)) return undefined;
   return ref;
+}
+
+function parsePaymentRecipientName(value: string): string | undefined {
+  const match = value.match(/\b(?:for|to)\s+(.+?)(?:\s+(?:for|worth|of|at|amount|total|\$|usd\b|\d)|[,.]|$)/i)?.[1];
+  const name = cleanPaymentRecipientName(match ?? '');
+  return name || undefined;
+}
+
+function parsePaymentDescription(value: string): string | undefined {
+  const quoted = value.match(/["“]([^"”]{2,120})["”]/)?.[1];
+  const afterAmount = value.match(/(?:\$|usd\s*)\s*[0-9][0-9,]*(?:\.\d{1,2})?\s+(?:for|toward|towards|about)\s+(.+?)(?:[,.]|$)/i)?.[1]
+    ?? value.match(/[0-9][0-9,]*(?:\.\d{1,2})?\s*(?:usd|dollars?)\s+(?:for|toward|towards|about)\s+(.+?)(?:[,.]|$)/i)?.[1];
+  const forParts = value.split(/\bfor\b/i).map((part) => part.trim()).filter(Boolean);
+  const afterFor = forParts.length > 2 ? forParts.at(-1) : undefined;
+  const clean = cleanPaymentDescription(quoted || afterAmount || afterFor || '');
+  if (!clean || /\b(payment|payments|payout|invoice|invoices)\b/i.test(clean)) return undefined;
+  if (/^\$?\d+(?:\.\d{1,2})?\s*(?:usd|dollars?)?$/i.test(clean)) return undefined;
+  return clean;
+}
+
+function cleanPaymentRecipientName(value: string) {
+  return value
+    .replace(/\b(?:payment|payments|payout|payouts|invoice|invoices|called|named)\b/gi, '')
+    .replace(/\s+/g, ' ')
+    .replace(/[.?!:;,-]+$/g, '')
+    .trim()
+    .replace(/\b\w/g, (letter) => letter.toUpperCase())
+    .slice(0, 80);
+}
+
+function cleanPaymentDescription(value: string) {
+  return value
+    .replace(/\$?\d[\d,]*(?:\.\d{1,2})?\s*(?:usd|dollars?)?/gi, '')
+    .replace(/\b(?:payment|payments|payout|payouts|invoice|invoices)\b/gi, '')
+    .replace(/\s+/g, ' ')
+    .replace(/[.?!:;,-]+$/g, '')
+    .trim()
+    .slice(0, 140);
 }
 
 function parseAreaStatus(value: string): string | undefined {
@@ -3133,6 +3314,20 @@ function matchesPaymentRecipient(payment: PaymentCandidate, recipientName: strin
 
 function getPaymentRecipientLabel(payment: PaymentCandidate) {
   return payment.recipient?.display_name || payment.description || payment.id;
+}
+
+async function findPaymentRecipientProfile(recipientName: string): Promise<{ id: string; display_name?: string | null } | null> {
+  const { data, error } = await (getServiceClient() as any)
+    .from('profiles')
+    .select('id, display_name')
+    .ilike('display_name', recipientName)
+    .limit(2);
+  if (error) throw new AgentProviderError('EKO could not check the payment recipient.', 500);
+  const matches = (data ?? []) as Array<{ id: string; display_name?: string | null }>;
+  if (matches.length > 1) {
+    throw new AgentProviderError(`EKO found multiple team members named ${recipientName}. Use the exact profile in Payments.`, 409);
+  }
+  return matches[0] ?? null;
 }
 
 function formatPaymentAmount(value: PaymentCandidate['amount']) {

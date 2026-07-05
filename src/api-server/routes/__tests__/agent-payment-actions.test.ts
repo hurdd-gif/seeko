@@ -78,6 +78,35 @@ describe('EKO payment actions', () => {
     });
   });
 
+  it('prepares creating a pending payment as a gated dashboard write', () => {
+    expect(planLocalPaymentWrite({ message: 'Create payment for Mel $450 for UI extension' }, dashboardContext)).toEqual({
+      reply: 'Ready for approval: create 450 USD payment for Mel.',
+      provider: 'openai',
+      model: 'eko-local-planner',
+      intent: 'approval_required',
+      approval: {
+        kind: 'payment.create',
+        title: 'Create Mel payment',
+        copy: 'Create pending payment for Mel: 450 USD for UI extension.',
+        draft: {
+          recipientName: 'Mel',
+          amount: '450',
+          description: 'UI extension',
+          itemLabel: 'UI extension',
+        },
+      },
+    });
+  });
+
+  it('asks for missing payment creation details instead of opening a vague approval', () => {
+    expect(planLocalPaymentWrite({ message: 'Create a payment for Mel' }, dashboardContext)).toEqual({
+      reply: 'Add amount and payment reason before EKO can prepare the payment.',
+      provider: 'openai',
+      model: 'eko-local-planner',
+      intent: 'clarification',
+    });
+  });
+
   it('marks a single pending payment paid only after approval and records it as an EKO write', async () => {
     const inserts: Array<{ table: string; payload: Record<string, unknown> }> = [];
     const updates: Array<{ table: string; payload: Record<string, unknown> }> = [];
@@ -196,6 +225,143 @@ describe('EKO payment actions', () => {
         user_id: 'user-1',
         action: 'Updated payment',
         target: 'payment: Mel -> paid 450 USD',
+        source: 'eko',
+      },
+    });
+  });
+
+  it('creates a pending payment only after approval and records it as an EKO write', async () => {
+    const inserts: Array<{ table: string; payload: Record<string, unknown> }> = [];
+    mocks.loadTasksBoard.mockResolvedValue({
+      projectMilestones: [],
+      projectActivity: [],
+      tasks: [],
+      areas: [],
+      team: [],
+      account: { notifications: [], unreadCount: 0 },
+    });
+    mocks.getServiceClient.mockReturnValue({
+      from: vi.fn((table: string) => {
+        if (table === 'agent_chat_messages') {
+          const query = {
+            select: vi.fn(() => query),
+            eq: vi.fn(() => query),
+            order: vi.fn(() => query),
+            limit: vi.fn(async () => ({ data: [], error: null })),
+            insert: vi.fn(async (rows: Array<Record<string, unknown>>) => {
+              for (const row of rows) inserts.push({ table, payload: row });
+              return { error: null };
+            }),
+          };
+          return query;
+        }
+
+        if (table === 'profiles') {
+          const query = {
+            select: vi.fn(() => query),
+            eq: vi.fn(() => query),
+            maybeSingle: vi.fn(async () => ({ data: { is_admin: true }, error: null })),
+            ilike: vi.fn(() => query),
+            limit: vi.fn(async () => ({ data: [{ id: 'mel-1', display_name: 'Mel' }], error: null })),
+          };
+          return query;
+        }
+
+        if (table === 'payments') {
+          const query = {
+            insert: vi.fn((payload: Record<string, unknown>) => {
+              inserts.push({ table, payload });
+              return query;
+            }),
+            select: vi.fn(() => query),
+            single: vi.fn(async () => ({ data: { id: 'payment-2', recipient_id: 'mel-1', amount: 450, status: 'pending' }, error: null })),
+          };
+          return query;
+        }
+
+        if (table === 'payment_items') {
+          return {
+            insert: vi.fn(async (payload: Record<string, unknown>) => {
+              inserts.push({ table, payload });
+              return { error: null };
+            }),
+          };
+        }
+
+        if (table === 'activity_log') {
+          return {
+            insert: vi.fn(async (payload: Record<string, unknown>) => {
+              inserts.push({ table, payload });
+              return { error: null };
+            }),
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      }),
+    });
+
+    const input: AgentChatInput = {
+      message: 'Create payment for Mel $450 for UI extension',
+      mode: 'approval',
+      decision: 'approve',
+      suggestion: {
+        title: 'Create Mel payment',
+        approval: {
+          kind: 'payment.create' as never,
+          title: 'Create Mel payment',
+          copy: 'Create pending payment for Mel: 450 USD for UI extension.',
+          draft: {
+            recipientName: 'Mel',
+            amount: '450',
+            description: 'UI extension',
+            itemLabel: 'UI extension',
+          },
+        },
+      },
+    };
+
+    const response = await createAgentApp().request('/api/agent/chat', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(input),
+    });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      reply: 'Created pending payment for Mel: 450 USD.',
+      provider: 'openai',
+      model: 'eko-local-write',
+      intent: 'executed',
+    });
+    expect(inserts).toContainEqual({
+      table: 'payments',
+      payload: {
+        recipient_id: 'mel-1',
+        payee_name: null,
+        amount: 450,
+        currency: 'USD',
+        description: 'UI extension',
+        status: 'pending',
+        paid_at: null,
+        created_by: 'user-1',
+      },
+    });
+    expect(inserts).toContainEqual({
+      table: 'payment_items',
+      payload: {
+        payment_id: 'payment-2',
+        task_id: null,
+        label: 'UI extension',
+        amount: 450,
+      },
+    });
+    expect(inserts).toContainEqual({
+      table: 'activity_log',
+      payload: {
+        user_id: 'user-1',
+        action: 'Created payment',
+        target: 'payment: Mel -> pending 450 USD',
         source: 'eko',
       },
     });
