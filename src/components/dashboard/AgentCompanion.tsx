@@ -87,17 +87,20 @@ type EkoApiResponse = {
   model?: string;
   intent?: 'answer' | 'clarification' | 'details_needed' | 'approval_required' | 'executed' | 'rejected';
   approval?: {
-    kind?: 'issue.create' | 'issue.update' | 'issue.delete' | 'area.update' | 'doc.create' | 'doc.update' | 'doc.delete' | 'note.create' | 'note.archive' | 'generic';
+    kind?: 'issue.create' | 'issue.update' | 'issue.delete' | 'area.update' | 'milestone.update' | 'doc.create' | 'doc.update' | 'doc.delete' | 'note.create' | 'note.archive' | 'generic';
     title?: string;
     copy?: string;
     draft?: {
       title?: string;
       areaName?: string;
+      milestoneName?: string;
       status?: string;
       priority?: string;
+      health?: string;
       progress?: string;
       phase?: string;
       dueDate?: string;
+      targetDate?: string;
       docType?: string;
       docTitle?: string;
       content?: string;

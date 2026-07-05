@@ -3,7 +3,7 @@ import { loadTasksBoard, type TasksBoardData } from '@/lib/tasks-board';
 import { loadDocsIndex, type DocsIndexData } from '@/lib/docs-index';
 import { loadPaymentsIndex, type PaymentsIndexData } from '@/lib/payments-index';
 import { getServiceClient } from '@/lib/supabase/service';
-import type { Priority, TaskStatus } from '@/lib/types';
+import type { MilestoneHealth, Priority, TaskStatus } from '@/lib/types';
 import { getAuthenticatedUser, type AuthenticatedUser } from '../supabase';
 import { buildAgentDashboardContext } from '../agent/context';
 
@@ -15,11 +15,14 @@ type AgentIntent = 'answer' | 'clarification' | 'details_needed' | 'approval_req
 type AgentApprovalDraft = {
   title?: string;
   areaName?: string;
+  milestoneName?: string;
   status?: string;
   priority?: string;
+  health?: string;
   progress?: string;
   phase?: string;
   dueDate?: string;
+  targetDate?: string;
   docType?: string;
   docTitle?: string;
   content?: string;
@@ -32,7 +35,7 @@ type AgentApprovalDraft = {
   assigneeName?: string;
 };
 type AgentApproval = {
-  kind: 'issue.create' | 'issue.update' | 'issue.delete' | 'area.update' | 'doc.create' | 'doc.update' | 'doc.delete' | 'note.create' | 'note.archive' | 'generic';
+  kind: 'issue.create' | 'issue.update' | 'issue.delete' | 'area.update' | 'milestone.update' | 'doc.create' | 'doc.update' | 'doc.delete' | 'note.create' | 'note.archive' | 'generic';
   title: string;
   copy: string;
   draft?: AgentApprovalDraft;
@@ -353,6 +356,7 @@ function parseApproval(value: unknown): AgentApproval | undefined {
     record.kind === 'issue.update' ||
     record.kind === 'issue.delete' ||
     record.kind === 'area.update' ||
+    record.kind === 'milestone.update' ||
     record.kind === 'doc.create' ||
     record.kind === 'doc.update' ||
     record.kind === 'doc.delete' ||
@@ -377,7 +381,7 @@ function parseApprovalDraft(value: unknown): AgentApprovalDraft | undefined {
   if (!value || typeof value !== 'object') return undefined;
   const record = value as Record<string, unknown>;
   const draft: AgentApprovalDraft = {};
-  for (const key of ['title', 'areaName', 'status', 'priority', 'progress', 'phase', 'dueDate', 'docType', 'docTitle', 'taskName', 'taskNumber', 'taskNumbers', 'assigneeName'] as const) {
+  for (const key of ['title', 'areaName', 'milestoneName', 'status', 'priority', 'health', 'progress', 'phase', 'dueDate', 'targetDate', 'docType', 'docTitle', 'taskName', 'taskNumber', 'taskNumbers', 'assigneeName'] as const) {
     const field = record[key];
     if (typeof field === 'string' && field.trim()) draft[key] = field.trim().slice(0, 140);
   }
@@ -462,6 +466,9 @@ async function runAgentChat(
 
   const localAreaPlan = planLocalAreaWrite(input, dashboardContext);
   if (localAreaPlan) return localAreaPlan;
+
+  const localMilestonePlan = planLocalMilestoneWrite(input, dashboardContext);
+  if (localMilestonePlan) return localMilestonePlan;
 
   const localWritePlan = planLocalIssueWrite(input, dashboardContext);
   if (localWritePlan) return localWritePlan;
@@ -583,6 +590,10 @@ async function executeTypedApproval(approval: AgentApproval, user: Authenticated
 
   if (approval.kind === 'area.update') {
     return executeAreaUpdateDraft(approval.draft, user, board);
+  }
+
+  if (approval.kind === 'milestone.update') {
+    return executeMilestoneUpdateDraft(approval.draft, user, board);
   }
 
   if (approval.kind === 'doc.create') {
@@ -758,6 +769,12 @@ type AreaWriteDraft = {
   status?: string;
   progress?: string;
   phase?: string;
+};
+
+type MilestoneWriteDraft = {
+  milestoneName?: string;
+  health?: string;
+  targetDate?: string;
 };
 
 type DocumentWriteDraft = {
@@ -944,6 +961,44 @@ export function planLocalAreaWrite(input: AgentChatInput, dashboardContext: stri
       kind: 'area.update',
       title: `Update ${draft.areaName}`,
       copy: `Update area ${draft.areaName}: ${updates.join(', ')}.`,
+      draft,
+    },
+  };
+}
+
+export function planLocalMilestoneWrite(input: AgentChatInput, dashboardContext: string): AgentChatResult | null {
+  if (input.mode === 'approval') return null;
+
+  const draft = parseMilestoneUpdateDraft(input.message.trim(), dashboardContext);
+  if (!draft) return null;
+  if (!draft.milestoneName) {
+    return {
+      reply: 'Which milestone should EKO update?',
+      provider: 'openai',
+      model: 'eko-local-planner',
+      intent: 'clarification',
+    };
+  }
+
+  const updates = formatMilestoneUpdateParts(draft);
+  if (!updates.length) {
+    return {
+      reply: `What should EKO change for ${draft.milestoneName}?`,
+      provider: 'openai',
+      model: 'eko-local-planner',
+      intent: 'clarification',
+    };
+  }
+
+  return {
+    reply: `Ready for approval: update ${draft.milestoneName} ${formatMilestoneReplyParts(draft).join(', ')}.`,
+    provider: 'openai',
+    model: 'eko-local-planner',
+    intent: 'approval_required',
+    approval: {
+      kind: 'milestone.update',
+      title: `Update ${draft.milestoneName}`,
+      copy: `Update milestone ${draft.milestoneName}: ${updates.join(', ')}.`,
       draft,
     },
   };
@@ -1831,6 +1886,76 @@ async function executeAreaUpdateDraft(
   };
 }
 
+async function executeMilestoneUpdateDraft(
+  draft: AgentApprovalDraft | MilestoneWriteDraft | undefined,
+  user: AuthenticatedUser,
+  board: TasksBoardData | null,
+): Promise<AgentChatResult | null> {
+  const milestoneName = draft?.milestoneName ?? draft?.title;
+  if (!milestoneName) return null;
+
+  const milestone = findMilestoneInBoard(milestoneName, board);
+  if (!milestone) {
+    return {
+      reply: `Approval recorded, but EKO could not find milestone "${milestoneName}". No dashboard changes were made.`,
+      provider: 'openai',
+      model: 'eko-local-approval',
+      intent: 'details_needed',
+    };
+  }
+
+  const updates: Record<string, unknown> = {};
+  const health = parseMilestoneHealth(draft?.health ?? '');
+  const targetDate = parseMilestoneTargetDate(draft?.targetDate ?? '');
+  if (health) updates.health = health;
+  if (targetDate) updates.target_date = targetDate;
+
+  if (!Object.keys(updates).length) {
+    return {
+      reply: `Add health or a due date before EKO can update "${milestone.name}". No dashboard changes were made.`,
+      provider: 'openai',
+      model: 'eko-local-approval',
+      intent: 'details_needed',
+      approval: {
+        kind: 'milestone.update',
+        title: `Update ${milestone.name}`,
+        copy: 'Add milestone health or due date so EKO can prepare the update for approval.',
+        draft,
+      },
+    };
+  }
+
+  await assertAdminUser(user.id);
+  const service = getServiceClient();
+  const { error } = await (service as any)
+    .from('milestones')
+    .update(updates)
+    .eq('id', milestone.id)
+    .select()
+    .single();
+  if (error) throw new AgentProviderError('EKO could not update the milestone.', 500);
+
+  const applied: MilestoneWriteDraft = {
+    milestoneName: milestone.name,
+    ...(health ? { health } : {}),
+    ...(targetDate ? { targetDate } : {}),
+  };
+  const updateParts = formatMilestoneUpdateParts(applied);
+  await service.from('activity_log').insert({
+    user_id: user.id,
+    action: 'Updated milestone',
+    target: `milestone: ${milestone.name} → ${updateParts.join(', ')}`,
+    source: 'eko',
+  } as never);
+
+  return {
+    reply: `Updated milestone "${milestone.name}": ${updateParts.join(', ')}.`,
+    provider: 'openai',
+    model: 'eko-local-write',
+    intent: 'executed',
+  };
+}
+
 function withTypedIntent(input: AgentChatInput, result: AgentChatResult): AgentChatResult {
   if (result.intent) return result;
   const reply = result.reply;
@@ -1963,6 +2088,23 @@ function parseAreaUpdateDraft(value: string, dashboardContext: string): AreaWrit
     ...(progress != null ? { progress: String(progress) } : {}),
     ...(status ? { status } : {}),
     ...(phase ? { phase } : {}),
+  };
+}
+
+function parseMilestoneUpdateDraft(value: string, dashboardContext: string): MilestoneWriteDraft | null {
+  const mentionsMilestoneSurface = /\b(milestone|checkpoint|target date|due date|due|deadline|health|track|risk)\b/i.test(value);
+  const health = parseMilestoneHealth(value);
+  const targetDate = /\b(due|deadline|date|target)\b/i.test(value) ? parseMilestoneTargetDate(value) : undefined;
+  const milestoneName = findMentionedMilestoneName(value, dashboardContext);
+
+  if (!mentionsMilestoneSurface && !milestoneName) return null;
+  if (!health && !targetDate && !/\b(update|set|change|mark|move|make)\b/i.test(value)) return null;
+  if (/\b(task|issue|todo|payment|invoice|doc|document|deck|note|area|studio progress)\b/i.test(value) && !/\bmilestone|checkpoint\b/i.test(value)) return null;
+
+  return {
+    milestoneName: milestoneName || undefined,
+    ...(health ? { health } : {}),
+    ...(targetDate ? { targetDate } : {}),
   };
 }
 
@@ -2187,6 +2329,17 @@ function parseAreaProgress(value: string): number | undefined {
   return num;
 }
 
+function parseMilestoneHealth(value: string): MilestoneHealth | undefined {
+  if (/\boff[-_\s]?track\b/i.test(value)) return 'off_track';
+  if (/\bat[-_\s]?risk\b/i.test(value)) return 'at_risk';
+  if (/\bon[-_\s]?track\b/i.test(value)) return 'on_track';
+  return undefined;
+}
+
+function parseMilestoneTargetDate(value: string): string | undefined {
+  return parseDueDate(value);
+}
+
 function formatAreaUpdateParts(draft: Pick<AreaWriteDraft, 'progress' | 'status' | 'phase'>): string[] {
   return [
     draft.progress ? `progress ${draft.progress}%` : null,
@@ -2201,6 +2354,24 @@ function formatAreaReplyParts(draft: Pick<AreaWriteDraft, 'progress' | 'status' 
     draft.status ? `status to ${draft.status}` : null,
     draft.phase ? `phase to ${draft.phase}` : null,
   ].filter((part): part is string => Boolean(part));
+}
+
+function formatMilestoneUpdateParts(draft: Pick<MilestoneWriteDraft, 'health' | 'targetDate'>): string[] {
+  return [
+    draft.health ? `health ${draft.health}` : null,
+    draft.targetDate ? `due ${draft.targetDate}` : null,
+  ].filter((part): part is string => Boolean(part));
+}
+
+function formatMilestoneReplyParts(draft: Pick<MilestoneWriteDraft, 'health' | 'targetDate'>): string[] {
+  return [
+    draft.health ? `health to ${formatMilestoneHealthForReply(draft.health)}` : null,
+    draft.targetDate ? `due date to ${draft.targetDate}` : null,
+  ].filter((part): part is string => Boolean(part));
+}
+
+function formatMilestoneHealthForReply(value: string) {
+  return value.replace(/_/g, ' ');
 }
 
 function parseDueDate(value: string): string | undefined {
@@ -2411,6 +2582,13 @@ function findMentionedAreaName(value: string, dashboardContext: string) {
     .find((area) => normalized.includes(area.name.toLowerCase()))?.name;
 }
 
+function findMentionedMilestoneName(value: string, dashboardContext: string) {
+  const normalized = value.toLowerCase();
+  return parseDashboardMilestoneIndex(dashboardContext)
+    .sort((a, b) => b.name.length - a.name.length)
+    .find((milestone) => normalized.includes(milestone.name.toLowerCase()))?.name;
+}
+
 function findTaskInBoard(value: string, board: TasksBoardData | null) {
   if (!board) return null;
   const normalized = value.toLowerCase();
@@ -2425,6 +2603,14 @@ function findAreaInBoard(value: string, board: TasksBoardData | null) {
   return [...board.areas]
     .sort((a, b) => b.name.length - a.name.length)
     .find((area) => normalized.includes(area.name.toLowerCase())) ?? null;
+}
+
+function findMilestoneInBoard(value: string, board: TasksBoardData | null) {
+  if (!board) return null;
+  const normalized = value.toLowerCase();
+  return [...board.projectMilestones]
+    .sort((a, b) => b.name.length - a.name.length)
+    .find((milestone) => normalized.includes(milestone.name.toLowerCase())) ?? null;
 }
 
 function findStaffInBoard(value: string, board: TasksBoardData | null) {
@@ -2509,6 +2695,30 @@ function parseDashboardAreaIndex(dashboardContext: string) {
       };
     })
     .filter((area): area is { name: string; status?: string; phase?: string; progress?: number } => Boolean(area));
+}
+
+function parseDashboardMilestoneIndex(dashboardContext: string) {
+  const line = dashboardContext
+    .split('\n')
+    .find((entry) => /^Milestones:/i.test(entry));
+  if (!line) return [] as Array<{ name: string; health?: MilestoneHealth; targetDate?: string }>;
+
+  return line
+    .slice(line.indexOf(':') + 1)
+    .split(';')
+    .map((part) => {
+      const raw = part.trim().replace(/\.$/, '');
+      const match = raw.match(/^(.+?)(?:\s+\((.*?)\))?$/);
+      const name = match?.[1]?.trim();
+      if (!name || /^no milestones|^none$|^…and \d+ more/i.test(name)) return null;
+      const meta = (match?.[2] ?? '').split(',').map((item) => item.trim()).filter(Boolean);
+      return {
+        name,
+        health: meta.map(parseMilestoneHealth).find(Boolean),
+        targetDate: meta.map(parseMilestoneTargetDate).find(Boolean),
+      };
+    })
+    .filter((milestone): milestone is { name: string; health?: MilestoneHealth; targetDate?: string } => Boolean(milestone));
 }
 
 /**
