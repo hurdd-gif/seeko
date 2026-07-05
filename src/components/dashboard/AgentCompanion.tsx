@@ -128,6 +128,12 @@ type ChatHistoryItem = {
   role: 'user' | 'eko' | 'action';
   text: string;
 };
+type EkoHistoryResponse = {
+  history?: Array<{
+    role?: unknown;
+    text?: unknown;
+  }>;
+};
 
 const emptyPendingWriteDraft: PendingWriteDraft = {
   title: '',
@@ -148,7 +154,7 @@ const writeDetailsSteps: Array<{ id: WriteDetailsStep; label: string }> = [
 const EKO_OPEN_STORAGE_KEY = 'seeko:eko-open';
 const EKO_LEARNING_STORAGE_PREFIX = 'seeko:eko-learning';
 const EKO_HISTORY_STORAGE_PREFIX = 'seeko:eko-history';
-const MAX_HISTORY_ITEMS = 10;
+const MAX_HISTORY_ITEMS = 24;
 
 function readStoredEkoOpen() {
   try {
@@ -243,6 +249,36 @@ function writeChatHistory(userKey: string | undefined, history: ChatHistoryItem[
   } catch {
     // History is a local convenience. EKO can still answer if storage is blocked.
   }
+}
+
+function normalizeServerHistory(body: EkoHistoryResponse): ChatHistoryItem[] {
+  if (!Array.isArray(body.history)) return [];
+
+  return body.history
+    .map((item, index): ChatHistoryItem | null => {
+      const role = item.role === 'user' || item.role === 'eko' || item.role === 'action' ? item.role : null;
+      const text = typeof item.text === 'string' ? item.text.trim().slice(0, 420) : '';
+      if (!role || !text) return null;
+      return {
+        id: `server-${index}-${hashStorageSegment(`${role}:${text}`)}`,
+        role,
+        text,
+      };
+    })
+    .filter((item): item is ChatHistoryItem => Boolean(item))
+    .slice(-MAX_HISTORY_ITEMS);
+}
+
+function mergeChatHistory(base: ChatHistoryItem[], next: ChatHistoryItem[]) {
+  const seen = new Set<string>();
+  return [...base, ...next]
+    .filter((item) => {
+      const key = `${item.role}:${item.text}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(-MAX_HISTORY_ITEMS);
 }
 
 function inferSuggestionId(prompt: string) {
@@ -800,9 +836,32 @@ export function AgentCompanion({ userKey }: { userKey?: string }) {
   }, [open]);
 
   useEffect(() => {
+    let cancelled = false;
+    const localHistory = readChatHistory(userKey);
+
     setSuggestionStats(readSuggestionStats(userKey));
-    setChatHistory(readChatHistory(userKey));
+    setChatHistory(localHistory);
     setStorageHydrated(true);
+
+    void fetch('/api/agent/history', {
+      method: 'GET',
+      credentials: 'same-origin',
+    })
+      .then(async (response) => {
+        if (!response.ok) return [];
+        return normalizeServerHistory(await response.json().catch(() => ({})));
+      })
+      .then((serverHistory) => {
+        if (cancelled || !serverHistory.length) return;
+        setChatHistory((current) => mergeChatHistory(serverHistory, current));
+      })
+      .catch(() => {
+        // Server history is a progressive enhancement; local history still keeps the tray usable.
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [userKey]);
 
   useEffect(() => {

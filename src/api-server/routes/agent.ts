@@ -34,6 +34,27 @@ type RecentHistoryItem = {
   role: 'user' | 'eko' | 'action';
   text: string;
 };
+type AgentHistoryRow = {
+  role: string | null;
+  text: string | null;
+  created_at?: string | null;
+};
+type AgentHistoryInsert = {
+  user_id: string;
+  role: RecentHistoryItem['role'];
+  text: string;
+  metadata: Record<string, unknown>;
+};
+type AgentHistoryQuery = {
+  select: (columns: string) => AgentHistoryQuery;
+  eq: (column: string, value: string) => AgentHistoryQuery;
+  order: (column: string, options?: { ascending?: boolean }) => AgentHistoryQuery;
+  limit: (count: number) => Promise<{ data: AgentHistoryRow[] | null; error: { message?: string } | null }>;
+  insert: (rows: AgentHistoryInsert[]) => Promise<{ error: { message?: string } | null }>;
+};
+type AgentHistoryService = {
+  from: (table: 'agent_chat_messages') => AgentHistoryQuery;
+};
 
 export type AgentChatInput = {
   message: string;
@@ -102,6 +123,9 @@ class AgentProviderError extends Error {
   }
 }
 
+const MAX_PERSISTED_HISTORY_ITEMS = 24;
+const MAX_PROMPT_HISTORY_ITEMS = 10;
+
 const EKO_INSTRUCTIONS = [
   'You are EKO, SEEKO Studio dashboard agent.',
   'Audience: admins and investors. Be concise, specific, and operational.',
@@ -117,7 +141,17 @@ export function createAgentRoutes(options: AgentRoutesOptions = {}) {
   const authResolver = options.authResolver ?? getAuthenticatedUser;
   const agentRunner = options.agentRunner ?? runAgentChat;
 
-  return new Hono().post('/agent/chat', async (c) => {
+  return new Hono().get('/agent/history', async (c) => {
+    const user = await authResolver(c);
+    if (!user) return c.json({ error: 'unauthorized' }, 401);
+
+    try {
+      return c.json({ history: await loadPersistedAgentHistory(user.id) });
+    } catch (error) {
+      console.error('[hono agent] history load failed:', error);
+      return c.json({ error: 'EKO history is unavailable.' }, 503);
+    }
+  }).post('/agent/chat', async (c) => {
     const user = await authResolver(c);
     if (!user) return c.json({ error: 'unauthorized' }, 401);
 
@@ -125,7 +159,33 @@ export function createAgentRoutes(options: AgentRoutesOptions = {}) {
     if ('error' in input) return c.json({ error: input.error }, 400);
 
     try {
-      return c.json(await agentRunner(input, user));
+      const serverHistory = await safeLoadPersistedAgentHistory(user.id);
+      const hydratedInput = mergeInputHistory(input, serverHistory);
+      await safePersistAgentHistory(user.id, [
+        {
+          role: 'user',
+          text: input.message,
+          metadata: {
+            path: input.clientContext?.path,
+            title: input.clientContext?.title,
+          },
+        },
+      ]);
+
+      const result = await agentRunner(hydratedInput, user);
+      await safePersistAgentHistory(user.id, [
+        {
+          role: 'eko',
+          text: result.reply,
+          metadata: {
+            intent: result.intent,
+            provider: result.provider,
+            model: result.model,
+          },
+        },
+      ]);
+
+      return c.json(result);
     } catch (error) {
       if (error instanceof AgentConfigError) {
         return c.json({ error: error.message }, 503);
@@ -138,6 +198,99 @@ export function createAgentRoutes(options: AgentRoutesOptions = {}) {
       return c.json({ error: 'EKO failed before making changes.' }, 500);
     }
   });
+}
+
+function getAgentHistoryService() {
+  return getServiceClient() as unknown as AgentHistoryService;
+}
+
+function sanitizeHistoryRows(rows: AgentHistoryRow[] | null | undefined): RecentHistoryItem[] {
+  return (rows ?? [])
+    .map((row): RecentHistoryItem | null => {
+      const role = row.role === 'user' || row.role === 'eko' || row.role === 'action' ? row.role : null;
+      const text = typeof row.text === 'string' ? row.text.trim().slice(0, 420) : '';
+      if (!role || !text) return null;
+      return { role, text };
+    })
+    .filter((item): item is RecentHistoryItem => Boolean(item))
+    .slice(-MAX_PERSISTED_HISTORY_ITEMS);
+}
+
+async function loadPersistedAgentHistory(userId: string): Promise<RecentHistoryItem[]> {
+  const service = getAgentHistoryService();
+  const { data, error } = await service
+    .from('agent_chat_messages')
+    .select('role,text,created_at')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: true })
+    .limit(MAX_PERSISTED_HISTORY_ITEMS);
+
+  if (error) throw new Error(error.message ?? 'history_load_failed');
+  return sanitizeHistoryRows(data);
+}
+
+async function safeLoadPersistedAgentHistory(userId: string): Promise<RecentHistoryItem[]> {
+  try {
+    return await loadPersistedAgentHistory(userId);
+  } catch (error) {
+    if (!isMissingServiceConfigError(error)) {
+      console.warn('[hono agent] history unavailable; continuing with client context only', error);
+    }
+    return [];
+  }
+}
+
+function mergeInputHistory(input: AgentChatInput, serverHistory: RecentHistoryItem[]): AgentChatInput {
+  const clientHistory = input.clientContext?.recentHistory ?? [];
+  const seen = new Set<string>();
+  const merged = [...serverHistory, ...clientHistory].filter((item) => {
+    const key = `${item.role}:${item.text}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  }).slice(-MAX_PROMPT_HISTORY_ITEMS);
+
+  return {
+    ...input,
+    clientContext: {
+      ...input.clientContext,
+      recentHistory: merged.length ? merged : undefined,
+    },
+  };
+}
+
+async function safePersistAgentHistory(
+  userId: string,
+  rows: Array<{ role: RecentHistoryItem['role']; text: string; metadata?: Record<string, unknown> }>,
+) {
+  const inserts = rows
+    .map((row): AgentHistoryInsert | null => {
+      const text = row.text.trim().slice(0, 2000);
+      if (!text) return null;
+      return {
+        user_id: userId,
+        role: row.role,
+        text,
+        metadata: row.metadata ?? {},
+      };
+    })
+    .filter((row): row is AgentHistoryInsert => Boolean(row));
+
+  if (!inserts.length) return;
+
+  try {
+    const service = getAgentHistoryService();
+    const { error } = await service.from('agent_chat_messages').insert(inserts);
+    if (error) throw new Error(error.message ?? 'history_insert_failed');
+  } catch (error) {
+    if (!isMissingServiceConfigError(error)) {
+      console.warn('[hono agent] history persist failed:', error);
+    }
+  }
+}
+
+function isMissingServiceConfigError(error: unknown) {
+  return error instanceof Error && /Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY/.test(error.message);
 }
 
 async function parseAgentInput(c: Context): Promise<AgentChatInput | { error: string }> {
