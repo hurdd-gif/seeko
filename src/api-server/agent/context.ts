@@ -85,8 +85,9 @@ export const EKO_CAPABILITIES = [
   '- issue.update (due date): set or clear an existing issue due date.',
   '- issue.delete: delete an existing issue (destructive; always requires approval).',
   '- doc.create: create a document or deck in Docs.',
-  'Read-only knowledge: team roster, areas, milestones, issues, recent activity, notes inbox, docs index, payments (admins only).',
-  'Not supported yet (do not improvise or imply): editing existing docs, sending emails or invites, creating or marking payments, editing milestones or areas, archiving notes, changing an existing issue description, publishing anything.',
+  '- doc.update: replace content in an existing text document.',
+  'Read-only knowledge: team roster, areas, milestones, issues, activity, notes inbox, docs index, payments (admins only).',
+  'Not supported yet (do not improvise or imply): editing deck slides, emails/invites, creating or marking payments, editing milestones or areas, archiving notes, changing issue descriptions, publishing.',
   'If asked for an unsupported write: say EKO cannot do that yet, then offer the closest supported action or point to the dashboard UI. Never claim a write happened unless an approved action was executed.',
 ].join('\n');
 

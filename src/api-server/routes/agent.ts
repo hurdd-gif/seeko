@@ -18,6 +18,8 @@ type AgentApprovalDraft = {
   priority?: string;
   dueDate?: string;
   docType?: string;
+  docTitle?: string;
+  content?: string;
   taskName?: string;
   /** Board task_number as a string — the unique, user-facing task reference. */
   taskNumber?: string;
@@ -26,7 +28,7 @@ type AgentApprovalDraft = {
   assigneeName?: string;
 };
 type AgentApproval = {
-  kind: 'issue.create' | 'issue.update' | 'issue.delete' | 'doc.create' | 'generic';
+  kind: 'issue.create' | 'issue.update' | 'issue.delete' | 'doc.create' | 'doc.update' | 'generic';
   title: string;
   copy: string;
   draft?: AgentApprovalDraft;
@@ -347,6 +349,7 @@ function parseApproval(value: unknown): AgentApproval | undefined {
     record.kind === 'issue.update' ||
     record.kind === 'issue.delete' ||
     record.kind === 'doc.create' ||
+    record.kind === 'doc.update' ||
     record.kind === 'generic'
       ? record.kind
       : null;
@@ -366,9 +369,12 @@ function parseApprovalDraft(value: unknown): AgentApprovalDraft | undefined {
   if (!value || typeof value !== 'object') return undefined;
   const record = value as Record<string, unknown>;
   const draft: AgentApprovalDraft = {};
-  for (const key of ['title', 'status', 'priority', 'dueDate', 'docType', 'taskName', 'taskNumber', 'taskNumbers', 'assigneeName'] as const) {
+  for (const key of ['title', 'status', 'priority', 'dueDate', 'docType', 'docTitle', 'taskName', 'taskNumber', 'taskNumbers', 'assigneeName'] as const) {
     const field = record[key];
     if (typeof field === 'string' && field.trim()) draft[key] = field.trim().slice(0, 140);
+  }
+  if (typeof record.content === 'string' && record.content.trim()) {
+    draft.content = record.content.trim().slice(0, 5_000);
   }
   return Object.keys(draft).length ? draft : undefined;
 }
@@ -562,6 +568,10 @@ async function executeTypedApproval(approval: AgentApproval, user: Authenticated
     return executeDocumentCreateDraft(approval.draft, user);
   }
 
+  if (approval.kind === 'doc.update') {
+    return executeDocumentUpdateDraft(approval.draft, user);
+  }
+
   return null;
 }
 
@@ -712,11 +722,46 @@ type IssueWriteDraft = {
 
 type DocumentWriteDraft = {
   title?: string;
+  docTitle?: string;
   docType?: 'doc' | 'deck';
+  content?: string;
 };
 
 export function planLocalDocumentWrite(input: AgentChatInput): AgentChatResult | null {
   if (input.mode === 'approval') return null;
+
+  const updateDraft = parseDocumentUpdateDraft(input.message.trim());
+  if (updateDraft) {
+    if (!updateDraft.docTitle) {
+      return {
+        reply: 'Which document should EKO update?',
+        provider: 'openai',
+        model: 'eko-local-planner',
+        intent: 'clarification',
+      };
+    }
+    if (!updateDraft.content) {
+      return {
+        reply: `What should EKO write in ${updateDraft.docTitle}?`,
+        provider: 'openai',
+        model: 'eko-local-planner',
+        intent: 'clarification',
+      };
+    }
+
+    return {
+      reply: `Ready for approval: update document ${updateDraft.docTitle}.`,
+      provider: 'openai',
+      model: 'eko-local-planner',
+      intent: 'approval_required',
+      approval: {
+        kind: 'doc.update',
+        title: `Update ${updateDraft.docTitle}`,
+        copy: `Replace the content in document ${updateDraft.docTitle}.`,
+        draft: updateDraft,
+      },
+    };
+  }
 
   const draft = parseDocumentCreateDraft(input.message.trim());
   if (!draft) return null;
@@ -1082,6 +1127,75 @@ async function executeDocumentCreateDraft(
   };
 }
 
+async function executeDocumentUpdateDraft(
+  draft: AgentApprovalDraft | DocumentWriteDraft | undefined,
+  user: AuthenticatedUser,
+): Promise<AgentChatResult | null> {
+  const docTitle = draft?.docTitle ?? draft?.title;
+  const content = draft?.content;
+  if (!docTitle || !content) {
+    return {
+      reply: `Add ${formatList([docTitle ? null : 'document title', content ? null : 'content'].filter(Boolean))} before EKO can update the document. No dashboard changes were made.`,
+      provider: 'openai',
+      model: 'eko-local-approval',
+      intent: 'details_needed',
+      approval: {
+        kind: 'doc.update',
+        title: docTitle ? `Update ${docTitle}` : 'Update document',
+        copy: 'Add the document title and content so EKO can prepare the update for approval.',
+        draft,
+      },
+    };
+  }
+
+  await assertAdminUser(user.id);
+  const service = getServiceClient();
+  const { data: existing, error: findError } = await service
+    .from('docs')
+    .select('id, title, type')
+    .eq('title', docTitle)
+    .single();
+  if (findError || !existing) throw new AgentProviderError(`EKO could not find document "${docTitle}".`, 404);
+
+  const doc = existing as unknown as { id: string; title: string; type?: string } | null;
+  if (!doc?.id) throw new AgentProviderError(`EKO could not find document "${docTitle}".`, 404);
+  if (doc.type === 'deck') {
+    return {
+      reply: `EKO can create decks, but slide editing for "${doc.title}" is not supported yet. No dashboard changes were made.`,
+      provider: 'openai',
+      model: 'eko-local-approval',
+      intent: 'details_needed',
+    };
+  }
+
+  const updatePayload = {
+    content: contentToDocHtml(content),
+    updated_at: new Date().toISOString(),
+  };
+  const { error: updateError } = await service
+    .from('docs')
+    .update(updatePayload as never)
+    .eq('id', doc.id)
+    .select('id')
+    .single();
+  if (updateError) throw new AgentProviderError('EKO could not update the document.', 500);
+
+  await service.from('activity_log').insert({
+    user_id: user.id,
+    action: 'Updated',
+    target: `doc: ${doc.title}`,
+    doc_id: doc.id,
+    source: 'eko',
+  } as never);
+
+  return {
+    reply: `Updated document "${doc.title}".`,
+    provider: 'openai',
+    model: 'eko-local-write',
+    intent: 'executed',
+  };
+}
+
 async function executeIssueStatusDraft(
   draft: Pick<IssueWriteDraft, 'taskName' | 'status'>,
   user: AuthenticatedUser,
@@ -1374,6 +1488,31 @@ function parseDocumentCreateDraft(value: string): DocumentWriteDraft | null {
   return { title: title || undefined, docType: type };
 }
 
+function parseDocumentUpdateDraft(value: string): DocumentWriteDraft | null {
+  if (!/\b(update|edit|replace|rewrite|add to|append to)\b/i.test(value)) return null;
+  if (!/\b(doc|docs|document|note|notes|brief|memo)\b/i.test(value)) return null;
+  if (/\b(create|new|make)\b/i.test(value)) return null;
+
+  const quotedTitle = value.match(/\b(?:update|edit|replace|rewrite|add to|append to)\s+(?:the\s+)?["“]([^"”]{2,100})["”]/i)?.[1];
+  const beforeExplicitDocType = value.match(/\b(?:update|edit|replace|rewrite|add to|append to)\s+(?:the\s+)?([^:,.]+?)\s+(?:doc|docs|document)\b/i)?.[1];
+  const beforeType = beforeExplicitDocType
+    || value.match(/\b(?:update|edit|replace|rewrite|add to|append to)\s+(?:the\s+)?([^:,.]+?)\s+(?:brief|memo)\b/i)?.[1];
+  const afterType = value.match(/\b(?:update|edit|replace|rewrite)\s+(?:the\s+)?(?:doc|docs|document|note|notes|brief|memo)\s+(?:called|named|titled)?\s*([^:,.]+?)(?:\s+(?:to say|with|saying)\b|:|[,.]|$)/i)?.[1];
+  const docTitle = cleanDocumentTitle(quotedTitle || beforeType || afterType || '');
+  const content = cleanDocumentContent(
+    value.match(/\b(?:to say|with|saying)\s+([\s\S]+)$/i)?.[1]
+      || value.match(/:\s*([\s\S]+)$/)?.[1]
+      || '',
+  );
+
+  if (!docTitle && !content) return null;
+  return {
+    docTitle: docTitle || undefined,
+    content: content || undefined,
+    docType: 'doc',
+  };
+}
+
 function parseIssueCreateDraft(value: string): IssueWriteDraft | null {
   if (!/\b(create|add|make|new)\b/i.test(value) || !/\b(task|issue|todo|work item)\b/i.test(value)) return null;
   const quoted = value.match(/["“]([^"”]{2,80})["”]/)?.[1];
@@ -1608,6 +1747,33 @@ function cleanDocumentTitle(value: string) {
     .trim()
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
   return /^(?:A|An|The)$/i.test(clean) ? '' : clean;
+}
+
+function cleanDocumentContent(value: string) {
+  return value
+    .replace(/^["“]|["”]$/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function contentToDocHtml(value: string) {
+  const clean = value.trim();
+  if (/^\s*</.test(clean)) return clean;
+  return clean
+    .split(/\n{2,}/)
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean)
+    .map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`)
+    .join('');
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 function formatList(items: unknown[]) {

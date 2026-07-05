@@ -71,6 +71,31 @@ describe('EKO document actions', () => {
     });
   });
 
+  it('prepares an existing document update as a gated dashboard write', () => {
+    expect(planLocalDocumentWrite({ message: 'Update the Launch Notes document to say Release ships Friday.' })).toMatchObject({
+      reply: 'Ready for approval: update document Launch Notes.',
+      intent: 'approval_required',
+      approval: {
+        kind: 'doc.update',
+        title: 'Update Launch Notes',
+        copy: 'Replace the content in document Launch Notes.',
+        draft: {
+          docTitle: 'Launch Notes',
+          content: 'Release ships Friday.',
+        },
+      },
+    });
+  });
+
+  it('asks for content before opening a document update approval', () => {
+    expect(planLocalDocumentWrite({ message: 'Update the Launch Notes document' })).toEqual({
+      reply: 'What should EKO write in Launch Notes?',
+      provider: 'openai',
+      model: 'eko-local-planner',
+      intent: 'clarification',
+    });
+  });
+
   it('creates a document only after approval and records it as an EKO write', async () => {
     const inserts: Array<{ table: string; payload: Record<string, unknown> }> = [];
     mocks.getServiceClient.mockReturnValue({
@@ -169,6 +194,110 @@ describe('EKO document actions', () => {
       payload: {
         user_id: 'user-1',
         action: 'Created',
+        target: 'doc: Launch Notes',
+        doc_id: 'doc-1',
+        source: 'eko',
+      },
+    });
+  });
+
+  it('updates an existing document only after approval and records it as an EKO write', async () => {
+    const inserts: Array<{ table: string; payload: Record<string, unknown> }> = [];
+    const updates: Array<{ table: string; payload: Record<string, unknown> }> = [];
+    mocks.getServiceClient.mockReturnValue({
+      from: vi.fn((table: string) => {
+        if (table === 'agent_chat_messages') {
+          const query = {
+            select: vi.fn(() => query),
+            eq: vi.fn(() => query),
+            order: vi.fn(() => query),
+            limit: vi.fn(async () => ({ data: [], error: null })),
+            insert: vi.fn(async (rows: Array<Record<string, unknown>>) => {
+              for (const row of rows) inserts.push({ table, payload: row });
+              return { error: null };
+            }),
+          };
+          return query;
+        }
+
+        if (table === 'profiles') {
+          const query = {
+            select: vi.fn(() => query),
+            eq: vi.fn(() => query),
+            maybeSingle: vi.fn(async () => ({ data: { is_admin: true }, error: null })),
+          };
+          return query;
+        }
+
+        if (table === 'docs') {
+          const query = {
+            select: vi.fn(() => query),
+            eq: vi.fn(() => query),
+            update: vi.fn((payload: Record<string, unknown>) => {
+              updates.push({ table, payload });
+              return query;
+            }),
+            single: vi.fn(async () => ({ data: { id: 'doc-1', title: 'Launch Notes', type: 'doc' }, error: null })),
+          };
+          return query;
+        }
+
+        if (table === 'activity_log') {
+          return {
+            insert: vi.fn(async (payload: Record<string, unknown>) => {
+              inserts.push({ table, payload });
+              return { error: null };
+            }),
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      }),
+    });
+
+    const input: AgentChatInput = {
+      message: 'Update the Launch Notes document to say Release ships Friday.',
+      mode: 'approval',
+      decision: 'approve',
+      suggestion: {
+        title: 'Update Launch Notes',
+        approval: {
+          kind: 'doc.update',
+          title: 'Update Launch Notes',
+          copy: 'Replace the content in document Launch Notes.',
+          draft: {
+            docTitle: 'Launch Notes',
+            content: 'Release ships Friday.',
+          },
+        },
+      },
+    };
+
+    const response = await createAgentApp().request('/api/agent/chat', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(input),
+    });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      reply: 'Updated document "Launch Notes".',
+      provider: 'openai',
+      model: 'eko-local-write',
+      intent: 'executed',
+    });
+    expect(updates).toContainEqual({
+      table: 'docs',
+      payload: {
+        content: '<p>Release ships Friday.</p>',
+        updated_at: expect.any(String),
+      },
+    });
+    expect(inserts).toContainEqual({
+      table: 'activity_log',
+      payload: {
+        user_id: 'user-1',
+        action: 'Updated',
         target: 'doc: Launch Notes',
         doc_id: 'doc-1',
         source: 'eko',
