@@ -14,8 +14,11 @@ type AgentDecision = 'approve' | 'reject';
 type AgentIntent = 'answer' | 'clarification' | 'details_needed' | 'approval_required' | 'executed' | 'rejected';
 type AgentApprovalDraft = {
   title?: string;
+  areaName?: string;
   status?: string;
   priority?: string;
+  progress?: string;
+  phase?: string;
   dueDate?: string;
   docType?: string;
   docTitle?: string;
@@ -29,7 +32,7 @@ type AgentApprovalDraft = {
   assigneeName?: string;
 };
 type AgentApproval = {
-  kind: 'issue.create' | 'issue.update' | 'issue.delete' | 'doc.create' | 'doc.update' | 'doc.delete' | 'note.create' | 'note.archive' | 'generic';
+  kind: 'issue.create' | 'issue.update' | 'issue.delete' | 'area.update' | 'doc.create' | 'doc.update' | 'doc.delete' | 'note.create' | 'note.archive' | 'generic';
   title: string;
   copy: string;
   draft?: AgentApprovalDraft;
@@ -349,6 +352,7 @@ function parseApproval(value: unknown): AgentApproval | undefined {
     record.kind === 'issue.create' ||
     record.kind === 'issue.update' ||
     record.kind === 'issue.delete' ||
+    record.kind === 'area.update' ||
     record.kind === 'doc.create' ||
     record.kind === 'doc.update' ||
     record.kind === 'doc.delete' ||
@@ -373,7 +377,7 @@ function parseApprovalDraft(value: unknown): AgentApprovalDraft | undefined {
   if (!value || typeof value !== 'object') return undefined;
   const record = value as Record<string, unknown>;
   const draft: AgentApprovalDraft = {};
-  for (const key of ['title', 'status', 'priority', 'dueDate', 'docType', 'docTitle', 'taskName', 'taskNumber', 'taskNumbers', 'assigneeName'] as const) {
+  for (const key of ['title', 'areaName', 'status', 'priority', 'progress', 'phase', 'dueDate', 'docType', 'docTitle', 'taskName', 'taskNumber', 'taskNumbers', 'assigneeName'] as const) {
     const field = record[key];
     if (typeof field === 'string' && field.trim()) draft[key] = field.trim().slice(0, 140);
   }
@@ -456,6 +460,9 @@ async function runAgentChat(
   const localDocumentPlan = planLocalDocumentWrite(input);
   if (localDocumentPlan) return localDocumentPlan;
 
+  const localAreaPlan = planLocalAreaWrite(input, dashboardContext);
+  if (localAreaPlan) return localAreaPlan;
+
   const localWritePlan = planLocalIssueWrite(input, dashboardContext);
   if (localWritePlan) return localWritePlan;
 
@@ -523,7 +530,7 @@ async function runApprovalDecision(input: AgentChatInput, user: AuthenticatedUse
 
 async function executeTypedApproval(approval: AgentApproval, user: AuthenticatedUser): Promise<AgentChatResult | null> {
   const board = await loadTasksBoard(user).catch(() => null);
-  const dashboardContext = board ? summarizeBoardContext(board) : '';
+  const dashboardContext = approval.kind === 'issue.update' && board ? summarizeBoardContext(board) : '';
 
   if (approval.kind === 'issue.create') {
     return executeIssueCreateDraft(approval.draft, user);
@@ -572,6 +579,10 @@ async function executeTypedApproval(approval: AgentApproval, user: Authenticated
 
   if (approval.kind === 'issue.delete') {
     return executeIssueDeleteDraft(approval.draft, user, board);
+  }
+
+  if (approval.kind === 'area.update') {
+    return executeAreaUpdateDraft(approval.draft, user, board);
   }
 
   if (approval.kind === 'doc.create') {
@@ -742,6 +753,13 @@ type IssueWriteDraft = {
   taskName?: string;
 };
 
+type AreaWriteDraft = {
+  areaName?: string;
+  status?: string;
+  progress?: string;
+  phase?: string;
+};
+
 type DocumentWriteDraft = {
   title?: string;
   docTitle?: string;
@@ -888,6 +906,44 @@ export function planLocalDocumentWrite(input: AgentChatInput): AgentChatResult |
       kind: 'doc.create',
       title: `Create ${draft.title}`,
       copy: `Create ${label} ${draft.title}.`,
+      draft,
+    },
+  };
+}
+
+export function planLocalAreaWrite(input: AgentChatInput, dashboardContext: string): AgentChatResult | null {
+  if (input.mode === 'approval') return null;
+
+  const draft = parseAreaUpdateDraft(input.message.trim(), dashboardContext);
+  if (!draft) return null;
+  if (!draft.areaName) {
+    return {
+      reply: 'Which area should EKO update?',
+      provider: 'openai',
+      model: 'eko-local-planner',
+      intent: 'clarification',
+    };
+  }
+
+  const updates = formatAreaUpdateParts(draft);
+  if (!updates.length) {
+    return {
+      reply: `What should EKO change for ${draft.areaName}?`,
+      provider: 'openai',
+      model: 'eko-local-planner',
+      intent: 'clarification',
+    };
+  }
+
+  return {
+    reply: `Ready for approval: update ${draft.areaName} ${formatAreaReplyParts(draft).join(', ')}.`,
+    provider: 'openai',
+    model: 'eko-local-planner',
+    intent: 'approval_required',
+    approval: {
+      kind: 'area.update',
+      title: `Update ${draft.areaName}`,
+      copy: `Update area ${draft.areaName}: ${updates.join(', ')}.`,
       draft,
     },
   };
@@ -1702,6 +1758,79 @@ async function executeIssueDeleteDraft(
   };
 }
 
+async function executeAreaUpdateDraft(
+  draft: AgentApprovalDraft | AreaWriteDraft | undefined,
+  user: AuthenticatedUser,
+  board: TasksBoardData | null,
+): Promise<AgentChatResult | null> {
+  const areaName = draft?.areaName ?? draft?.title;
+  if (!areaName) return null;
+
+  const area = findAreaInBoard(areaName, board);
+  if (!area) {
+    return {
+      reply: `Approval recorded, but EKO could not find area "${areaName}". No dashboard changes were made.`,
+      provider: 'openai',
+      model: 'eko-local-approval',
+      intent: 'details_needed',
+    };
+  }
+
+  const updates: Record<string, unknown> = {};
+  const progress = parseAreaProgress(draft?.progress ?? '');
+  const status = parseAreaStatus(draft?.status ?? '');
+  const phase = parseAreaPhase(draft?.phase ?? '');
+  if (progress != null) updates.progress = progress;
+  if (status) updates.status = status;
+  if (phase) updates.phase = phase;
+
+  if (!Object.keys(updates).length) {
+    return {
+      reply: `Add progress, status, or phase before EKO can update "${area.name}". No dashboard changes were made.`,
+      provider: 'openai',
+      model: 'eko-local-approval',
+      intent: 'details_needed',
+      approval: {
+        kind: 'area.update',
+        title: `Update ${area.name}`,
+        copy: 'Add the area fields so EKO can prepare the update for approval.',
+        draft,
+      },
+    };
+  }
+
+  await assertAdminUser(user.id);
+  const service = getServiceClient();
+  const { error } = await service
+    .from('areas')
+    .update(updates as never)
+    .eq('id', area.id)
+    .select()
+    .single();
+  if (error) throw new AgentProviderError('EKO could not update the area.', 500);
+
+  const applied: AreaWriteDraft = {
+    areaName: area.name,
+    ...(progress != null ? { progress: String(progress) } : {}),
+    ...(status ? { status } : {}),
+    ...(phase ? { phase } : {}),
+  };
+  const updateParts = formatAreaUpdateParts(applied);
+  await service.from('activity_log').insert({
+    user_id: user.id,
+    action: 'Updated area',
+    target: `area: ${area.name} → ${updateParts.join(', ')}`,
+    source: 'eko',
+  } as never);
+
+  return {
+    reply: `Updated area "${area.name}": ${updateParts.join(', ')}.`,
+    provider: 'openai',
+    model: 'eko-local-write',
+    intent: 'executed',
+  };
+}
+
 function withTypedIntent(input: AgentChatInput, result: AgentChatResult): AgentChatResult {
   if (result.intent) return result;
   const reply = result.reply;
@@ -1815,6 +1944,25 @@ function parseDocumentDeleteDraft(value: string): DocumentWriteDraft | null {
 
   return {
     docTitle: docTitle || undefined,
+  };
+}
+
+function parseAreaUpdateDraft(value: string, dashboardContext: string): AreaWriteDraft | null {
+  const mentionsAreaSurface = /\b(area|areas|studio progress|progress|phase)\b/i.test(value);
+  const progress = parseAreaProgress(value);
+  const status = parseAreaStatus(value);
+  const phase = parseAreaPhase(value);
+  const areaName = findMentionedAreaName(value, dashboardContext);
+
+  if (!mentionsAreaSurface && !areaName) return null;
+  if (progress == null && !status && !phase && !/\b(update|set|change|mark|move|make)\b/i.test(value)) return null;
+  if (/\b(task|issue|todo|payment|invoice|doc|document|deck|note)\b/i.test(value) && !/\barea|studio progress\b/i.test(value)) return null;
+
+  return {
+    areaName: areaName || undefined,
+    ...(progress != null ? { progress: String(progress) } : {}),
+    ...(status ? { status } : {}),
+    ...(phase ? { phase } : {}),
   };
 }
 
@@ -2011,6 +2159,48 @@ function parsePriority(value: string): Priority | undefined {
   if (/\bmedium\b/i.test(value)) return 'Medium';
   if (/\blow\b/i.test(value)) return 'Low';
   return undefined;
+}
+
+function parseAreaStatus(value: string): string | undefined {
+  if (/\bactive\b/i.test(value)) return 'Active';
+  if (/\bplanned\b/i.test(value)) return 'Planned';
+  if (/\bcomplete(?:d)?\b/i.test(value)) return 'Complete';
+  return undefined;
+}
+
+function parseAreaPhase(value: string): string | undefined {
+  if (/\balpha\b/i.test(value)) return 'Alpha';
+  if (/\bbeta\b/i.test(value)) return 'Beta';
+  if (/\blaunch\b/i.test(value)) return 'Launch';
+  return undefined;
+}
+
+function parseAreaProgress(value: string): number | undefined {
+  const trimmed = value.trim();
+  const raw = /^\d{1,3}$/.test(trimmed)
+    ? trimmed
+    : value.match(/\b(?:progress\s*(?:to|at)?\s*)?(\d{1,3})\s*%/i)?.[1]
+    ?? value.match(/\bprogress\s+(?:to|at)\s+(\d{1,3})\b/i)?.[1];
+  if (!raw) return undefined;
+  const num = Number(raw);
+  if (!Number.isFinite(num) || num < 0 || num > 100) return undefined;
+  return num;
+}
+
+function formatAreaUpdateParts(draft: Pick<AreaWriteDraft, 'progress' | 'status' | 'phase'>): string[] {
+  return [
+    draft.progress ? `progress ${draft.progress}%` : null,
+    draft.status ? `status ${draft.status}` : null,
+    draft.phase ? `phase ${draft.phase}` : null,
+  ].filter((part): part is string => Boolean(part));
+}
+
+function formatAreaReplyParts(draft: Pick<AreaWriteDraft, 'progress' | 'status' | 'phase'>): string[] {
+  return [
+    draft.progress ? `progress to ${draft.progress}%` : null,
+    draft.status ? `status to ${draft.status}` : null,
+    draft.phase ? `phase to ${draft.phase}` : null,
+  ].filter((part): part is string => Boolean(part));
 }
 
 function parseDueDate(value: string): string | undefined {
@@ -2214,12 +2404,27 @@ function findMentionedTaskName(value: string, dashboardContext: string) {
   return findTaskInContext(value, dashboardContext)?.name;
 }
 
+function findMentionedAreaName(value: string, dashboardContext: string) {
+  const normalized = value.toLowerCase();
+  return parseDashboardAreaIndex(dashboardContext)
+    .sort((a, b) => b.name.length - a.name.length)
+    .find((area) => normalized.includes(area.name.toLowerCase()))?.name;
+}
+
 function findTaskInBoard(value: string, board: TasksBoardData | null) {
   if (!board) return null;
   const normalized = value.toLowerCase();
   return [...board.tasks]
     .sort((a, b) => b.name.length - a.name.length)
     .find((task) => normalized.includes(task.name.toLowerCase())) ?? null;
+}
+
+function findAreaInBoard(value: string, board: TasksBoardData | null) {
+  if (!board) return null;
+  const normalized = value.toLowerCase();
+  return [...board.areas]
+    .sort((a, b) => b.name.length - a.name.length)
+    .find((area) => normalized.includes(area.name.toLowerCase())) ?? null;
 }
 
 function findStaffInBoard(value: string, board: TasksBoardData | null) {
@@ -2277,6 +2482,33 @@ function parseDashboardTaskIndex(dashboardContext: string) {
     }
   }
   return [...tasks.values()];
+}
+
+function parseDashboardAreaIndex(dashboardContext: string) {
+  const line = dashboardContext
+    .split('\n')
+    .find((entry) => /^Areas:/i.test(entry));
+  if (!line) return [] as Array<{ name: string; status?: string; phase?: string; progress?: number }>;
+
+  return line
+    .slice(line.indexOf(':') + 1)
+    .split(';')
+    .map((part) => {
+      const raw = part.trim().replace(/\.$/, '');
+      const match = raw.match(/^(.+?)(?:\s+\((.*?)\))?$/);
+      const name = match?.[1]?.trim().replace(/\s+\d+%$/, '');
+      if (!name || /^no areas|^none$|^…and \d+ more/i.test(name)) return null;
+      const meta = (match?.[2] ?? '').split(',').map((item) => item.trim()).filter(Boolean);
+      const inlineProgress = raw.match(/\b(\d{1,3})%/)?.[1];
+      const metaProgress = meta.find((item) => /^\d{1,3}%$/.test(item))?.replace('%', '');
+      return {
+        name,
+        status: meta.find((item) => parseAreaStatus(item)),
+        phase: meta.find((item) => parseAreaPhase(item)),
+        progress: inlineProgress || metaProgress ? Number(inlineProgress ?? metaProgress) : undefined,
+      };
+    })
+    .filter((area): area is { name: string; status?: string; phase?: string; progress?: number } => Boolean(area));
 }
 
 /**
