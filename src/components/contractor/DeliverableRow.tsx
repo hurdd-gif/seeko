@@ -110,7 +110,8 @@ export function DeliverableRow({
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
-          className={`flex w-full flex-col gap-1.5 px-4 py-3 text-left ${LIGHT_FOCUS_RING} rounded-[14px]`}
+          aria-expanded={open}
+          className={`flex w-full flex-col gap-1.5 px-4 py-3 text-left transition-colors active:bg-black/[0.02] ${LIGHT_FOCUS_RING} rounded-[14px]`}
         >
           <span className="flex w-full items-center gap-3">
             <span className={`min-w-0 flex-1 truncate ${CARD_TITLE}`}>{deliverable.name}</span>
@@ -177,7 +178,7 @@ export function DeliverableRow({
             <div className="mt-4">
               <label
                 htmlFor={fileInputId}
-                className="inline-flex cursor-pointer items-center rounded-[14px] bg-[#f4f4f4] px-4 py-2 text-[13px] font-medium text-[#2a2a2a] transition-colors hover:bg-[#ececec]"
+                className="inline-flex cursor-pointer items-center rounded-[14px] bg-[#f4f4f4] px-4 py-2 text-[13px] font-medium text-[#2a2a2a] transition-colors hover:bg-[#ececec] active:bg-[#e4e4e4]"
               >
                 Upload deliverable
               </label>

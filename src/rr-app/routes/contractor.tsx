@@ -44,7 +44,7 @@ export function ContractorRouteContent({ data, now = new Date() }: { data: Contr
           </p>
           <a
             href="/login"
-            className="mt-4 inline-flex h-9 items-center rounded-full bg-[#111] px-4 text-sm font-medium text-white transition-colors hover:bg-[#000]"
+            className="mt-4 inline-flex h-9 items-center rounded-full bg-[#111] px-4 text-sm font-medium text-white transition-[transform,background-color] hover:bg-[#000] active:scale-[0.98]"
           >
             Back to sign in
           </a>
