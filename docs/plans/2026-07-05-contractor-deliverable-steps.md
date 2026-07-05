@@ -641,7 +641,10 @@ describe('DeliverableSteps', () => {
       </ul>,
     );
     fireEvent.click(screen.getByRole('button', { name: /submit hud integration for review/i }));
-    expect(screen.getByText('In review')).toBeInTheDocument();
+    // Optimistic flip: the node now reads "In review" (the rollup heading mirrors it
+    // for a single-step deliverable, hence getAllByText), and the submit button is gone.
+    expect(screen.getAllByText('In review').length).toBeGreaterThan(0);
+    expect(screen.queryByRole('button', { name: /submit hud integration for review/i })).not.toBeInTheDocument();
     await waitFor(() => expect(onAdvance).toHaveBeenCalledWith('b'));
   });
 
