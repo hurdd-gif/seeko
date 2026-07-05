@@ -265,7 +265,7 @@ export function createTasksRoutes(options: TasksRoutesOptions = {}) {
       } catch {
         return c.json({ error: 'Invalid JSON' }, 400);
       }
-      const progress = (body as { progress?: unknown }).progress;
+      const progress = (body as { progress?: unknown } | null)?.progress;
       if (
         typeof progress !== 'number' ||
         !Number.isFinite(progress) ||
