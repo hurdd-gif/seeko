@@ -1,6 +1,6 @@
 export type PostLoginDestination = '/contractor' | '/investor' | '/tasks';
 
-type MinimalSupabase = {
+export type MinimalSupabase = {
   auth: { getUser: () => Promise<{ data: { user: { id: string } | null } }> };
   from: (table: string) => {
     select: (cols: string) => {
