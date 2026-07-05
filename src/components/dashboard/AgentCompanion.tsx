@@ -322,6 +322,17 @@ function isAmbiguousStandaloneConfirmation(prompt: string) {
   return /^\s*(?:yes|yeah|yep|ok|okay|sure|do it|confirmed?|confirm|go ahead|proceed|approve it|approved it|i approve|i already approved it)\s*[.!?]*\s*$/i.test(prompt);
 }
 
+type ConfirmationHistoryItem = Pick<ChatHistoryItem, 'role' | 'text'>;
+
+function lastEkoAskedToPrepareGatedUpdate(history: ConfirmationHistoryItem[]) {
+  const lastEkoReply = [...history].reverse().find((item) => item.role === 'eko')?.text ?? '';
+  return /\bwould you like EKO to prepare\b/i.test(lastEkoReply);
+}
+
+export function shouldHandleStandaloneConfirmationLocally(prompt: string, history: ConfirmationHistoryItem[]) {
+  return isAmbiguousStandaloneConfirmation(prompt) && !lastEkoAskedToPrepareGatedUpdate(history);
+}
+
 function needsInlineWriteDetails(reply: string) {
   return /\b(task name|issue title|\btitle\b|priority|due date|area|assignee|status|please share the|please confirm the task|specify which|which item|what action)\b/i.test(reply);
 }
@@ -1392,7 +1403,7 @@ export function AgentCompanion({ userKey }: { userKey?: string }) {
       }
     }
 
-    if (isAmbiguousStandaloneConfirmation(prompt)) {
+    if (shouldHandleStandaloneConfirmationLocally(prompt, chatHistory)) {
       const reply = 'Tell me the specific action you want EKO to prepare. I will keep any write gated for approval.';
       setActiveSuggestion(null);
       setEditValue('');
@@ -1445,7 +1456,7 @@ export function AgentCompanion({ userKey }: { userKey?: string }) {
         }),
       );
       if (requestId !== promptRequestRef.current) return;
-      if (shouldOpenApprovalFromResponse(response) && !isAmbiguousStandaloneConfirmation(prompt)) {
+      if (shouldOpenApprovalFromResponse(response) && !shouldHandleStandaloneConfirmationLocally(prompt, chatHistory)) {
         const generatedSuggestion = createGeneratedApprovalSuggestionFromResponse(prompt, response);
         const inferredDraft = draftFromResponse(response, prompt);
         setActiveSuggestion(generatedSuggestion);
