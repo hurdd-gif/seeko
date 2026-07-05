@@ -676,6 +676,24 @@ describe('API server', () => {
     });
   });
 
+  it('answers plural progress follow-ups for tasks named in the recent conversation', () => {
+    const context = [
+      'Issues context: 3 tasks, 1 overdue, 2 staff, 0 areas, 0 milestones.',
+      'All issues: #18 UI Extension (Todo); #19 Gem Vector (In Progress).',
+      'Recent activity task details: UI Extension (Todo); Gem Vector (In Progress, #19, High priority, due 2026-07-10, assigned to Member Example).',
+    ].join('\n');
+    const recentHistory = [
+      { role: 'user' as const, text: 'What task was recently added?' },
+      { role: 'eko' as const, text: 'The recently added task was UI Extension. Recent activity also shows Gem Vector as newly created.' },
+    ];
+
+    expect(answerLocalContextFollowUp({ message: 'Any progress on those?', clientContext: { recentHistory } }, context)).toMatchObject({
+      reply: 'UI Extension is Todo. Gem Vector is In Progress, due 2026-07-10.',
+      provider: 'openai',
+      model: 'eko-local-context',
+    });
+  });
+
   it('routes risky EKO write prep to Claude in hybrid mode', async () => {
     vi.stubEnv('EKO_AGENT_PROVIDER', 'hybrid');
     vi.stubEnv('OPENAI_API_KEY', 'openai-key');

@@ -1714,7 +1714,16 @@ export function answerLocalContextFollowUp(input: AgentChatInput, dashboardConte
   const tasks = parseContextTasks(dashboardContext);
   if (!tasks.length) return null;
 
-  const referencedTask = findReferencedContextTask(input, tasks);
+  const referencedTasks = findReferencedContextTasks(input, tasks);
+  if (referencedTasks.length > 1 && asksForPluralReference(message) && asksForStatus(message)) {
+    return {
+      reply: referencedTasks.map(formatContextTaskProgress).join(' '),
+      provider: 'openai',
+      model: 'eko-local-context',
+    };
+  }
+
+  const referencedTask = referencedTasks[0];
   if (!referencedTask) return null;
 
   if (asksForDueDate(message)) {
@@ -1776,6 +1785,15 @@ function asksForPriority(message: string) {
   return /\b(?:priority|urgent|urgency|how important)\b/i.test(message);
 }
 
+function asksForPluralReference(message: string) {
+  return /\b(?:those|them|these|both|all of them|the tasks|the issues)\b/i.test(message);
+}
+
+function formatContextTaskProgress(task: ContextTask) {
+  const status = task.status ?? 'without a visible status';
+  return `${task.name} is ${status}${task.deadline ? `, due ${task.deadline}` : ''}.`;
+}
+
 function parseContextTasks(dashboardContext: string): ContextTask[] {
   const taskLines = dashboardContext
     .split('\n')
@@ -1814,17 +1832,19 @@ function parseContextTasks(dashboardContext: string): ContextTask[] {
   return tasks;
 }
 
-function findReferencedContextTask(input: AgentChatInput, tasks: ContextTask[]) {
+function findReferencedContextTasks(input: AgentChatInput, tasks: ContextTask[]) {
   const sortedTasks = [...tasks].sort((a, b) => b.name.length - a.name.length);
   const history = [...(input.clientContext?.recentHistory ?? [])].reverse();
 
   for (const item of history) {
     const text = item.text.toLowerCase();
-    const match = sortedTasks.find((task) => text.includes(task.name.toLowerCase()));
-    if (match) return match;
+    const matches = sortedTasks
+      .filter((task) => text.includes(task.name.toLowerCase()))
+      .sort((a, b) => text.indexOf(a.name.toLowerCase()) - text.indexOf(b.name.toLowerCase()));
+    if (matches.length) return matches;
   }
 
-  return null;
+  return [];
 }
 
 function formatContextError(error: unknown) {
