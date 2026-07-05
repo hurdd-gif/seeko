@@ -29,7 +29,7 @@ type AgentApprovalDraft = {
   assigneeName?: string;
 };
 type AgentApproval = {
-  kind: 'issue.create' | 'issue.update' | 'issue.delete' | 'doc.create' | 'doc.update' | 'note.create' | 'note.archive' | 'generic';
+  kind: 'issue.create' | 'issue.update' | 'issue.delete' | 'doc.create' | 'doc.update' | 'doc.delete' | 'note.create' | 'note.archive' | 'generic';
   title: string;
   copy: string;
   draft?: AgentApprovalDraft;
@@ -351,6 +351,7 @@ function parseApproval(value: unknown): AgentApproval | undefined {
     record.kind === 'issue.delete' ||
     record.kind === 'doc.create' ||
     record.kind === 'doc.update' ||
+    record.kind === 'doc.delete' ||
     record.kind === 'note.create' ||
     record.kind === 'note.archive' ||
     record.kind === 'generic'
@@ -581,6 +582,10 @@ async function executeTypedApproval(approval: AgentApproval, user: Authenticated
     return executeDocumentUpdateDraft(approval.draft, user);
   }
 
+  if (approval.kind === 'doc.delete') {
+    return executeDocumentDeleteDraft(approval.draft, user);
+  }
+
   if (approval.kind === 'note.create') {
     return executeNoteCreateDraft(approval.draft, user);
   }
@@ -803,6 +808,31 @@ export function planLocalNoteWrite(input: AgentChatInput): AgentChatResult | nul
 
 export function planLocalDocumentWrite(input: AgentChatInput): AgentChatResult | null {
   if (input.mode === 'approval') return null;
+
+  const deleteDraft = parseDocumentDeleteDraft(input.message.trim());
+  if (deleteDraft) {
+    if (!deleteDraft.docTitle) {
+      return {
+        reply: 'Which document should EKO delete?',
+        provider: 'openai',
+        model: 'eko-local-planner',
+        intent: 'clarification',
+      };
+    }
+
+    return {
+      reply: `Ready for approval: delete document ${deleteDraft.docTitle}.`,
+      provider: 'openai',
+      model: 'eko-local-planner',
+      intent: 'approval_required',
+      approval: {
+        kind: 'doc.delete',
+        title: `Delete ${deleteDraft.docTitle}`,
+        copy: `Delete document ${deleteDraft.docTitle} from Docs. This cannot be undone.`,
+        draft: deleteDraft,
+      },
+    };
+  }
 
   const updateDraft = parseDocumentUpdateDraft(input.message.trim());
   if (updateDraft) {
@@ -1270,6 +1300,66 @@ async function executeDocumentUpdateDraft(
   };
 }
 
+async function executeDocumentDeleteDraft(
+  draft: AgentApprovalDraft | DocumentWriteDraft | undefined,
+  user: AuthenticatedUser,
+): Promise<AgentChatResult | null> {
+  const docTitle = draft?.docTitle ?? draft?.title;
+  if (!docTitle) {
+    return {
+      reply: 'Name the document EKO should delete. No dashboard changes were made.',
+      provider: 'openai',
+      model: 'eko-local-approval',
+      intent: 'details_needed',
+      approval: {
+        kind: 'doc.delete',
+        title: 'Delete document',
+        copy: 'Name the document so EKO can prepare a gated delete.',
+        draft,
+      },
+    };
+  }
+
+  await assertAdminUser(user.id);
+  const service = getServiceClient();
+  const { data, error: findError } = await service
+    .from('docs')
+    .select('id, title, type')
+    .eq('title', docTitle)
+    .limit(2);
+  if (findError) throw new AgentProviderError('EKO could not read Docs before deleting.', 500);
+
+  const matches = (data ?? []) as Array<{ id: string; title: string; type?: string | null }>;
+  if (matches.length !== 1) {
+    return {
+      reply: matches.length
+        ? `Approval recorded, but "${docTitle}" matches ${matches.length} documents. No dashboard changes were made; use the exact title.`
+        : `Approval recorded, but EKO could not find document "${docTitle}". No dashboard changes were made.`,
+      provider: 'openai',
+      model: 'eko-local-approval',
+      intent: 'details_needed',
+    };
+  }
+
+  const doc = matches[0];
+  const { error: deleteError } = await service.from('docs').delete().eq('id', doc.id);
+  if (deleteError) throw new AgentProviderError('EKO could not delete the document.', 500);
+
+  await service.from('activity_log').insert({
+    user_id: user.id,
+    action: 'Deleted',
+    target: `doc: ${doc.title}`,
+    source: 'eko',
+  } as never);
+
+  return {
+    reply: `Deleted ${doc.type === 'deck' ? 'deck' : 'document'} "${doc.title}".`,
+    provider: 'openai',
+    model: 'eko-local-write',
+    intent: 'executed',
+  };
+}
+
 async function executeNoteCreateDraft(
   draft: AgentApprovalDraft | NoteWriteDraft | undefined,
   user: AuthenticatedUser,
@@ -1710,6 +1800,21 @@ function parseDocumentUpdateDraft(value: string): DocumentWriteDraft | null {
     docTitle: docTitle || undefined,
     content: content || undefined,
     docType: 'doc',
+  };
+}
+
+function parseDocumentDeleteDraft(value: string): DocumentWriteDraft | null {
+  if (!/\b(delete|remove)\b/i.test(value)) return null;
+  if (!/\b(doc|docs|document|deck|presentation|slides?)\b/i.test(value)) return null;
+  if (/\b(note|notes inbox|task|issue|todo|payment|invoice)\b/i.test(value)) return null;
+
+  const quotedTitle = value.match(/\b(?:delete|remove)\s+(?:the\s+)?["“]([^"”]{2,100})["”]/i)?.[1];
+  const afterType = value.match(/\b(?:delete|remove)\s+(?:the\s+)?(?:document|docs|doc|deck|presentation|slides?)\s*(?:called|named|titled)?\s*([^,.]+?)(?:[,.]|$)/i)?.[1];
+  const beforeType = value.match(/\b(?:delete|remove)\s+(?:the\s+)?([^,.]+?)\s+(?:document|docs|doc|deck|presentation|slides?)(?:[,.]|$)/i)?.[1];
+  const docTitle = cleanDocumentTitle(quotedTitle || afterType || beforeType || '');
+
+  return {
+    docTitle: docTitle || undefined,
   };
 }
 

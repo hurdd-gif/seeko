@@ -304,4 +304,126 @@ describe('EKO document actions', () => {
       },
     });
   });
+
+  it('prepares document deletion as a gated dashboard write', () => {
+    expect(planLocalDocumentWrite({ message: 'Delete document Launch Notes' })).toEqual({
+      reply: 'Ready for approval: delete document Launch Notes.',
+      provider: 'openai',
+      model: 'eko-local-planner',
+      intent: 'approval_required',
+      approval: {
+        kind: 'doc.delete',
+        title: 'Delete Launch Notes',
+        copy: 'Delete document Launch Notes from Docs. This cannot be undone.',
+        draft: {
+          docTitle: 'Launch Notes',
+        },
+      },
+    });
+  });
+
+  it('asks which document to delete before opening a delete approval', () => {
+    expect(planLocalDocumentWrite({ message: 'Delete a document' })).toEqual({
+      reply: 'Which document should EKO delete?',
+      provider: 'openai',
+      model: 'eko-local-planner',
+      intent: 'clarification',
+    });
+  });
+
+  it('deletes an existing document only after approval and records it as an EKO write', async () => {
+    const inserts: Array<{ table: string; payload: Record<string, unknown> }> = [];
+    const deletedIds: string[] = [];
+    mocks.getServiceClient.mockReturnValue({
+      from: vi.fn((table: string) => {
+        if (table === 'agent_chat_messages') {
+          const query = {
+            select: vi.fn(() => query),
+            eq: vi.fn(() => query),
+            order: vi.fn(() => query),
+            limit: vi.fn(async () => ({ data: [], error: null })),
+            insert: vi.fn(async (rows: Array<Record<string, unknown>>) => {
+              for (const row of rows) inserts.push({ table, payload: row });
+              return { error: null };
+            }),
+          };
+          return query;
+        }
+
+        if (table === 'profiles') {
+          const query = {
+            select: vi.fn(() => query),
+            eq: vi.fn(() => query),
+            maybeSingle: vi.fn(async () => ({ data: { is_admin: true }, error: null })),
+          };
+          return query;
+        }
+
+        if (table === 'docs') {
+          const query = {
+            select: vi.fn(() => query),
+            eq: vi.fn((column: string, value: string) => {
+              if (column === 'id') deletedIds.push(value);
+              return query;
+            }),
+            limit: vi.fn(async () => ({ data: [{ id: 'doc-1', title: 'Launch Notes', type: 'doc' }], error: null })),
+            delete: vi.fn(() => query),
+          };
+          return query;
+        }
+
+        if (table === 'activity_log') {
+          return {
+            insert: vi.fn(async (payload: Record<string, unknown>) => {
+              inserts.push({ table, payload });
+              return { error: null };
+            }),
+          };
+        }
+
+        throw new Error(`Unexpected table ${table}`);
+      }),
+    });
+
+    const input: AgentChatInput = {
+      message: 'Delete document Launch Notes',
+      mode: 'approval',
+      decision: 'approve',
+      suggestion: {
+        title: 'Delete Launch Notes',
+        approval: {
+          kind: 'doc.delete' as never,
+          title: 'Delete Launch Notes',
+          copy: 'Delete document Launch Notes from Docs. This cannot be undone.',
+          draft: {
+            docTitle: 'Launch Notes',
+          },
+        },
+      },
+    };
+
+    const response = await createAgentApp().request('/api/agent/chat', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(input),
+    });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      reply: 'Deleted document "Launch Notes".',
+      provider: 'openai',
+      model: 'eko-local-write',
+      intent: 'executed',
+    });
+    expect(deletedIds).toEqual(['doc-1']);
+    expect(inserts).toContainEqual({
+      table: 'activity_log',
+      payload: {
+        user_id: 'user-1',
+        action: 'Deleted',
+        target: 'doc: Launch Notes',
+        source: 'eko',
+      },
+    });
+  });
 });
