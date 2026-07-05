@@ -87,7 +87,7 @@ type EkoApiResponse = {
   model?: string;
   intent?: 'answer' | 'clarification' | 'details_needed' | 'approval_required' | 'executed' | 'rejected';
   approval?: {
-    kind?: 'issue.create' | 'issue.update' | 'generic';
+    kind?: 'issue.create' | 'issue.update' | 'issue.delete' | 'doc.create' | 'generic';
     title?: string;
     copy?: string;
     draft?: {
@@ -95,6 +95,11 @@ type EkoApiResponse = {
       status?: string;
       priority?: string;
       dueDate?: string;
+      docType?: string;
+      taskName?: string;
+      taskNumber?: string;
+      taskNumbers?: string;
+      assigneeName?: string;
     };
   };
   /**
@@ -107,7 +112,7 @@ type EkoApiResponse = {
     taskId: string;
     taskNumber?: number | null;
     name: string;
-    action: 'create' | 'status' | 'assignee';
+    action: 'create' | 'status' | 'assignee' | 'priority' | 'dueDate';
   };
 };
 type WriteReceipt = {

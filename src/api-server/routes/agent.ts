@@ -17,6 +17,7 @@ type AgentApprovalDraft = {
   status?: string;
   priority?: string;
   dueDate?: string;
+  docType?: string;
   taskName?: string;
   /** Board task_number as a string — the unique, user-facing task reference. */
   taskNumber?: string;
@@ -25,7 +26,7 @@ type AgentApprovalDraft = {
   assigneeName?: string;
 };
 type AgentApproval = {
-  kind: 'issue.create' | 'issue.update' | 'issue.delete' | 'generic';
+  kind: 'issue.create' | 'issue.update' | 'issue.delete' | 'doc.create' | 'generic';
   title: string;
   copy: string;
   draft?: AgentApprovalDraft;
@@ -345,6 +346,7 @@ function parseApproval(value: unknown): AgentApproval | undefined {
     record.kind === 'issue.create' ||
     record.kind === 'issue.update' ||
     record.kind === 'issue.delete' ||
+    record.kind === 'doc.create' ||
     record.kind === 'generic'
       ? record.kind
       : null;
@@ -364,7 +366,7 @@ function parseApprovalDraft(value: unknown): AgentApprovalDraft | undefined {
   if (!value || typeof value !== 'object') return undefined;
   const record = value as Record<string, unknown>;
   const draft: AgentApprovalDraft = {};
-  for (const key of ['title', 'status', 'priority', 'dueDate', 'taskName', 'taskNumber', 'taskNumbers', 'assigneeName'] as const) {
+  for (const key of ['title', 'status', 'priority', 'dueDate', 'docType', 'taskName', 'taskNumber', 'taskNumbers', 'assigneeName'] as const) {
     const field = record[key];
     if (typeof field === 'string' && field.trim()) draft[key] = field.trim().slice(0, 140);
   }
@@ -434,6 +436,9 @@ async function runAgentChat(
 
   const contextualDetail = answerLocalMissingDetail(input, dashboardContext);
   if (contextualDetail) return contextualDetail;
+
+  const localDocumentPlan = planLocalDocumentWrite(input);
+  if (localDocumentPlan) return localDocumentPlan;
 
   const localWritePlan = planLocalIssueWrite(input, dashboardContext);
   if (localWritePlan) return localWritePlan;
@@ -551,6 +556,10 @@ async function executeTypedApproval(approval: AgentApproval, user: Authenticated
 
   if (approval.kind === 'issue.delete') {
     return executeIssueDeleteDraft(approval.draft, user, board);
+  }
+
+  if (approval.kind === 'doc.create') {
+    return executeDocumentCreateDraft(approval.draft, user);
   }
 
   return null;
@@ -700,6 +709,40 @@ type IssueWriteDraft = {
   assigneeName?: string;
   taskName?: string;
 };
+
+type DocumentWriteDraft = {
+  title?: string;
+  docType?: 'doc' | 'deck';
+};
+
+export function planLocalDocumentWrite(input: AgentChatInput): AgentChatResult | null {
+  if (input.mode === 'approval') return null;
+
+  const draft = parseDocumentCreateDraft(input.message.trim());
+  if (!draft) return null;
+  if (!draft.title) {
+    return {
+      reply: `What should EKO call the ${draft.docType === 'deck' ? 'deck' : 'document'}?`,
+      provider: 'openai',
+      model: 'eko-local-planner',
+      intent: 'clarification',
+    };
+  }
+
+  const label = draft.docType === 'deck' ? 'deck' : 'document';
+  return {
+    reply: `Ready for approval: create ${label} ${draft.title}.`,
+    provider: 'openai',
+    model: 'eko-local-planner',
+    intent: 'approval_required',
+    approval: {
+      kind: 'doc.create',
+      title: `Create ${draft.title}`,
+      copy: `Create ${label} ${draft.title}.`,
+      draft,
+    },
+  };
+}
 
 export function planLocalIssueWrite(input: AgentChatInput, dashboardContext: string): AgentChatResult | null {
   if (input.mode === 'approval') return null;
@@ -983,6 +1026,62 @@ async function executeIssueCreateDraft(
   };
 }
 
+async function executeDocumentCreateDraft(
+  draft: AgentApprovalDraft | DocumentWriteDraft | undefined,
+  user: AuthenticatedUser,
+): Promise<AgentChatResult | null> {
+  if (!draft?.title) {
+    return {
+      reply: 'Add a document title before EKO can create it. No dashboard changes were made.',
+      provider: 'openai',
+      model: 'eko-local-approval',
+      intent: 'details_needed',
+      approval: {
+        kind: 'doc.create',
+        title: 'Create document',
+        copy: 'Add a title so EKO can prepare the document for approval.',
+        draft,
+      },
+    };
+  }
+
+  await assertAdminUser(user.id);
+  const docType = draft.docType === 'deck' ? 'deck' : 'doc';
+  const service = getServiceClient();
+  const insertPayload = {
+    title: draft.title,
+    content: '',
+    sort_order: 0,
+    restricted_department: null,
+    granted_user_ids: null,
+    ...(docType === 'deck' ? { type: 'deck', slides: [] } : {}),
+  };
+  const { data, error } = await service
+    .from('docs')
+    .insert(insertPayload as never)
+    .select('id, title, type')
+    .single();
+  if (error) throw new AgentProviderError(`EKO could not create the ${docType === 'deck' ? 'deck' : 'document'}.`, 500);
+
+  const doc = data as unknown as { id: string; title: string; type?: string } | null;
+  if (doc?.id) {
+    await service.from('activity_log').insert({
+      user_id: user.id,
+      action: 'Created',
+      target: `doc: ${draft.title}`,
+      doc_id: doc.id,
+      source: 'eko',
+    } as never);
+  }
+
+  return {
+    reply: `Created ${docType === 'deck' ? 'deck' : 'document'} "${draft.title}".`,
+    provider: 'openai',
+    model: 'eko-local-write',
+    intent: 'executed',
+  };
+}
+
 async function executeIssueStatusDraft(
   draft: Pick<IssueWriteDraft, 'taskName' | 'status'>,
   user: AuthenticatedUser,
@@ -1258,6 +1357,23 @@ function withTypedIntent(input: AgentChatInput, result: AgentChatResult): AgentC
   return { ...result, intent: 'answer' };
 }
 
+function parseDocumentCreateDraft(value: string): DocumentWriteDraft | null {
+  const type = /\b(deck|presentation|slides?)\b/i.test(value)
+    ? 'deck'
+    : /\b(doc|docs|document|note|notes|brief|memo)\b/i.test(value)
+      ? 'doc'
+      : null;
+  if (!type || !/\b(create|add|make|new|draft)\b/i.test(value)) return null;
+
+  const quoted = value.match(/["“]([^"”]{2,100})["”]/)?.[1];
+  const afterNamed = value.match(/\b(?:called|named|titled|for)\s+([^,.]+?)(?:[,.]|$)/i)?.[1];
+  const beforeType = value.match(/\b(?:create|add|make|draft)\s+(?:a|an|the|new)?\s*([^,.]+?)\s+(?:doc|docs|document|note|notes|brief|memo|deck|presentation|slides?)(?:[,.]|$)/i)?.[1];
+  const afterCreate = value.match(/\b(?:create|add|make|draft)\s+(?:a|an|the|new)?\s*(?:doc|docs|document|note|notes|brief|memo|deck|presentation|slides?)\s*(?:called|named|titled|for)?\s*([^,.]+?)(?:[,.]|$)/i)?.[1];
+  const title = cleanDocumentTitle(quoted || afterNamed || beforeType || afterCreate || '');
+
+  return { title: title || undefined, docType: type };
+}
+
 function parseIssueCreateDraft(value: string): IssueWriteDraft | null {
   if (!/\b(create|add|make|new)\b/i.test(value) || !/\b(task|issue|todo|work item)\b/i.test(value)) return null;
   const quoted = value.match(/["“]([^"”]{2,80})["”]/)?.[1];
@@ -1481,6 +1597,17 @@ function cleanIssueTitle(value: string) {
     .replace(/[.?!:;,-]+$/g, '')
     .trim()
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function cleanDocumentTitle(value: string) {
+  const clean = value
+    .replace(/^(?:a|an|the)\s+/i, '')
+    .replace(/\b(?:doc|docs|document|deck|presentation|slides?)\b/gi, '')
+    .replace(/\s+/g, ' ')
+    .replace(/[.?!:;,-]+$/g, '')
+    .trim()
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+  return /^(?:A|An|The)$/i.test(clean) ? '' : clean;
 }
 
 function formatList(items: unknown[]) {

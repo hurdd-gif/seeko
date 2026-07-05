@@ -385,8 +385,10 @@ describe('EKO_CAPABILITIES', () => {
     expect(EKO_CAPABILITIES).toContain('issue.update (status)');
     expect(EKO_CAPABILITIES).toContain('issue.update (assign)');
     expect(EKO_CAPABILITIES).toContain('issue.delete');
+    expect(EKO_CAPABILITIES).toContain('doc.create');
     expect(EKO_CAPABILITIES).toContain('gated behind explicit user approval');
     expect(EKO_CAPABILITIES).toContain('Not supported yet');
+    expect(EKO_CAPABILITIES).not.toContain('creating or editing docs');
     expect(EKO_CAPABILITIES).toContain('Never claim a write happened');
   });
 });
