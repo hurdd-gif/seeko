@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { createAgentRoutes, type AgentChatInput, type AgentChatResult } from './routes/agent';
 import { createAdminRoutes } from './routes/admin';
 import { createAgreementRoutes, type AgreementIndexData } from './routes/agreement';
 import { createAuthCallbackRoutes, createAuthRoutes, createPasskeyLoginRoutes } from './routes/auth';
@@ -74,6 +75,8 @@ import type { AuthenticatedUser } from './supabase';
 import type { AuthGuard } from './auth-utils';
 
 type ApiDependencies = {
+  agentAuthResolver?: (c: Context) => Promise<AuthenticatedUser | null>;
+  agentRunner?: (input: AgentChatInput, user: AuthenticatedUser) => Promise<AgentChatResult>;
   authSignOut?: (c: Context) => Promise<void>;
   agreementAuthResolver?: (c: Context) => Promise<AuthenticatedUser | null>;
   agreementLoader?: (user: AuthenticatedUser) => Promise<AgreementIndexData>;
@@ -139,6 +142,10 @@ export function createApiApp(dependencies: ApiDependencies = {}) {
     .route('/api/auth', createAuthCallbackRoutes())
     .route('/api/auth', createPasskeyLoginRoutes())
     .route('/api', createAdminRoutes())
+    .route('/api', createAgentRoutes({
+      authResolver: dependencies.agentAuthResolver,
+      agentRunner: dependencies.agentRunner,
+    }))
     .route('/api', createAgreementRoutes({
       authResolver: dependencies.agreementAuthResolver,
       agreementLoader: dependencies.agreementLoader,
