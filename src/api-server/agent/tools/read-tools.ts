@@ -3,7 +3,7 @@ import { EMPTY_SCHEMA } from '../tool-contract';
 import type { TaskWithAssignee } from '@/lib/types';
 
 /** UTC day-bucket overdue count — deterministic regardless of server tz. */
-function daysOverdue(dateIso: string | undefined, now: Date): number {
+export function daysOverdue(dateIso: string | undefined, now: Date): number {
   if (!dateIso) return 0;
   const target = Date.parse(dateIso);
   if (Number.isNaN(target)) return 0;

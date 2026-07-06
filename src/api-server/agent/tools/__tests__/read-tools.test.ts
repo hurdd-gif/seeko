@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { READ_TOOLS } from '../read-tools';
+import { READ_TOOLS, daysOverdue } from '../read-tools';
 import type { ToolContext } from '../../tool-contract';
 import type { TasksBoardData } from '@/lib/tasks-board';
 import type { TaskWithAssignee } from '@/lib/types';
@@ -17,16 +17,28 @@ function ctxFor(board: TasksBoardData | null): ToolContext {
 }
 const byId = (id: string) => READ_TOOLS.find((t) => t.id === id)!;
 
+describe('daysOverdue', () => {
+  it('computes exact UTC day-bucket differences with a fixed clock', () => {
+    const now = new Date('2026-06-01T00:00:00Z');
+    // 2026-04-24 -> 2026-06-01: 6 (Apr 24-30) + 31 (May) + 1 (Jun 1) = 38 days overdue.
+    expect(daysOverdue('2026-04-24', now)).toBe(38);
+    // No target date -> not overdue.
+    expect(daysOverdue(undefined, now)).toBe(0);
+    // Unparseable date -> not overdue.
+    expect(daysOverdue('not-a-date', now)).toBe(0);
+    // Future target -> negative (unclamped); the tool clamps with Math.max(0, ...).
+    expect(daysOverdue('2026-06-10', now)).toBe(-9);
+  });
+});
+
 describe('list_milestones', () => {
   it('returns name, health, targetDate, and computed overdueDays', async () => {
-    const now = new Date('2026-06-01T00:00:00Z');
     const board = makeBoard({
       projectMilestones: [
         { id: 'm1', name: 'Alpha', health: 'on_track', target_date: '2026-04-24', sort_order: 0, created_at: 'x' },
       ] as never,
     });
     const out = (await byId('list_milestones').run({}, ctxFor(board))) as Array<Record<string, unknown>>;
-    // 2026-06-01 minus 2026-04-24 = 38 days overdue.
     expect(out[0]).toMatchObject({ name: 'Alpha', health: 'on_track', targetDate: '2026-04-24' });
     expect(typeof out[0].overdueDays).toBe('number');
   });
