@@ -18,6 +18,14 @@ export type ContractorProfile = {
   isContractor: boolean;
 };
 
+export type LatestExtension = {
+  id: string;
+  status: 'pending' | 'approved' | 'denied';
+  requested_deadline: string;
+  reason: string | null;
+  denial_reason: string | null;
+};
+
 export type ContractorDeliverable = {
   id: string;
   name: string;
@@ -27,6 +35,7 @@ export type ContractorDeliverable = {
   deadline: string | null;
   progress: number;
   description: string | null;
+  latestExtension: LatestExtension | null;
 };
 
 export type ContractorOverviewData = {
@@ -39,6 +48,8 @@ const CONTRACTOR_PROFILE_SELECT =
 const CONTRACTOR_TASK_SELECT =
   'id, name, department, status, priority, deadline, progress, description' as const;
 const CONTRACTOR_STEP_SELECT = 'id, task_id, name, deadline, state, sort_order' as const;
+const CONTRACTOR_EXT_SELECT =
+  'id, task_id, status, requested_deadline, reason, denial_reason, created_at' as const;
 
 // `progress` exists on public.tasks (docs/supabase-schema.sql) but is missing from the
 // generated Database types, so the select-string parser can't infer it — override the
@@ -139,6 +150,28 @@ export async function loadContractorOverview(currentUser: {
     }
   }
 
+  // Newest extension row per task (ordered created_at desc; first wins).
+  const extByTask = new Map<string, LatestExtension>();
+  if (taskIds.length > 0) {
+    const { data: extRows, error: extError } = await service
+      .from('deadline_extensions')
+      .select(CONTRACTOR_EXT_SELECT)
+      .in('task_id', taskIds)
+      .order('created_at', { ascending: false });
+    if (extError) throw extError;
+    for (const row of extRows ?? []) {
+      if (!extByTask.has(row.task_id)) {
+        extByTask.set(row.task_id, {
+          id: row.id,
+          status: row.status as LatestExtension['status'],
+          requested_deadline: row.requested_deadline,
+          reason: row.reason ?? null,
+          denial_reason: row.denial_reason ?? null,
+        });
+      }
+    }
+  }
+
   const deliverables: ContractorStepDeliverable[] = taskRows.map((t) => ({
     id: t.id,
     name: t.name,
@@ -148,6 +181,7 @@ export async function loadContractorOverview(currentUser: {
     deadline: t.deadline ?? null,
     progress: typeof t.progress === 'number' ? t.progress : 0,
     description: t.description ?? null,
+    latestExtension: extByTask.get(t.id) ?? null,
     steps: stepsByTask.get(t.id) ?? [],
   }));
 

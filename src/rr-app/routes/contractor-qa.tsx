@@ -25,6 +25,7 @@ function d(partial: Partial<ContractorStepDeliverable>): ContractorStepDeliverab
     deadline: partial.deadline ?? null,
     progress: partial.progress ?? 0,
     description: partial.description ?? null,
+    latestExtension: partial.latestExtension ?? null,
     steps: partial.steps ?? [],
   };
 }
