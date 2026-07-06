@@ -8,13 +8,16 @@
  * the EKO_CAPABILITIES manifest so the model knows exactly which typed gated
  * tools exist.
  *
- * COMPATIBILITY: routes/agent.ts parses this text with line-prefix regexes
- * (parseDashboardTaskIndex, parseStaffIndex, parseContextTasks). The following
- * line shapes are load-bearing and must not change:
- *   - `Staff: Name (…); Name2 (…).`
+ * COMPATIBILITY: routes/agent.ts's read-only context follow-up parses this
+ * text with line-prefix regexes (parseContextTasks). Write-path entity
+ * resolution no longer reads this prose — it resolves against structured board
+ * data (agent/entity-index.ts). The following line shapes remain load-bearing
+ * for parseContextTasks and must not change:
  *   - `In progress: …` / `Risk queue: …` / `In review: …` /
  *     `Recent activity task details: …` where each entry is
  *     `Task Name (Status, …, due YYYY-MM-DD, assigned to X)` joined by `; `.
+ * The `Staff: Name (…); Name2 (…).` line is now read only by the model as
+ * prose (staff resolution moved to the structured roster), not parsed.
  *
  * Every section is individually guarded: one failed loader degrades to a
  * `<Section> context: unavailable (…).` line instead of throwing.
@@ -144,7 +147,8 @@ function taskRef(task: TaskWithAssignee): string | null {
 
 /**
  * Task entry formatter. Meta order matters: status must stay first so
- * routes/agent.ts's parseDashboardTaskIndex keeps reading it as the status.
+ * routes/agent.ts's parseContextTasks (read-only follow-up) keeps reading the
+ * first comma-separated meta item as the status.
  */
 function formatTask(task: TaskWithAssignee, now: Date): string {
   const flags = [
