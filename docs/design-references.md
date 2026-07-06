@@ -79,9 +79,9 @@ Use this to inform Pencil wireframes and Design Canvas explorations.
 ### Breadcrumb deliverable steps — component tokens
 
 > **First component vocabulary built ON the baseline above.** Extracted 2026-07-05
-> from the shipped `/contractor/steps-qa` prototype (`StepNode`,
-> `DeliverableSteps`, `StepDeliverableTimeline`; derivation in
-> `src/lib/contractor-steps.ts`). It is the worked example of how portal
+> from the step-model prototype — now folded into the canonical `/contractor/qa`
+> preview and the live `/contractor` route (`StepNode`, `DeliverableSteps`,
+> `StepDeliverableTimeline`; derivation in `src/lib/contractor-steps.ts`). It is the worked example of how portal
 > components should read: **one hairline spine, grouping by heading + margin
 > (never a card frame), state carried by node fill + a matching trailing label,
 > focus carried by department color — hierarchy from size + color, never weight.**
