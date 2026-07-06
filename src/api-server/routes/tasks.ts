@@ -292,6 +292,61 @@ export function createTasksRoutes(options: TasksRoutesOptions = {}) {
 
       return c.json({ id: taskId, progress: rounded });
     })
+    .patch('/tasks/:taskId/steps/:stepId', async (c) => {
+      const user = await authResolver(c);
+      if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+      const taskId = c.req.param('taskId');
+      const stepId = c.req.param('stepId');
+
+      const access = await canAccessTask(user.id, taskId);
+      if (!access.found) return c.json({ error: 'Task not found' }, 404);
+      if (!access.allowed) {
+        return c.json({ error: 'Only the assignee or an admin can update this task' }, 403);
+      }
+
+      const service = getServiceClient();
+      const { data: steps, error } = await service
+        .from('task_steps')
+        .select('id, state, sort_order')
+        .eq('task_id', taskId)
+        .order('sort_order', { ascending: true });
+      if (error) return c.json({ error: 'Failed to load steps' }, 500);
+
+      const rows = (steps ?? []) as { id: string; state: 'pending' | 'in_review' | 'done'; sort_order: number }[];
+      const step = rows.find((s) => s.id === stepId);
+      if (!step) return c.json({ error: 'Step not found' }, 404);
+
+      let target: 'pending' | 'in_review' | 'done';
+      if (access.isAdmin) {
+        // Admin may set any valid state (completes the review loop without an
+        // authoring UI yet — see design §10). Defaults to in_review.
+        const body = (await c.req.json().catch(() => null)) as { state?: unknown } | null;
+        const requested = body?.state;
+        target =
+          requested === 'pending' || requested === 'in_review' || requested === 'done'
+            ? requested
+            : 'in_review';
+      } else {
+        // Contractor: only the focal pending step advances to in_review.
+        const focal = rows.find((s) => s.state !== 'done');
+        if (!focal || focal.id !== stepId) {
+          return c.json({ error: 'Only the current step can be advanced' }, 403);
+        }
+        if (step.state !== 'pending') {
+          return c.json({ error: 'Step is not awaiting submission' }, 409);
+        }
+        target = 'in_review';
+      }
+
+      const { error: updateError } = await service
+        .from('task_steps')
+        .update({ state: target } as never)
+        .eq('id', stepId);
+      if (updateError) return c.json({ error: 'Failed to update step' }, 500);
+
+      return c.json({ id: stepId, state: target });
+    })
     .delete('/tasks/:id/deliverables/:deliverableId', async (c) => {
       const user = await authResolver(c);
       if (!user) return c.json({ error: 'Forbidden' }, 403);
