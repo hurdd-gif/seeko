@@ -3,6 +3,7 @@ import { Link, Navigate, useParams } from 'react-router';
 import { CircleHelp } from 'lucide-react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { springs } from '@/lib/motion';
+import { glideStep } from '@/lib/legal-scrub';
 import { termsOfUse } from '@/lib/legal/terms';
 import { developerTerms } from '@/lib/legal/developer-terms';
 import { privacyPolicy } from '@/lib/legal/privacy';
@@ -214,18 +215,15 @@ export function LegalRoute() {
     const tick = () => {
       const el = scrollerRef.current;
       if (!el || scrubAnimRef.current !== anim) return;
-      const delta = anim.target - el.scrollTop;
-      if (Math.abs(delta) < 0.5) {
-        el.scrollTop = anim.target;
-        // Keep idling while the pointer is still down — the next move only
-        // updates `target`; once released and settled, stop for real.
-        if (!dragRef.current?.dragging) {
-          scrubAnimRef.current = null;
-          return;
-        }
-      } else {
-        el.scrollTop += delta * anim.factor;
+      // glideStep stops the loop the instant the pointer is released (dragging
+      // false) WITHOUT touching scroll on that frame, so the settle never fights
+      // the user's own scroll. While held, it chases `target` and idles on it.
+      const { scrollTop, done } = glideStep(el.scrollTop, anim.target, anim.factor, !!dragRef.current?.dragging);
+      if (done) {
+        scrubAnimRef.current = null;
+        return;
       }
+      el.scrollTop = scrollTop;
       anim.raf = requestAnimationFrame(tick);
     };
     anim.raf = requestAnimationFrame(tick);
@@ -254,10 +252,25 @@ export function LegalRoute() {
     }
   };
 
+  // Ends a rail scrub. Bound to pointerup / pointercancel AND lostpointercapture,
+  // so a release the pointer events miss (mouse let go outside the window, capture
+  // yanked away) still tears the drag down. Idempotent: once dragRef is cleared the
+  // guard below early-returns, so the duplicate lostpointercapture fire is a no-op.
   const endRailDrag = (e: React.PointerEvent<HTMLDivElement>) => {
     const drag = dragRef.current;
     if (!drag || e.pointerId !== drag.pointerId) return;
     dragRef.current = null;
+    // Stop the glide loop the moment the pointer leaves. It must never keep
+    // owning scrollTop past release — the settle chase would fight the user's
+    // own scroll and the page reads as locked. Land instantly on the scrubbed
+    // position instead, then hand scroll control back.
+    const anim = scrubAnimRef.current;
+    if (anim) {
+      cancelAnimationFrame(anim.raf);
+      scrubAnimRef.current = null;
+      const scroller = scrollerRef.current;
+      if (drag.dragging && scroller) scroller.scrollTop = anim.target;
+    }
     if (!drag.dragging) return; // stationary press — the button's onClick owns it
     setRailDragging(false);
     const landed = drag.lastIndex >= 0 ? drag.lastIndex : drag.startIndex;
@@ -381,6 +394,7 @@ export function LegalRoute() {
           }}
           onPointerUp={endRailDrag}
           onPointerCancel={endRailDrag}
+          onLostPointerCapture={endRailDrag}
         >
         {doc.sections.map((section, i) => (
           <button
