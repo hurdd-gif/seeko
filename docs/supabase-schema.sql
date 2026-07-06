@@ -505,3 +505,38 @@ create policy "notes_admin_update"
   using ((select is_admin from public.profiles where id = auth.uid()) = true);
 
 comment on table public.notes is 'Inbox for Studio Agents — admin-only via RLS; Telegram bot writes via service role.';
+
+-- ─── Task steps (contractor deliverable breadcrumbs) ────────────────────────
+-- See migration 20260705000001_task_steps.sql.
+-- Admin-authored sub-steps for a deliverable. The stored enum stays tiny; the
+-- situational active/missed render states are DERIVED at render time in
+-- src/lib/contractor-steps.ts, never stored.
+
+create type public.task_step_state as enum ('pending', 'in_review', 'done');
+
+create table public.task_steps (
+  id          uuid primary key default gen_random_uuid(),
+  task_id     uuid not null references public.tasks(id) on delete cascade,
+  name        text not null,
+  deadline    date,
+  state       public.task_step_state not null default 'pending',
+  sort_order  int not null default 0,
+  created_at  timestamptz not null default now()
+);
+
+create index task_steps_task_idx on public.task_steps (task_id, sort_order);
+
+alter table public.task_steps enable row level security;
+
+create policy "task_steps_select_authenticated"
+  on public.task_steps for select
+  to authenticated
+  using (true);
+
+create policy "task_steps_write_admin"
+  on public.task_steps for all
+  to authenticated
+  using ((select is_admin from public.profiles where id = auth.uid()) = true)
+  with check ((select is_admin from public.profiles where id = auth.uid()) = true);
+
+comment on table public.task_steps is 'Admin-authored deliverable breadcrumb steps; contractor advance (pending -> in_review) via service-role API route.';

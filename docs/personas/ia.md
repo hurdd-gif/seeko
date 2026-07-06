@@ -173,6 +173,26 @@ RLS: admin-only `select` / `insert` / `update` (checked against `profiles.is_adm
 
 ---
 
+### 10. task_steps
+
+Admin-authored deliverable sub-steps ("breadcrumbs") for the contractor portal. Each task/deliverable holds 1–10 ordered steps on one vertical spine. The stored enum is deliberately tiny — the situational `active`/`missed` render states are **derived** at render time in `src/lib/contractor-steps.ts`, never stored.
+
+| Column     | Type                 | Notes                                                      |
+|------------|----------------------|------------------------------------------------------------|
+| id         | uuid (PK)            | Auto-generated                                             |
+| task_id    | uuid (FK)            | → tasks.id (cascade delete)                                |
+| name       | text                 | Step label                                                 |
+| deadline   | date (null)          | Nullable ("No deadline")                                   |
+| state      | task_step_state enum | pending, in_review, done (defaults to `pending`)           |
+| sort_order | int                  | Ordering within a deliverable (default 0)                  |
+| created_at | timestamptz          | Defaults to `now()`                                        |
+
+Index: `(task_id, sort_order)` for the per-deliverable ordered fetch.
+
+RLS: any authenticated user can `select` (step visibility follows task visibility, which the contractor index filters server-side); only `profiles.is_admin = true` can `insert` / `update` / `delete`. The contractor's `pending → in_review` advance is NOT a client write — it goes through the API route on the service role (guarded in code), so no assignee UPDATE policy is granted.
+
+---
+
 ## Enum Types (dropdowns in Table Editor)
 
 | Enum                | Values                                                                       |
@@ -186,6 +206,7 @@ RLS: admin-only `select` / `insert` / `update` (checked against `profiles.is_adm
 | payment_status      | pending, paid, cancelled                                                     |
 | note_status         | open, archived                                                               |
 | note_source         | web, telegram                                                                |
+| task_step_state     | pending, in_review, done                                                     |
 
 ---
 
@@ -194,6 +215,7 @@ RLS: admin-only `select` / `insert` / `update` (checked against `profiles.is_adm
 ```
 Supabase (seeko-studio project)
 ├── tasks          ← area_id → areas, assignee_id → profiles
+│   └── task_steps ← task_id → tasks (admin-authored deliverable breadcrumbs)
 ├── areas          ← Main Game, Fighting Club
 ├── profiles       ← auto-created from auth.users (= team roster)
 ├── payments       ← recipient_id → profiles, created_by → profiles
@@ -239,6 +261,7 @@ const docs  = await fetchDocs(parentId);  // optional parent filter, null = top-
 - `passkey_credentials`: owner can `select` and `delete`; inserts/updates only via service role
 - `passkey_challenges`: RLS enabled, no client policies — service-role only
 - `notes`: admin-only select/insert/update; service role bypasses for the Telegram bot.
+- `task_steps`: any authenticated user can `select`; admin-only `insert`/`update`/`delete`. Contractor advance (`pending → in_review`) via the service-role API route, not a client write.
 
 Doc visibility is enforced in app logic: a doc is locked for a user unless they are admin, their department is in `restricted_department`, or their user id is in `granted_user_ids` (granted access despite department restriction).
 
