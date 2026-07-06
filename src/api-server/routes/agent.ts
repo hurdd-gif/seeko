@@ -438,68 +438,6 @@ async function loadAgentDashboardContext(user: AuthenticatedUser) {
   return buildAgentDashboardContext(user);
 }
 
-function summarizeBoardContext(data: TasksBoardData) {
-  const statusCounts = new Map<string, number>();
-  for (const task of data.tasks) {
-    statusCounts.set(task.status, (statusCounts.get(task.status) ?? 0) + 1);
-  }
-  const counts = [...statusCounts.entries()]
-    .map(([status, count]) => `${status}: ${count}`)
-    .join(', ');
-  const overdueTasks = data.tasks.filter((task) => isTaskOverdue(task.deadline, task.status));
-  const formatTask = (task: TasksBoardData['tasks'][number]) => {
-    const flags = [
-      task.status,
-      task.priority ? `${task.priority} priority` : null,
-      isTaskOverdue(task.deadline, task.status) ? 'overdue' : null,
-      task.deadline ? `due ${task.deadline}` : null,
-      task.assignee?.display_name ? `assigned to ${task.assignee.display_name}` : null,
-    ].filter(Boolean);
-    return `${task.name}${flags.length ? ` (${flags.join(', ')})` : ''}`;
-  };
-  const inProgressTasks = data.tasks
-    .filter((task) => task.status === 'In Progress')
-    .slice(0, 8)
-    .map(formatTask);
-  const riskTasks = data.tasks
-    .filter((task) => isTaskOverdue(task.deadline, task.status) || task.priority === 'Urgent' || task.priority === 'High' || task.status === 'Backlog')
-    .slice(0, 6)
-    .map(formatTask);
-  const reviewTasks = data.tasks
-    .filter((task) => task.status === 'In Review')
-    .slice(0, 4)
-    .map(formatTask);
-  const milestones = data.projectMilestones
-    .slice(0, 8)
-    .map((milestone) => `${milestone.name}${milestone.health ? ` (${milestone.health})` : ''}${milestone.target_date ? ` due ${milestone.target_date}` : ''}`);
-  const recentActivity = data.projectActivity
-    .slice(0, 6)
-    .map((activity) => `${activity.action}: ${activity.target}`);
-  const recentActivityTaskDetails = data.projectActivity
-    .slice(0, 8)
-    .map((activity) => data.tasks.find((task) => task.name.toLowerCase() === activity.target.toLowerCase()))
-    .filter((task, index, tasks): task is TasksBoardData['tasks'][number] => {
-      if (!task) return false;
-      return tasks.findIndex((item) => item?.id === task.id) === index;
-    })
-    .slice(0, 5)
-    .map(formatTask);
-
-  return [
-    `Issues context: ${data.tasks.length} tasks, ${overdueTasks.length} overdue, ${data.team.length} staff, ${data.areas.length} areas, ${data.projectMilestones.length} milestones.`,
-    `Task counts by status: ${counts}.`,
-    inProgressTasks.length ? `In progress: ${inProgressTasks.join('; ')}.` : 'In progress: no tasks currently visible.',
-    riskTasks.length ? `Risk queue: ${riskTasks.join('; ')}.` : 'Risk queue: no urgent, high-priority, backlog, or overdue tasks visible.',
-    reviewTasks.length ? `In review: ${reviewTasks.join('; ')}.` : 'In review: no tasks currently visible.',
-    data.team.length ? `Staff: ${data.team.map((member) => `${member.display_name ?? 'Unnamed'}${member.department ? ` (${member.department})` : ''}`).slice(0, 12).join('; ')}.` : 'Staff: no roster entries visible.',
-    data.areas.length ? `Areas: ${data.areas.map((area) => `${area.name}${typeof area.progress === 'number' ? ` ${area.progress}%` : ''}`).slice(0, 10).join('; ')}.` : 'Areas: no areas visible.',
-    milestones.length ? `Milestones: ${milestones.join('; ')}.` : 'Milestones: no milestones visible.',
-    recentActivity.length ? `Recent activity: ${recentActivity.join('; ')}.` : 'Recent activity: no recent activity visible.',
-    recentActivityTaskDetails.length ? `Recent activity task details: ${recentActivityTaskDetails.join('; ')}.` : null,
-    data.account.notifications.length ? `Notifications: ${data.account.unreadCount} unread; ${data.account.notifications.slice(0, 5).map((notification) => notification.title).join('; ')}.` : 'Notifications: none visible.',
-  ].filter(Boolean).join('\n');
-}
-
 function summarizeDocsContext(data: DocsIndexData) {
   const visibleDocs = data.docs.filter((doc) => !doc.locked).slice(0, 10);
   const lockedDocs = data.docs.filter((doc) => doc.locked).slice(0, 6);
@@ -1467,10 +1405,6 @@ function parseStaffFromText(value: string, board: TasksBoardData | null) {
   return buildStaffIndex(board)
     .sort((a, b) => b.name.length - a.name.length)
     .find((member) => normalized.includes(member.name.toLowerCase()));
-}
-
-function findStaffInContext(value: string, board: TasksBoardData | null) {
-  return parseStaffFromText(value, board);
 }
 
 type ContextTask = {

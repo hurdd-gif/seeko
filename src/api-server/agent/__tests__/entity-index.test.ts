@@ -44,6 +44,37 @@ describe('buildTaskIndex', () => {
   });
 });
 
+describe('buildStaffIndex', () => {
+  it('maps each named team member to { id, name }', () => {
+    const board = makeBoard({
+      team: [
+        { id: 'staff-1', display_name: 'Karti' },
+        { id: 'staff-2', display_name: 'Mel' },
+      ],
+    });
+    expect(buildStaffIndex(board)).toEqual([
+      { id: 'staff-1', name: 'Karti' },
+      { id: 'staff-2', name: 'Mel' },
+    ]);
+  });
+
+  it('drops team members with no display_name', () => {
+    const board = makeBoard({
+      team: [
+        { id: 'staff-1', display_name: 'Karti' },
+        { id: 'staff-2', display_name: 'Mel' },
+        { id: 'staff-3', display_name: undefined },
+      ],
+    });
+    const result = buildStaffIndex(board);
+    expect(result).toHaveLength(2);
+    expect(result).toEqual([
+      { id: 'staff-1', name: 'Karti' },
+      { id: 'staff-2', name: 'Mel' },
+    ]);
+  });
+});
+
 describe('resolveTaskRef', () => {
   const index = [
     { id: 'a', name: 'Boss Fight', taskNumber: 22 },
