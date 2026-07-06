@@ -140,11 +140,11 @@ export type Database = {
           decided_at: string | null
           decided_by: string | null
           denial_reason: string | null
-          extra_hours: number
           id: string
-          new_deadline: string
           original_deadline: string
+          reason: string | null
           requested_by: string
+          requested_deadline: string
           status: string
           task_id: string
         }
@@ -153,11 +153,11 @@ export type Database = {
           decided_at?: string | null
           decided_by?: string | null
           denial_reason?: string | null
-          extra_hours: number
           id?: string
-          new_deadline: string
           original_deadline: string
+          reason?: string | null
           requested_by: string
+          requested_deadline: string
           status?: string
           task_id: string
         }
@@ -166,11 +166,11 @@ export type Database = {
           decided_at?: string | null
           decided_by?: string | null
           denial_reason?: string | null
-          extra_hours?: number
           id?: string
-          new_deadline?: string
           original_deadline?: string
+          reason?: string | null
           requested_by?: string
+          requested_deadline?: string
           status?: string
           task_id?: string
         }

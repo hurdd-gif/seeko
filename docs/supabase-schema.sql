@@ -330,20 +330,37 @@ create policy "Authenticated users can insert activity"
   with check (auth.role() = 'authenticated');
 
 -- ─── Deadline Extensions ──────────────────────────────────────────────────────
+-- Date + reason model. See migration 20260705000002_deadline_extensions_reshape.sql.
 
 create table public.deadline_extensions (
-  id                uuid primary key default gen_random_uuid(),
-  task_id           uuid not null references public.tasks(id) on delete cascade,
-  requested_by      uuid not null references public.profiles(id) on delete cascade,
-  extra_hours       integer not null,
-  original_deadline date not null,
-  new_deadline      date not null,
-  status            text not null default 'pending' check (status in ('pending', 'approved', 'denied')),
-  decided_by        uuid references public.profiles(id),
-  decided_at        timestamptz,
-  denial_reason     text,
-  created_at        timestamptz not null default now()
+  id                  uuid primary key default gen_random_uuid(),
+  task_id             uuid not null references public.tasks(id) on delete cascade,
+  requested_by        uuid not null references public.profiles(id) on delete cascade,
+  original_deadline   date not null,
+  requested_deadline  date not null,
+  reason              text,
+  status              text not null default 'pending' check (status in ('pending', 'approved', 'denied')),
+  decided_by          uuid references public.profiles(id),
+  decided_at          timestamptz,
+  denial_reason       text,
+  created_at          timestamptz not null default now()
 );
+
+create index deadline_extensions_task_pending_idx
+  on public.deadline_extensions (task_id, status)
+  where status = 'pending';
+
+alter table public.deadline_extensions enable row level security;
+
+create policy "deadline_extensions_select_owner_or_admin"
+  on public.deadline_extensions for select
+  to authenticated
+  using (
+    auth.uid() = requested_by
+    or (select is_admin from public.profiles where id = auth.uid()) = true
+  );
+
+comment on table public.deadline_extensions is 'Contractor-requested deadline extensions (date + reason model); admin approve/deny via service-role API route.';
 
 -- ─── Storage: Avatars Bucket ──────────────────────────────────────────────────
 

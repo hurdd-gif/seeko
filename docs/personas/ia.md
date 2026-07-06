@@ -193,6 +193,30 @@ RLS: any authenticated user can `select` (step visibility follows task visibilit
 
 ---
 
+### 11. deadline_extensions
+
+Contractor-requested deadline extensions on a task, date + reason model (reshaped from an earlier duration model — see migration `20260705000002_deadline_extensions_reshape.sql`). One row per request; a task may only have one `pending` row at a time (enforced in code, not a DB constraint).
+
+| Column             | Type                       | Notes                                                      |
+|--------------------|----------------------------|-------------------------------------------------------------|
+| id                 | uuid (PK)                  | Auto-generated                                              |
+| task_id            | uuid (FK)                  | → tasks.id (cascade delete)                                 |
+| requested_by       | uuid (FK)                  | → profiles.id (cascade delete); the contractor/assignee      |
+| original_deadline  | date                       | Snapshot of `tasks.deadline` at request time                 |
+| requested_deadline | date                       | The date the contractor wants; must be strictly after `original_deadline` |
+| reason             | text (null)                | Optional free-text justification                             |
+| status             | text                       | `pending`, `approved`, `denied` (check constraint)            |
+| decided_by         | uuid (FK, null)            | → profiles.id; admin who approved/denied                     |
+| decided_at         | timestamptz (null)         | When decided                                                 |
+| denial_reason      | text (null)                | Optional admin note when denying                              |
+| created_at         | timestamptz                | Defaults to `now()`                                          |
+
+Index: partial `(task_id, status) where status = 'pending'` for the "does this task have a pending request?" lookup.
+
+RLS: owner-or-admin `select` only — no client `insert` / `update`. Writes (create request, approve/deny) go through the service-role API route (`POST /api/deadline-extensions`, `PATCH /api/deadline-extensions/:id`), which enforces assignee-only creation and admin-only decisions in code.
+
+---
+
 ## Enum Types (dropdowns in Table Editor)
 
 | Enum                | Values                                                                       |
@@ -215,7 +239,8 @@ RLS: any authenticated user can `select` (step visibility follows task visibilit
 ```
 Supabase (seeko-studio project)
 ├── tasks          ← area_id → areas, assignee_id → profiles
-│   └── task_steps ← task_id → tasks (admin-authored deliverable breadcrumbs)
+│   ├── task_steps ← task_id → tasks (admin-authored deliverable breadcrumbs)
+│   └── deadline_extensions ← task_id → tasks, requested_by → profiles (contractor date+reason requests)
 ├── areas          ← Main Game, Fighting Club
 ├── profiles       ← auto-created from auth.users (= team roster)
 ├── payments       ← recipient_id → profiles, created_by → profiles
@@ -262,6 +287,7 @@ const docs  = await fetchDocs(parentId);  // optional parent filter, null = top-
 - `passkey_challenges`: RLS enabled, no client policies — service-role only
 - `notes`: admin-only select/insert/update; service role bypasses for the Telegram bot.
 - `task_steps`: any authenticated user can `select`; admin-only `insert`/`update`/`delete`. Contractor advance (`pending → in_review`) via the service-role API route, not a client write.
+- `deadline_extensions`: owner-or-admin `select` only; no client `insert`/`update` — create/approve/deny via the service-role API route.
 
 Doc visibility is enforced in app logic: a doc is locked for a user unless they are admin, their department is in `restricted_department`, or their user id is in `granted_user_ids` (granted access despite department restriction).
 
