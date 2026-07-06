@@ -457,13 +457,6 @@ function summarizePaymentsContext(data: PaymentsIndexData) {
   ].join('\n');
 }
 
-function isTaskOverdue(deadline: string | undefined | null, status: string | null | undefined) {
-  if (!deadline || status === 'Done') return false;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return new Date(deadline).getTime() < today.getTime();
-}
-
 type IssueWriteDraft = {
   title?: string;
   status?: TaskStatus;
