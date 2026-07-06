@@ -11,11 +11,14 @@ export type DeadlineExtensionControlProps = {
   onRequest?: (taskId: string, requestedDeadline: string, reason: string) => Promise<LatestExtension>;
 };
 
-/* Pending-request amber — deliberately distinct from the neutral grey the rest of
- * the light theme uses for payment `pending` (SettingsPanel.tsx): this pending
- * state is "awaiting an admin decision on a request", not "awaiting payment", so
- * it earns its own hue rather than reusing that neutral. AA on white (~5.9:1). */
-const PENDING_AMBER = '#a16207';
+/* Pending-request amber — reuses the existing awaiting-decision amber already
+ * established by LIGHT_SIGNING_STATUS.pending (lightKit.ts:75) rather than
+ * inventing a new hue: same "blocked on someone else's decision" semantic
+ * (there, an external signer; here, an admin). Still distinct from the neutral
+ * grey the light theme uses for payment `pending` (SettingsPanel.tsx) — that's
+ * a "waiting in a queue" state, not "waiting on a decision". #946a00 on white
+ * ≈ 4.86:1, clears AA (4.5:1) for normal text. */
+const PENDING_AMBER = '#946a00';
 
 async function defaultRequest(
   taskId: string,
@@ -84,7 +87,9 @@ export function DeadlineExtensionControl({
 
   const min = dayAfter(deadline);
 
-  // Pending — quiet amber pill, no request affordance.
+  // Pending — quiet amber pill, no request affordance. Checked first so a
+  // pending request always wins regardless of `open`: there's no "cancel out
+  // of pending", the affordance is fully suppressed.
   if (ext && ext.status === 'pending') {
     return (
       <p className="mt-1 flex items-center gap-1.5 pl-6 text-[11px] font-medium" style={{ color: PENDING_AMBER }}>
@@ -92,6 +97,99 @@ export function DeadlineExtensionControl({
         Extension requested — pending
         <span className="tabular-nums text-ink-faint">· {fmt(ext.requested_deadline)}</span>
       </p>
+    );
+  }
+
+  async function submit() {
+    if (!date) return;
+    setSubmitting(true);
+    setError(false);
+    // Snapshot the resting state — null for a fresh request, the denied
+    // record for a "Request again" — so a failed submit restores exactly
+    // what was showing before, not a hardcoded "none" that would erase a
+    // denial note the contractor still needs to see.
+    const restingExt = ext;
+    const optimistic: LatestExtension = {
+      id: 'optimistic',
+      status: 'pending',
+      requested_deadline: date,
+      reason: reason.trim() || null,
+      denial_reason: null,
+    };
+    setExt(optimistic);
+    try {
+      const saved = await onRequest(taskId, date, reason.trim());
+      setExt(saved);
+      setOpen(false);
+    } catch {
+      setExt(restingExt);
+      setError(true);
+      setOpen(false);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  // Inline request form — `open` alone controls this overlay. `ext` (e.g. a
+  // denied record) is never touched to open it, so Cancel has nothing to
+  // restore: closing the form just reveals the untouched resting state below.
+  if (open) {
+    return (
+      <div className="mt-1.5 ml-6 max-w-[320px] rounded-xl bg-[#fafafa] p-3 ring-1 ring-hairline">
+        <label className="block text-[11px] font-medium text-ink-faint" htmlFor={`ext-date-${taskId}`}>
+          New deadline
+        </label>
+        {/* Date + reason fields signal focus with a brand-blue ring-color
+         * change, following the LIGHT_INPUT focus idiom (lightKit.ts,
+         * user-decided 2026-07-03: border/ring color-change, not a diffuse
+         * glow). That's a scoped idiom for this form, not a codebase-wide
+         * rule — several inputs elsewhere (e.g. StepNode.tsx in this same
+         * contractor/ directory) do use a focus-visible:ring glow. */}
+        <input
+          id={`ext-date-${taskId}`}
+          type="date"
+          min={min}
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+          className="mt-1 w-full rounded-lg bg-white px-2.5 py-1.5 text-[13px] tabular-nums text-ink ring-1 ring-hairline transition-[box-shadow] duration-150 ease-out focus:outline-none focus:ring-[#0d7aff] motion-reduce:transition-none"
+        />
+        <textarea
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          placeholder="Reason (optional)"
+          aria-label="Reason (optional)"
+          rows={2}
+          maxLength={500}
+          className="mt-2 w-full resize-none rounded-lg bg-white px-2.5 py-1.5 text-[13px] text-ink ring-1 ring-hairline transition-[box-shadow] duration-150 ease-out placeholder:text-ink-faintest focus:outline-none focus:ring-[#0d7aff] motion-reduce:transition-none"
+        />
+        <div className="mt-2 flex items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(false);
+              setError(false);
+            }}
+            className="text-[11px] text-ink-faint transition-colors duration-150 ease-out hover:text-ink active:text-[#111] motion-reduce:transition-none"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={submit}
+            disabled={!date || submitting}
+            className="inline-flex items-center gap-1 rounded-full bg-[#111] px-3 py-1 text-[11px] font-medium text-white transition-[transform,background-color] duration-150 ease-out hover:bg-[#2a2a2a] active:scale-[0.98] disabled:opacity-100 disabled:bg-black/[0.06] disabled:text-black/35 motion-reduce:transition-none motion-reduce:active:scale-100"
+          >
+            {submitting ? (
+              'Submitting…'
+            ) : (
+              <>
+                <Check className="size-3" strokeWidth={2.5} aria-hidden /> Submit
+              </>
+            )}
+          </button>
+        </div>
+        {error && <p className="mt-1 text-[11px] text-[#d4503e]">Couldn’t request — try again.</p>}
+      </div>
     );
   }
 
@@ -106,113 +204,32 @@ export function DeadlineExtensionControl({
         <button
           type="button"
           onClick={() => {
-            setExt(null);
             setOpen(true);
+            setError(false);
           }}
           className={`mt-0.5 ${GHOST_LINK}`}
         >
           Request again
         </button>
+        {error && <p className="mt-0.5 text-[11px] text-[#d4503e]">Couldn’t request — try again.</p>}
       </div>
     );
   }
 
   // None / approved (superseded) — request affordance.
-  async function submit() {
-    if (!date) return;
-    setSubmitting(true);
-    setError(false);
-    const optimistic: LatestExtension = {
-      id: 'optimistic',
-      status: 'pending',
-      requested_deadline: date,
-      reason: reason.trim() || null,
-      denial_reason: null,
-    };
-    setExt(optimistic);
-    try {
-      const saved = await onRequest(taskId, date, reason.trim());
-      setExt(saved);
-      setOpen(false);
-    } catch {
-      // Revert all the way back to the closed "none" state — the error reads
-      // against the request affordance the contractor will retry from, not
-      // against a form they might assume is still mid-submit.
-      setExt(null);
-      setError(true);
-      setOpen(false);
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  if (!open) {
-    return (
-      <div className="mt-1">
-        <button
-          type="button"
-          onClick={() => {
-            setOpen(true);
-            setError(false);
-          }}
-          className={`ml-6 ${GHOST_LINK}`}
-        >
-          Request more time
-        </button>
-        {error && <p className="ml-6 mt-0.5 text-[11px] text-[#d4503e]">Couldn’t request — try again.</p>}
-      </div>
-    );
-  }
-
   return (
-    <div className="mt-1.5 ml-6 max-w-[320px] rounded-xl bg-[#fafafa] p-3 ring-1 ring-hairline">
-      <label className="block text-[11px] font-medium text-ink-faint" htmlFor={`ext-date-${taskId}`}>
-        New deadline
-      </label>
-      <input
-        id={`ext-date-${taskId}`}
-        type="date"
-        min={min}
-        value={date}
-        onChange={(e) => setDate(e.target.value)}
-        className="mt-1 w-full rounded-lg bg-white px-2.5 py-1.5 text-[13px] tabular-nums text-ink ring-1 ring-hairline transition-[box-shadow] duration-150 ease-out focus:outline-none focus:ring-[#0d7aff] motion-reduce:transition-none"
-      />
-      <textarea
-        value={reason}
-        onChange={(e) => setReason(e.target.value)}
-        placeholder="Reason (optional)"
-        aria-label="Reason (optional)"
-        rows={2}
-        maxLength={500}
-        className="mt-2 w-full resize-none rounded-lg bg-white px-2.5 py-1.5 text-[13px] text-ink ring-1 ring-hairline transition-[box-shadow] duration-150 ease-out placeholder:text-ink-faintest focus:outline-none focus:ring-[#0d7aff] motion-reduce:transition-none"
-      />
-      <div className="mt-2 flex items-center justify-end gap-2">
-        <button
-          type="button"
-          onClick={() => {
-            setOpen(false);
-            setError(false);
-          }}
-          className="text-[11px] text-ink-faint transition-colors duration-150 ease-out hover:text-ink active:text-[#111] motion-reduce:transition-none"
-        >
-          Cancel
-        </button>
-        <button
-          type="button"
-          onClick={submit}
-          disabled={!date || submitting}
-          className="inline-flex items-center gap-1 rounded-full bg-[#111] px-3 py-1 text-[11px] font-medium text-white transition-[transform,background-color] duration-150 ease-out hover:bg-[#2a2a2a] active:scale-[0.98] disabled:opacity-100 disabled:bg-black/[0.06] disabled:text-black/35 motion-reduce:transition-none motion-reduce:active:scale-100"
-        >
-          {submitting ? (
-            'Submitting…'
-          ) : (
-            <>
-              <Check className="size-3" strokeWidth={2.5} aria-hidden /> Submit
-            </>
-          )}
-        </button>
-      </div>
-      {error && <p className="mt-1 text-[11px] text-[#d4503e]">Couldn’t request — try again.</p>}
+    <div className="mt-1">
+      <button
+        type="button"
+        onClick={() => {
+          setOpen(true);
+          setError(false);
+        }}
+        className={`ml-6 ${GHOST_LINK}`}
+      >
+        Request more time
+      </button>
+      {error && <p className="ml-6 mt-0.5 text-[11px] text-[#d4503e]">Couldn’t request — try again.</p>}
     </div>
   );
 }

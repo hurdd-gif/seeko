@@ -56,4 +56,15 @@ describe('DeadlineExtensionControl', () => {
     expect(await screen.findByText(/couldn.t request/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /request more time/i })).toBeInTheDocument();
   });
+
+  it('keeps the denial note after "Request again" is opened then cancelled', () => {
+    const ext: LatestExtension = { id: 'e2', status: 'denied', requested_deadline: '2026-07-25', reason: null, denial_reason: 'Ship date is fixed' };
+    render(<DeadlineExtensionControl {...base} latestExtension={ext} />);
+    fireEvent.click(screen.getByRole('button', { name: /request again/i }));
+    expect(screen.getByLabelText(/new deadline/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /^cancel$/i }));
+    expect(screen.getByText(/denied/i)).toBeInTheDocument();
+    expect(screen.getByText(/Ship date is fixed/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /request again/i })).toBeInTheDocument();
+  });
 });
