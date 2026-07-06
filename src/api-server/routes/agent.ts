@@ -6,6 +6,7 @@ import { getServiceClient } from '@/lib/supabase/service';
 import type { Priority, TaskStatus } from '@/lib/types';
 import { getAuthenticatedUser, type AuthenticatedUser } from '../supabase';
 import { buildAgentDashboardContext } from '../agent/context';
+import { buildStaffIndex, buildTaskIndex, resolveTaskRef, type TaskIndexEntry } from '../agent/entity-index';
 
 type AuthResolver = (c: Context) => Promise<AuthenticatedUser | null>;
 type AgentProvider = 'openai' | 'anthropic';
@@ -270,7 +271,8 @@ async function runAgentChat(input: AgentChatInput, _user: AuthenticatedUser): Pr
 
   const providers = resolveProviderPlan(input);
   const dashboardContext = await loadAgentDashboardContext(_user);
-  const localWritePlan = planLocalIssueWrite(input, dashboardContext);
+  const board = await loadTasksBoard(_user).catch(() => null);
+  const localWritePlan = planLocalIssueWrite(input, board);
   if (localWritePlan) return localWritePlan;
 
   const localFollowUp = answerLocalContextFollowUp(input, dashboardContext);
@@ -320,8 +322,7 @@ async function runApprovalDecision(input: AgentChatInput, user: AuthenticatedUse
   const action = input.revision || input.suggestion?.approvalCopy || input.message;
   const cleanAction = normalizeAgentReply(action).replace(/^ready for approval:\s*/i, '');
   const board = await loadTasksBoard(user).catch(() => null);
-  const dashboardContext = board ? summarizeBoardContext(board) : await loadAgentDashboardContext(user);
-  const execution = await executeApprovedIssueWrite(cleanAction, user, dashboardContext, board);
+  const execution = await executeApprovedIssueWrite(cleanAction, user, board);
   if (execution) return execution;
 
   return {
@@ -336,7 +337,6 @@ async function runApprovalDecision(input: AgentChatInput, user: AuthenticatedUse
 
 async function executeTypedApproval(approval: AgentApproval, user: AuthenticatedUser): Promise<AgentChatResult | null> {
   const board = await loadTasksBoard(user).catch(() => null);
-  const dashboardContext = board ? summarizeBoardContext(board) : '';
 
   if (approval.kind === 'issue.create') {
     return executeIssueCreateDraft(approval.draft, user);
@@ -370,16 +370,16 @@ async function executeTypedApproval(approval: AgentApproval, user: Authenticated
       return executeIssueDueDateDraft({ taskName: approval.draft.taskName, dueDate }, user, board);
     }
 
-    const parsedStatus = parseIssueStatusDraft(approval.copy, dashboardContext);
+    const parsedStatus = parseIssueStatusDraft(approval.copy, board);
     if (parsedStatus?.taskName && parsedStatus.status) return executeIssueStatusDraft(parsedStatus, user, board);
 
-    const parsedAssignee = parseIssueAssigneeDraft(approval.copy, dashboardContext);
+    const parsedAssignee = parseIssueAssigneeDraft(approval.copy, board);
     if (parsedAssignee?.taskName && parsedAssignee.assigneeName) return executeIssueAssigneeDraft(parsedAssignee, user, board);
 
-    const parsedPriority = parseIssuePriorityDraft(approval.copy, dashboardContext);
+    const parsedPriority = parseIssuePriorityDraft(approval.copy, board);
     if (parsedPriority?.taskName && parsedPriority.priority) return executeIssuePriorityDraft(parsedPriority, user, board);
 
-    const parsedDueDate = parseIssueDueDateDraft(approval.copy, dashboardContext);
+    const parsedDueDate = parseIssueDueDateDraft(approval.copy, board);
     if (parsedDueDate?.taskName && parsedDueDate.dueDate) return executeIssueDueDateDraft(parsedDueDate, user, board);
   }
 
@@ -535,7 +535,7 @@ type IssueWriteDraft = {
   taskName?: string;
 };
 
-export function planLocalIssueWrite(input: AgentChatInput, dashboardContext: string): AgentChatResult | null {
+export function planLocalIssueWrite(input: AgentChatInput, board: TasksBoardData | null): AgentChatResult | null {
   if (input.mode === 'approval') return null;
 
   const message = input.message.trim();
@@ -577,7 +577,7 @@ export function planLocalIssueWrite(input: AgentChatInput, dashboardContext: str
     };
   }
 
-  const statusDraft = parseIssueStatusDraft(message, dashboardContext);
+  const statusDraft = parseIssueStatusDraft(message, board);
   if (statusDraft?.taskName && statusDraft.status) {
     return {
       reply: `Ready for approval: move ${statusDraft.taskName} to ${statusDraft.status}.`,
@@ -593,7 +593,7 @@ export function planLocalIssueWrite(input: AgentChatInput, dashboardContext: str
     };
   }
 
-  const assigneeDraft = parseIssueAssigneeDraft(message, dashboardContext);
+  const assigneeDraft = parseIssueAssigneeDraft(message, board);
   if (assigneeDraft?.taskName && assigneeDraft.assigneeName) {
     return {
       reply: `Ready for approval: assign ${assigneeDraft.taskName} to ${assigneeDraft.assigneeName}.`,
@@ -609,7 +609,7 @@ export function planLocalIssueWrite(input: AgentChatInput, dashboardContext: str
     };
   }
 
-  const priorityDraft = parseIssuePriorityDraft(message, dashboardContext);
+  const priorityDraft = parseIssuePriorityDraft(message, board);
   if (priorityDraft?.taskName && priorityDraft.priority) {
     return {
       reply: `Ready for approval: set ${priorityDraft.taskName} to ${priorityDraft.priority} priority.`,
@@ -625,7 +625,7 @@ export function planLocalIssueWrite(input: AgentChatInput, dashboardContext: str
     };
   }
 
-  const dueDateDraft = parseIssueDueDateDraft(message, dashboardContext);
+  const dueDateDraft = parseIssueDueDateDraft(message, board);
   if (dueDateDraft?.taskName && dueDateDraft.dueDate) {
     const dueLabel = /no date/i.test(dueDateDraft.dueDate) ? 'no due date' : `due ${dueDateDraft.dueDate}`;
     return {
@@ -642,7 +642,7 @@ export function planLocalIssueWrite(input: AgentChatInput, dashboardContext: str
     };
   }
 
-  const bulkAssign = parseBulkAssignFromHistory(message, dashboardContext, input.clientContext?.recentHistory);
+  const bulkAssign = parseBulkAssignFromHistory(message, board, input.clientContext?.recentHistory);
   if (bulkAssign) {
     const taskList = bulkAssign.tasks.map((task) => `"${task.name}" (#${task.taskNumber})`).join(', ');
     return {
@@ -663,7 +663,7 @@ export function planLocalIssueWrite(input: AgentChatInput, dashboardContext: str
   }
 
   const recentHistory = input.clientContext?.recentHistory;
-  const deleteResolution = parseIssueDeleteDraft(message, dashboardContext, recentHistory);
+  const deleteResolution = parseIssueDeleteDraft(message, board, recentHistory);
   if (deleteResolution) return deleteResolutionResult(deleteResolution);
 
   // Slot-fill turn: EKO just asked which task to delete, and this message is
@@ -671,7 +671,7 @@ export function planLocalIssueWrite(input: AgentChatInput, dashboardContext: str
   // resolver with the delete verb restored so number/name/referent rules apply.
   const lastEkoRow = [...(recentHistory ?? [])].reverse().find((row) => row.role === 'eko');
   if (lastEkoRow && /\btask to delete\b/i.test(lastEkoRow.text)) {
-    const followUp = parseIssueDeleteDraft(`delete ${message}`, dashboardContext, recentHistory);
+    const followUp = parseIssueDeleteDraft(`delete ${message}`, board, recentHistory);
     if (followUp?.outcome === 'match' || followUp?.outcome === 'ambiguous') {
       return deleteResolutionResult(followUp);
     }
@@ -720,7 +720,6 @@ function deleteResolutionResult(resolution: IssueDeleteResolution): AgentChatRes
 async function executeApprovedIssueWrite(
   action: string,
   user: AuthenticatedUser,
-  dashboardContext: string,
   board: TasksBoardData | null,
 ): Promise<AgentChatResult | null> {
   const createDraft = parseIssueCreateDraft(action);
@@ -728,22 +727,22 @@ async function executeApprovedIssueWrite(
     return executeIssueCreateDraft(createDraft, user);
   }
 
-  const statusDraft = parseIssueStatusDraft(action, dashboardContext);
+  const statusDraft = parseIssueStatusDraft(action, board);
   if (statusDraft?.taskName && statusDraft.status) {
     return executeIssueStatusDraft(statusDraft, user, board);
   }
 
-  const assigneeDraft = parseIssueAssigneeDraft(action, dashboardContext);
+  const assigneeDraft = parseIssueAssigneeDraft(action, board);
   if (assigneeDraft?.taskName && assigneeDraft.assigneeName) {
     return executeIssueAssigneeDraft(assigneeDraft, user, board);
   }
 
-  const priorityDraft = parseIssuePriorityDraft(action, dashboardContext);
+  const priorityDraft = parseIssuePriorityDraft(action, board);
   if (priorityDraft?.taskName && priorityDraft.priority) {
     return executeIssuePriorityDraft(priorityDraft, user, board);
   }
 
-  const dueDateDraft = parseIssueDueDateDraft(action, dashboardContext);
+  const dueDateDraft = parseIssueDueDateDraft(action, board);
   if (dueDateDraft?.taskName && dueDateDraft.dueDate) {
     return executeIssueDueDateDraft(dueDateDraft, user, board);
   }
@@ -1103,35 +1102,35 @@ function parseIssueCreateDraft(value: string): IssueWriteDraft | null {
   return { title: title || undefined, status, priority, dueDate };
 }
 
-function parseIssueStatusDraft(value: string, dashboardContext: string): IssueWriteDraft | null {
+function parseIssueStatusDraft(value: string, board: TasksBoardData | null): IssueWriteDraft | null {
   const status = parseTaskStatus(value);
   if (!status || !/\b(move|set|change|mark)\b/i.test(value)) return null;
-  const taskName = findMentionedTaskName(value, dashboardContext);
+  const taskName = findMentionedTaskName(value, board);
   return taskName ? { taskName, status } : null;
 }
 
-function parseIssueAssigneeDraft(value: string, dashboardContext: string): IssueWriteDraft | null {
+function parseIssueAssigneeDraft(value: string, board: TasksBoardData | null): IssueWriteDraft | null {
   if (!/\b(assign|reassign|give)\b/i.test(value)) return null;
-  const taskName = findMentionedTaskName(value, dashboardContext);
-  const staff = parseStaffFromText(value, dashboardContext);
+  const taskName = findMentionedTaskName(value, board);
+  const staff = parseStaffFromText(value, board);
   return taskName && staff ? { taskName, assigneeName: staff.name } : null;
 }
 
-function parseIssuePriorityDraft(value: string, dashboardContext: string): IssueWriteDraft | null {
+function parseIssuePriorityDraft(value: string, board: TasksBoardData | null): IssueWriteDraft | null {
   const priority = parsePriority(value);
   if (!priority) return null;
   if (!/\b(set|change|mark|make|raise|lower|bump|prioriti[sz]e)\b/i.test(value)) return null;
   if (!/\b(priority|urgent|high|medium|low)\b/i.test(value)) return null;
-  const taskName = findMentionedTaskName(value, dashboardContext);
+  const taskName = findMentionedTaskName(value, board);
   return taskName ? { taskName, priority } : null;
 }
 
-function parseIssueDueDateDraft(value: string, dashboardContext: string): IssueWriteDraft | null {
+function parseIssueDueDateDraft(value: string, board: TasksBoardData | null): IssueWriteDraft | null {
   const dueDate = parseDueDate(value);
   if (!dueDate) return null;
   if (!/\b(set|change|mark|make|add|clear|remove)\b/i.test(value)) return null;
   if (!/\b(due|deadline|date)\b/i.test(value)) return null;
-  const taskName = findMentionedTaskName(value, dashboardContext);
+  const taskName = findMentionedTaskName(value, board);
   return taskName ? { taskName, dueDate } : null;
 }
 
@@ -1143,15 +1142,15 @@ function parseIssueDueDateDraft(value: string, dashboardContext: string): IssueW
  */
 function parseBulkAssignFromHistory(
   value: string,
-  dashboardContext: string,
+  board: TasksBoardData | null,
   recentHistory?: RecentHistoryItem[],
 ): { assigneeName: string; tasks: Array<{ name: string; taskNumber: number }> } | null {
   if (!/\b(assign|reassign|give)\b/i.test(value)) return null;
   if (!/\b(?:them(?:\s+all)?|these|those|all of them|everything listed|all \d+)\b/i.test(value)) return null;
-  const staff = parseStaffFromText(value, dashboardContext);
+  const staff = parseStaffFromText(value, board);
   if (!staff || !recentHistory?.length) return null;
 
-  const index = parseDashboardTaskIndex(dashboardContext);
+  const index = buildTaskIndex(board);
   for (let i = recentHistory.length - 1; i >= 0; i -= 1) {
     const row = recentHistory[i];
     if (row.role !== 'eko') continue;
@@ -1175,7 +1174,7 @@ type IssueDeleteResolution =
 
 function parseIssueDeleteDraft(
   value: string,
-  dashboardContext: string,
+  board: TasksBoardData | null,
   recentHistory?: RecentHistoryItem[],
 ): IssueDeleteResolution | null {
   if (!/\b(?:delete|remove)\b/i.test(value)) return null;
@@ -1184,7 +1183,7 @@ function parseIssueDeleteDraft(
     return null;
   }
 
-  const tasks = parseDashboardTaskIndex(dashboardContext);
+  const tasks = buildTaskIndex(board);
   const normalized = value.toLowerCase();
   const quotedName = value.match(/["“]([^"”]{2,120})["”]/)?.[1]?.trim();
   const statusQualifier = parseTaskStatus(value);
@@ -1255,7 +1254,7 @@ function parseIssueDeleteDraft(
  */
 function findRecentCreatedTask(
   recentHistory: RecentHistoryItem[] | undefined,
-  tasks: ReturnType<typeof parseDashboardTaskIndex>,
+  tasks: TaskIndexEntry[],
 ) {
   if (!recentHistory?.length) return null;
   for (let i = recentHistory.length - 1; i >= 0; i -= 1) {
@@ -1439,8 +1438,8 @@ async function markLatestDeletedTaskActivityAsEko({
   } as never);
 }
 
-function findMentionedTaskName(value: string, dashboardContext: string) {
-  return findTaskInContext(value, dashboardContext)?.name;
+function findMentionedTaskName(value: string, board: TasksBoardData | null) {
+  return findTaskInContext(value, board)?.name;
 }
 
 function findTaskInBoard(value: string, board: TasksBoardData | null) {
@@ -1459,18 +1458,8 @@ function findStaffInBoard(value: string, board: TasksBoardData | null) {
     .find((member) => member.display_name && normalized.includes(member.display_name.toLowerCase())) ?? null;
 }
 
-function findTaskInContext(value: string, dashboardContext: string) {
-  const index = parseDashboardTaskIndex(dashboardContext);
-  // "move task 22 to done" / "assign #22 to karti" — the unique number wins.
-  const numberRef = parseTaskNumberRef(value);
-  if (numberRef != null) {
-    const byNumber = index.find((task) => task.taskNumber === numberRef);
-    if (byNumber) return byNumber;
-  }
-  const normalized = value.toLowerCase();
-  return index
-    .sort((a, b) => b.name.length - a.name.length)
-    .find((task) => normalized.includes(task.name.toLowerCase()));
+function findTaskInContext(value: string, board: TasksBoardData | null) {
+  return resolveTaskRef(value, buildTaskIndex(board));
 }
 
 function parseDashboardTaskIndex(dashboardContext: string) {
@@ -1518,18 +1507,15 @@ function parseTaskNumberRef(value: string): number | null {
   return match ? Number(match[1]) : null;
 }
 
-function parseStaffFromText(value: string, dashboardContext: string) {
+function parseStaffFromText(value: string, board: TasksBoardData | null) {
   const normalized = value.toLowerCase();
-  return parseStaffIndex(dashboardContext)
+  return buildStaffIndex(board)
     .sort((a, b) => b.name.length - a.name.length)
     .find((member) => normalized.includes(member.name.toLowerCase()));
 }
 
-function findStaffInContext(value: string, dashboardContext: string) {
-  const normalized = value.toLowerCase();
-  return parseStaffIndex(dashboardContext)
-    .sort((a, b) => b.name.length - a.name.length)
-    .find((member) => normalized.includes(member.name.toLowerCase()));
+function findStaffInContext(value: string, board: TasksBoardData | null) {
+  return parseStaffFromText(value, board);
 }
 
 function parseStaffIndex(dashboardContext: string) {
