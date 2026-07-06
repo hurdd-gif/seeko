@@ -1,6 +1,35 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { app, createApiApp } from '../app';
 import { answerLocalContextFollowUp, planLocalIssueWrite } from '../routes/agent';
+import type { TasksBoardData } from '@/lib/tasks-board';
+import type { TaskWithAssignee } from '@/lib/types';
+
+// planLocalIssueWrite's second argument used to be a prose dashboardContext
+// string; task/staff resolution now reads directly off the structured board
+// (see src/api-server/agent/entity-index.ts). These helpers build minimal
+// boards in place of the old prose fixtures.
+function makeTask(overrides: Partial<TaskWithAssignee> = {}): TaskWithAssignee {
+  return {
+    id: 'task-1',
+    name: 'Task',
+    department: 'Coding',
+    status: 'Todo',
+    priority: 'Medium',
+    ...overrides,
+  } as TaskWithAssignee;
+}
+function makeBoard(tasks: TaskWithAssignee[], team: TasksBoardData['team'] = []): TasksBoardData {
+  return {
+    tasks,
+    team,
+    areas: [],
+    projectMilestones: [],
+    projectActivity: [],
+    isAdmin: true,
+    currentUserId: 'user-1',
+    account: { email: 'a@b.invalid', initials: 'A', isAdmin: true, unreadCount: 0, notifications: [], team: [], areas: [] },
+  } as TasksBoardData;
+}
 
 describe('API server', () => {
   afterEach(() => {
@@ -202,16 +231,14 @@ describe('API server', () => {
   });
 
   describe('typed issue deletes', () => {
-    const deleteContext = [
-      'Issues context: 3 tasks, 0 overdue, 2 staff, 1 areas, 0 milestones.',
-      'Task counts by status: Backlog: 1, In Progress: 1, In Review: 1.',
-      'In progress: Gem Vector (In Progress, High priority, due 2026-07-10).',
-      'Risk queue: Loot Table Pass (Backlog, Medium priority); Gem Vector (In Progress, High priority, due 2026-07-10).',
-      'In review: UI Extension (In Review).',
-    ].join('\n');
+    const deleteBoard = makeBoard([
+      makeTask({ id: 'gem-vector', name: 'Gem Vector', status: 'In Progress', priority: 'High', deadline: '2026-07-10' }),
+      makeTask({ id: 'loot-table-pass', name: 'Loot Table Pass', status: 'Backlog', priority: 'Medium' }),
+      makeTask({ id: 'ui-extension', name: 'UI Extension', status: 'In Review' }),
+    ]);
 
     it('proposes an approval-gated delete when a status qualifier resolves one task', () => {
-      const result = planLocalIssueWrite({ message: 'Remove the task in backlog' }, deleteContext);
+      const result = planLocalIssueWrite({ message: 'Remove the task in backlog' }, deleteBoard);
 
       expect(result).toEqual({
         reply: 'Ready for approval: delete "Loot Table Pass" from Issues.',
@@ -230,7 +257,7 @@ describe('API server', () => {
     it('resolves quoted task names exactly', () => {
       const result = planLocalIssueWrite(
         { message: 'Delete the backlog issue "Loot Table Pass"' },
-        deleteContext,
+        deleteBoard,
       );
 
       expect(result).toMatchObject({
@@ -240,7 +267,7 @@ describe('API server', () => {
     });
 
     it('resolves an unquoted task name mentioned in the message', () => {
-      const result = planLocalIssueWrite({ message: 'delete Gem Vector' }, deleteContext);
+      const result = planLocalIssueWrite({ message: 'delete Gem Vector' }, deleteBoard);
 
       expect(result).toMatchObject({
         reply: 'Ready for approval: delete "Gem Vector" from Issues.',
@@ -254,13 +281,12 @@ describe('API server', () => {
     });
 
     it('asks for clarification instead of guessing when multiple tasks match', () => {
-      const ambiguousContext = [
-        'Issues context: 2 tasks, 0 overdue, 2 staff, 1 areas, 0 milestones.',
-        'Task counts by status: Backlog: 2.',
-        'Risk queue: Loot Table Pass (Backlog, Medium priority); Old Login Flow (Backlog, Low priority).',
-      ].join('\n');
+      const ambiguousBoard = makeBoard([
+        makeTask({ id: 'loot-table-pass', name: 'Loot Table Pass', status: 'Backlog', priority: 'Medium' }),
+        makeTask({ id: 'old-login-flow', name: 'Old Login Flow', status: 'Backlog', priority: 'Low' }),
+      ]);
 
-      const result = planLocalIssueWrite({ message: 'remove the task in backlog' }, ambiguousContext);
+      const result = planLocalIssueWrite({ message: 'remove the task in backlog' }, ambiguousBoard);
 
       expect(result).toEqual({
         reply: 'EKO found 2 matching tasks: Loot Table Pass; Old Login Flow. Give the task number or exact name so EKO can prepare the delete for approval.',
@@ -272,7 +298,7 @@ describe('API server', () => {
     });
 
     it('asks for clarification when no task matches a delete request', () => {
-      const result = planLocalIssueWrite({ message: 'Delete the task "Ghost Feature"' }, deleteContext);
+      const result = planLocalIssueWrite({ message: 'Delete the task "Ghost Feature"' }, deleteBoard);
 
       expect(result).toEqual({
         reply: 'EKO could not match that to a single task in the current Issues context. Give the task number shown on the board (like "task 22") or the exact task name so EKO can prepare the delete for approval.',
@@ -283,18 +309,17 @@ describe('API server', () => {
     });
 
     it('does not treat field-level removals as issue deletes', () => {
-      expect(planLocalIssueWrite({ message: 'Remove the assignee from Gem Vector' }, deleteContext)).toBeNull();
+      expect(planLocalIssueWrite({ message: 'Remove the assignee from Gem Vector' }, deleteBoard)).toBeNull();
     });
 
-    const numberedContext = [
-      'Issues context: 3 tasks, 0 overdue, 2 staff, 1 areas, 0 milestones.',
-      'Task counts by status: Todo: 2, In Progress: 1.',
-      'All issues: #22 this is a test (Todo); #7 Gem Vector (In Progress); #9 Quiet Chore (Todo).',
-      'In progress: Gem Vector (In Progress, #7, High priority, due 2026-07-10).',
-    ].join('\n');
+    const numberedBoard = makeBoard([
+      makeTask({ id: 't22', task_number: 22, name: 'this is a test', status: 'Todo' }),
+      makeTask({ id: 't7', task_number: 7, name: 'Gem Vector', status: 'In Progress', priority: 'High', deadline: '2026-07-10' }),
+      makeTask({ id: 't9', task_number: 9, name: 'Quiet Chore', status: 'Todo' }),
+    ]);
 
     it('resolves a delete by bare task number, including tasks only in the All issues index', () => {
-      const result = planLocalIssueWrite({ message: 'Delete task 22' }, numberedContext);
+      const result = planLocalIssueWrite({ message: 'Delete task 22' }, numberedBoard);
 
       expect(result).toMatchObject({
         reply: 'Ready for approval: delete "this is a test" (#22) from Issues.',
@@ -307,20 +332,22 @@ describe('API server', () => {
     });
 
     it('asks for clarification when the referenced task number does not exist', () => {
-      expect(planLocalIssueWrite({ message: 'Delete task 99' }, numberedContext)).toMatchObject({
+      expect(planLocalIssueWrite({ message: 'Delete task 99' }, numberedBoard)).toMatchObject({
         intent: 'clarification',
       });
     });
 
-    it('parses tasks listed after a colon-containing task name in the All issues index', () => {
-      // "Concept Art: Characters …" has a colon in its name; a naive
-      // split(/:/, 2) truncates the index there and drops #18 after it.
-      const colonContext = [
-        'Issues context: 3 tasks, 0 overdue.',
-        'All issues: #6 Concept Art: Characters icons and currency (Done); #18 UI Extension (Todo); #2 Game Mechanics (Todo).',
-      ].join('\n');
+    it('resolves a task whose name contains a colon', () => {
+      // "Concept Art: Characters …" has a colon in its name — the old prose
+      // index truncated at the second colon; the structured board index reads
+      // the task's `name` field directly, so no truncation is possible.
+      const colonBoard = makeBoard([
+        makeTask({ id: 'c6', task_number: 6, name: 'Concept Art: Characters icons and currency', status: 'Done' }),
+        makeTask({ id: 'c18', task_number: 18, name: 'UI Extension', status: 'Todo' }),
+        makeTask({ id: 'c2', task_number: 2, name: 'Game Mechanics', status: 'Todo' }),
+      ]);
 
-      expect(planLocalIssueWrite({ message: 'Delete task 18' }, colonContext)).toMatchObject({
+      expect(planLocalIssueWrite({ message: 'Delete task 18' }, colonBoard)).toMatchObject({
         intent: 'approval_required',
         approval: {
           kind: 'issue.delete',
@@ -340,7 +367,7 @@ describe('API server', () => {
             ],
           },
         },
-        numberedContext,
+        numberedBoard,
       );
 
       expect(result).toMatchObject({
@@ -361,7 +388,7 @@ describe('API server', () => {
             ],
           },
         },
-        numberedContext,
+        numberedBoard,
       );
 
       expect(result).toMatchObject({
@@ -371,10 +398,10 @@ describe('API server', () => {
     });
 
     it("prepares a bulk assign from plural anaphora over EKO's last numbered list", () => {
-      const bulkContext = [
-        numberedContext,
-        'Staff: Karti (Coding, admin); Jamie (Visual Art).',
-      ].join('\n');
+      const bulkBoard = makeBoard(numberedBoard.tasks, [
+        { id: 'p-karti', display_name: 'Karti' } as never,
+        { id: 'p-jamie', display_name: 'Jamie' } as never,
+      ]);
       const result = planLocalIssueWrite(
         {
           message: 'Assign them all to Karti',
@@ -385,7 +412,7 @@ describe('API server', () => {
             ],
           },
         },
-        bulkContext,
+        bulkBoard,
       );
 
       expect(result).toMatchObject({
@@ -405,7 +432,7 @@ describe('API server', () => {
         'Delete the task "Ghost Feature"',
         'remove "Loot Table Pass"',
       ]) {
-        expect(planLocalIssueWrite({ message }, deleteContext)?.intent).not.toBe('executed');
+        expect(planLocalIssueWrite({ message }, deleteBoard)?.intent).not.toBe('executed');
       }
     });
 
@@ -471,15 +498,14 @@ describe('API server', () => {
   });
 
   describe('typed issue field updates', () => {
-    const updateContext = [
-      'Issues context: 3 tasks, 0 overdue, 2 staff, 1 areas, 0 milestones.',
-      'Task counts by status: Todo: 2, In Progress: 1.',
-      'All issues: #22 UI Extension (Todo); #7 Gem Vector (In Progress); #9 Quiet Chore (Todo).',
-      'In progress: Gem Vector (In Progress, #7, High priority, due 2026-07-10).',
-    ].join('\n');
+    const updateBoard = makeBoard([
+      makeTask({ id: 'u22', task_number: 22, name: 'UI Extension', status: 'Todo' }),
+      makeTask({ id: 'u7', task_number: 7, name: 'Gem Vector', status: 'In Progress', priority: 'High', deadline: '2026-07-10' }),
+      makeTask({ id: 'u9', task_number: 9, name: 'Quiet Chore', status: 'Todo' }),
+    ]);
 
     it('prepares priority changes as gated issue updates', () => {
-      const result = planLocalIssueWrite({ message: 'Make UI Extension high priority' }, updateContext);
+      const result = planLocalIssueWrite({ message: 'Make UI Extension high priority' }, updateBoard);
 
       expect(result).toMatchObject({
         reply: 'Ready for approval: set UI Extension to High priority.',
@@ -495,7 +521,7 @@ describe('API server', () => {
     });
 
     it('prepares due-date changes as gated issue updates', () => {
-      const result = planLocalIssueWrite({ message: 'Set UI Extension due today' }, updateContext);
+      const result = planLocalIssueWrite({ message: 'Set UI Extension due today' }, updateBoard);
 
       expect(result).toMatchObject({
         reply: 'Ready for approval: set UI Extension to due Today.',
@@ -511,7 +537,7 @@ describe('API server', () => {
     });
 
     it('prepares due-date clearing as a gated issue update', () => {
-      const result = planLocalIssueWrite({ message: 'Clear the due date for Gem Vector' }, updateContext);
+      const result = planLocalIssueWrite({ message: 'Clear the due date for Gem Vector' }, updateBoard);
 
       expect(result).toMatchObject({
         reply: 'Ready for approval: set Gem Vector to no due date.',
