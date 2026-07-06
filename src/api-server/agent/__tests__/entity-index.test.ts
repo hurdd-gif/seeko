@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { buildTaskIndex, buildStaffIndex, resolveTaskRef, parseTaskNumberRef } from '../entity-index';
+import {
+  buildTaskIndex,
+  buildStaffIndex,
+  resolveTaskRef,
+  parseTaskNumberRef,
+  buildMilestoneIndex,
+  buildAreaIndex,
+  resolveMilestoneRef,
+  resolveAreaRef,
+  resolveStaffRef,
+} from '../entity-index';
 import type { TasksBoardData } from '@/lib/tasks-board';
 import type { TaskWithAssignee } from '@/lib/types';
 
@@ -93,5 +103,51 @@ describe('parseTaskNumberRef', () => {
     expect(parseTaskNumberRef('delete task 22')).toBe(22);
     expect(parseTaskNumberRef('#22 please')).toBe(22);
     expect(parseTaskNumberRef('due in 22 days')).toBeNull();
+  });
+});
+
+describe('buildMilestoneIndex', () => {
+  it('maps every board milestone to an entry with id, name, health, targetDate', () => {
+    const board = makeBoard({
+      projectMilestones: [
+        { id: 'm1', name: 'Alpha', health: 'on_track', target_date: '2026-05-01', sort_order: 0, created_at: 'x' },
+        { id: 'm2', name: 'Beta', health: null, sort_order: 1, created_at: 'x' },
+      ] as never,
+    });
+    expect(buildMilestoneIndex(board)).toEqual([
+      { id: 'm1', name: 'Alpha', health: 'on_track', targetDate: '2026-05-01' },
+      { id: 'm2', name: 'Beta', health: undefined, targetDate: undefined },
+    ]);
+  });
+  it('returns [] for a null board', () => {
+    expect(buildMilestoneIndex(null)).toEqual([]);
+  });
+});
+
+describe('buildAreaIndex', () => {
+  it('maps every board area to an entry with id, name, status, progress, phase', () => {
+    const board = makeBoard({
+      areas: [{ id: 'a1', name: 'Main Game', status: 'Active', progress: 40, phase: 'Beta' }] as never,
+    });
+    expect(buildAreaIndex(board)).toEqual([
+      { id: 'a1', name: 'Main Game', status: 'Active', progress: 40, phase: 'Beta' },
+    ]);
+  });
+});
+
+describe('resolveMilestoneRef / resolveAreaRef / resolveStaffRef', () => {
+  it('resolves the longest contained name', () => {
+    const milestones = [
+      { id: 'm1', name: 'Alpha' },
+      { id: 'm2', name: 'Alpha Combat' },
+    ];
+    expect(resolveMilestoneRef('mark alpha combat off track', milestones)).toMatchObject({ id: 'm2' });
+    const areas = [{ id: 'a1', name: 'Main Game' }];
+    expect(resolveAreaRef('set main game to complete', areas)).toMatchObject({ id: 'a1' });
+    const staff = [{ id: 's1', name: 'Karti' }];
+    expect(resolveStaffRef('assign it to karti', staff)).toMatchObject({ id: 's1' });
+  });
+  it('returns undefined when nothing matches', () => {
+    expect(resolveAreaRef('set nothing', [{ id: 'a1', name: 'Main Game' }])).toBeUndefined();
   });
 });

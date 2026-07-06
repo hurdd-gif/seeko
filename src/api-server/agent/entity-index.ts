@@ -50,3 +50,56 @@ export function resolveTaskRef(value: string, index: TaskIndexEntry[]): TaskInde
     .sort((a, b) => b.name.length - a.name.length)
     .find((task) => normalized.includes(task.name.toLowerCase()));
 }
+
+export type MilestoneIndexEntry = { id: string; name: string; health?: string; targetDate?: string };
+export type AreaIndexEntry = {
+  id: string;
+  name: string;
+  status?: string;
+  progress?: number;
+  phase?: string;
+};
+
+export function buildMilestoneIndex(board: TasksBoardData | null): MilestoneIndexEntry[] {
+  if (!board) return [];
+  return board.projectMilestones.map((milestone) => ({
+    id: milestone.id,
+    name: milestone.name,
+    health: milestone.health ?? undefined,
+    targetDate: milestone.target_date ?? undefined,
+  }));
+}
+
+export function buildAreaIndex(board: TasksBoardData | null): AreaIndexEntry[] {
+  if (!board) return [];
+  return board.areas.map((area) => ({
+    id: area.id,
+    name: area.name,
+    status: area.status ?? undefined,
+    progress: typeof area.progress === 'number' ? area.progress : undefined,
+    phase: area.phase ?? undefined,
+  }));
+}
+
+/** Longest-contained-name match — the shared name-resolution idiom. */
+function resolveByName<T extends { name: string }>(value: string, index: T[]): T | undefined {
+  const normalized = value.toLowerCase();
+  return [...index]
+    .sort((a, b) => b.name.length - a.name.length)
+    .find((entry) => normalized.includes(entry.name.toLowerCase()));
+}
+
+export function resolveMilestoneRef(
+  value: string,
+  index: MilestoneIndexEntry[],
+): MilestoneIndexEntry | undefined {
+  return resolveByName(value, index);
+}
+
+export function resolveAreaRef(value: string, index: AreaIndexEntry[]): AreaIndexEntry | undefined {
+  return resolveByName(value, index);
+}
+
+export function resolveStaffRef(value: string, index: StaffIndexEntry[]): StaffIndexEntry | undefined {
+  return resolveByName(value, index);
+}
