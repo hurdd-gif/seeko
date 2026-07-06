@@ -5,9 +5,11 @@ import {
   composeAgentContext,
   formatActivitySection,
   formatAreasSection,
+  formatExtensionsSection,
   formatIssuesSection,
   formatNotesSection,
   formatTeamSection,
+  type AgentDeadlineExtensionsSnapshot,
   type AgentContextData,
   type AgentNotesSnapshot,
   type AgentRosterEntry,
@@ -144,6 +146,22 @@ function makePayments(): PaymentsIndexData {
     ],
     pendingRequests: [],
     recentPaid: [],
+  };
+}
+
+function makeExtensions(): AgentDeadlineExtensionsSnapshot {
+  return {
+    pending: [
+      {
+        id: 'ext-1',
+        taskId: 'task-1',
+        taskName: 'UI Extension',
+        requesterName: 'Mel',
+        extraHours: 48,
+        originalDeadline: '2026-07-04',
+        newDeadline: '2026-07-06',
+      },
+    ],
   };
 }
 
@@ -304,6 +322,18 @@ describe('formatNotesSection', () => {
   });
 });
 
+describe('formatExtensionsSection', () => {
+  it('lists pending deadline extension requests with stable ids', () => {
+    expect(formatExtensionsSection(makeExtensions())).toBe(
+      'Pending deadline extensions: UI Extension (48h, 2026-07-04 → 2026-07-06, by Mel, id ext-1).',
+    );
+  });
+
+  it('handles an empty extension queue', () => {
+    expect(formatExtensionsSection({ pending: [] })).toBe('Pending deadline extensions: none.');
+  });
+});
+
 describe('composeAgentContext', () => {
   function makeData(overrides: Partial<AgentContextData> = {}): AgentContextData {
     return {
@@ -312,6 +342,7 @@ describe('composeAgentContext', () => {
       notes: { openCount: 1, recent: [{ body: 'Note', source: 'web', createdAt: null }] },
       docs: makeDocs(),
       payments: makePayments(),
+      extensions: makeExtensions(),
       ...overrides,
     };
   }
@@ -331,6 +362,7 @@ describe('composeAgentContext', () => {
     expect(context).toContain('Locked docs: Investor Deck.');
     expect(context).toContain('Payments context: 2 people owed, 1 payments this month, pending total 450 USD, paid this month 200.');
     expect(context).toContain('Payment roster: Mel pending 450.');
+    expect(context).toContain('Pending deadline extensions: UI Extension (48h, 2026-07-04 → 2026-07-06, by Mel, id ext-1).');
     expect(context).toContain(EKO_CAPABILITIES);
   });
 
@@ -339,7 +371,8 @@ describe('composeAgentContext', () => {
       makeData({
         board: null,
         payments: null,
-        reasons: { board: 'profile_not_found', payments: 'not visible for this user' },
+        extensions: null,
+        reasons: { board: 'profile_not_found', payments: 'not visible for this user', extensions: 'not visible for this user' },
       }),
       NOW,
     );
@@ -348,6 +381,7 @@ describe('composeAgentContext', () => {
     expect(context).toContain('Areas context: unavailable (profile_not_found).');
     expect(context).toContain('Activity context: unavailable (profile_not_found).');
     expect(context).toContain('Payments context: unavailable (not visible for this user).');
+    expect(context).toContain('Deadline extensions context: unavailable (not visible for this user).');
     // Healthy sections still render.
     expect(context).toContain('Team context: 2 staff, 1 investors.');
   });
@@ -397,6 +431,7 @@ describe('EKO_CAPABILITIES', () => {
     expect(EKO_CAPABILITIES).toContain('payment.create');
     expect(EKO_CAPABILITIES).toContain('payment.refund');
     expect(EKO_CAPABILITIES).toContain('payment.update');
+    expect(EKO_CAPABILITIES).toContain('deadline_extension.update');
     expect(EKO_CAPABILITIES).toContain('gated behind explicit user approval');
     expect(EKO_CAPABILITIES).toContain('Not supported yet');
     expect(EKO_CAPABILITIES).not.toContain('creating or editing docs');
@@ -416,6 +451,7 @@ describe('buildAgentDashboardContext', () => {
         loadNotes: async () => ({ openCount: 2, recent: [{ body: 'Hi', source: 'web', createdAt: null }] }),
         loadDocs: async () => makeDocs(),
         loadPayments: async () => makePayments(),
+        loadExtensions: async () => makeExtensions(),
       },
       NOW,
     );
@@ -424,6 +460,7 @@ describe('buildAgentDashboardContext', () => {
     expect(context).toContain('In progress: UI Extension (In Progress, #12, High priority).');
     expect(context).toContain('Notes inbox: 2 open.');
     expect(context).toContain('Payments context: 2 people owed');
+    expect(context).toContain('Pending deadline extensions: UI Extension');
     expect(context).toContain(EKO_CAPABILITIES);
   });
 
@@ -433,7 +470,7 @@ describe('buildAgentDashboardContext', () => {
     };
     const context = await buildAgentDashboardContext(
       user,
-      { loadBoard: boom, loadRoster: boom, loadNotes: boom, loadDocs: boom, loadPayments: boom },
+      { loadBoard: boom, loadRoster: boom, loadNotes: boom, loadDocs: boom, loadPayments: boom, loadExtensions: boom },
       NOW,
     );
 
@@ -443,6 +480,7 @@ describe('buildAgentDashboardContext', () => {
     // Board failed → not admin → payments/notes skipped, not attempted.
     expect(context).toContain('Payments context: unavailable (not visible for this user).');
     expect(context).toContain('Notes context: unavailable (not visible for this user).');
+    expect(context).toContain('Deadline extensions context: unavailable (not visible for this user).');
     expect(context).toContain(EKO_CAPABILITIES);
   });
 
@@ -467,6 +505,7 @@ describe('buildAgentDashboardContext', () => {
   it('skips payments and notes reads for non-admin users', async () => {
     let paymentsCalled = false;
     let notesCalled = false;
+    let extensionsCalled = false;
     const context = await buildAgentDashboardContext(
       user,
       {
@@ -481,13 +520,19 @@ describe('buildAgentDashboardContext', () => {
           notesCalled = true;
           return { openCount: 0, recent: [] };
         },
+        loadExtensions: async () => {
+          extensionsCalled = true;
+          return makeExtensions();
+        },
       },
       NOW,
     );
 
     expect(paymentsCalled).toBe(false);
     expect(notesCalled).toBe(false);
+    expect(extensionsCalled).toBe(false);
     expect(context).toContain('Payments context: unavailable (not visible for this user).');
     expect(context).toContain('Notes context: unavailable (not visible for this user).');
+    expect(context).toContain('Deadline extensions context: unavailable (not visible for this user).');
   });
 });

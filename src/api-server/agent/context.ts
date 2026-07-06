@@ -50,7 +50,19 @@ export type AgentNotesSnapshot = {
   }[];
 };
 
-type SectionKey = 'roster' | 'board' | 'notes' | 'docs' | 'payments';
+export type AgentDeadlineExtensionsSnapshot = {
+  pending: {
+    id: string;
+    taskId: string;
+    taskName: string;
+    requesterName: string | null;
+    extraHours: number;
+    originalDeadline: string;
+    newDeadline: string;
+  }[];
+};
+
+type SectionKey = 'roster' | 'board' | 'notes' | 'docs' | 'payments' | 'extensions';
 
 export type AgentContextData = {
   roster: AgentRosterEntry[] | null;
@@ -58,6 +70,7 @@ export type AgentContextData = {
   notes: AgentNotesSnapshot | null;
   docs: DocsIndexData | null;
   payments: PaymentsIndexData | null;
+  extensions: AgentDeadlineExtensionsSnapshot | null;
   /** Optional per-section failure reasons, surfaced in the unavailable lines. */
   reasons?: Partial<Record<SectionKey, string>>;
 };
@@ -68,6 +81,7 @@ export type AgentContextLoaders = {
   loadNotes: (user: AgentContextUser) => Promise<AgentNotesSnapshot>;
   loadDocs: (user: AgentContextUser) => Promise<DocsIndexData>;
   loadPayments: (user: AgentContextUser) => Promise<PaymentsIndexData>;
+  loadExtensions: (user: AgentContextUser) => Promise<AgentDeadlineExtensionsSnapshot>;
 };
 
 /**
@@ -76,29 +90,29 @@ export type AgentContextLoaders = {
  * execute. Keep in sync with the typed tools in routes/agent.ts.
  */
 export const EKO_CAPABILITIES = [
-  'EKO capabilities:',
-  'Typed writes gated behind explicit user approval:',
-  '- issue.create: create issue (title, status, priority, due).',
-  '- issue.update (status): move issue status.',
+  'Writes gated behind explicit user approval:',
+  '- issue.create: create issue.',
+  '- issue.update (status): move issue.',
   '- issue.update (assign): assign issue.',
   '- issue.update (priority): change issue priority.',
   '- issue.update (due): set/clear issue due date.',
   '- issue.delete: delete issue (destructive).',
-  '- area.update: update area progress/status/phase.',
+  '- area.update: update area.',
   '- milestone.create: create milestone.',
-  '- milestone.update: update milestone health/due.',
+  '- milestone.update: update milestone.',
   '- milestone.link/unlink: issue to/from milestone.',
   '- doc.create: create doc/deck.',
-  '- doc.update: replace text doc content.',
+  '- doc.update: update doc.',
   '- doc.delete: delete doc/deck.',
   '- note.create: add inbox note',
   '- note.archive: archive one open inbox note.',
   '- payment.create: create pending payment',
   '- payment.refund: record refund on paid payment',
   '- payment.update: mark pending payment paid/cancelled',
-  'Read: roster, areas, milestones, issues, activity, notes, docs, payments.',
-  'Not supported yet: deck slide edits, emails/invites, deleting milestones, issue descriptions, publishing.',
-  'If asked for an unsupported write: say EKO cannot do that yet, then offer the closest supported action or point to the dashboard UI. Never claim a write happened unless an approved action was executed.',
+  '- deadline_extension.update: approve/deny extension.',
+  'Read: roster, areas, milestones, issues, activity, notes, docs, payments, extensions.',
+  'Not supported yet: slide edits, emails/invites, deleting milestones, issue descriptions, publishing.',
+  'If asked for an unsupported write: say EKO cannot do that yet and offer a supported action. Never claim a write happened unless an approved action executed.',
 ].join('\n');
 
 // ---------------------------------------------------------------------------
@@ -333,6 +347,16 @@ export function formatNotesSection(notes: AgentNotesSnapshot, now: Date): string
     : 'Notes inbox: empty.';
 }
 
+export function formatExtensionsSection(extensions: AgentDeadlineExtensionsSnapshot): string {
+  const pending = extensions.pending.slice(0, 5).map((item) => (
+    `${item.taskName} (${item.extraHours}h, ${item.originalDeadline} → ${item.newDeadline}${item.requesterName ? `, by ${item.requesterName}` : ''}, id ${item.id})`
+  ));
+
+  return pending.length
+    ? `Pending deadline extensions: ${pending.join(LIST_JOIN)}.`
+    : 'Pending deadline extensions: none.';
+}
+
 export function formatDocsSection(data: DocsIndexData): string {
   const visibleDocs = data.docs.filter((doc) => !doc.locked);
   const lockedDocs = data.docs.filter((doc) => doc.locked);
@@ -399,6 +423,7 @@ export function composeAgentContext(data: AgentContextData, now: Date = new Date
     ),
     guardSection('Activity', reasons.board, () => (data.board ? formatActivitySection(data.board, now) : null)),
     guardSection('Notes', reasons.notes, () => (data.notes ? formatNotesSection(data.notes, now) : null)),
+    guardSection('Deadline extensions', reasons.extensions, () => (data.extensions ? formatExtensionsSection(data.extensions) : null)),
     guardSection('Docs', reasons.docs, () => (data.docs ? formatDocsSection(data.docs) : null)),
     guardSection('Payments', reasons.payments, () => (data.payments ? formatPaymentsSection(data.payments) : null)),
     EKO_CAPABILITIES,
@@ -454,12 +479,44 @@ async function loadNotesFromSupabase(): Promise<AgentNotesSnapshot> {
   };
 }
 
+async function loadExtensionsFromSupabase(): Promise<AgentDeadlineExtensionsSnapshot> {
+  const service = getServiceClient();
+  const { data, error } = await (service as any)
+    .from('deadline_extensions')
+    .select('id, task_id, requested_by, extra_hours, original_deadline, new_deadline, task:tasks(name), requester:profiles!deadline_extensions_requested_by_fkey(display_name)')
+    .eq('status', 'pending')
+    .order('created_at', { ascending: false })
+    .limit(5);
+  if (error) throw error;
+
+  return {
+    pending: ((data ?? []) as Array<{
+      id: string;
+      task_id: string;
+      extra_hours: number;
+      original_deadline: string;
+      new_deadline: string;
+      task?: { name?: string | null } | null;
+      requester?: { display_name?: string | null } | null;
+    }>).map((row) => ({
+      id: row.id,
+      taskId: row.task_id,
+      taskName: row.task?.name ?? row.task_id,
+      requesterName: row.requester?.display_name ?? null,
+      extraHours: row.extra_hours,
+      originalDeadline: row.original_deadline,
+      newDeadline: row.new_deadline,
+    })),
+  };
+}
+
 const defaultLoaders: AgentContextLoaders = {
   loadBoard: (user) => loadTasksBoard(user),
   loadRoster: () => loadRosterFromSupabase(),
   loadNotes: () => loadNotesFromSupabase(),
   loadDocs: (user) => loadDocsIndex(user),
   loadPayments: (user) => loadPaymentsIndex(user),
+  loadExtensions: () => loadExtensionsFromSupabase(),
 };
 
 // ---------------------------------------------------------------------------
@@ -494,6 +551,7 @@ export async function buildAgentDashboardContext(
     notes: null,
     docs: null,
     payments: null,
+    extensions: null,
     reasons: {},
   };
   const reasons = data.reasons as NonNullable<AgentContextData['reasons']>;
@@ -515,17 +573,21 @@ export async function buildAgentDashboardContext(
   // entirely for non-admins (mirrors the previous behavior in routes/agent.ts).
   const isAdmin = data.board?.isAdmin ?? false;
   if (isAdmin) {
-    const [paymentsResult, notesResult] = await Promise.all([
+    const [paymentsResult, notesResult, extensionsResult] = await Promise.all([
       settle(() => loaders.loadPayments(user)),
       settle(() => loaders.loadNotes(user)),
+      settle(() => loaders.loadExtensions(user)),
     ]);
     if (paymentsResult.ok) data.payments = paymentsResult.value;
     else reasons.payments = paymentsResult.reason;
     if (notesResult.ok) data.notes = notesResult.value;
     else reasons.notes = notesResult.reason;
+    if (extensionsResult.ok) data.extensions = extensionsResult.value;
+    else reasons.extensions = extensionsResult.reason;
   } else {
     reasons.payments = 'not visible for this user';
     reasons.notes = 'not visible for this user';
+    reasons.extensions = 'not visible for this user';
   }
 
   return composeAgentContext(data, now);

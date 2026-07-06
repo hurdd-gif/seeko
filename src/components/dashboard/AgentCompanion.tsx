@@ -87,7 +87,7 @@ type EkoApiResponse = {
   model?: string;
   intent?: 'answer' | 'clarification' | 'details_needed' | 'approval_required' | 'executed' | 'rejected';
   approval?: {
-    kind?: 'issue.create' | 'issue.update' | 'issue.delete' | 'area.update' | 'milestone.create' | 'milestone.update' | 'milestone.link' | 'milestone.unlink' | 'doc.create' | 'doc.update' | 'doc.delete' | 'note.create' | 'note.archive' | 'payment.create' | 'payment.refund' | 'payment.update' | 'generic';
+    kind?: 'issue.create' | 'issue.update' | 'issue.delete' | 'area.update' | 'milestone.create' | 'milestone.update' | 'milestone.link' | 'milestone.unlink' | 'doc.create' | 'doc.update' | 'doc.delete' | 'note.create' | 'note.archive' | 'payment.create' | 'payment.refund' | 'payment.update' | 'deadline_extension.update' | 'generic';
     title?: string;
     copy?: string;
     draft?: {
@@ -109,6 +109,9 @@ type EkoApiResponse = {
       taskNumber?: string;
       taskNumbers?: string;
       assigneeName?: string;
+      extensionId?: string;
+      action?: string;
+      reason?: string;
     };
   };
   /**

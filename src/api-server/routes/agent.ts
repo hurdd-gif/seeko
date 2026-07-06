@@ -39,9 +39,31 @@ type AgentApprovalDraft = {
   description?: string;
   itemLabel?: string;
   refundNote?: string;
+  extensionId?: string;
+  action?: string;
+  reason?: string;
 };
+type AgentApprovalKind =
+  | 'issue.create'
+  | 'issue.update'
+  | 'issue.delete'
+  | 'area.update'
+  | 'milestone.create'
+  | 'milestone.update'
+  | 'milestone.link'
+  | 'milestone.unlink'
+  | 'doc.create'
+  | 'doc.update'
+  | 'doc.delete'
+  | 'note.create'
+  | 'note.archive'
+  | 'payment.create'
+  | 'payment.refund'
+  | 'payment.update'
+  | 'deadline_extension.update'
+  | 'generic';
 type AgentApproval = {
-  kind: 'issue.create' | 'issue.update' | 'issue.delete' | 'area.update' | 'milestone.create' | 'milestone.update' | 'milestone.link' | 'milestone.unlink' | 'doc.create' | 'doc.update' | 'doc.delete' | 'note.create' | 'note.archive' | 'payment.create' | 'payment.refund' | 'payment.update' | 'generic';
+  kind: AgentApprovalKind;
   title: string;
   copy: string;
   draft?: AgentApprovalDraft;
@@ -357,26 +379,7 @@ function parseSuggestion(value: unknown): AgentChatInput['suggestion'] {
 function parseApproval(value: unknown): AgentApproval | undefined {
   if (!value || typeof value !== 'object') return undefined;
   const record = value as Record<string, unknown>;
-  const kind =
-    record.kind === 'issue.create' ||
-    record.kind === 'issue.update' ||
-    record.kind === 'issue.delete' ||
-    record.kind === 'area.update' ||
-    record.kind === 'milestone.create' ||
-    record.kind === 'milestone.update' ||
-    record.kind === 'milestone.link' ||
-    record.kind === 'milestone.unlink' ||
-    record.kind === 'doc.create' ||
-    record.kind === 'doc.update' ||
-    record.kind === 'doc.delete' ||
-    record.kind === 'note.create' ||
-    record.kind === 'note.archive' ||
-    record.kind === 'payment.create' ||
-    record.kind === 'payment.refund' ||
-    record.kind === 'payment.update' ||
-    record.kind === 'generic'
-      ? record.kind
-      : null;
+  const kind = isAgentApprovalKind(record.kind) ? record.kind : null;
   const title = typeof record.title === 'string' ? record.title.trim().slice(0, 120) : '';
   const copy = typeof record.copy === 'string' ? record.copy.trim().slice(0, 500) : '';
   if (!kind || !title || !copy) return undefined;
@@ -393,7 +396,7 @@ function parseApprovalDraft(value: unknown): AgentApprovalDraft | undefined {
   if (!value || typeof value !== 'object') return undefined;
   const record = value as Record<string, unknown>;
   const draft: AgentApprovalDraft = {};
-  for (const key of ['title', 'areaName', 'milestoneName', 'status', 'priority', 'health', 'progress', 'phase', 'dueDate', 'targetDate', 'docType', 'docTitle', 'taskName', 'taskNumber', 'taskNumbers', 'assigneeName', 'paymentId', 'recipientName', 'amount', 'description', 'itemLabel', 'refundNote'] as const) {
+  for (const key of ['title', 'areaName', 'milestoneName', 'status', 'priority', 'health', 'progress', 'phase', 'dueDate', 'targetDate', 'docType', 'docTitle', 'taskName', 'taskNumber', 'taskNumbers', 'assigneeName', 'paymentId', 'recipientName', 'amount', 'description', 'itemLabel', 'refundNote', 'extensionId', 'action', 'reason'] as const) {
     const field = record[key];
     if (typeof field === 'string' && field.trim()) draft[key] = field.trim().slice(0, 140);
   }
@@ -404,6 +407,27 @@ function parseApprovalDraft(value: unknown): AgentApprovalDraft | undefined {
     draft.noteBody = record.noteBody.trim().slice(0, 1_000);
   }
   return Object.keys(draft).length ? draft : undefined;
+}
+
+function isAgentApprovalKind(value: unknown): value is AgentApprovalKind {
+  return value === 'issue.create' ||
+    value === 'issue.update' ||
+    value === 'issue.delete' ||
+    value === 'area.update' ||
+    value === 'milestone.create' ||
+    value === 'milestone.update' ||
+    value === 'milestone.link' ||
+    value === 'milestone.unlink' ||
+    value === 'doc.create' ||
+    value === 'doc.update' ||
+    value === 'doc.delete' ||
+    value === 'note.create' ||
+    value === 'note.archive' ||
+    value === 'payment.create' ||
+    value === 'payment.refund' ||
+    value === 'payment.update' ||
+    value === 'deadline_extension.update' ||
+    value === 'generic';
 }
 
 function parseClientContext(value: unknown): AgentChatInput['clientContext'] {
@@ -481,6 +505,9 @@ async function runAgentChat(
 
   const localMilestonePlan = planLocalMilestoneWrite(input, dashboardContext);
   if (localMilestonePlan) return localMilestonePlan;
+
+  const localDeadlineExtensionPlan = planLocalDeadlineExtensionWrite(input, dashboardContext);
+  if (localDeadlineExtensionPlan) return localDeadlineExtensionPlan;
 
   const localPaymentPlan = planLocalPaymentWrite(input, dashboardContext);
   if (localPaymentPlan) return localPaymentPlan;
@@ -637,6 +664,10 @@ async function executeTypedApproval(approval: AgentApproval, user: Authenticated
 
   if (approval.kind === 'note.archive') {
     return executeNoteArchiveDraft(approval.draft, user);
+  }
+
+  if (approval.kind === 'deadline_extension.update') {
+    return executeDeadlineExtensionDraft(approval.draft, user);
   }
 
   if (approval.kind === 'payment.create') {
@@ -835,7 +866,27 @@ type PaymentWriteDraft = {
   amount?: string;
   description?: string;
   itemLabel?: string;
+  refundNote?: string;
   status?: Extract<PaymentStatus, 'paid' | 'cancelled'>;
+};
+
+type DeadlineExtensionWriteDraft = {
+  extensionId?: string;
+  taskName?: string;
+  action?: 'approve' | 'deny';
+  reason?: string;
+};
+
+type DeadlineExtensionCandidate = {
+  id: string;
+  task_id: string;
+  requested_by: string;
+  extra_hours: number;
+  original_deadline: string;
+  new_deadline: string;
+  status: string;
+  task?: { name?: string | null } | null;
+  tasks?: { name?: string | null } | null;
 };
 
 type PaymentCandidate = {
@@ -1135,6 +1186,46 @@ export function planLocalMilestoneWrite(input: AgentChatInput, dashboardContext:
       kind: 'milestone.update',
       title: `Update ${draft.milestoneName}`,
       copy: `Update milestone ${draft.milestoneName}: ${updates.join(', ')}.`,
+      draft,
+    },
+  };
+}
+
+export function planLocalDeadlineExtensionWrite(input: AgentChatInput, dashboardContext: string): AgentChatResult | null {
+  if (input.mode === 'approval') return null;
+
+  const draft = parseDeadlineExtensionUpdateDraft(input.message.trim(), dashboardContext);
+  if (!draft) return null;
+
+  if (!draft.action) {
+    return {
+      reply: 'Should EKO approve or deny the pending deadline extension?',
+      provider: 'openai',
+      model: 'eko-local-planner',
+      intent: 'clarification',
+    };
+  }
+
+  if (!draft.extensionId && !draft.taskName) {
+    return {
+      reply: 'Which pending deadline extension should EKO review?',
+      provider: 'openai',
+      model: 'eko-local-planner',
+      intent: 'clarification',
+    };
+  }
+
+  const actionLabel = draft.action === 'approve' ? 'approve' : 'deny';
+  const target = draft.taskName ?? `extension ${draft.extensionId}`;
+  return {
+    reply: `Ready for approval: ${actionLabel} deadline extension for ${target}.`,
+    provider: 'openai',
+    model: 'eko-local-planner',
+    intent: 'approval_required',
+    approval: {
+      kind: 'deadline_extension.update',
+      title: `${capitalize(actionLabel)} ${target} extension`,
+      copy: `${capitalize(actionLabel)} pending deadline extension for ${target}.`,
       draft,
     },
   };
@@ -1809,6 +1900,120 @@ async function executeNoteArchiveDraft(
     provider: 'openai',
     model: 'eko-local-write',
     intent: 'executed',
+  };
+}
+
+async function executeDeadlineExtensionDraft(
+  draft: AgentApprovalDraft | DeadlineExtensionWriteDraft | undefined,
+  user: AuthenticatedUser,
+): Promise<AgentChatResult | null> {
+  const action = parseDeadlineExtensionAction(draft?.action ?? '');
+  const extensionId = draft?.extensionId;
+  const taskName = draft?.taskName;
+  const reason = draft?.reason?.trim();
+
+  if (!action || (!extensionId && !taskName)) {
+    return {
+      reply: `Add ${formatList([
+        action ? null : 'approve or deny',
+        extensionId || taskName ? null : 'pending extension target',
+      ].filter(Boolean))} before EKO can update the deadline extension. No dashboard changes were made.`,
+      provider: 'openai',
+      model: 'eko-local-approval',
+      intent: 'details_needed',
+      approval: {
+        kind: 'deadline_extension.update',
+        title: taskName ? `Review ${taskName} extension` : 'Review deadline extension',
+        copy: 'Add the pending extension target and decision so EKO can prepare this for approval.',
+        draft,
+      },
+    };
+  }
+
+  await assertAdminUser(user.id);
+  const service = getServiceClient();
+  const { data, error } = await (service as any)
+    .from('deadline_extensions')
+    .select('id, task_id, requested_by, extra_hours, original_deadline, new_deadline, status, task:tasks(name)')
+    .eq('status', 'pending');
+  if (error) throw new AgentProviderError('EKO could not read pending deadline extensions.', 500);
+
+  const pending = ((data ?? []) as DeadlineExtensionCandidate[]).filter((extension) =>
+    extensionId ? extension.id === extensionId : matchesExtensionTask(extension, taskName ?? ''),
+  );
+
+  if (pending.length !== 1) {
+    return {
+      reply: pending.length
+        ? `EKO found ${pending.length} pending deadline extensions for ${taskName}. No dashboard changes were made; use the exact extension ID.`
+        : `Approval recorded, but EKO could not find a pending deadline extension for ${taskName ?? extensionId}. No dashboard changes were made.`,
+      provider: 'openai',
+      model: 'eko-local-approval',
+      intent: 'details_needed',
+    };
+  }
+
+  const extension = pending[0];
+  const resolvedTaskName = getExtensionTaskName(extension);
+  const nextStatus = action === 'approve' ? 'approved' : 'denied';
+  const decidedAt = new Date().toISOString();
+  const updatePayload: Record<string, unknown> = {
+    status: nextStatus,
+    decided_by: user.id,
+    decided_at: decidedAt,
+  };
+  if (action === 'deny' && reason) updatePayload.denial_reason = reason;
+
+  const { error: extensionError } = await (service as any)
+    .from('deadline_extensions')
+    .update(updatePayload)
+    .eq('id', extension.id)
+    .eq('status', 'pending');
+  if (extensionError) throw new AgentProviderError('EKO could not update the deadline extension.', 500);
+
+  if (action === 'approve') {
+    const { error: taskError } = await (service as any)
+      .from('tasks')
+      .update({ deadline: extension.new_deadline })
+      .eq('id', extension.task_id);
+    if (taskError) {
+      await (service as any)
+        .from('deadline_extensions')
+        .update({ status: 'pending', decided_by: null, decided_at: null, denial_reason: null })
+        .eq('id', extension.id);
+      throw new AgentProviderError('EKO could not update the task deadline.', 500);
+    }
+  }
+
+  await service.from('activity_log').insert({
+    user_id: user.id,
+    action: action === 'approve' ? 'Approved extension' : 'Denied extension',
+    target: `task: ${resolvedTaskName}`,
+    task_id: extension.task_id,
+    source: 'eko',
+  } as never);
+  await service.from('notifications').insert({
+    user_id: extension.requested_by,
+    kind: action === 'approve' ? 'deadline_extension_approved' : 'deadline_extension_denied',
+    title: action === 'approve' ? `Extension approved on "${resolvedTaskName}"` : `Extension denied on "${resolvedTaskName}"`,
+    body: reason ?? null,
+    link: `/tasks?task=${extension.task_id}`,
+    read: false,
+  } as never);
+
+  return {
+    reply: action === 'approve'
+      ? `Approved deadline extension for ${resolvedTaskName}; due date is now ${extension.new_deadline}.`
+      : `Denied deadline extension for ${resolvedTaskName}.`,
+    provider: 'openai',
+    model: 'eko-local-write',
+    intent: 'executed',
+    target: {
+      kind: 'task',
+      taskId: extension.task_id,
+      name: resolvedTaskName,
+      action: 'dueDate',
+    },
   };
 }
 
@@ -2740,6 +2945,23 @@ function parseMilestoneLinkDraft(value: string, dashboardContext: string): Miles
   };
 }
 
+function parseDeadlineExtensionUpdateDraft(value: string, dashboardContext: string): DeadlineExtensionWriteDraft | null {
+  const mentionsDeadlineExtension = /\b(deadline extension|extension request|extend(?:ed|ing)? deadline|more time|requested extension)\b/i.test(value)
+    || (/\b(?:approve|deny|reject|decline)\b/i.test(value) && /\b(?:extension|deadline)\b/i.test(value));
+  if (!mentionsDeadlineExtension) return null;
+  const taskName = findMentionedExtensionTaskName(value, dashboardContext) || undefined;
+  const matchedExtension = taskName
+    ? parseDeadlineExtensionIndex(dashboardContext).find((extension) => extension.taskName.toLowerCase() === taskName.toLowerCase())
+    : null;
+
+  return {
+    action: parseDeadlineExtensionAction(value),
+    extensionId: parseExtensionIdRef(value, dashboardContext) ?? matchedExtension?.id,
+    taskName,
+    reason: parseExtensionReason(value),
+  };
+}
+
 function parsePaymentRefundDraft(value: string, dashboardContext: string): PaymentWriteDraft | null {
   if (!/\b(refund|refunded|refunds|reimburse|reimbursement)\b/i.test(value)) return null;
   if (!/\b(payment|payments|payout|payouts|invoice|invoices|paid)\b/i.test(value)) return null;
@@ -3358,6 +3580,13 @@ function findMentionedPaymentRecipientName(value: string, dashboardContext: stri
     .find((payment) => normalized.includes(payment.name.toLowerCase()))?.name;
 }
 
+function findMentionedExtensionTaskName(value: string, dashboardContext: string) {
+  const normalized = value.toLowerCase();
+  return parseDeadlineExtensionIndex(dashboardContext)
+    .sort((a, b) => b.taskName.length - a.taskName.length)
+    .find((extension) => normalized.includes(extension.taskName.toLowerCase()))?.taskName;
+}
+
 function findTaskInBoard(value: string, board: TasksBoardData | null) {
   if (!board) return null;
   const normalized = value.toLowerCase();
@@ -3457,6 +3686,58 @@ function parseDashboardPaymentRosterIndex(dashboardContext: string) {
       return name && !/^none visible$/i.test(name) ? { name } : null;
     })
     .filter((entry): entry is { name: string } => Boolean(entry));
+}
+
+function parseDeadlineExtensionIndex(dashboardContext: string) {
+  const line = dashboardContext
+    .split('\n')
+    .find((entry) => /^Pending deadline extensions:/i.test(entry));
+  if (!line) return [] as Array<{ id?: string; taskName: string }>;
+
+  return line
+    .slice(line.indexOf(':') + 1)
+    .split(';')
+    .map((part) => {
+      const raw = part.trim().replace(/\.$/, '');
+      if (!raw || /^none$/i.test(raw)) return null;
+      const match = raw.match(/^(.+?)\s+\((.*)\)$/);
+      const taskName = (match?.[1] ?? raw).trim();
+      const meta = match?.[2] ?? '';
+      const id = meta.match(/\bid\s+([a-z0-9_-]+)/i)?.[1];
+      return taskName ? { id, taskName } : null;
+    })
+    .filter((entry): entry is { id?: string; taskName: string } => Boolean(entry));
+}
+
+function parseDeadlineExtensionAction(value: string): DeadlineExtensionWriteDraft['action'] {
+  if (/\b(?:deny|denied|reject|rejected|decline|declined)\b/i.test(value)) return 'deny';
+  if (/\b(?:approve|approved|accept|accepted|grant|allow)\b/i.test(value)) return 'approve';
+  return undefined;
+}
+
+function parseExtensionIdRef(value: string, dashboardContext: string): string | undefined {
+  const explicit = value.match(/\b(?:extension|request|id)\s+#?([a-z0-9_-]{3,})\b/i)?.[1];
+  if (explicit && !/^(?:for|request|extension|deadline|approve|deny|reject)$/i.test(explicit)) return explicit;
+  const normalized = value.toLowerCase();
+  return parseDeadlineExtensionIndex(dashboardContext)
+    .find((extension) => extension.id && normalized.includes(extension.id.toLowerCase()))?.id;
+}
+
+function parseExtensionReason(value: string): string | undefined {
+  const match = value.match(/\b(?:because|reason|note)\s+(.+?)(?:[.?!]|$)/i)?.[1];
+  const reason = match?.replace(/\s+/g, ' ').trim().slice(0, 140);
+  return reason || undefined;
+}
+
+function matchesExtensionTask(extension: DeadlineExtensionCandidate, taskName: string) {
+  const target = taskName.trim().toLowerCase();
+  if (!target) return false;
+  const label = getExtensionTaskName(extension).toLowerCase();
+  return label === target || label.includes(target) || target.includes(label);
+}
+
+function getExtensionTaskName(extension: DeadlineExtensionCandidate) {
+  return extension.task?.name ?? extension.tasks?.name ?? extension.task_id;
 }
 
 function matchesPaymentRecipient(payment: PaymentCandidate, recipientName: string) {
