@@ -72,6 +72,21 @@ const deliverables: ContractorStepDeliverable[] = [
   }),
   // Zero steps → "No steps yet".
   d({ id: 'd4', name: 'Character portraits', department: 'Visual Art', status: 'Todo', priority: 'Low', steps: [] }),
+  // Deadline-extension affordance states: a pending request (amber pill) and a
+  // denied request (note + reason + "Request again").
+  d({
+    id: 'd-ext-pending', name: 'Combat VFX pass', department: 'Animation', status: 'In Progress',
+    priority: 'High', progress: 30, deadline: '2026-07-20',
+    steps: [{ id: 'p1', name: 'Blockout', deadline: '2026-07-14', state: 'done', sort_order: 0 },
+            { id: 'p2', name: 'Polish', deadline: '2026-07-20', state: 'pending', sort_order: 1 }],
+    latestExtension: { id: 'x1', status: 'pending', requested_deadline: '2026-07-27', reason: 'Extra polish', denial_reason: null },
+  }),
+  d({
+    id: 'd-ext-denied', name: 'Store page copy', department: 'UI/UX', status: 'In Progress',
+    priority: 'Medium', progress: 50, deadline: '2026-07-12',
+    steps: [{ id: 'q1', name: 'First draft', deadline: '2026-07-12', state: 'pending', sort_order: 0 }],
+    latestExtension: { id: 'x2', status: 'denied', requested_deadline: '2026-07-19', reason: null, denial_reason: 'Launch date is locked' },
+  }),
   // Delivered — condense into the Timeline zone (splitDeliverables files Done
   // deliverables under the month-grouped history). All steps done.
   d({ id: 't1', name: 'Combat SFX pack', department: 'Asset Creation', status: 'Done', deadline: '2026-06-20', progress: 100, steps: [{ id: 't1s1', name: 'Delivered', deadline: '2026-06-20', state: 'done', sort_order: 0 }] }),

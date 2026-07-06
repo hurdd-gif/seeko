@@ -43,6 +43,9 @@ export function StepDeliverableTimeline({ active, timeline, now, onAdvance }: St
               department={d.department}
               steps={d.steps}
               now={now}
+              taskId={d.id}
+              deadline={d.deadline}
+              latestExtension={d.latestExtension}
               onAdvance={onAdvance ? (stepId) => onAdvance(d.id, stepId) : undefined}
             />
           ))

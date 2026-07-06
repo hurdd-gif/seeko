@@ -3,13 +3,18 @@ import { useState } from 'react';
 import { Check, ChevronDown } from 'lucide-react';
 import type { ContractorStep } from '@/lib/contractor-steps';
 import { deriveSteps, summarizeSteps } from '@/lib/contractor-steps';
+import type { LatestExtension } from '@/lib/contractor-index';
 import { StepNode } from './StepNode';
+import { DeadlineExtensionControl } from './DeadlineExtensionControl';
 
 export type DeliverableStepsProps = {
   name: string;
   department: string | null;
   steps: ContractorStep[];
   now: Date;
+  taskId: string;
+  deadline: string | null;
+  latestExtension: LatestExtension | null;
   onAdvance?: (stepId: string) => void | Promise<void>;
 };
 
@@ -20,12 +25,24 @@ export type DeliverableStepsProps = {
  * upcoming steps never collapse. The contractor's one write — advance the focal
  * step to In review — is applied optimistically here (this component owns the list).
  */
-export function DeliverableSteps({ name, department, steps: initial, now, onAdvance }: DeliverableStepsProps) {
+export function DeliverableSteps({
+  name,
+  department,
+  steps: initial,
+  now,
+  taskId,
+  deadline,
+  latestExtension,
+  onAdvance,
+}: DeliverableStepsProps) {
   const [steps, setSteps] = useState(initial);
   const [expanded, setExpanded] = useState(false);
   const [error, setError] = useState(false);
 
   const rollup = summarizeSteps(steps, now);
+  const extControl = deadline ? (
+    <DeadlineExtensionControl taskId={taskId} deadline={deadline} latestExtension={latestExtension} now={now} />
+  ) : null;
 
   async function advance(stepId: string) {
     const prev = steps;
@@ -54,6 +71,7 @@ export function DeliverableSteps({ name, department, steps: initial, now, onAdva
     return (
       <div>
         {Heading}
+        {extControl}
         <p className="pl-6 text-[13px] text-ink-faintest">No steps yet</p>
       </div>
     );
@@ -67,6 +85,7 @@ export function DeliverableSteps({ name, department, steps: initial, now, onAdva
   return (
     <div>
       {Heading}
+      {extControl}
       <ol>
         {collapse ? (
           <li>
