@@ -6,7 +6,7 @@ import { getServiceClient } from '@/lib/supabase/service';
 import type { Priority, TaskStatus } from '@/lib/types';
 import { getAuthenticatedUser, type AuthenticatedUser } from '../supabase';
 import { buildAgentDashboardContext } from '../agent/context';
-import { buildStaffIndex, buildTaskIndex, resolveTaskRef, type TaskIndexEntry } from '../agent/entity-index';
+import { buildStaffIndex, buildTaskIndex, parseTaskNumberRef, resolveTaskRef, type TaskIndexEntry } from '../agent/entity-index';
 
 type AuthResolver = (c: Context) => Promise<AuthenticatedUser | null>;
 type AgentProvider = 'openai' | 'anthropic';
@@ -1462,51 +1462,6 @@ function findTaskInContext(value: string, board: TasksBoardData | null) {
   return resolveTaskRef(value, buildTaskIndex(board));
 }
 
-function parseDashboardTaskIndex(dashboardContext: string) {
-  // "All issues" is the exhaustive index (every open task, "#22 Name (Status)"
-  // shape); the queue lines are filtered views with richer meta. A task can
-  // appear in several lines, so entries merge instead of first-line-wins.
-  const taskLines = dashboardContext
-    .split('\n')
-    .filter((line) => /^(?:All issues|In progress|Risk queue|In review|Overdue|Unassigned high priority|Recent activity task details):/i.test(line));
-  const tasks = new Map<string, { id?: string; name: string; status?: string; assigneeName?: string; taskNumber?: number }>();
-  for (const line of taskLines) {
-    // Everything after the FIRST colon — not split(/:/, 2), which keeps only
-    // the first two segments and so truncates the value at a second colon
-    // inside a task name (e.g. "Concept Art: Characters …"), dropping every
-    // task listed after it.
-    const value = line.slice(line.indexOf(':') + 1).trim();
-    for (const part of value.split(';')) {
-      const raw = part.trim().replace(/\.$/, '');
-      const match = raw.match(/^(?:#(\d+)\s+)?(.+?)(?:\s+\((.*?)\))?$/);
-      const name = match?.[2]?.trim();
-      if (!name || /^no tasks|^none$|^…and \d+ more/i.test(name)) continue;
-      const meta = match?.[3] ?? '';
-      const metaNumber = meta.match(/#(\d+)/)?.[1];
-      const taskNumber = match?.[1] ?? metaNumber;
-      const entry = tasks.get(name.toLowerCase()) ?? { name };
-      entry.status ??= meta
-        .split(',')
-        .map((item) => item.trim())
-        .find((item) => item && !item.startsWith('#'));
-      entry.assigneeName ??= meta.match(/\bassigned to ([^,)]+)/i)?.[1]?.trim();
-      entry.taskNumber ??= taskNumber ? Number(taskNumber) : undefined;
-      tasks.set(name.toLowerCase(), entry);
-    }
-  }
-  return [...tasks.values()];
-}
-
-/**
- * Explicit task-number reference in a user message: "task 22", "issue #22",
- * "#22". A bare number with no noun or # marker never matches — dates and
- * quantities would false-positive.
- */
-function parseTaskNumberRef(value: string): number | null {
-  const match = value.match(/(?:\b(?:task|issue|todo|ticket)\s*#?|#)(\d+)\b/i);
-  return match ? Number(match[1]) : null;
-}
-
 function parseStaffFromText(value: string, board: TasksBoardData | null) {
   const normalized = value.toLowerCase();
   return buildStaffIndex(board)
@@ -1516,19 +1471,6 @@ function parseStaffFromText(value: string, board: TasksBoardData | null) {
 
 function findStaffInContext(value: string, board: TasksBoardData | null) {
   return parseStaffFromText(value, board);
-}
-
-function parseStaffIndex(dashboardContext: string) {
-  const staffLine = dashboardContext.split('\n').find((line) => /^Staff:/i.test(line));
-  if (!staffLine) return [];
-  const value = staffLine.slice(staffLine.indexOf(':') + 1).trim();
-  return value
-    .split(';')
-    .map((part) => {
-      const name = part.trim().replace(/\s+\([^)]*\).*$/, '').replace(/\.$/, '');
-      return name && !/^no roster/i.test(name) ? { id: '', name } : null;
-    })
-    .filter((member): member is { id: string; name: string } => Boolean(member));
 }
 
 type ContextTask = {
