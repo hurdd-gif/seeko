@@ -1,19 +1,8 @@
 // src/lib/contractor-buckets.ts
 import type { ContractorDeliverable } from './contractor-index';
 
-export type BucketKey = 'overdue' | 'thisWeek' | 'upcoming' | 'delivered';
-export type Bucket = { key: BucketKey; label: string; items: ContractorDeliverable[] };
-
 const DELIVERED: Record<string, true> = { Done: true };
 const HIDDEN: Record<string, true> = { Canceled: true, Duplicate: true };
-
-const BUCKET_ORDER: BucketKey[] = ['overdue', 'thisWeek', 'upcoming', 'delivered'];
-const BUCKET_LABEL: Record<BucketKey, string> = {
-  overdue: 'Overdue',
-  thisWeek: 'This week',
-  upcoming: 'Upcoming',
-  delivered: 'Delivered',
-};
 
 function startOfDay(d: Date): number {
   const x = new Date(d);
@@ -46,43 +35,84 @@ function sortByDeadlineThenPriority(a: ContractorDeliverable, b: ContractorDeliv
   return priorityRank(a.priority) - priorityRank(b.priority);
 }
 
-export function bucketDeliverables(items: ContractorDeliverable[], now: Date): Bucket[] {
-  const today = startOfDay(now);
-  const weekAhead = today + 7 * 24 * 60 * 60 * 1000;
-  const groups: Record<BucketKey, ContractorDeliverable[]> = {
-    overdue: [],
-    thisWeek: [],
-    upcoming: [],
-    delivered: [],
-  };
+export function formatDueLabel(d: Date): string {
+  return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+}
+
+/** A deadline is overdue only when it lands strictly before today's local midnight. */
+export function isOverdue(deadline: string | null, now: Date): boolean {
+  if (deadline == null) return false;
+  return startOfDay(parseDeadline(deadline)) < startOfDay(now);
+}
+
+/** Human day-count for an overdue deadline, e.g. "1 day overdue" / "5 days overdue". */
+export function overdueLabel(deadline: string, now: Date): string {
+  const days = Math.round((startOfDay(now) - startOfDay(parseDeadline(deadline))) / 86_400_000);
+  return days === 1 ? '1 day overdue' : `${days} days overdue`;
+}
+
+export type TimelineMonth = { key: string; label: string; items: ContractorDeliverable[] };
+
+const UNDATED_KEY = 'undated';
+
+function monthKey(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function monthLabel(d: Date): string {
+  return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+}
+
+/**
+ * Split a contractor's tasks into the two surfaces of the portal:
+ *  - `active`  — every incomplete task (Canceled/Duplicate dropped), sorted by
+ *    deadline then priority. Past dates sort ahead of today/future, so overdue
+ *    work naturally floats to the top of the "what you need to do" list.
+ *  - `timeline` — Done tasks condensed into month groups (newest month first,
+ *    newest-first within a month); Done tasks with no deadline collect into a
+ *    trailing "No date" group. This is the collapsing history below the fold.
+ */
+export function splitDeliverables<T extends ContractorDeliverable>(
+  items: T[],
+  _now: Date,
+): { active: T[]; timeline: { key: string; label: string; items: T[] }[] } {
+  const active: T[] = [];
+  const dated = new Map<string, { label: string; items: T[] }>();
+  const undated: T[] = [];
 
   for (const item of items) {
     if (HIDDEN[item.status]) continue;
-    if (DELIVERED[item.status]) {
-      groups.delivered.push(item);
+    if (!DELIVERED[item.status]) {
+      active.push(item);
       continue;
     }
     if (item.deadline == null) {
-      groups.upcoming.push(item);
+      undated.push(item);
       continue;
     }
-    const due = startOfDay(parseDeadline(item.deadline));
-    if (due < today) groups.overdue.push(item);
-    else if (due < weekAhead) groups.thisWeek.push(item);
-    else groups.upcoming.push(item);
+    const due = parseDeadline(item.deadline);
+    const key = monthKey(due);
+    const group = dated.get(key) ?? { label: monthLabel(due), items: [] };
+    group.items.push(item);
+    dated.set(key, group);
   }
 
-  for (const key of BUCKET_ORDER) groups[key].sort(sortByDeadlineThenPriority);
+  active.sort(sortByDeadlineThenPriority);
 
-  return BUCKET_ORDER.filter((key) => groups[key].length > 0).map((key) => ({
-    key,
-    label: BUCKET_LABEL[key],
-    items: groups[key],
-  }));
-}
+  const timeline: { key: string; label: string; items: T[] }[] = [...dated.entries()]
+    .sort((a, b) => (a[0] < b[0] ? 1 : a[0] > b[0] ? -1 : 0)) // newest month first
+    .map(([key, group]) => ({
+      key,
+      label: group.label,
+      // newest deadline first within the month
+      items: group.items.sort((a, b) => deadlineMs(b) - deadlineMs(a)),
+    }));
 
-export function formatDueLabel(d: Date): string {
-  return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  if (undated.length > 0) {
+    timeline.push({ key: UNDATED_KEY, label: 'No date', items: undated });
+  }
+
+  return { active, timeline };
 }
 
 export function summarizeDeliverables(

@@ -9,7 +9,7 @@ const NOW = new Date('2026-07-04T09:00:00');
 const ready: ContractorOverviewData = {
   profile: { id: 'u1', displayName: 'Dana Okafor', email: 'dana@x.com', avatarUrl: null, isAdmin: false, isContractor: true },
   deliverables: [
-    { id: 'a', name: 'Main menu wireframes', department: 'UI/UX', status: 'In Progress', priority: 'High', deadline: '2026-07-10', progress: 45, description: null },
+    { id: 'a', name: 'Main menu wireframes', department: 'UI/UX', status: 'In Progress', priority: 'High', deadline: '2026-07-10', progress: 45, description: null, steps: [] },
   ],
 };
 
