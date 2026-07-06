@@ -1,118 +1,54 @@
 import { Hono, type Context } from 'hono';
-import { loadTasksBoard, type TasksBoardData } from '@/lib/tasks-board';
-import { loadDocsIndex, type DocsIndexData } from '@/lib/docs-index';
-import { loadPaymentsIndex, type PaymentsIndexData } from '@/lib/payments-index';
-import { getServiceClient } from '@/lib/supabase/service';
-import type { Priority, TaskStatus } from '@/lib/types';
+import { loadTasksBoard } from '@/lib/tasks-board';
 import { getAuthenticatedUser, type AuthenticatedUser } from '../supabase';
-import { buildAgentDashboardContext } from '../agent/context';
-import { buildStaffIndex, buildTaskIndex, parseTaskNumberRef, resolveTaskRef, type TaskIndexEntry } from '../agent/entity-index';
+import { AGENT_TOOLS, getToolById } from '../agent/tool-registry';
+import type { AgentWriteTarget, WriteTool } from '../agent/tool-contract';
+import { runAgentLoop, createAnthropicCaller, EKO_AGENT_SYSTEM } from '../agent/runtime';
+import { AgentActionError } from '../agent/errors';
+import { assertAdmin } from '../agent/eko-activity';
+import {
+  getPendingActionById,
+  isExecutable,
+  markExecuting,
+  markExecuted,
+  markFailed,
+  markRejected,
+} from '../agent/pending-actions';
 
 type AuthResolver = (c: Context) => Promise<AuthenticatedUser | null>;
-type AgentProvider = 'openai' | 'anthropic';
 type AgentMode = 'chat' | 'approval';
 type AgentDecision = 'approve' | 'reject';
-type AgentIntent = 'answer' | 'clarification' | 'details_needed' | 'approval_required' | 'executed' | 'rejected';
-type AgentApprovalDraft = {
-  title?: string;
-  status?: string;
-  priority?: string;
-  dueDate?: string;
-  taskName?: string;
-  /** Board task_number as a string — the unique, user-facing task reference. */
-  taskNumber?: string;
-  /** Comma-separated task_numbers for bulk writes ("10,12,13"). */
-  taskNumbers?: string;
-  assigneeName?: string;
-};
-type AgentApproval = {
-  kind: 'issue.create' | 'issue.update' | 'issue.delete' | 'generic';
-  title: string;
-  copy: string;
-  draft?: AgentApprovalDraft;
-};
-type RecentHistoryItem = {
-  role: 'user' | 'eko' | 'action';
-  text: string;
-};
+
+type RecentHistoryItem = { role: 'user' | 'eko' | 'action'; text: string };
 
 export type AgentChatInput = {
   message: string;
   mode?: AgentMode;
   decision?: AgentDecision;
-  suggestion?: {
-    id?: string;
-    title?: string;
-    meta?: string;
-    approvalCopy?: string;
-    approval?: AgentApproval;
-  };
-  revision?: string;
-  clientContext?: {
-    path?: string;
-    title?: string;
-    recentHistory?: RecentHistoryItem[];
-  };
+  conversationId?: string;
+  pendingActionIds?: string[];
+  clientContext?: { path?: string; title?: string; recentHistory?: RecentHistoryItem[] };
 };
 
-/**
- * Deep-link target for an executed write. Pure UI-choreography metadata: it
- * tells the tray WHICH card changed so the post-write receipt can spotlight
- * it via the EKO bus — it never carries or triggers a mutation itself.
- * Deletes intentionally return no target (the row is gone).
- */
-export type AgentWriteTarget = {
-  kind: 'task';
-  taskId: string;
-  taskNumber?: number | null;
-  name: string;
-  action: 'create' | 'status' | 'assignee' | 'priority' | 'dueDate';
+export type StagedPendingDTO = { id: string; toolId: string; summary: string };
+export type ExecutedActionDTO = {
+  pendingActionId: string;
+  ok: boolean;
+  reply: string;
+  target?: AgentWriteTarget;
 };
 
 export type AgentChatResult = {
   reply: string;
-  provider: AgentProvider;
+  provider: 'anthropic';
   model: string;
-  intent?: AgentIntent;
-  approval?: AgentApproval;
-  /** Present only on `intent: 'executed'` responses that changed one task. */
-  target?: AgentWriteTarget;
+  pendingActions?: StagedPendingDTO[];
+  executed?: ExecutedActionDTO[];
 };
 
 type AgentRunner = (input: AgentChatInput, user: AuthenticatedUser) => Promise<AgentChatResult>;
 
-type AgentRoutesOptions = {
-  authResolver?: AuthResolver;
-  agentRunner?: AgentRunner;
-};
-
-class AgentConfigError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'AgentConfigError';
-  }
-}
-
-class AgentProviderError extends Error {
-  status: number;
-
-  constructor(message: string, status = 502) {
-    super(message);
-    this.name = 'AgentProviderError';
-    this.status = status;
-  }
-}
-
-const EKO_INSTRUCTIONS = [
-  'You are EKO, SEEKO Studio dashboard agent.',
-  'Audience: admins and investors. Be concise, specific, and operational.',
-  'You can help summarize dashboard state, draft investor-safe updates, review queues, and explain risk.',
-  'Risky actions require approval first. Never claim a write, send, delete, payment, invite, or publish action has happened unless the request explicitly says it was approved and the product has executed it.',
-  'When a write is needed, be specific about the target, fields, and action. If required fields are missing, ask for those fields instead of presenting it as approved.',
-  'When proposing a complete write that needs user confirmation, start the reply with "Ready for approval:" followed by the specific action.',
-  'Format for the dashboard tray: plain text only, no markdown, no bullets, no numbered lists. Keep replies to one or two short sentences.',
-  'Use the supplied Dashboard context as live read context. Do not say you lack live task data unless the context explicitly says unavailable.',
-].join('\n');
+type AgentRoutesOptions = { authResolver?: AuthResolver; agentRunner?: AgentRunner };
 
 export function createAgentRoutes(options: AgentRoutesOptions = {}) {
   const authResolver = options.authResolver ?? getAuthenticatedUser;
@@ -128,13 +64,9 @@ export function createAgentRoutes(options: AgentRoutesOptions = {}) {
     try {
       return c.json(await agentRunner(input, user));
     } catch (error) {
-      if (error instanceof AgentConfigError) {
-        return c.json({ error: error.message }, 503);
+      if (error instanceof AgentActionError) {
+        return c.json({ error: error.message }, { status: error.status as 500 });
       }
-      if (error instanceof AgentProviderError) {
-        return c.json({ error: error.message }, { status: error.status as 502 });
-      }
-
       console.error('[hono agent] chat failed:', error);
       return c.json({ error: 'EKO failed before making changes.' }, 500);
     }
@@ -148,78 +80,40 @@ async function parseAgentInput(c: Context): Promise<AgentChatInput | { error: st
   } catch {
     return { error: 'Invalid JSON body' };
   }
-
   if (!body || typeof body !== 'object') return { error: 'Invalid request body' };
   const record = body as Record<string, unknown>;
   const message = typeof record.message === 'string' ? record.message.trim() : '';
-  if (!message) return { error: 'Message is required' };
-  if (message.length > 2000) return { error: 'Message is too long' };
-
   const mode = record.mode === 'approval' ? 'approval' : 'chat';
   const decision =
     record.decision === 'approve' || record.decision === 'reject' ? record.decision : undefined;
-  if (mode === 'approval' && !decision) return { error: 'Approval decision is required' };
+  const pendingActionIds = Array.isArray(record.pendingActionIds)
+    ? record.pendingActionIds.filter((id): id is string => typeof id === 'string')
+    : undefined;
+
+  if (mode === 'approval') {
+    if (!decision) return { error: 'Approval decision is required' };
+    if (decision === 'approve' && (!pendingActionIds || pendingActionIds.length === 0)) {
+      return { error: 'pendingActionIds are required to approve' };
+    }
+  } else {
+    if (!message) return { error: 'Message is required' };
+    if (message.length > 2000) return { error: 'Message is too long' };
+  }
 
   return {
     message,
     mode,
     decision,
-    suggestion: parseSuggestion(record.suggestion),
-    revision: typeof record.revision === 'string' ? record.revision.trim().slice(0, 500) : undefined,
+    conversationId:
+      typeof record.conversationId === 'string' && record.conversationId ? record.conversationId : undefined,
+    pendingActionIds,
     clientContext: parseClientContext(record.clientContext),
   };
-}
-
-function parseSuggestion(value: unknown): AgentChatInput['suggestion'] {
-  if (!value || typeof value !== 'object') return undefined;
-  const record = value as Record<string, unknown>;
-
-  return {
-    id: typeof record.id === 'string' ? record.id : undefined,
-    title: typeof record.title === 'string' ? record.title : undefined,
-    meta: typeof record.meta === 'string' ? record.meta : undefined,
-    approvalCopy: typeof record.approvalCopy === 'string' ? record.approvalCopy : undefined,
-    approval: parseApproval(record.approval),
-  };
-}
-
-function parseApproval(value: unknown): AgentApproval | undefined {
-  if (!value || typeof value !== 'object') return undefined;
-  const record = value as Record<string, unknown>;
-  const kind =
-    record.kind === 'issue.create' ||
-    record.kind === 'issue.update' ||
-    record.kind === 'issue.delete' ||
-    record.kind === 'generic'
-      ? record.kind
-      : null;
-  const title = typeof record.title === 'string' ? record.title.trim().slice(0, 120) : '';
-  const copy = typeof record.copy === 'string' ? record.copy.trim().slice(0, 500) : '';
-  if (!kind || !title || !copy) return undefined;
-
-  return {
-    kind,
-    title,
-    copy,
-    draft: parseApprovalDraft(record.draft),
-  };
-}
-
-function parseApprovalDraft(value: unknown): AgentApprovalDraft | undefined {
-  if (!value || typeof value !== 'object') return undefined;
-  const record = value as Record<string, unknown>;
-  const draft: AgentApprovalDraft = {};
-  for (const key of ['title', 'status', 'priority', 'dueDate', 'taskName', 'taskNumber', 'taskNumbers', 'assigneeName'] as const) {
-    const field = record[key];
-    if (typeof field === 'string' && field.trim()) draft[key] = field.trim().slice(0, 140);
-  }
-  return Object.keys(draft).length ? draft : undefined;
 }
 
 function parseClientContext(value: unknown): AgentChatInput['clientContext'] {
   if (!value || typeof value !== 'object') return undefined;
   const record = value as Record<string, unknown>;
-
   return {
     path: typeof record.path === 'string' ? record.path : undefined,
     title: typeof record.title === 'string' ? record.title : undefined,
@@ -229,7 +123,6 @@ function parseClientContext(value: unknown): AgentChatInput['clientContext'] {
 
 function parseRecentHistory(value: unknown): RecentHistoryItem[] | undefined {
   if (!Array.isArray(value)) return undefined;
-
   return value
     .map((item): RecentHistoryItem | null => {
       if (!item || typeof item !== 'object') return null;
@@ -239,1396 +132,104 @@ function parseRecentHistory(value: unknown): RecentHistoryItem[] | undefined {
       if (!role || !text) return null;
       return { role, text };
     })
-    .filter((item): item is NonNullable<typeof item> => Boolean(item))
+    .filter((item): item is RecentHistoryItem => Boolean(item))
     .slice(-6);
 }
 
-async function runAgentChat(input: AgentChatInput, _user: AuthenticatedUser): Promise<AgentChatResult> {
+async function runAgentChat(input: AgentChatInput, user: AuthenticatedUser): Promise<AgentChatResult> {
   if (input.mode === 'approval' && input.decision) {
-    return runApprovalDecision(input, _user);
+    return runApprovalDecision(input, user);
   }
 
-  // Slash commands are client-side tray actions (chat state lives in the
-  // browser). Left unguarded, "/clear" reaches the LLM and gets a fabricated
-  // "Cleared." while every bubble stays on screen.
-  if (input.mode !== 'approval' && /^\/[a-z]+\b/i.test(input.message.trim())) {
+  // Slash commands run in the tray, not the model.
+  if (/^\/[a-z]+\b/i.test(input.message.trim())) {
     return {
       reply: 'That command runs in the tray, not on the server. Type /clear in the composer to reset this chat.',
-      provider: 'openai',
-      model: 'eko-local-planner',
-      intent: 'clarification',
+      provider: 'anthropic',
+      model: 'eko-local',
     };
   }
 
-  if (input.mode !== 'approval' && isBareConfirmationMessage(input.message)) {
+  // A bare "yes"/"approve" in chat mode must never burn a model call or stage a
+  // fresh write — approvals go through the Approve button, not free-text chat.
+  if (/^\s*(?:yes|yeah|yep|ok|okay|sure|confirmed?|confirm|go ahead|proceed|do it|approve(?: it)?|approved(?: it)?|i approve)\s*[.!?]*\s*$/i.test(input.message)) {
     return {
       reply: 'Use the Approve button on the pending action, or tell EKO the specific action you want prepared. Writes stay gated until approved.',
-      provider: 'openai',
-      model: 'eko-local-planner',
-      intent: 'clarification',
+      provider: 'anthropic',
+      model: 'eko-local',
     };
   }
 
-  const providers = resolveProviderPlan(input);
-  const dashboardContext = await loadAgentDashboardContext(_user);
-  const board = await loadTasksBoard(_user).catch(() => null);
-  const localWritePlan = planLocalIssueWrite(input, board);
-  if (localWritePlan) return localWritePlan;
+  const board = await loadTasksBoard(user).catch(() => null);
+  const conversationId = input.conversationId ?? 'default';
+  const { caller, model } = createAnthropicCaller();
+  const loop = await runAgentLoop({
+    userMessage: input.message,
+    system: EKO_AGENT_SYSTEM,
+    ctx: { user, board, conversationId },
+    tools: AGENT_TOOLS,
+    caller,
+  });
 
-  const localFollowUp = answerLocalContextFollowUp(input, dashboardContext);
-  if (localFollowUp) return localFollowUp;
-
-  const prompt = buildPrompt(input, dashboardContext);
-
-  let lastError: unknown;
-  for (const provider of providers) {
-    try {
-      const result = provider === 'openai' ? await runOpenAI(prompt) : await runAnthropic(prompt);
-      return withTypedIntent(input, result);
-    } catch (error) {
-      lastError = error;
-      if (providers.length === 1 || error instanceof AgentConfigError) throw error;
-      console.warn(`[hono agent] ${provider} failed, trying fallback provider`, error);
-    }
-  }
-
-  throw lastError instanceof Error ? lastError : new AgentProviderError('EKO provider routing failed.');
+  return {
+    reply: loop.text || 'Done.',
+    provider: 'anthropic',
+    model,
+    pendingActions: loop.pendingActions,
+  };
 }
 
-async function runApprovalDecision(input: AgentChatInput, user: AuthenticatedUser): Promise<AgentChatResult> {
+async function runApprovalDecision(
+  input: AgentChatInput,
+  user: AuthenticatedUser,
+): Promise<AgentChatResult> {
   if (input.decision === 'reject') {
-    return {
-      reply: 'Rejected. No dashboard changes were made.',
-      provider: 'openai',
-      model: 'eko-local-approval',
-      intent: 'rejected',
-    };
-  }
-
-  const typedApproval = input.suggestion?.approval;
-  const typedAction = typedApproval ? await executeTypedApproval(typedApproval, user) : null;
-  if (typedAction) return typedAction;
-
-  if (typedApproval) {
-    return {
-      reply: 'Approval recorded, but EKO does not have enough typed issue details to execute safely. No dashboard changes were made.',
-      provider: 'openai',
-      model: 'eko-local-approval',
-      intent: 'details_needed',
-      approval: typedApproval,
-    };
-  }
-
-  const action = input.revision || input.suggestion?.approvalCopy || input.message;
-  const cleanAction = normalizeAgentReply(action).replace(/^ready for approval:\s*/i, '');
-  const board = await loadTasksBoard(user).catch(() => null);
-  const execution = await executeApprovedIssueWrite(cleanAction, user, board);
-  if (execution) return execution;
-
-  return {
-    reply: cleanAction
-      ? `Approval recorded, but EKO does not have a matching write tool for "${cleanAction}" yet. No dashboard changes were made.`
-      : 'Approval recorded, but EKO did not receive a specific write action. No dashboard changes were made.',
-    provider: 'openai',
-    model: 'eko-local-approval',
-    intent: 'answer',
-  };
-}
-
-async function executeTypedApproval(approval: AgentApproval, user: AuthenticatedUser): Promise<AgentChatResult | null> {
-  const board = await loadTasksBoard(user).catch(() => null);
-
-  if (approval.kind === 'issue.create') {
-    return executeIssueCreateDraft(approval.draft, user);
-  }
-
-  if (approval.kind === 'issue.update') {
-    if (approval.draft?.assigneeName && approval.draft.taskNumbers) {
-      return executeBulkAssigneeDraft(approval.draft.taskNumbers, approval.draft.assigneeName, user, board);
+    for (const id of input.pendingActionIds ?? []) {
+      await markRejected(id).catch(() => undefined);
     }
-
-    const status = parseTaskStatus(approval.draft?.status ?? approval.copy);
-    if (approval.draft?.taskName && status) {
-      return executeIssueStatusDraft({ taskName: approval.draft.taskName, status }, user, board);
-    }
-
-    if (approval.draft?.taskName && approval.draft.assigneeName) {
-      return executeIssueAssigneeDraft(
-        { taskName: approval.draft.taskName, assigneeName: approval.draft.assigneeName },
-        user,
-        board,
-      );
-    }
-
-    const priority = parsePriority(approval.draft?.priority ?? approval.copy);
-    if (approval.draft?.taskName && priority) {
-      return executeIssuePriorityDraft({ taskName: approval.draft.taskName, priority }, user, board);
-    }
-
-    const dueDate = parseDueDate(approval.draft?.dueDate ?? approval.copy);
-    if (approval.draft?.taskName && dueDate) {
-      return executeIssueDueDateDraft({ taskName: approval.draft.taskName, dueDate }, user, board);
-    }
-
-    const parsedStatus = parseIssueStatusDraft(approval.copy, board);
-    if (parsedStatus?.taskName && parsedStatus.status) return executeIssueStatusDraft(parsedStatus, user, board);
-
-    const parsedAssignee = parseIssueAssigneeDraft(approval.copy, board);
-    if (parsedAssignee?.taskName && parsedAssignee.assigneeName) return executeIssueAssigneeDraft(parsedAssignee, user, board);
-
-    const parsedPriority = parseIssuePriorityDraft(approval.copy, board);
-    if (parsedPriority?.taskName && parsedPriority.priority) return executeIssuePriorityDraft(parsedPriority, user, board);
-
-    const parsedDueDate = parseIssueDueDateDraft(approval.copy, board);
-    if (parsedDueDate?.taskName && parsedDueDate.dueDate) return executeIssueDueDateDraft(parsedDueDate, user, board);
+    return { reply: 'Rejected. No dashboard changes were made.', provider: 'anthropic', model: 'eko-local' };
   }
 
-  if (approval.kind === 'issue.delete') {
-    return executeIssueDeleteDraft(approval.draft, user, board);
+  const executed: ExecutedActionDTO[] = [];
+  for (const id of input.pendingActionIds ?? []) {
+    executed.push(await executeById(id, user));
   }
+  const okCount = executed.filter((e) => e.ok).length;
+  const reply = okCount
+    ? executed.filter((e) => e.ok).map((e) => e.reply).join(' ')
+    : executed[0]?.reply ?? 'No changes were made.';
 
-  return null;
-}
-
-function resolveProviderPlan(input: AgentChatInput): AgentProvider[] {
-  const configured = (process.env.EKO_AGENT_PROVIDER ?? 'auto').toLowerCase();
-
-  if (configured === 'openai') {
-    if (!process.env.OPENAI_API_KEY) throw new AgentConfigError('Missing OPENAI_API_KEY for EKO.');
-    return ['openai'];
-  }
-
-  if (configured === 'anthropic' || configured === 'claude') {
-    if (!process.env.ANTHROPIC_API_KEY) throw new AgentConfigError('Missing ANTHROPIC_API_KEY for EKO.');
-    return ['anthropic'];
-  }
-
-  const preferred = choosePrimaryProvider(input);
-  const fallback: AgentProvider = preferred === 'openai' ? 'anthropic' : 'openai';
-  const providers = [preferred, fallback].filter((provider, index, list) => {
-    if (list.indexOf(provider) !== index) return false;
-    return provider === 'openai' ? Boolean(process.env.OPENAI_API_KEY) : Boolean(process.env.ANTHROPIC_API_KEY);
-  });
-
-  if (providers.length) return providers;
-  throw new AgentConfigError('Configure OPENAI_API_KEY or ANTHROPIC_API_KEY to use EKO.');
-}
-
-function choosePrimaryProvider(input: AgentChatInput): AgentProvider {
-  const signal = [
-    input.message,
-    input.suggestion?.title,
-    input.suggestion?.meta,
-    input.suggestion?.approvalCopy,
-    input.revision,
-  ].filter(Boolean).join(' ').toLowerCase();
-
-  if (/\b(draft|investor|approval|approve|risky|risk|write|create|delete|move|send|publish|payment|invoice|invite|revise|review queue|digest)\b/.test(signal)) {
-    return 'anthropic';
-  }
-
-  return 'openai';
-}
-
-async function loadAgentDashboardContext(user: AuthenticatedUser) {
-  // Delegates to the richer structured builder in ../agent/context (team
-  // roster, areas/milestones, task-number-grounded issues, activity, notes inbox,
-  // docs, payments) which also appends the EKO_CAPABILITIES manifest. Each
-  // section degrades to an "unavailable" line on failure — never throws.
-  return buildAgentDashboardContext(user);
-}
-
-function summarizeDocsContext(data: DocsIndexData) {
-  const visibleDocs = data.docs.filter((doc) => !doc.locked).slice(0, 10);
-  const lockedDocs = data.docs.filter((doc) => doc.locked).slice(0, 6);
-
-  return [
-    `Docs context: ${data.docCount} docs, ${data.deckCount} decks, ${data.lockedCount} locked.`,
-    visibleDocs.length ? `Accessible docs: ${visibleDocs.map((doc) => `${doc.title}${doc.type === 'deck' ? ' (deck)' : ''}`).join('; ')}.` : 'Accessible docs: none visible.',
-    lockedDocs.length ? `Locked docs: ${lockedDocs.map((doc) => doc.title).join('; ')}.` : 'Locked docs: none visible.',
-  ].join('\n');
-}
-
-function summarizePaymentsContext(data: PaymentsIndexData) {
-  return [
-    `Payments context: ${data.stats.peopleOwed} people owed, ${data.stats.paymentsThisMonth} payments this month, pending total ${data.stats.pendingTotal} ${data.recentPaid[0]?.currency ?? 'USD'}, paid this month ${data.stats.paidThisMonth}.`,
-    data.people.length ? `Payment roster: ${data.people.slice(0, 8).map((person) => `${person.displayName ?? 'Unnamed'}${person.pendingAmount ? ` pending ${person.pendingAmount}` : ''}`).join('; ')}.` : 'Payment roster: none visible.',
-    data.pendingRequests.length ? `Pending payment requests: ${data.pendingRequests.slice(0, 5).map((payment) => `${payment.recipientEmail ?? payment.description ?? payment.id} ${payment.amount}`).join('; ')}.` : 'Pending payment requests: none visible.',
-  ].join('\n');
-}
-
-type IssueWriteDraft = {
-  title?: string;
-  status?: TaskStatus;
-  priority?: Priority;
-  dueDate?: string;
-  assigneeName?: string;
-  taskName?: string;
-};
-
-export function planLocalIssueWrite(input: AgentChatInput, board: TasksBoardData | null): AgentChatResult | null {
-  if (input.mode === 'approval') return null;
-
-  const message = input.message.trim();
-  const createDraft = parseIssueCreateDraft(message);
-  if (createDraft) {
-    const missing = [
-      createDraft.title ? null : 'title',
-      createDraft.status ? null : 'status',
-      createDraft.priority ? null : 'priority',
-      createDraft.dueDate ? null : 'due date',
-    ].filter(Boolean);
-
-    if (missing.length) {
-      return {
-        reply: `Add ${formatList(missing)} so EKO can prepare the issue for approval.`,
-        provider: 'openai',
-        model: 'eko-local-planner',
-        intent: 'details_needed',
-        approval: {
-          kind: 'issue.create',
-          title: createDraft.title ? `Create ${createDraft.title}` : 'Create issue',
-          copy: 'Add issue details below. This write stays gated until you review and approve it.',
-          draft: createDraft,
-        },
-      };
-    }
-
-    return {
-      reply: `Ready for approval: create ${createDraft.title} as ${createDraft.status}, ${createDraft.priority} priority, due ${createDraft.dueDate}.`,
-      provider: 'openai',
-      model: 'eko-local-planner',
-      intent: 'approval_required',
-      approval: {
-        kind: 'issue.create',
-        title: `Create ${createDraft.title}`,
-        copy: `Create ${createDraft.title} as ${createDraft.status}, ${createDraft.priority} priority, due ${createDraft.dueDate}.`,
-        draft: createDraft,
-      },
-    };
-  }
-
-  const statusDraft = parseIssueStatusDraft(message, board);
-  if (statusDraft?.taskName && statusDraft.status) {
-    return {
-      reply: `Ready for approval: move ${statusDraft.taskName} to ${statusDraft.status}.`,
-      provider: 'openai',
-      model: 'eko-local-planner',
-      intent: 'approval_required',
-      approval: {
-        kind: 'issue.update',
-        title: `Move ${statusDraft.taskName}`,
-        copy: `Move ${statusDraft.taskName} to ${statusDraft.status}.`,
-        draft: statusDraft,
-      },
-    };
-  }
-
-  const assigneeDraft = parseIssueAssigneeDraft(message, board);
-  if (assigneeDraft?.taskName && assigneeDraft.assigneeName) {
-    return {
-      reply: `Ready for approval: assign ${assigneeDraft.taskName} to ${assigneeDraft.assigneeName}.`,
-      provider: 'openai',
-      model: 'eko-local-planner',
-      intent: 'approval_required',
-      approval: {
-        kind: 'issue.update',
-        title: `Assign ${assigneeDraft.taskName}`,
-        copy: `Assign ${assigneeDraft.taskName} to ${assigneeDraft.assigneeName}.`,
-        draft: assigneeDraft,
-      },
-    };
-  }
-
-  const priorityDraft = parseIssuePriorityDraft(message, board);
-  if (priorityDraft?.taskName && priorityDraft.priority) {
-    return {
-      reply: `Ready for approval: set ${priorityDraft.taskName} to ${priorityDraft.priority} priority.`,
-      provider: 'openai',
-      model: 'eko-local-planner',
-      intent: 'approval_required',
-      approval: {
-        kind: 'issue.update',
-        title: `Update ${priorityDraft.taskName} priority`,
-        copy: `Set ${priorityDraft.taskName} to ${priorityDraft.priority} priority.`,
-        draft: priorityDraft,
-      },
-    };
-  }
-
-  const dueDateDraft = parseIssueDueDateDraft(message, board);
-  if (dueDateDraft?.taskName && dueDateDraft.dueDate) {
-    const dueLabel = /no date/i.test(dueDateDraft.dueDate) ? 'no due date' : `due ${dueDateDraft.dueDate}`;
-    return {
-      reply: `Ready for approval: set ${dueDateDraft.taskName} to ${dueLabel}.`,
-      provider: 'openai',
-      model: 'eko-local-planner',
-      intent: 'approval_required',
-      approval: {
-        kind: 'issue.update',
-        title: `Update ${dueDateDraft.taskName} due date`,
-        copy: `Set ${dueDateDraft.taskName} to ${dueLabel}.`,
-        draft: dueDateDraft,
-      },
-    };
-  }
-
-  const bulkAssign = parseBulkAssignFromHistory(message, board, input.clientContext?.recentHistory);
-  if (bulkAssign) {
-    const taskList = bulkAssign.tasks.map((task) => `"${task.name}" (#${task.taskNumber})`).join(', ');
-    return {
-      reply: `Ready for approval: assign ${bulkAssign.tasks.length} tasks to ${bulkAssign.assigneeName} — ${taskList}.`,
-      provider: 'openai',
-      model: 'eko-local-planner',
-      intent: 'approval_required',
-      approval: {
-        kind: 'issue.update',
-        title: `Assign ${bulkAssign.tasks.length} tasks`,
-        copy: `Assign ${taskList} to ${bulkAssign.assigneeName}.`,
-        draft: {
-          assigneeName: bulkAssign.assigneeName,
-          taskNumbers: bulkAssign.tasks.map((task) => task.taskNumber).join(','),
-        },
-      },
-    };
-  }
-
-  const recentHistory = input.clientContext?.recentHistory;
-  const deleteResolution = parseIssueDeleteDraft(message, board, recentHistory);
-  if (deleteResolution) return deleteResolutionResult(deleteResolution);
-
-  // Slot-fill turn: EKO just asked which task to delete, and this message is
-  // the answer ("22", "the task we just created", the bare name). Re-run the
-  // resolver with the delete verb restored so number/name/referent rules apply.
-  const lastEkoRow = [...(recentHistory ?? [])].reverse().find((row) => row.role === 'eko');
-  if (lastEkoRow && /\btask to delete\b/i.test(lastEkoRow.text)) {
-    const followUp = parseIssueDeleteDraft(`delete ${message}`, board, recentHistory);
-    if (followUp?.outcome === 'match' || followUp?.outcome === 'ambiguous') {
-      return deleteResolutionResult(followUp);
-    }
-  }
-
-  return null;
-}
-
-function deleteResolutionResult(resolution: IssueDeleteResolution): AgentChatResult {
-  if (resolution.outcome === 'match') {
-    const numberLabel = resolution.taskNumber != null ? ` (#${resolution.taskNumber})` : '';
-    return {
-      reply: `Ready for approval: delete "${resolution.taskName}"${numberLabel} from Issues.`,
-      provider: 'openai',
-      model: 'eko-local-planner',
-      intent: 'approval_required',
-      approval: {
-        kind: 'issue.delete',
-        title: `Delete ${resolution.taskName}`,
-        copy: `Delete "${resolution.taskName}" (${resolution.status ?? 'status unknown'}) from Issues. This cannot be undone.`,
-        draft: {
-          taskName: resolution.taskName,
-          ...(resolution.taskNumber != null ? { taskNumber: String(resolution.taskNumber) } : {}),
-        },
-      },
-    };
-  }
-
-  if (resolution.outcome === 'ambiguous') {
-    return {
-      reply: `EKO found ${resolution.candidates.length} matching tasks: ${resolution.candidates.join('; ')}. Give the task number or exact name so EKO can prepare the delete for approval.`,
-      provider: 'openai',
-      model: 'eko-local-planner',
-      intent: 'clarification',
-    };
-  }
-
-  return {
-    reply: 'EKO could not match that to a single task in the current Issues context. Give the task number shown on the board (like "task 22") or the exact task name so EKO can prepare the delete for approval.',
-    provider: 'openai',
-    model: 'eko-local-planner',
-    intent: 'clarification',
-  };
-}
-
-async function executeApprovedIssueWrite(
-  action: string,
-  user: AuthenticatedUser,
-  board: TasksBoardData | null,
-): Promise<AgentChatResult | null> {
-  const createDraft = parseIssueCreateDraft(action);
-  if (createDraft?.title) {
-    return executeIssueCreateDraft(createDraft, user);
-  }
-
-  const statusDraft = parseIssueStatusDraft(action, board);
-  if (statusDraft?.taskName && statusDraft.status) {
-    return executeIssueStatusDraft(statusDraft, user, board);
-  }
-
-  const assigneeDraft = parseIssueAssigneeDraft(action, board);
-  if (assigneeDraft?.taskName && assigneeDraft.assigneeName) {
-    return executeIssueAssigneeDraft(assigneeDraft, user, board);
-  }
-
-  const priorityDraft = parseIssuePriorityDraft(action, board);
-  if (priorityDraft?.taskName && priorityDraft.priority) {
-    return executeIssuePriorityDraft(priorityDraft, user, board);
-  }
-
-  const dueDateDraft = parseIssueDueDateDraft(action, board);
-  if (dueDateDraft?.taskName && dueDateDraft.dueDate) {
-    return executeIssueDueDateDraft(dueDateDraft, user, board);
-  }
-
-  return null;
-}
-
-async function executeIssueCreateDraft(
-  draft: AgentApprovalDraft | IssueWriteDraft | undefined,
-  user: AuthenticatedUser,
-): Promise<AgentChatResult | null> {
-  if (!draft?.title) return null;
-  const status = parseTaskStatus(draft.status ?? '');
-  const priority = parsePriority(draft.priority ?? '');
-  const dueDate = draft.dueDate;
-
-  if (!status || !priority || !dueDate) {
-    return {
-      reply: `Add ${formatList([
-        status ? null : 'status',
-        priority ? null : 'priority',
-        dueDate ? null : 'due date',
-      ].filter(Boolean))} before EKO can create "${draft.title}". No dashboard changes were made.`,
-      provider: 'openai',
-      model: 'eko-local-approval',
-      intent: 'details_needed',
-      approval: {
-        kind: 'issue.create',
-        title: `Create ${draft.title}`,
-        copy: 'Add issue details below. This write stays gated until you review and approve it.',
-        draft,
-      },
-    };
-  }
-
-  const deadline = normalizeDueDate(dueDate);
-  await assertAdminUser(user.id);
-  const service = getServiceClient();
-  const { data, error } = await service
-    .from('tasks')
-    .insert({
-      name: draft.title,
-      department: 'Coding',
-      status,
-      priority,
-      deadline,
-      description: null,
-    } as never)
-    .select('id, task_number, name, status, priority, deadline')
-    .single();
-  if (error) throw new AgentProviderError('EKO could not create the issue.', 500);
-
-  // `as unknown` hop: the generated row types predate task_number, so the
-  // typed select-string parser can't prove the column — runtime has it.
-  const created = data as unknown as { id: string; task_number?: number | null } | null;
-  if (created) await markLatestTaskActivityAsEko({ taskId: created.id, kind: 'created', userId: user.id });
-  return {
-    reply: `Created issue "${draft.title}" in ${status}.`,
-    provider: 'openai',
-    model: 'eko-local-write',
-    intent: 'executed',
-    target: created
-      ? {
-          kind: 'task',
-          taskId: created.id,
-          taskNumber: created.task_number,
-          name: draft.title,
-          action: 'create',
-        }
-      : undefined,
-  };
-}
-
-async function executeIssueStatusDraft(
-  draft: Pick<IssueWriteDraft, 'taskName' | 'status'>,
-  user: AuthenticatedUser,
-  board: TasksBoardData | null,
-): Promise<AgentChatResult | null> {
-  if (!draft.taskName || !draft.status) return null;
-  await assertAdminUser(user.id);
-  const task = findTaskInBoard(draft.taskName, board);
-  if (!task) throw new AgentProviderError(`EKO could not find "${draft.taskName}" in the current issues context.`, 404);
-  const service = getServiceClient();
-  const { error } = await service.from('tasks').update({ status: draft.status } as never).eq('id', task.id);
-  if (error) throw new AgentProviderError('EKO could not update the issue status.', 500);
-  await markLatestTaskActivityAsEko({ taskId: task.id, kind: 'status_changed', userId: user.id });
-
-  return {
-    reply: `Moved "${task.name}" to ${draft.status}.`,
-    provider: 'openai',
-    model: 'eko-local-write',
-    intent: 'executed',
-    target: {
-      kind: 'task',
-      taskId: task.id,
-      taskNumber: task.task_number,
-      name: task.name,
-      action: 'status',
-    },
-  };
-}
-
-async function executeIssueAssigneeDraft(
-  draft: Pick<IssueWriteDraft, 'taskName' | 'assigneeName'>,
-  user: AuthenticatedUser,
-  board: TasksBoardData | null,
-): Promise<AgentChatResult | null> {
-  if (!draft.taskName || !draft.assigneeName) return null;
-  await assertAdminUser(user.id);
-  const task = findTaskInBoard(draft.taskName, board);
-  const member = findStaffInBoard(draft.assigneeName, board);
-  if (!task) throw new AgentProviderError(`EKO could not find "${draft.taskName}" in the current issues context.`, 404);
-  if (!member) throw new AgentProviderError(`EKO could not find "${draft.assigneeName}" in the current roster.`, 404);
-  const service = getServiceClient();
-  const { error } = await service.from('tasks').update({ assignee_id: member.id } as never).eq('id', task.id);
-  if (error) throw new AgentProviderError('EKO could not assign the issue.', 500);
-  await markLatestTaskActivityAsEko({ taskId: task.id, kind: 'assignee_changed', userId: user.id });
-  await hideLatestHumanAssignedEcho({ taskId: task.id, taskName: task.name, userId: user.id });
-
-  return {
-    reply: `Assigned "${task.name}" to ${member.display_name ?? 'the selected teammate'}.`,
-    provider: 'openai',
-    model: 'eko-local-write',
-    intent: 'executed',
-    target: {
-      kind: 'task',
-      taskId: task.id,
-      taskNumber: task.task_number,
-      name: task.name,
-      action: 'assignee',
-    },
-  };
-}
-
-async function executeIssuePriorityDraft(
-  draft: Pick<IssueWriteDraft, 'taskName' | 'priority'>,
-  user: AuthenticatedUser,
-  board: TasksBoardData | null,
-): Promise<AgentChatResult | null> {
-  if (!draft.taskName || !draft.priority) return null;
-  await assertAdminUser(user.id);
-  const task = findTaskInBoard(draft.taskName, board);
-  if (!task) throw new AgentProviderError(`EKO could not find "${draft.taskName}" in the current issues context.`, 404);
-  const service = getServiceClient();
-  const { error } = await service.from('tasks').update({ priority: draft.priority } as never).eq('id', task.id);
-  if (error) throw new AgentProviderError('EKO could not update the issue priority.', 500);
-  await markLatestTaskActivityAsEko({ taskId: task.id, action: 'Changed priority', userId: user.id });
-
-  return {
-    reply: `Set "${task.name}" to ${draft.priority} priority.`,
-    provider: 'openai',
-    model: 'eko-local-write',
-    intent: 'executed',
-    target: {
-      kind: 'task',
-      taskId: task.id,
-      taskNumber: task.task_number,
-      name: task.name,
-      action: 'priority',
-    },
-  };
-}
-
-async function executeIssueDueDateDraft(
-  draft: Pick<IssueWriteDraft, 'taskName' | 'dueDate'>,
-  user: AuthenticatedUser,
-  board: TasksBoardData | null,
-): Promise<AgentChatResult | null> {
-  if (!draft.taskName || !draft.dueDate) return null;
-  await assertAdminUser(user.id);
-  const task = findTaskInBoard(draft.taskName, board);
-  if (!task) throw new AgentProviderError(`EKO could not find "${draft.taskName}" in the current issues context.`, 404);
-  const deadline = normalizeDueDate(draft.dueDate);
-  const service = getServiceClient();
-  const { error } = await service.from('tasks').update({ deadline } as never).eq('id', task.id);
-  if (error) throw new AgentProviderError('EKO could not update the issue due date.', 500);
-  await service.from('activity_log').insert({
-    user_id: user.id,
-    action: 'Due date changed',
-    target: deadline ? `task: ${task.name} → ${deadline}` : `task: ${task.name} → no date`,
-    task_id: task.id,
-    before_value: task.deadline ?? null,
-    after_value: deadline,
-    source: 'eko',
-  } as never);
-
-  return {
-    reply: deadline ? `Set "${task.name}" due date to ${deadline}.` : `Cleared the due date for "${task.name}".`,
-    provider: 'openai',
-    model: 'eko-local-write',
-    intent: 'executed',
-    target: {
-      kind: 'task',
-      taskId: task.id,
-      taskNumber: task.task_number,
-      name: task.name,
-      action: 'dueDate',
-    },
-  };
+  return { reply, provider: 'anthropic', model: 'eko-local', executed };
 }
 
 /**
- * Bulk assign: every task_number re-resolves against the fresh board; refs
- * that vanished since approval are skipped and reported, never guessed. One
- * DB update per task so each write lands its own activity_log row via the
- * single-task executor.
+ * Execute one staged action by id. Idempotent on status (re-approving an
+ * executed/rejected/failed row is a no-op). Gate runs on every approval.
  */
-async function executeBulkAssigneeDraft(
-  taskNumbers: string,
-  assigneeName: string,
-  user: AuthenticatedUser,
-  board: TasksBoardData | null,
-): Promise<AgentChatResult | null> {
-  const numbers = taskNumbers
-    .split(',')
-    .map((part) => Number(part.trim()))
-    .filter((num) => Number.isFinite(num));
-  if (!numbers.length || !board) return null;
-
-  const assigned: string[] = [];
-  const missing: number[] = [];
-  let lastResult: AgentChatResult | null = null;
-  for (const taskNumber of numbers) {
-    const task = board.tasks.find((entry) => entry.task_number === taskNumber);
-    if (!task) {
-      missing.push(taskNumber);
-      continue;
-    }
-    lastResult = await executeIssueAssigneeDraft({ taskName: task.name, assigneeName }, user, board);
-    assigned.push(`"${task.name}" (#${taskNumber})`);
+export async function executeById(id: string, user: AuthenticatedUser): Promise<ExecutedActionDTO> {
+  const row = await getPendingActionById(id);
+  if (!row) return { pendingActionId: id, ok: false, reply: 'That action is no longer available.' };
+  if (!isExecutable(row.status)) {
+    return { pendingActionId: id, ok: false, reply: `That action is already ${row.status}. No changes were made.` };
   }
 
-  if (!assigned.length) {
-    return {
-      reply: `Approval recorded, but none of the referenced tasks (${numbers.map((num) => `#${num}`).join(', ')}) exist on the board anymore. No dashboard changes were made.`,
-      provider: 'openai',
-      model: 'eko-local-approval',
-      intent: 'details_needed',
-    };
+  await assertAdmin(user.id);
+  await markExecuting(id);
+
+  const tool = getToolById(row.tool_id);
+  if (!tool || !tool.gated) {
+    await markFailed(id, `No write tool for ${row.tool_id}`);
+    return { pendingActionId: id, ok: false, reply: 'EKO no longer has a matching write tool for that action.' };
   }
 
-  const missingNote = missing.length
-    ? ` Skipped ${missing.map((num) => `#${num}`).join(', ')} — no longer on the board.`
-    : '';
-  return {
-    reply: `Assigned ${assigned.length} task${assigned.length === 1 ? '' : 's'} to ${assigneeName}: ${assigned.join(', ')}.${missingNote}`,
-    provider: 'openai',
-    model: 'eko-local-write',
-    intent: 'executed',
-    // Receipt deep-links target exactly one task; a bulk write only carries
-    // one when the batch collapsed to a single assignment.
-    target: assigned.length === 1 ? lastResult?.target : undefined,
-  };
-}
-
-async function executeIssueDeleteDraft(
-  draft: AgentApprovalDraft | Pick<IssueWriteDraft, 'taskName'> | undefined,
-  user: AuthenticatedUser,
-  board: TasksBoardData | null,
-): Promise<AgentChatResult | null> {
-  const taskName = draft?.taskName;
-  if (!taskName) return null;
-
-  // Re-resolve against the fresh board load: the board may have changed since
-  // the approval card was prepared. Deletes never guess — anything other than
-  // exactly one match makes no change. The unique task_number wins over the
-  // name when the draft carries it (two tasks can share a name).
-  const draftNumber = 'taskNumber' in (draft ?? {}) ? Number((draft as AgentApprovalDraft).taskNumber) : NaN;
-  const byNumber = board && Number.isFinite(draftNumber)
-    ? board.tasks.filter((task) => task.task_number === draftNumber)
-    : [];
-  const matches = byNumber.length
-    ? byNumber
-    : board
-      ? board.tasks.filter((task) => task.name.toLowerCase() === taskName.toLowerCase())
-      : [];
-
-  if (matches.length !== 1) {
-    return {
-      reply: matches.length
-        ? `Approval recorded, but "${taskName}" now matches ${matches.length} tasks. No dashboard changes were made; name the exact task to delete.`
-        : `Approval recorded, but EKO could not find "${taskName}" in the current issues context. No dashboard changes were made.`,
-      provider: 'openai',
-      model: 'eko-local-approval',
-      intent: 'details_needed',
-    };
+  try {
+    const result = await (tool as WriteTool).commit(row.resolved_args, user);
+    await markExecuted(id);
+    return { pendingActionId: id, ok: true, reply: result.reply, target: result.target };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'EKO could not complete the action.';
+    await markFailed(id, message);
+    if (error instanceof AgentActionError && error.status === 403) throw error; // surface gate failures
+    return { pendingActionId: id, ok: false, reply: message };
   }
-
-  const task = matches[0];
-  await assertAdminUser(user.id);
-  const service = getServiceClient();
-  // FK relations (payment_items set-null, notes set-null, task_milestone
-  // cascade) make a plain row delete safe; the AFTER DELETE trigger writes the
-  // activity_log row. Afterward, relabel that trigger row as EKO-authored.
-  const { data, error } = await service.from('tasks').delete().eq('id', task.id).select('id');
-  if (error) throw new AgentProviderError('EKO could not delete the issue.', 500);
-  if (!data?.length) {
-    return {
-      reply: `Approval recorded, but "${task.name}" was already removed. No dashboard changes were made.`,
-      provider: 'openai',
-      model: 'eko-local-approval',
-      intent: 'details_needed',
-    };
-  }
-  await markLatestDeletedTaskActivityAsEko({ taskName: task.name, userId: user.id });
-
-  return {
-    reply: `Deleted "${task.name}" from Issues.`,
-    provider: 'openai',
-    model: 'eko-local-write',
-    intent: 'executed',
-  };
-}
-
-function withTypedIntent(input: AgentChatInput, result: AgentChatResult): AgentChatResult {
-  if (result.intent) return result;
-  const reply = result.reply;
-  if (isClarifyingReply(reply)) return { ...result, intent: 'clarification' };
-  if (isApprovalReply(reply)) {
-    // Deletes only execute through the typed issue.delete path prepared by
-    // parseIssueDeleteDraft. A delete proposal that reaches this fallback has
-    // no typed draft, and marking it details_needed would route it into the
-    // create-shaped details flow — turning "remove the task" into a create.
-    if (/\b(delete|remove)\b/i.test(`${input.message} ${reply}`) && !/\b(create|add|make)\b/i.test(input.message)) {
-      return {
-        ...result,
-        reply: 'Name the exact task to delete (as it appears in Issues) so EKO can prepare a gated delete for approval.',
-        intent: 'clarification',
-      };
-    }
-    const draft = parseIssueCreateDraft(`${input.message} ${reply}`) ?? undefined;
-    const intent = needsWriteDetails(reply) || (draft && (!draft.title || !draft.status || !draft.priority || !draft.dueDate))
-      ? 'details_needed'
-      : 'approval_required';
-    return {
-      ...result,
-      intent,
-      approval: {
-        kind: draft ? 'issue.create' : 'generic',
-        title: draft?.title ? `Create ${draft.title}` : getApprovalTitle(input.message, reply),
-        copy: reply,
-        draft,
-      },
-    };
-  }
-  return { ...result, intent: 'answer' };
-}
-
-function parseIssueCreateDraft(value: string): IssueWriteDraft | null {
-  if (!/\b(create|add|make|new)\b/i.test(value) || !/\b(task|issue|todo|work item)\b/i.test(value)) return null;
-  const quoted = value.match(/["“]([^"”]{2,80})["”]/)?.[1];
-  const afterCreate = value.match(/\b(?:create|add|make)\s+(?:a|an|the|new)?\s*(?:task|issue|todo|work item)?\s*(?:called|named|titled|for)?\s*([^,.]+?)(?:\s+(?:as|with|under|in|due|priority|status)\b|[,.]|$)/i)?.[1];
-  const title = cleanIssueTitle(quoted || afterCreate || '');
-  const status = parseTaskStatus(value);
-  const priority = parsePriority(value);
-  const dueDate = parseDueDate(value);
-  return { title: title || undefined, status, priority, dueDate };
-}
-
-function parseIssueStatusDraft(value: string, board: TasksBoardData | null): IssueWriteDraft | null {
-  const status = parseTaskStatus(value);
-  if (!status || !/\b(move|set|change|mark)\b/i.test(value)) return null;
-  const taskName = findMentionedTaskName(value, board);
-  return taskName ? { taskName, status } : null;
-}
-
-function parseIssueAssigneeDraft(value: string, board: TasksBoardData | null): IssueWriteDraft | null {
-  if (!/\b(assign|reassign|give)\b/i.test(value)) return null;
-  const taskName = findMentionedTaskName(value, board);
-  const staff = parseStaffFromText(value, board);
-  return taskName && staff ? { taskName, assigneeName: staff.name } : null;
-}
-
-function parseIssuePriorityDraft(value: string, board: TasksBoardData | null): IssueWriteDraft | null {
-  const priority = parsePriority(value);
-  if (!priority) return null;
-  if (!/\b(set|change|mark|make|raise|lower|bump|prioriti[sz]e)\b/i.test(value)) return null;
-  if (!/\b(priority|urgent|high|medium|low)\b/i.test(value)) return null;
-  const taskName = findMentionedTaskName(value, board);
-  return taskName ? { taskName, priority } : null;
-}
-
-function parseIssueDueDateDraft(value: string, board: TasksBoardData | null): IssueWriteDraft | null {
-  const dueDate = parseDueDate(value);
-  if (!dueDate) return null;
-  if (!/\b(set|change|mark|make|add|clear|remove)\b/i.test(value)) return null;
-  if (!/\b(due|deadline|date)\b/i.test(value)) return null;
-  const taskName = findMentionedTaskName(value, board);
-  return taskName ? { taskName, dueDate } : null;
-}
-
-/**
- * Bulk assign via plural anaphora: "assign them all to karti" right after EKO
- * listed tasks. The referent list is the #n references in EKO's most recent
- * reply that contains any — the exact set the user is looking at. Each number
- * must still resolve in the current index; unresolvable refs drop out.
- */
-function parseBulkAssignFromHistory(
-  value: string,
-  board: TasksBoardData | null,
-  recentHistory?: RecentHistoryItem[],
-): { assigneeName: string; tasks: Array<{ name: string; taskNumber: number }> } | null {
-  if (!/\b(assign|reassign|give)\b/i.test(value)) return null;
-  if (!/\b(?:them(?:\s+all)?|these|those|all of them|everything listed|all \d+)\b/i.test(value)) return null;
-  const staff = parseStaffFromText(value, board);
-  if (!staff || !recentHistory?.length) return null;
-
-  const index = buildTaskIndex(board);
-  for (let i = recentHistory.length - 1; i >= 0; i -= 1) {
-    const row = recentHistory[i];
-    if (row.role !== 'eko') continue;
-    const refs = [...row.text.matchAll(/#(\d+)/g)].map((match) => Number(match[1]));
-    if (!refs.length) continue;
-    const tasks = [...new Set(refs)]
-      .map((taskNumber) => {
-        const task = index.find((entry) => entry.taskNumber === taskNumber);
-        return task ? { name: task.name, taskNumber } : null;
-      })
-      .filter((task): task is NonNullable<typeof task> => Boolean(task));
-    return tasks.length ? { assigneeName: staff.name, tasks } : null;
-  }
-  return null;
-}
-
-type IssueDeleteResolution =
-  | { outcome: 'match'; taskName: string; status?: string; taskNumber?: number }
-  | { outcome: 'ambiguous'; candidates: string[] }
-  | { outcome: 'none' };
-
-function parseIssueDeleteDraft(
-  value: string,
-  board: TasksBoardData | null,
-  recentHistory?: RecentHistoryItem[],
-): IssueDeleteResolution | null {
-  if (!/\b(?:delete|remove)\b/i.test(value)) return null;
-  // Field-level edits ("remove the assignee/priority/…") are not issue deletes.
-  if (/\b(?:delete|remove)\s+(?:the\s+|its\s+)?(?:assignee|status|priority|due date|deadline|label|milestone|comment|description)\b/i.test(value)) {
-    return null;
-  }
-
-  const tasks = buildTaskIndex(board);
-  const normalized = value.toLowerCase();
-  const quotedName = value.match(/["“]([^"”]{2,120})["”]/)?.[1]?.trim();
-  const statusQualifier = parseTaskStatus(value);
-  const mentionsIssueNoun = /\b(?:task|issue|todo|work item)\b/i.test(value);
-
-  // Task numbers are unique, so an explicit "#22" / "task 22" is the most
-  // precise reference there is — it resolves before any name matching.
-  const numberRef = parseTaskNumberRef(value);
-  if (numberRef != null) {
-    const byNumber = tasks.filter((task) => task.taskNumber === numberRef);
-    return byNumber.length === 1
-      ? { outcome: 'match', taskName: byNumber[0].name, status: byNumber[0].status, taskNumber: numberRef }
-      : { outcome: 'none' };
-  }
-
-  // Referential delete ("delete it", "remove that task") right after EKO
-  // executed a create: resolve against the receipt line in recent history.
-  if (/\b(?:it|that(?: one| task| issue)?|this(?: one| task| issue)?|the (?:task|issue|one) (?:we|you|i) just (?:created|made|added))\b/i.test(value)) {
-    const referent = findRecentCreatedTask(recentHistory, tasks);
-    if (referent) {
-      return { outcome: 'match', taskName: referent.name, status: referent.status, taskNumber: referent.taskNumber };
-    }
-  }
-
-  // Deletes never guess: a quoted name must match a task name exactly, an
-  // unquoted mention must contain a known task name, and a status qualifier
-  // ("in backlog") narrows candidates instead of picking one.
-  let candidates: typeof tasks;
-  if (quotedName) {
-    candidates = tasks.filter((task) => task.name.toLowerCase() === quotedName.toLowerCase());
-    if (statusQualifier && candidates.length > 1) {
-      const narrowed = candidates.filter((task) => task.status?.toLowerCase() === statusQualifier.toLowerCase());
-      if (narrowed.length) candidates = narrowed;
-    }
-  } else {
-    // A task literally named "Task" (or "Issue" etc.) would match the noun in
-    // every delete sentence — generic names resolve only via quotes or a
-    // status qualifier, never by containment.
-    candidates = tasks.filter(
-      (task) =>
-        !/^(?:task|issue|todo|item|ticket|work item)$/i.test(task.name.trim())
-        && normalized.includes(task.name.toLowerCase()),
-    );
-    if (!candidates.length && !mentionsIssueNoun) return null;
-    if (statusQualifier) {
-      if (!candidates.length) {
-        candidates = tasks.filter((task) => task.status?.toLowerCase() === statusQualifier.toLowerCase());
-      } else if (candidates.length > 1) {
-        const narrowed = candidates.filter((task) => task.status?.toLowerCase() === statusQualifier.toLowerCase());
-        if (narrowed.length) candidates = narrowed;
-      }
-    }
-  }
-
-  if (candidates.length === 1) {
-    return { outcome: 'match', taskName: candidates[0].name, status: candidates[0].status, taskNumber: candidates[0].taskNumber };
-  }
-  if (candidates.length > 1) {
-    return { outcome: 'ambiguous', candidates: candidates.map((task) => task.name).slice(0, 6) };
-  }
-  return { outcome: 'none' };
-}
-
-/**
- * The task EKO itself just created, recovered from the executed-write receipt
- * in recent chat history ('Created issue "X" in Todo.'). Only a task that
- * still exists in the current index counts — a stale referent never resolves.
- */
-function findRecentCreatedTask(
-  recentHistory: RecentHistoryItem[] | undefined,
-  tasks: TaskIndexEntry[],
-) {
-  if (!recentHistory?.length) return null;
-  for (let i = recentHistory.length - 1; i >= 0; i -= 1) {
-    const row = recentHistory[i];
-    if (row.role !== 'eko') continue;
-    const created = row.text.match(/Created issue ["“]([^"”]{1,140})["”]/i)?.[1]?.trim();
-    if (!created) continue;
-    return tasks.find((task) => task.name.toLowerCase() === created.toLowerCase()) ?? null;
-  }
-  return null;
-}
-
-function parseTaskStatus(value: string): TaskStatus | undefined {
-  if (/\bin progress\b/i.test(value)) return 'In Progress';
-  if (/\bin review\b/i.test(value)) return 'In Review';
-  if (/\bbacklog\b/i.test(value)) return 'Backlog';
-  if (/\b(?:todo|to do)\b/i.test(value)) return 'Todo';
-  if (/\bdone\b/i.test(value)) return 'Done';
-  if (/\bcanceled\b/i.test(value)) return 'Canceled';
-  if (/\bduplicate\b/i.test(value)) return 'Duplicate';
-  return undefined;
-}
-
-function parsePriority(value: string): Priority | undefined {
-  if (/\burgent\b/i.test(value)) return 'Urgent';
-  if (/\bhigh\b/i.test(value)) return 'High';
-  if (/\bmedium\b/i.test(value)) return 'Medium';
-  if (/\blow\b/i.test(value)) return 'Low';
-  return undefined;
-}
-
-function parseDueDate(value: string): string | undefined {
-  const iso = value.match(/\b\d{4}-\d{2}-\d{2}\b/)?.[0];
-  if (iso) return iso;
-  if (/\btoday\b/i.test(value)) return 'Today';
-  if (/\btomorrow\b/i.test(value)) return 'Tomorrow';
-  if (/\bnext week\b/i.test(value)) return 'Next week';
-  if (/\bno date\b/i.test(value) || /\b(?:clear|remove)\s+(?:the\s+)?(?:due date|deadline|date)\b/i.test(value)) return 'No date';
-  return undefined;
-}
-
-function normalizeDueDate(value: string) {
-  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
-  const date = new Date();
-  date.setHours(0, 0, 0, 0);
-  if (/tomorrow/i.test(value)) date.setDate(date.getDate() + 1);
-  if (/next week/i.test(value)) date.setDate(date.getDate() + 7);
-  if (/no date/i.test(value)) return null;
-  return date.toISOString().slice(0, 10);
-}
-
-function cleanIssueTitle(value: string) {
-  return value
-    .replace(/\b(?:in progress|in review|backlog|todo|to do|urgent|high|medium|low|today|tomorrow|next week|no date)\b/gi, '')
-    .replace(/\b(?:status|priority|due|date)\b/gi, '')
-    .replace(/\s+/g, ' ')
-    .replace(/[.?!:;,-]+$/g, '')
-    .trim()
-    .replace(/\b\w/g, (letter) => letter.toUpperCase());
-}
-
-function formatList(items: unknown[]) {
-  const strings = items.map(String).filter(Boolean);
-  if (strings.length <= 1) return strings[0] ?? '';
-  return `${strings.slice(0, -1).join(', ')} and ${strings[strings.length - 1]}`;
-}
-
-function isApprovalReply(reply: string) {
-  return /^\s*ready for approval\s*:/i.test(reply);
-}
-
-function isBareConfirmationMessage(message: string) {
-  return /^\s*(?:yes|yeah|yep|ok|okay|sure|confirmed?|confirm|go ahead|proceed|do it|approve(?: it)?|approved(?: it)?|i approve)\s*[.!?]*\s*$/i.test(message);
-}
-
-function isClarifyingReply(reply: string) {
-  return /\b(please specify|which item|which task|what would you like|tell me what|i need (?:the|a)|since none|none (?:is|are) currently pending|no .* currently pending)\b/i.test(reply);
-}
-
-function needsWriteDetails(reply: string) {
-  return /\b(task name|issue title|\btitle\b|priority|due date|area|assignee|status|please share|please confirm|specify which|which item)\b/i.test(reply);
-}
-
-function getApprovalTitle(message: string, reply: string) {
-  const action = normalizeAgentReply(reply).replace(/^ready for approval:\s*/i, '').split(/[.;]/)[0]?.trim();
-  if (action) return action.slice(0, 72);
-  return normalizeAgentReply(message).slice(0, 72) || 'Approval request';
-}
-
-async function assertAdminUser(userId: string) {
-  const { data, error } = await getServiceClient().from('profiles').select('is_admin').eq('id', userId).maybeSingle();
-  if (error) throw new AgentProviderError('EKO could not verify your permissions.', 500);
-  if (!data?.is_admin) throw new AgentProviderError('Only admins can approve EKO writes.', 403);
-}
-
-async function markLatestTaskActivityAsEko({
-  taskId,
-  userId,
-  kind,
-  action,
-}: {
-  taskId: string;
-  userId: string;
-  kind?: string;
-  action?: string;
-}) {
-  const service = getServiceClient();
-  let query = service
-    .from('activity_log')
-    .select('id')
-    .eq('task_id', taskId)
-    .order('created_at', { ascending: false })
-    .limit(1);
-
-  if (kind) query = query.eq('kind', kind);
-  if (action) query = query.eq('action', action);
-
-  const { data } = await query;
-  const id = (data as Array<{ id: string }> | null)?.[0]?.id;
-  if (!id) return;
-
-  await service.from('activity_log').update({ source: 'eko', user_id: userId } as never).eq('id', id);
-}
-
-async function hideLatestHumanAssignedEcho({
-  taskId,
-  taskName,
-  userId,
-}: {
-  taskId: string;
-  taskName: string;
-  userId: string;
-}) {
-  const service = getServiceClient();
-  const { data } = await service
-    .from('activity_log')
-    .select('id')
-    .eq('task_id', taskId)
-    .eq('action', 'Assigned')
-    .like('target', `task: ${taskName}%`)
-    .order('created_at', { ascending: false })
-    .limit(1);
-  const id = (data as Array<{ id: string }> | null)?.[0]?.id;
-  if (!id) return;
-
-  await service.from('activity_log').delete().eq('id', id).eq('user_id', userId);
-}
-
-async function markLatestDeletedTaskActivityAsEko({
-  taskName,
-  userId,
-}: {
-  taskName: string;
-  userId: string;
-}) {
-  const service = getServiceClient();
-  const { data } = await service
-    .from('activity_log')
-    .select('id')
-    .eq('action', 'Deleted')
-    .eq('target', `task: ${taskName}`)
-    .is('task_id', null)
-    .order('created_at', { ascending: false })
-    .limit(1);
-  const id = (data as Array<{ id: string }> | null)?.[0]?.id;
-
-  if (id) {
-    await service
-      .from('activity_log')
-      .update({ action: 'deleted this task', target: '', source: 'eko', user_id: userId } as never)
-      .eq('id', id);
-    return;
-  }
-
-  await service.from('activity_log').insert({
-    user_id: userId,
-    action: 'deleted this task',
-    target: '',
-    task_id: null,
-    source: 'eko',
-  } as never);
-}
-
-function findMentionedTaskName(value: string, board: TasksBoardData | null) {
-  return findTaskInContext(value, board)?.name;
-}
-
-function findTaskInBoard(value: string, board: TasksBoardData | null) {
-  if (!board) return null;
-  const normalized = value.toLowerCase();
-  return [...board.tasks]
-    .sort((a, b) => b.name.length - a.name.length)
-    .find((task) => normalized.includes(task.name.toLowerCase())) ?? null;
-}
-
-function findStaffInBoard(value: string, board: TasksBoardData | null) {
-  if (!board) return null;
-  const normalized = value.toLowerCase();
-  return [...board.team]
-    .sort((a, b) => (b.display_name ?? '').length - (a.display_name ?? '').length)
-    .find((member) => member.display_name && normalized.includes(member.display_name.toLowerCase())) ?? null;
-}
-
-function findTaskInContext(value: string, board: TasksBoardData | null) {
-  return resolveTaskRef(value, buildTaskIndex(board));
-}
-
-function parseStaffFromText(value: string, board: TasksBoardData | null) {
-  const normalized = value.toLowerCase();
-  return buildStaffIndex(board)
-    .sort((a, b) => b.name.length - a.name.length)
-    .find((member) => normalized.includes(member.name.toLowerCase()));
-}
-
-type ContextTask = {
-  name: string;
-  status?: string;
-  deadline?: string;
-  raw: string;
-};
-
-export function answerLocalContextFollowUp(input: AgentChatInput, dashboardContext: string): AgentChatResult | null {
-  if (input.mode === 'approval') return null;
-
-  const message = input.message.trim();
-  const tasks = parseContextTasks(dashboardContext);
-  if (!tasks.length) return null;
-
-  const referencedTask = findReferencedContextTask(input, tasks);
-  if (!referencedTask) return null;
-
-  if (asksForDueDate(message)) {
-    return {
-      reply: referencedTask.deadline
-        ? `${referencedTask.name} is due ${referencedTask.deadline}.`
-        : `${referencedTask.name} does not have a due date. Would you like EKO to prepare adding one for approval?`,
-      provider: 'openai',
-      model: 'eko-local-context',
-    };
-  }
-
-  return null;
-}
-
-function asksForDueDate(message: string) {
-  return /\b(?:when|due|deadline|date)\b/i.test(message);
-}
-
-function parseContextTasks(dashboardContext: string): ContextTask[] {
-  const taskLines = dashboardContext
-    .split('\n')
-    .filter((line) =>
-      /^(?:In progress|Risk queue|In review|Recent activity task details):/i.test(line),
-    );
-  const seen = new Set<string>();
-  const tasks: ContextTask[] = [];
-
-  for (const line of taskLines) {
-    // Everything after the FIRST colon — not split(/:/, 2), which keeps only
-    // the first two segments and so truncates the value at a second colon
-    // inside a task name (e.g. "Concept Art: Characters …"), dropping every
-    // task listed after it.
-    const value = line.slice(line.indexOf(':') + 1).trim();
-    for (const part of value.split(';')) {
-      const raw = part.trim().replace(/\.$/, '');
-      if (!raw || /^no tasks/i.test(raw)) continue;
-      const match = raw.match(/^(.+?)(?:\s+\((.*?)\))?$/);
-      if (!match) continue;
-      const name = match[1]?.trim();
-      const meta = match[2] ?? '';
-      if (!name || seen.has(name.toLowerCase())) continue;
-      seen.add(name.toLowerCase());
-      tasks.push({
-        name,
-        raw,
-        status: meta.split(',').map((item) => item.trim()).find(Boolean),
-        deadline: meta.match(/\bdue\s+(\d{4}-\d{2}-\d{2})\b/i)?.[1],
-      });
-    }
-  }
-
-  return tasks;
-}
-
-function findReferencedContextTask(input: AgentChatInput, tasks: ContextTask[]) {
-  const sortedTasks = [...tasks].sort((a, b) => b.name.length - a.name.length);
-  const history = [...(input.clientContext?.recentHistory ?? [])].reverse();
-
-  for (const item of history) {
-    const text = item.text.toLowerCase();
-    const match = sortedTasks.find((task) => text.includes(task.name.toLowerCase()));
-    if (match) return match;
-  }
-
-  return null;
-}
-
-function formatContextError(error: unknown) {
-  return error instanceof Error ? error.message : 'unknown';
-}
-
-function buildPrompt(input: AgentChatInput, dashboardContext: string) {
-  const recentHistory = input.clientContext?.recentHistory?.length
-    ? [
-        'Recent EKO conversation:',
-        ...input.clientContext.recentHistory.map((item) => `${item.role.toUpperCase()}: ${item.text}`),
-      ].join('\n')
-    : null;
-  const parts = [
-    `Authenticated user: signed in`,
-    `Mode: ${input.mode ?? 'chat'}`,
-    input.decision ? `Decision: ${input.decision}` : null,
-    input.suggestion?.title ? `Selected action: ${input.suggestion.title}` : null,
-    input.suggestion?.meta ? `Action context: ${input.suggestion.meta}` : null,
-    input.suggestion?.approvalCopy ? `Approval copy: ${input.suggestion.approvalCopy}` : null,
-    input.revision ? `Saved revision: ${input.revision}` : null,
-    input.clientContext?.path ? `Dashboard path: ${input.clientContext.path}` : null,
-    recentHistory,
-    dashboardContext,
-    'Answer from Recent EKO conversation first when the user uses follow-ups like "those", "that", or "it". Keep the same subject unless the user clearly changes it; then verify details against Dashboard context. Avoid mentioning missing integrations or asking the user to paste data if the context includes task counts.',
-    `User request: ${input.message}`,
-  ].filter(Boolean);
-
-  return parts.join('\n');
-}
-
-async function runOpenAI(prompt: string): Promise<AgentChatResult> {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) throw new AgentConfigError('Missing OPENAI_API_KEY for EKO.');
-  const model = process.env.EKO_OPENAI_MODEL ?? process.env.OPENAI_MODEL ?? 'gpt-5.4-mini';
-
-  const response = await fetch('https://api.openai.com/v1/responses', {
-    method: 'POST',
-    headers: {
-      authorization: `Bearer ${apiKey}`,
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify({
-      model,
-      instructions: EKO_INSTRUCTIONS,
-      input: prompt,
-      max_output_tokens: 500,
-    }),
-  });
-
-  const body = await response.json().catch(() => null);
-  if (!response.ok) {
-    throw new AgentProviderError(extractProviderError(body) ?? 'OpenAI request failed.', response.status);
-  }
-
-  const reply = normalizeAgentReply(extractOpenAIText(body));
-  if (!reply) throw new AgentProviderError('OpenAI returned an empty EKO response.');
-
-  return { reply, provider: 'openai', model };
-}
-
-async function runAnthropic(prompt: string): Promise<AgentChatResult> {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new AgentConfigError('Missing ANTHROPIC_API_KEY for EKO.');
-  const model = process.env.EKO_ANTHROPIC_MODEL ?? process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-5';
-
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify({
-      model,
-      system: EKO_INSTRUCTIONS,
-      max_tokens: 500,
-      messages: [{ role: 'user', content: prompt }],
-    }),
-  });
-
-  const body = await response.json().catch(() => null);
-  if (!response.ok) {
-    throw new AgentProviderError(extractProviderError(body) ?? 'Anthropic request failed.', response.status);
-  }
-
-  const reply = normalizeAgentReply(extractAnthropicText(body));
-  if (!reply) throw new AgentProviderError('Anthropic returned an empty EKO response.');
-
-  return { reply, provider: 'anthropic', model };
-}
-
-function extractOpenAIText(body: unknown) {
-  if (!body || typeof body !== 'object') return '';
-  const record = body as Record<string, unknown>;
-  if (typeof record.output_text === 'string') return record.output_text.trim();
-
-  const output = Array.isArray(record.output) ? record.output : [];
-  const text: string[] = [];
-  for (const item of output) {
-    if (!item || typeof item !== 'object') continue;
-    const content = (item as Record<string, unknown>).content;
-    if (!Array.isArray(content)) continue;
-    for (const block of content) {
-      if (!block || typeof block !== 'object') continue;
-      const value = (block as Record<string, unknown>).text;
-      if (typeof value === 'string') text.push(value);
-    }
-  }
-  return text.join('\n').trim();
-}
-
-function extractAnthropicText(body: unknown) {
-  if (!body || typeof body !== 'object') return '';
-  const content = (body as Record<string, unknown>).content;
-  if (!Array.isArray(content)) return '';
-
-  return content
-    .map((block) => {
-      if (!block || typeof block !== 'object') return '';
-      const record = block as Record<string, unknown>;
-      return record.type === 'text' && typeof record.text === 'string' ? record.text : '';
-    })
-    .filter(Boolean)
-    .join('\n')
-    .trim();
-}
-
-function extractProviderError(body: unknown) {
-  if (!body || typeof body !== 'object') return null;
-  const record = body as Record<string, unknown>;
-  const error = record.error;
-  if (typeof error === 'string') return error;
-  if (error && typeof error === 'object') {
-    const message = (error as Record<string, unknown>).message;
-    if (typeof message === 'string') return message;
-  }
-  return null;
-}
-
-function normalizeAgentReply(reply: string) {
-  return reply
-    .replace(/\*\*(.*?)\*\*/g, '$1')
-    .replace(/`([^`]+)`/g, '$1')
-    .replace(/^\s*[-*]\s+/gm, '')
-    .replace(/^\s*\d+\.\s+/gm, '')
-    .replace(/\b\d+\.\s+/g, '')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, 420);
 }
