@@ -809,19 +809,6 @@ export const router = createBrowserRouter([
     },
   },
   {
-    // No-backend visual-QA preview for the breadcrumb-steps model. Standalone.
-    // Not in routeInventory. Retired once /contractor/qa adopts the step model
-    // (plan Task 10).
-    path: '/contractor/steps-qa',
-    ErrorBoundary: StandaloneErrorBoundary,
-    lazy: async () => {
-      const route = await import('./routes/contractor-steps-qa');
-      return {
-        Component: route.ContractorStepsQaRoute,
-      };
-    },
-  },
-  {
     path: '/login',
     lazy: async () => {
       const route = await import('./routes/login');

@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { ContractorDeliverable } from '@/lib/contractor-index';
 import {
-  bucketDeliverables,
   greetingFor,
+  isOverdue,
+  overdueLabel,
+  splitDeliverables,
   summarizeDeliverables,
 } from '@/lib/contractor-buckets';
 
@@ -21,39 +23,81 @@ function d(partial: Partial<ContractorDeliverable>): ContractorDeliverable {
   };
 }
 
-describe('bucketDeliverables', () => {
-  it('classifies by deadline vs today and drops canceled/duplicate', () => {
-    const items = [
-      d({ id: 'over', deadline: '2026-07-01', status: 'In Progress' }),
-      d({ id: 'week', deadline: '2026-07-08', status: 'Todo' }),
-      d({ id: 'later', deadline: '2026-07-24', status: 'Backlog' }),
-      d({ id: 'none', deadline: null, status: 'Todo' }),
-      d({ id: 'done', deadline: '2026-07-02', status: 'Done' }),
-      d({ id: 'cancel', deadline: '2026-07-02', status: 'Canceled' }),
-      d({ id: 'dup', deadline: '2026-07-02', status: 'Duplicate' }),
-    ];
-    const buckets = bucketDeliverables(items, NOW);
-    const byKey = Object.fromEntries(buckets.map((b) => [b.key, b.items.map((i) => i.id)]));
-
-    expect(byKey.overdue).toEqual(['over']);
-    expect(byKey.thisWeek).toEqual(['week']);
-    expect(byKey.upcoming).toEqual(['later', 'none']); // no-deadline sorts last within upcoming
-    expect(byKey.delivered).toEqual(['done']);
-    // canceled + duplicate appear in NO bucket
-    expect(JSON.stringify(buckets)).not.toContain('cancel');
-    expect(JSON.stringify(buckets)).not.toContain('dup');
-    // empty buckets are omitted
-    expect(buckets.every((b) => b.items.length > 0)).toBe(true);
-  });
-
-  it('sorts within a bucket by deadline then priority', () => {
+describe('splitDeliverables', () => {
+  it('sorts active by deadline then priority (same-day High before Low)', () => {
     const items = [
       d({ id: 'b', deadline: '2026-07-08', priority: 'Low' }),
       d({ id: 'a', deadline: '2026-07-06', priority: 'Low' }),
       d({ id: 'a-high', deadline: '2026-07-06', priority: 'High' }),
     ];
-    const [week] = bucketDeliverables(items, NOW);
-    expect(week.items.map((i) => i.id)).toEqual(['a-high', 'a', 'b']);
+    const { active } = splitDeliverables(items, NOW);
+    expect(active.map((i) => i.id)).toEqual(['a-high', 'a', 'b']);
+  });
+
+
+  it('puts all incomplete work in active (overdue floats to top), Done in the timeline', () => {
+    const items = [
+      d({ id: 'week', deadline: '2026-07-08', status: 'Todo' }),
+      d({ id: 'overdue1', deadline: '2026-07-01', status: 'In Progress' }),
+      d({ id: 'overdue2', deadline: '2026-06-15', status: 'Todo' }),
+      d({ id: 'none', deadline: null, status: 'Todo' }),
+      d({ id: 'done-may', deadline: '2026-05-20', status: 'Done' }),
+      d({ id: 'cancel', deadline: '2026-07-02', status: 'Canceled' }),
+      d({ id: 'dup', deadline: '2026-07-02', status: 'Duplicate' }),
+    ];
+    const { active, timeline } = splitDeliverables(items, NOW);
+
+    // overdue (earliest deadline) first, then upcoming by deadline, undated last
+    expect(active.map((i) => i.id)).toEqual(['overdue2', 'overdue1', 'week', 'none']);
+    // Done leaves the active list entirely
+    expect(active.map((i) => i.id)).not.toContain('done-may');
+    // canceled + duplicate appear nowhere
+    expect(JSON.stringify({ active, timeline })).not.toContain('cancel');
+    expect(JSON.stringify({ active, timeline })).not.toContain('dup');
+  });
+
+  it('groups the timeline by month, newest month first, newest-first within a month', () => {
+    const items = [
+      d({ id: 'apr', deadline: '2026-04-30', status: 'Done' }),
+      d({ id: 'may-early', deadline: '2026-05-12', status: 'Done' }),
+      d({ id: 'may-late', deadline: '2026-05-20', status: 'Done' }),
+    ];
+    const { timeline } = splitDeliverables(items, NOW);
+
+    expect(timeline.map((m) => m.label)).toEqual(['May 2026', 'April 2026']);
+    expect(timeline[0].items.map((i) => i.id)).toEqual(['may-late', 'may-early']);
+    expect(timeline[1].items.map((i) => i.id)).toEqual(['apr']);
+  });
+
+  it('collects Done items with no deadline into a trailing "No date" group', () => {
+    const items = [
+      d({ id: 'dated', deadline: '2026-05-20', status: 'Done' }),
+      d({ id: 'undated', deadline: null, status: 'Done' }),
+    ];
+    const { timeline } = splitDeliverables(items, NOW);
+
+    expect(timeline.map((m) => m.label)).toEqual(['May 2026', 'No date']);
+    expect(timeline.at(-1)?.items.map((i) => i.id)).toEqual(['undated']);
+  });
+
+  it('omits empty groups and returns empty arrays when there is nothing to show', () => {
+    expect(splitDeliverables([], NOW)).toEqual({ active: [], timeline: [] });
+  });
+});
+
+describe('isOverdue', () => {
+  it('is true only for a past-dated deadline, never today or the future or null', () => {
+    expect(isOverdue('2026-07-01', NOW)).toBe(true);
+    expect(isOverdue('2026-07-04', NOW)).toBe(false); // due today is not overdue
+    expect(isOverdue('2026-07-10', NOW)).toBe(false);
+    expect(isOverdue(null, NOW)).toBe(false);
+  });
+});
+
+describe('overdueLabel', () => {
+  it('renders a human day count', () => {
+    expect(overdueLabel('2026-07-03', NOW)).toBe('1 day overdue');
+    expect(overdueLabel('2026-06-29', NOW)).toBe('5 days overdue');
   });
 });
 
