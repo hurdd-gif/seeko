@@ -1,4 +1,5 @@
 import { getServiceClient } from '@/lib/supabase/service';
+import type { ContractorStep, ContractorStepDeliverable } from './contractor-steps';
 import type { Priority, TaskStatus } from './types';
 
 export class ContractorAccessError extends Error {
@@ -30,13 +31,14 @@ export type ContractorDeliverable = {
 
 export type ContractorOverviewData = {
   profile: ContractorProfile;
-  deliverables: ContractorDeliverable[];
+  deliverables: ContractorStepDeliverable[];
 };
 
 const CONTRACTOR_PROFILE_SELECT =
   'id, display_name, email, avatar_url, is_admin, is_contractor' as const;
 const CONTRACTOR_TASK_SELECT =
   'id, name, department, status, priority, deadline, progress, description' as const;
+const CONTRACTOR_STEP_SELECT = 'id, task_id, name, deadline, state, sort_order' as const;
 
 // `progress` exists on public.tasks (docs/supabase-schema.sql) but is missing from the
 // generated Database types, so the select-string parser can't infer it — override the
@@ -107,7 +109,37 @@ export async function loadContractorOverview(currentUser: {
 
   if (error) throw error;
 
-  const deliverables: ContractorDeliverable[] = (data ?? []).map((t) => ({
+  const taskRows = data ?? [];
+  const taskIds = taskRows.map((t) => t.id);
+
+  // One extra query pulls every step for the caller's tasks, then we bucket them
+  // by task_id. Ordered by sort_order so each deliverable's spine reads top-down.
+  const stepsByTask = new Map<string, ContractorStep[]>();
+  if (taskIds.length > 0) {
+    const { data: stepRows, error: stepError } = await service
+      .from('task_steps')
+      .select(CONTRACTOR_STEP_SELECT)
+      .in('task_id', taskIds)
+      .order('sort_order', { ascending: true });
+    if (stepError) throw stepError;
+
+    // Sort by sort_order in code too: the invariant "a deliverable's steps read
+    // top-down by sort_order" shouldn't depend on the transport preserving order.
+    const sortedRows = [...(stepRows ?? [])].sort((a, b) => a.sort_order - b.sort_order);
+    for (const row of sortedRows) {
+      const list = stepsByTask.get(row.task_id) ?? [];
+      list.push({
+        id: row.id,
+        name: row.name,
+        deadline: row.deadline ?? null,
+        state: row.state,
+        sort_order: row.sort_order,
+      });
+      stepsByTask.set(row.task_id, list);
+    }
+  }
+
+  const deliverables: ContractorStepDeliverable[] = taskRows.map((t) => ({
     id: t.id,
     name: t.name,
     department: t.department ?? null,
@@ -116,6 +148,7 @@ export async function loadContractorOverview(currentUser: {
     deadline: t.deadline ?? null,
     progress: typeof t.progress === 'number' ? t.progress : 0,
     description: t.description ?? null,
+    steps: stepsByTask.get(t.id) ?? [],
   }));
 
   return { profile, deliverables };
