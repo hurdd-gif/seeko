@@ -55,11 +55,22 @@ function dayAfter(iso: string): string {
 
 /* Ghost text-button — matches the established sibling pattern in this same
  * directory (DeliverableSteps.tsx "N done" toggle, CompletedTimeline.tsx
- * "Show N earlier"): three-step ink ramp on hover/active, no scale (this is a
- * quiet inline affordance, not a filled control — the color step already reads
- * as feedback and matches its siblings on the same spine). */
+ * "Show N earlier"): ink ramp on hover/active, no scale (this is a quiet
+ * inline affordance, not a filled control — the color step already reads as
+ * feedback and matches its siblings on the same spine).
+ *
+ * DEVIATION from those siblings, visual-QA pass 2026-07-06: resting color is
+ * `ink` (#3a3a3a, 10.5:1) rather than `ink-faint` (#969696, ~2.96:1) — this is
+ * the ONLY entry/recovery path in the control (not decorative sublining), so
+ * the resting state itself must clear WCAG AA (4.5:1), not just the
+ * hover/active steps. hover/active are unchanged (hover is now a same-tier
+ * no-op, active still deepens to #111). Also carries `py-1.5` +
+ * `inline-flex items-center` to grow the ~75×16.5px tap target toward the
+ * mobile 44px floor without changing the visible text footprint. Local to
+ * this file, used only for the two labels below — does not touch the shared
+ * `lightKit` ghost-link tokens used elsewhere in the portal. */
 const GHOST_LINK =
-  'text-[11px] font-medium text-ink-faint transition-colors duration-150 ease-out hover:text-ink active:text-[#111] motion-reduce:transition-none';
+  'inline-flex items-center py-1.5 text-[11px] font-medium text-ink transition-colors duration-150 ease-out hover:text-ink active:text-[#111] motion-reduce:transition-none';
 
 /**
  * Contractor-facing deadline-extension affordance for one deliverable heading.
@@ -95,7 +106,13 @@ export function DeadlineExtensionControl({
       <p className="mt-1 flex items-center gap-1.5 pl-6 text-[11px] font-medium" style={{ color: PENDING_AMBER }}>
         <CalendarClock className="size-3" strokeWidth={2.5} aria-hidden />
         Extension requested — pending
-        <span className="tabular-nums text-ink-faint">· {fmt(ext.requested_deadline)}</span>
+        {/* ink-faint (#969696, ~2.96:1) failed AA on this date — it's the one
+         * hard fact in the pending state, not decorative sublining. Raised to
+         * ink-muted-strong (#686868, 4.9:1), the token's own documented "AA
+         * floor" tier (globals.css) — one step lighter than the ghost-link
+         * labels' `ink` since this is supporting data inside an already-amber
+         * pill, not the primary actionable text. */}
+        <span className="tabular-nums text-ink-muted-strong">· {fmt(ext.requested_deadline)}</span>
       </p>
     );
   }
@@ -169,7 +186,7 @@ export function DeadlineExtensionControl({
               setOpen(false);
               setError(false);
             }}
-            className="text-[11px] text-ink-faint transition-colors duration-150 ease-out hover:text-ink active:text-[#111] motion-reduce:transition-none"
+            className="inline-flex items-center py-1.5 text-[11px] text-ink-faint transition-colors duration-150 ease-out hover:text-ink active:text-[#111] motion-reduce:transition-none"
           >
             Cancel
           </button>
@@ -197,7 +214,7 @@ export function DeadlineExtensionControl({
   if (ext && ext.status === 'denied') {
     return (
       <div className="mt-1 pl-6">
-        <p className="text-[11px] text-ink-faint">
+        <p className="text-pretty text-[11px] text-ink-faint">
           Extension denied
           {ext.denial_reason ? <span className="text-ink"> — {ext.denial_reason}</span> : null}
         </p>

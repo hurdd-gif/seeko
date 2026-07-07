@@ -72,8 +72,15 @@ const deliverables: ContractorStepDeliverable[] = [
   }),
   // Zero steps → "No steps yet".
   d({ id: 'd4', name: 'Character portraits', department: 'Visual Art', status: 'Todo', priority: 'Low', steps: [] }),
-  // Deadline-extension affordance states: a pending request (amber pill) and a
-  // denied request (note + reason + "Request again").
+  // Deadline-extension affordance states: no request yet ("Request more time"
+  // entry point), a pending request (amber pill), and a denied request (note +
+  // reason + "Request again").
+  d({
+    id: 'd-ext-none', name: 'Level 3 blockout', department: 'Coding', status: 'In Progress',
+    priority: 'Medium', progress: 20, deadline: '2026-07-30',
+    steps: [{ id: 'n1', name: 'Greybox pass', deadline: '2026-07-30', state: 'pending', sort_order: 0 }],
+    latestExtension: null,
+  }),
   d({
     id: 'd-ext-pending', name: 'Combat VFX pass', department: 'Animation', status: 'In Progress',
     priority: 'High', progress: 30, deadline: '2026-07-20',
