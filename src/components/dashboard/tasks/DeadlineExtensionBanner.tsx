@@ -11,13 +11,14 @@ export type DeadlineExtensionBannerProps = {
 const fmt = (iso: string) =>
   new Date(iso + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
-/* Awaiting-decision amber — reuses the codebase's established "waiting on
- * someone else's decision" amber (LIGHT_SIGNING_STATUS.pending, PaymentsAdmin's
- * refund-pending card, DeadlineExtensionControl's own PENDING_AMBER) rather
- * than inventing a new one. Deliberately NOT `#b45309` — that hex is already
- * spoken for elsewhere as the Animation department color (lightKit.ts), a
- * different semantic; reusing it here would collide two unrelated meanings
- * under one hue. */
+/* Awaiting-decision amber — reuses the codebase's established shared
+ * "pending decision" amber (LIGHT_SIGNING_STATUS.pending, the sibling
+ * DeadlineExtensionControl's own pending pill) rather than inventing a new
+ * one, for cross-surface consistency. Note this value also equals
+ * lightKit.ts's LIGHT_DEPT_COLOR.Animation — that's an existing coincidence
+ * in the palette, not something this reuse avoids. It's harmless here: this
+ * page's department dots render Animation as `#fbbf24`, so nothing on this
+ * screen collides with it. */
 const PENDING_AMBER = '#946a00';
 
 async function defaultDecide(id: string, action: 'approve' | 'deny', reason?: string): Promise<void> {
@@ -121,7 +122,8 @@ export function DeadlineExtensionBanner({ extension, onDecide }: DeadlineExtensi
           <button
             type="button"
             onClick={() => setDenyMode(true)}
-            className="rounded-full px-3.5 py-1.5 text-[12px] font-medium text-[#3a3a3a] ring-1 ring-black/[0.1] transition-[background-color,transform] duration-150 ease-out hover:bg-black/[0.03] active:scale-[0.97] motion-reduce:transition-none motion-reduce:active:scale-100"
+            disabled={deciding}
+            className="rounded-full px-3.5 py-1.5 text-[12px] font-medium text-[#3a3a3a] ring-1 ring-black/[0.1] transition-[background-color,transform] duration-150 ease-out hover:bg-black/[0.03] active:scale-[0.97] disabled:opacity-50 motion-reduce:transition-none motion-reduce:active:scale-100"
           >
             Deny
           </button>
