@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { emitEkoEvent, requestEkoSpotlight } from '@/lib/eko-bus';
+import { newConversationId, executedTarget } from '@/lib/eko-agent-client';
 
 const suggestions = [
   {
@@ -64,6 +65,8 @@ type EkoApiRequest = {
   message: string;
   mode?: 'chat' | 'approval';
   decision?: 'approve' | 'reject';
+  conversationId?: string;
+  pendingActionIds?: string[];
   suggestion?: {
     id: string;
     title: string;
@@ -98,17 +101,21 @@ type EkoApiResponse = {
     };
   };
   /**
-   * Mirrors AgentWriteTarget in src/api-server/routes/agent.ts — present only
-   * on `executed` responses that changed one task. Drives the post-write
-   * receipt row; UI choreography metadata only, never a write path.
+   * Mirrors AgentWriteTarget in src/api-server/agent/tool-contract.ts —
+   * present only on `executed` responses that changed one task. Drives the
+   * post-write receipt row; UI choreography metadata only, never a write path.
    */
   target?: {
     kind: 'task';
     taskId: string;
     taskNumber?: number | null;
     name: string;
-    action: 'create' | 'status' | 'assignee';
+    action: 'create' | 'status' | 'assignee' | 'priority' | 'dueDate';
   };
+  /** Staged writes awaiting approval, keyed server-side by conversationId. */
+  pendingActions?: Array<{ id: string; toolId: string; summary: string }>;
+  /** Results of an approval decision — one entry per approved pendingActionId. */
+  executed?: Array<{ pendingActionId: string; ok: boolean; reply: string; target?: EkoApiResponse['target'] }>;
 };
 type WriteReceipt = {
   target: NonNullable<EkoApiResponse['target']>;
@@ -307,9 +314,6 @@ function normalizeApprovalLabel(value: string) {
 }
 
 function getGeneratedApprovalLabel(prompt: string, reply: string) {
-  const inferred = inferPendingWriteDraft(prompt, reply);
-  if (inferred.title) return `Create ${inferred.title}`;
-
   const action = normalizeApprovalLabel(stripApprovalPrefix(reply).split(/[,;]/)[0] ?? '');
   if (action && action.length >= 6) return action.slice(0, 72);
 
@@ -346,13 +350,12 @@ function createGeneratedApprovalSuggestionFromResponse(prompt: string, response:
   };
 }
 
-function draftFromResponse(response: EkoApiResponse, prompt: string): PendingWriteDraft {
-  const inferred = inferPendingWriteDraft(prompt, response.reply);
+function draftFromResponse(response: EkoApiResponse, _prompt: string): PendingWriteDraft {
   return {
-    title: response.approval?.draft?.title ?? inferred.title,
-    status: response.approval?.draft?.status ?? inferred.status,
-    priority: response.approval?.draft?.priority ?? inferred.priority,
-    dueDate: response.approval?.draft?.dueDate ?? inferred.dueDate,
+    title: response.approval?.draft?.title ?? '',
+    status: response.approval?.draft?.status ?? '',
+    priority: response.approval?.draft?.priority ?? '',
+    dueDate: response.approval?.draft?.dueDate ?? '',
   };
 }
 
@@ -367,42 +370,6 @@ function titleCaseIssue(value: string) {
 function extractQuotedTitle(value: string) {
   const match = value.match(/["“]([^"”]{3,80})["”]/);
   return match ? titleCaseIssue(match[1]) : '';
-}
-
-function inferPendingWriteDraft(prompt: string, reply: string): PendingWriteDraft {
-  const source = `${prompt} ${reply}`;
-  const titleFromQuote = extractQuotedTitle(reply) || extractQuotedTitle(prompt);
-  const titleFromHaving = prompt.match(/\b(?:having|adding|add|create|make)\s+(.+?)(?:,\s*add|\s+as\s+an\s+issue|\s+issue|\s+task|$)/i)?.[1];
-  const usableTitleFromPrompt =
-    titleFromHaving && !/^(?:a|an|the|new|task|issue)$/i.test(titleFromHaving.trim())
-      ? titleFromHaving
-      : '';
-  const status = /\bin progress\b/i.test(source)
-    ? 'In Progress'
-    : /\bin review\b/i.test(source)
-      ? 'In Review'
-      : /\bbacklog\b/i.test(source)
-        ? 'Backlog'
-        : /\btodo\b/i.test(source)
-          ? 'Todo'
-          : '';
-  const priority = /\burgent\b/i.test(source)
-    ? 'Urgent'
-    : /\bhigh\b/i.test(source)
-      ? 'High'
-      : /\bmedium\b/i.test(source)
-        ? 'Medium'
-        : /\blow\b/i.test(source)
-          ? 'Low'
-          : '';
-  const dueDate = source.match(/\b\d{4}-\d{2}-\d{2}\b/)?.[0] ?? '';
-
-  return {
-    title: titleFromQuote || (usableTitleFromPrompt ? titleCaseIssue(usableTitleFromPrompt) : ''),
-    status,
-    priority,
-    dueDate,
-  };
 }
 
 function getInitialWriteDetailsStep(draft: PendingWriteDraft): WriteDetailsStep {
@@ -457,7 +424,9 @@ export function AgentCompanion({ userKey }: { userKey?: string }) {
   const [storageHydrated, setStorageHydrated] = useState(false);
   const [suggestionStats, setSuggestionStats] = useState<SuggestionStats>({});
   const [actionFeedback, setActionFeedback] = useState<'approve' | 'edit' | 'reject' | null>(null);
+  const [pendingActionIds, setPendingActionIds] = useState<string[]>([]);
   const reduceMotion = useReducedMotion();
+  const conversationIdRef = useRef<string>(newConversationId());
   const decisionTimerRef = useRef<number | null>(null);
   const editTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const trayScrollRef = useRef<HTMLDivElement | null>(null);
@@ -991,6 +960,7 @@ export function AgentCompanion({ userKey }: { userKey?: string }) {
 
     return {
       message,
+      conversationId: conversationIdRef.current,
       clientContext: {
         path: window.location.pathname,
         title: document.title,
@@ -1037,7 +1007,8 @@ export function AgentCompanion({ userKey }: { userKey?: string }) {
         buildApiRequest(approvalMessage, {
           mode: 'approval',
           decision: 'approve',
-          revision: approvalMessage || undefined,
+          pendingActionIds,
+          suggestion: undefined,
         }),
       );
       setApprovalStatus('answered');
@@ -1045,23 +1016,28 @@ export function AgentCompanion({ userKey }: { userKey?: string }) {
       setDemoResponse(response.reply);
       // Read-only bus signal for ALL executed writes (deletes included, with
       // no target): consumers revalidate loader data — no mutation rides this.
-      if (response.intent === 'executed') {
+      const target = executedTarget(response as unknown as import('@/lib/eko-agent-client').EkoChatResponse);
+      const didExecute = (response.executed ?? []).some((e) => e.ok);
+      if (didExecute) {
         emitEkoEvent({
           type: 'write-executed',
-          target: response.target
-            ? {
-                id: response.target.taskId,
-                taskNumber: response.target.taskNumber ?? undefined,
-                name: response.target.name,
-              }
-            : undefined,
+          target: target ? { id: target.taskId, taskNumber: target.taskNumber ?? undefined, name: target.name } : undefined,
         });
       }
       // Post-write receipt: executed writes return the changed task so the
       // tray can offer a "view it on the board" deep link (bus spotlight).
       setWriteReceipt(
-        response.intent === 'executed' && response.target
-          ? { target: response.target, reply: response.reply }
+        target
+          ? {
+              target: {
+                kind: 'task',
+                taskId: target.taskId,
+                taskNumber: target.taskNumber ?? null,
+                name: target.name,
+                action: target.action as 'create' | 'status' | 'assignee' | 'priority' | 'dueDate',
+              },
+              reply: response.reply,
+            }
           : null,
       );
       appendHistory({ role: 'eko', text: response.reply });
@@ -1298,6 +1274,8 @@ export function AgentCompanion({ userKey }: { userKey?: string }) {
     // while every bubble stays. Resets to the same state as a first open.
     if (/^\/(clear|reset)\b/i.test(prompt.trim())) {
       promptRequestRef.current += 1;
+      conversationIdRef.current = newConversationId();
+      setPendingActionIds([]);
       setChatHistory([]);
       setActiveSuggestion(null);
       setEditValue('');
@@ -1390,8 +1368,14 @@ export function AgentCompanion({ userKey }: { userKey?: string }) {
         const generatedSuggestion = createGeneratedApprovalSuggestionFromResponse(prompt, response);
         const inferredDraft = draftFromResponse(response, prompt);
         setActiveSuggestion(generatedSuggestion);
+        setPendingActionIds(response.pendingActions?.map((p) => p.id) ?? []);
         setGeneratedApprovalCopy(response.approval?.copy || response.reply);
         setActiveApproval(response.approval ?? null);
+        const staged = response.pendingActions ?? [];
+        if (staged.length) {
+          // One line per staged write; the card renders this as its body.
+          setGeneratedApprovalCopy(staged.map((p) => `• ${p.summary}`).join('\n'));
+        }
         setPendingWriteDraft(inferredDraft);
         setWriteDetailsStep(getInitialWriteDetailsStep(inferredDraft));
         setApprovalStatus(responseNeedsWriteDetails(response) ? 'editing' : 'pending');
@@ -1930,7 +1914,7 @@ export function AgentCompanion({ userKey }: { userKey?: string }) {
                                   Risky action
                                 </p>
                               </div>
-                              <p className="text-[13px] font-medium leading-[17px] text-white/88">
+                              <p className="whitespace-pre-line text-[13px] font-medium leading-[17px] text-white/88">
                                 {approvalCopy}
                               </p>
                               {shouldCollectWriteDetails ? null : approvalStatus === 'editing' ? (
@@ -2103,7 +2087,11 @@ export function AgentCompanion({ userKey }: { userKey?: string }) {
                                         ? 'Created'
                                         : writeReceipt.target.action === 'status'
                                           ? 'Status updated'
-                                          : 'Reassigned'}
+                                          : writeReceipt.target.action === 'assignee'
+                                            ? 'Reassigned'
+                                            : writeReceipt.target.action === 'priority'
+                                              ? 'Priority updated'
+                                              : 'Due date updated'}
                                       {writeReceipt.target.taskNumber != null
                                         ? ` · #${writeReceipt.target.taskNumber}`
                                         : ''}
