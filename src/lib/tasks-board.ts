@@ -5,6 +5,7 @@ import type {
   Area,
   Milestone,
   Notification,
+  PendingExtension,
   Profile,
   TaskActivity,
   TaskWithAssignee,
@@ -187,10 +188,13 @@ export type TaskDetailFullData = {
   milestones: Milestone[];
   activity: TaskActivity[];
   isAdmin: boolean;
+  pendingExtension: PendingExtension | null;
 };
 
 const TASK_ACTIVITY_SELECT =
   'id, user_id, action, target, task_id, doc_id, kind, before_value, after_value, source, created_at, profiles(display_name, avatar_url)' as const;
+const PENDING_EXT_SELECT =
+  'id, requested_by, original_deadline, requested_deadline, reason, status, profiles!requested_by(display_name)' as const;
 
 export async function loadTaskDetailFull(
   currentUser: { id: string; email?: string | null },
@@ -229,7 +233,7 @@ export async function loadTaskDetailFull(
     throw new TaskDetailAccessError('forbidden');
   }
 
-  const [teamResult, areasResult, milestonesResult, activityResult] = await Promise.all([
+  const [teamResult, areasResult, milestonesResult, activityResult, extResult] = await Promise.all([
     service.from('profiles').select(TEAM_SELECT).order('display_name', { ascending: true }),
     service
       .from('areas')
@@ -244,6 +248,13 @@ export async function loadTaskDetailFull(
       .eq('task_id', taskId)
       .order('created_at', { ascending: false })
       .limit(50),
+    service
+      .from('deadline_extensions')
+      .select(PENDING_EXT_SELECT)
+      .eq('task_id', taskId)
+      .eq('status', 'pending')
+      .limit(1)
+      .maybeSingle(),
   ]);
 
   // Investors are not shown on the roster (discreet), matching fetchTeam().
@@ -254,5 +265,22 @@ export async function loadTaskDetailFull(
     .filter((m): m is Milestone => Boolean(m));
   const activity = (activityResult.data ?? []) as unknown as TaskActivity[];
 
-  return { task, areas, team, milestones, activity, isAdmin };
+  const extRow = (extResult.data ?? null) as unknown as {
+    id: string;
+    original_deadline: string;
+    requested_deadline: string;
+    reason: string | null;
+    profiles?: { display_name?: string | null };
+  } | null;
+  const pendingExtension: PendingExtension | null = extRow
+    ? {
+        id: extRow.id,
+        requesterName: extRow.profiles?.display_name ?? 'Someone',
+        originalDeadline: extRow.original_deadline,
+        requestedDeadline: extRow.requested_deadline,
+        reason: extRow.reason ?? null,
+      }
+    : null;
+
+  return { task, areas, team, milestones, activity, isAdmin, pendingExtension };
 }

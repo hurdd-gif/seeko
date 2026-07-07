@@ -46,6 +46,7 @@ const detail: TaskDetailFullData = {
   milestones: [],
   activity,
   isAdmin: true,
+  pendingExtension: null,
 };
 
 function renderDetail(data: Parameters<typeof TaskDetailRouteContent>[0]['data']) {

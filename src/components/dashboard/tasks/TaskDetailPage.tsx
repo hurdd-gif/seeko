@@ -32,6 +32,7 @@ import { ChevronRight, ChevronLeft } from 'lucide-react';
 import type {
   Area,
   Milestone,
+  PendingExtension,
   Profile,
   TaskActivity,
   TaskWithAssignee,
@@ -43,6 +44,7 @@ import { MilestonesSection } from './MilestonesSection';
 import { ProgressSection } from './ProgressSection';
 import { ActivitySection } from './ActivitySection';
 import { TaskActionsMenu } from './TaskActionsMenu';
+import { DeadlineExtensionBanner } from './DeadlineExtensionBanner';
 import { createClient } from '@/lib/supabase/client';
 
 export function TaskDetailPage({
@@ -52,6 +54,7 @@ export function TaskDetailPage({
   milestones: initialMilestones,
   activity,
   isAdmin = false,
+  pendingExtension = null,
 }: {
   task: TaskWithAssignee;
   areas: Area[];
@@ -59,6 +62,7 @@ export function TaskDetailPage({
   milestones: Milestone[];
   activity: TaskActivity[];
   isAdmin?: boolean;
+  pendingExtension?: PendingExtension | null;
 }) {
   const router = useRouter();
 
@@ -129,6 +133,12 @@ export function TaskDetailPage({
         {/* Main content (scrollable) */}
         <main className="min-h-0 flex-1 overflow-y-auto">
           <div className="mx-auto max-w-3xl px-8 py-8">
+            {isAdmin && pendingExtension && (
+              <FadeRise y={6} delay={0.08}>
+                <DeadlineExtensionBanner extension={pendingExtension} />
+              </FadeRise>
+            )}
+
             <FadeRise y={6} delay={0.1}>
               <section className="overflow-hidden rounded-2xl bg-white shadow-seeko">
                 <div className="px-8 pt-8 pb-6">

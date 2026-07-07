@@ -51,7 +51,7 @@ export function TaskDetailRouteContent({ data }: { data: TaskDetailLoaderData })
     );
   }
 
-  const { task, areas, team, milestones, activity, isAdmin } = data.detail;
+  const { task, areas, team, milestones, activity, isAdmin, pendingExtension } = data.detail;
   return (
     <TaskDetailPage
       task={task}
@@ -60,6 +60,7 @@ export function TaskDetailRouteContent({ data }: { data: TaskDetailLoaderData })
       milestones={milestones}
       activity={activity}
       isAdmin={isAdmin}
+      pendingExtension={pendingExtension}
     />
   );
 }
