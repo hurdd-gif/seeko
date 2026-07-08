@@ -62,6 +62,7 @@ import {
   markExecuted,
   markFailed,
   isExecutable,
+  listExecutedByConversation,
 } from '../pending-actions';
 
 afterEach(() => {
@@ -112,5 +113,35 @@ describe('pending-actions lifecycle', () => {
     expect(isExecutable('rejected')).toBe(false);
     expect(isExecutable('failed')).toBe(false);
     expect(isExecutable('executing')).toBe(false);
+  });
+});
+
+describe('listExecutedByConversation', () => {
+  it('returns only executed rows for the conversation, excluding awaiting and other conversations', async () => {
+    fake.rows.push(
+      {
+        id: 'x1', conversation_id: 'c1', status: 'executed', summary: 'Set milestone "ALPHA" health to off_track',
+        tool_id: 'set_milestone_health', resolved_args: {}, user_id: 'u1', created_at: 'x', executed_at: '2026-07-07T21:49:35Z', error: null,
+      },
+      {
+        id: 'x2', conversation_id: 'c1', status: 'awaiting_approval', summary: 'still pending',
+        tool_id: 'set_milestone_health', resolved_args: {}, user_id: 'u1', created_at: 'x', executed_at: null, error: null,
+      },
+      {
+        id: 'x3', conversation_id: 'c2', status: 'executed', summary: 'other conversation',
+        tool_id: 'set_milestone_health', resolved_args: {}, user_id: 'u1', created_at: 'x', executed_at: '2026-07-07T20:00:00Z', error: null,
+      },
+      {
+        id: 'x4', conversation_id: 'c1', status: 'executed', summary: 'Set milestone "BETA" health to at_risk',
+        tool_id: 'set_milestone_health', resolved_args: {}, user_id: 'u1', created_at: 'x', executed_at: '2026-07-07T21:49:36Z', error: null,
+      },
+    );
+    const rows = await listExecutedByConversation('c1');
+    const summaries = rows.map((r) => r.summary);
+    expect(summaries).toHaveLength(2);
+    expect(summaries).toContain('Set milestone "ALPHA" health to off_track');
+    expect(summaries).toContain('Set milestone "BETA" health to at_risk');
+    expect(summaries).not.toContain('still pending');
+    expect(summaries).not.toContain('other conversation');
   });
 });

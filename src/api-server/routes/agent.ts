@@ -3,12 +3,20 @@ import { loadTasksBoard } from '@/lib/tasks-board';
 import { getAuthenticatedUser, type AuthenticatedUser } from '../supabase';
 import { AGENT_TOOLS, getToolById } from '../agent/tool-registry';
 import type { AgentWriteTarget, WriteTool } from '../agent/tool-contract';
-import { runAgentLoop, createAnthropicCaller, EKO_AGENT_SYSTEM } from '../agent/runtime';
+import {
+  runAgentLoop,
+  createAnthropicCaller,
+  EKO_AGENT_SYSTEM,
+  formatExecutedActionsContext,
+  type PriorTurn,
+} from '../agent/runtime';
 import { AgentActionError } from '../agent/errors';
 import { assertAdmin } from '../agent/eko-activity';
 import {
   getPendingActionById,
   isExecutable,
+  listAwaitingByConversation,
+  listExecutedByConversation,
   markExecuting,
   markExecuted,
   markFailed,
@@ -136,6 +144,24 @@ function parseRecentHistory(value: unknown): RecentHistoryItem[] | undefined {
     .slice(-6);
 }
 
+const BARE_AFFIRMATION =
+  /^\s*(?:yes|yeah|yep|ok|okay|sure|confirmed?|confirm|go ahead|proceed|do it|approve(?: it)?|approved(?: it)?|i approve)\s*[.!?]*\s*$/i;
+
+/**
+ * A bare "yes"/"approve" means two different things depending on state:
+ *  - if an action is already STAGED for this conversation, it must go through the
+ *    Approve button, never free-text — return the deflection copy so we neither
+ *    re-stage nor execute a write via chat;
+ *  - if nothing is staged yet, the user is confirming an offer EKO just made, so
+ *    return null and let the history-aware model act on it and stage the write.
+ * Substantive messages are never intercepted.
+ */
+export function bareAffirmationReply(message: string, hasPendingAction: boolean): string | null {
+  if (!BARE_AFFIRMATION.test(message)) return null;
+  if (!hasPendingAction) return null;
+  return 'Use the Approve button on the pending action, or tell EKO the specific action you want prepared. Writes stay gated until approved.';
+}
+
 async function runAgentChat(input: AgentChatInput, user: AuthenticatedUser): Promise<AgentChatResult> {
   if (input.mode === 'approval' && input.decision) {
     return runApprovalDecision(input, user);
@@ -150,22 +176,35 @@ async function runAgentChat(input: AgentChatInput, user: AuthenticatedUser): Pro
     };
   }
 
-  // A bare "yes"/"approve" in chat mode must never burn a model call or stage a
-  // fresh write — approvals go through the Approve button, not free-text chat.
-  if (/^\s*(?:yes|yeah|yep|ok|okay|sure|confirmed?|confirm|go ahead|proceed|do it|approve(?: it)?|approved(?: it)?|i approve)\s*[.!?]*\s*$/i.test(input.message)) {
-    return {
-      reply: 'Use the Approve button on the pending action, or tell EKO the specific action you want prepared. Writes stay gated until approved.',
-      provider: 'anthropic',
-      model: 'eko-local',
-    };
+  const conversationId = input.conversationId ?? 'default';
+
+  // A bare "yes" only deflects to the Approve button when a write is actually staged.
+  // Otherwise it is confirming an offer EKO made last turn — let it reach the model.
+  if (BARE_AFFIRMATION.test(input.message)) {
+    const awaiting = await listAwaitingByConversation(conversationId).catch(() => null);
+    // On a lookup failure, stay conservative and treat it as if something is staged.
+    const deflection = bareAffirmationReply(input.message, awaiting === null || awaiting.length > 0);
+    if (deflection) {
+      return { reply: deflection, provider: 'anthropic', model: 'eko-local' };
+    }
   }
 
   const board = await loadTasksBoard(user).catch(() => null);
-  const conversationId = input.conversationId ?? 'default';
+  // Feed already-committed writes back to the model so it knows what it did this
+  // conversation and stops denying changes that took effect. Read-only; on a
+  // lookup failure fall back to the base prompt rather than blocking the turn.
+  const executed = await listExecutedByConversation(conversationId).catch(() => []);
+  const executedContext = formatExecutedActionsContext(executed.map((row) => row.summary));
+  const system = executedContext ? `${EKO_AGENT_SYSTEM}\n\n${executedContext}` : EKO_AGENT_SYSTEM;
+  const history: PriorTurn[] = (input.clientContext?.recentHistory ?? []).map((item) => ({
+    role: item.role === 'user' ? 'user' : 'assistant',
+    text: item.text,
+  }));
   const { caller, model } = createAnthropicCaller();
   const loop = await runAgentLoop({
     userMessage: input.message,
-    system: EKO_AGENT_SYSTEM,
+    history,
+    system,
     ctx: { user, board, conversationId },
     tools: AGENT_TOOLS,
     caller,

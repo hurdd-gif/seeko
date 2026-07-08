@@ -20,6 +20,41 @@ export type ModelCaller = (req: {
 export type StagedPending = { id: string; toolId: string; summary: string };
 export type RunAgentLoopResult = { text: string; pendingActions: StagedPending[]; steps: number };
 
+export type PriorTurn = { role: 'user' | 'assistant'; text: string };
+type InitialMessage = { role: 'user' | 'assistant'; content: Array<{ type: 'text'; text: string }> };
+
+/**
+ * Build the model's opening `messages` array from prior conversation turns plus the
+ * current user message. EKO is otherwise stateless per request, so without this the
+ * model cannot remember an offer it made last turn — a bare "yes" arrives with no
+ * context. Guarantees the Anthropic contract: the first message is `user`, roles
+ * strictly alternate (consecutive same-role turns are merged), and the array ends
+ * with the current user message (deduped if history already carried it).
+ */
+export function buildInitialMessages(userMessage: string, history?: PriorTurn[]): InitialMessage[] {
+  const turns: PriorTurn[] = [];
+  for (const turn of history ?? []) {
+    const text = turn.text.trim();
+    if (!text) continue;
+    const last = turns[turns.length - 1];
+    if (last && last.role === turn.role) {
+      last.text = `${last.text}\n${text}`;
+    } else {
+      turns.push({ role: turn.role, text });
+    }
+  }
+  while (turns.length && turns[0].role === 'assistant') turns.shift();
+
+  const current = userMessage.trim();
+  const last = turns[turns.length - 1];
+  if (last && last.role === 'user') {
+    if (last.text !== current) last.text = `${last.text}\n${current}`;
+  } else {
+    turns.push({ role: 'user', text: current });
+  }
+  return turns.map((turn) => ({ role: turn.role, content: [{ type: 'text', text: turn.text }] }));
+}
+
 type StagePendingFn = (row: {
   conversationId: string;
   userId: string;
@@ -32,16 +67,34 @@ export const EKO_AGENT_SYSTEM = [
   'You are EKO, the SEEKO Studio dashboard agent. Audience: admins. Be concise and operational.',
   'You act through tools. Use the read tools (list_tasks, list_milestones, list_areas, list_staff) to inspect current state before deciding anything — never guess at data you can look up.',
   'When the user asks you to change something, call the matching write tool. Every write tool STAGES the change for the user to approve with an Approve button; it does NOT take effect immediately.',
-  'Never claim a write happened. After staging, say you have prepared it for approval.',
+  'When you have just staged a write this turn, never say it already happened — say you have prepared it for approval.',
+  'A write that was already approved and executed earlier in this conversation HAS taken effect. If the context lists actions as already executed, acknowledge them truthfully and offer to change them back — never deny a change that was executed.',
   'For a conditional request ("update them if they aren\'t on track"), first read the relevant state, evaluate the condition yourself, then call the write tool once per entity that meets it. You may call multiple write tools in a single turn.',
+  'If you offered an action on the previous turn and the user confirms it (e.g. replies "yes" or "do it"), proceed to call the write tool(s) for exactly what you offered — do not ask them to restate it.',
   'If a tool returns an error (unresolved entity, invalid value), ask the user a specific clarifying question instead of retrying blindly.',
   'Keep replies to one or two short sentences, plain text, no markdown.',
 ].join('\n');
+
+/**
+ * Render the conversation's already-executed writes as a context block appended
+ * to the system prompt, so EKO knows what it has committed and stops denying it.
+ * Empty string when nothing has executed — the caller then leaves the prompt as-is.
+ */
+export function formatExecutedActionsContext(summaries: string[]): string {
+  if (summaries.length === 0) return '';
+  const lines = summaries.map((summary) => `- ${summary}`).join('\n');
+  return [
+    'Writes already approved and executed earlier in this conversation (the user approved each; these have taken effect):',
+    lines,
+    'If the user asks whether you changed something, acknowledge these truthfully and offer to change it back. Do not say nothing happened.',
+  ].join('\n');
+}
 
 const MAX_STEPS = 8;
 
 export async function runAgentLoop(params: {
   userMessage: string;
+  history?: PriorTurn[];
   system: string;
   ctx: ToolContext;
   tools: AgentTool[];
@@ -49,7 +102,7 @@ export async function runAgentLoop(params: {
   maxSteps?: number;
   stagePending?: StagePendingFn;
 }): Promise<RunAgentLoopResult> {
-  const { userMessage, system, ctx, tools, caller } = params;
+  const { userMessage, history, system, ctx, tools, caller } = params;
   const maxSteps = params.maxSteps ?? MAX_STEPS;
   const stage = params.stagePending ?? stagePendingAction;
 
@@ -60,7 +113,7 @@ export async function runAgentLoop(params: {
   }));
   const byId = new Map(tools.map((tool) => [tool.id, tool]));
 
-  const messages: unknown[] = [{ role: 'user', content: [{ type: 'text', text: userMessage }] }];
+  const messages: unknown[] = buildInitialMessages(userMessage, history);
   const pendingActions: StagedPending[] = [];
   const texts: string[] = [];
   let steps = 0;

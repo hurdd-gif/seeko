@@ -95,3 +95,21 @@ export async function listAwaitingByConversation(
   if (error) throw error;
   return (data as EkoPendingActionRow[] | null) ?? [];
 }
+
+/**
+ * Writes this conversation has already approved AND committed. Fed back into the
+ * model's context so EKO knows what it did — without this, the durable
+ * `status = 'executed'` history is invisible to the model and it denies changes
+ * that actually took effect (the "I didn't change anything" narration bug).
+ */
+export async function listExecutedByConversation(
+  conversationId: string,
+): Promise<EkoPendingActionRow[]> {
+  const { data, error } = await table()
+    .select('*')
+    .eq('conversation_id', conversationId)
+    .eq('status', 'executed')
+    .order('executed_at', { ascending: true });
+  if (error) throw error;
+  return (data as EkoPendingActionRow[] | null) ?? [];
+}
