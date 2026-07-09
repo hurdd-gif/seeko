@@ -48,6 +48,53 @@ export async function requireAdmin(c: Context): Promise<AuthGuard> {
   return guard;
 }
 
+/**
+ * Admin gate for route modules that inject their own authResolver (a DI test
+ * seam — see app.test.ts) instead of using requireUser's cookie-bound
+ * Supabase client. Flags are always read via the service client so the guard
+ * also works for token-only resolvers that bypass cookie auth entirely.
+ */
+export async function requireAdminVia(
+  c: Context,
+  authResolver: (c: Context) => Promise<AuthenticatedUser | null>,
+): Promise<AuthGuard> {
+  const user = await authResolver(c);
+  if (!user) return { ok: false, status: 401, error: 'Unauthorized' };
+
+  if (isDevAuthBypass()) {
+    return { ok: true, user, isAdmin: true, isInvestor: false };
+  }
+
+  const service = getServiceClient();
+  const { data } = await service
+    .from('profiles')
+    .select('is_admin, is_investor')
+    .eq('id', user.id)
+    .maybeSingle();
+
+  const profile = data as { is_admin?: boolean; is_investor?: boolean } | null;
+  if (!profile?.is_admin) return { ok: false, status: 403, error: 'Forbidden' };
+  return { ok: true, user, isAdmin: true, isInvestor: !!profile.is_investor };
+}
+
+/**
+ * The sole profiles.is_admin boolean check for callers that only have a
+ * userId (no Context to run an authResolver against) — currently
+ * agent/eko-activity.ts's assertAdmin. Throws on a genuine query failure so
+ * callers can distinguish "could not verify" from "verified: not admin".
+ */
+export async function isAdminUser(userId: string): Promise<boolean> {
+  const service = getServiceClient();
+  const { data, error } = await service
+    .from('profiles')
+    .select('is_admin')
+    .eq('id', userId)
+    .maybeSingle();
+
+  if (error) throw error;
+  return !!(data as { is_admin?: boolean } | null)?.is_admin;
+}
+
 export function getClientIp(c: Context) {
   const forwarded = c.req.header('x-forwarded-for');
   if (forwarded) {

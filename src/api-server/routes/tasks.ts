@@ -17,7 +17,7 @@ import {
 import { fetchMilestones, fetchTaskActivity } from '@/lib/supabase/data';
 import { getServiceClient } from '@/lib/supabase/service';
 import { getAuthenticatedUser, type AuthenticatedUser } from '../supabase';
-import { isRateLimited } from '../auth-utils';
+import { isAdminUser, isRateLimited } from '../auth-utils';
 
 type TasksIndexLoader = (user: AuthenticatedUser) => Promise<TasksIndexData>;
 type TaskDetailLoader = (user: AuthenticatedUser, taskId: string) => Promise<TaskDetailData>;
@@ -199,9 +199,8 @@ export function createTasksRoutes(options: TasksRoutesOptions = {}) {
     .get('/tasks/:id/deliverables', async (c) => {
       const user = await authResolver(c);
       if (!user) return c.json({ error: 'Forbidden' }, 403);
+      if (!(await isAdminSafe(user.id))) return c.json({ error: 'Forbidden' }, 403);
       const service = getServiceClient();
-      const { data: profile } = await service.from('profiles').select('is_admin').eq('id', user.id).single();
-      if (!profile?.is_admin) return c.json({ error: 'Forbidden' }, 403);
 
       const { data: rows, error } = await service
         .from('task_deliverables')
@@ -258,9 +257,8 @@ export function createTasksRoutes(options: TasksRoutesOptions = {}) {
     .delete('/tasks/:id/deliverables/:deliverableId', async (c) => {
       const user = await authResolver(c);
       if (!user) return c.json({ error: 'Forbidden' }, 403);
+      if (!(await isAdminSafe(user.id))) return c.json({ error: 'Forbidden' }, 403);
       const service = getServiceClient();
-      const { data: profile } = await service.from('profiles').select('is_admin').eq('id', user.id).single();
-      if (!profile?.is_admin) return c.json({ error: 'Forbidden' }, 403);
 
       const taskId = c.req.param('id');
       const deliverableId = c.req.param('deliverableId');
@@ -324,6 +322,21 @@ function isAllowedFile(file: File): boolean {
   if (BLOCKED_EXTENSIONS.includes(ext)) return false;
   const mime = (file.type || 'application/octet-stream').toLowerCase();
   return ALLOWED_MIME_PREFIXES.some((prefix) => mime.startsWith(prefix));
+}
+
+/**
+ * Deliverables' admin gate wants "could not verify" to fail closed (403), not
+ * bubble to a 500 — the pre-refactor inline query ignored its error the same
+ * way. isAdminUser itself must keep throwing (eko-activity's assertAdmin
+ * relies on that to distinguish "verify failed" from "verified: not admin"),
+ * so this is a thin local catch rather than a change to the shared gate.
+ */
+async function isAdminSafe(userId: string): Promise<boolean> {
+  try {
+    return await isAdminUser(userId);
+  } catch {
+    return false;
+  }
 }
 
 async function canAccessTask(userId: string, taskId: string) {

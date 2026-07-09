@@ -8,6 +8,7 @@ import {
 } from '@/lib/onboarding-index';
 import { getServiceClient } from '@/lib/supabase/service';
 import { getAuthenticatedUser, type AuthenticatedUser } from '../supabase';
+import { requireAdminVia } from '../auth-utils';
 
 type AuthResolver = (c: Context) => Promise<AuthenticatedUser | null>;
 
@@ -24,18 +25,10 @@ export function createProfileRoutes(options: ProfileRoutesOptions = {}) {
 
   return new Hono()
   .patch('/profile', async (c) => {
-    const user = await authResolver(c);
-    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+    const admin = await requireAdminVia(c, authResolver);
+    if (!admin.ok) return c.json({ error: admin.error }, admin.status);
 
     const service = getServiceClient();
-    const { data: profile } = await service
-      .from('profiles')
-      .select('is_admin')
-      .eq('id', user.id)
-      .single();
-
-    if (!profile?.is_admin) return c.json({ error: 'Forbidden' }, 403);
-
     const body = await c.req.json().catch(() => null) as {
       userId?: unknown;
       department?: unknown;

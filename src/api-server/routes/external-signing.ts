@@ -28,6 +28,7 @@ import { isSigningInvite } from '@/lib/invite-filters';
 import { getServiceClient } from '@/lib/supabase/service';
 import type { ExternalAgreementSection, ExternalSigningInvite } from '@/lib/types';
 import { getAuthenticatedUser, type AuthenticatedUser } from '../supabase';
+import { requireAdminVia } from '../auth-utils';
 import type { Context } from 'hono';
 
 type ExternalSigningLoader = (token: string) => Promise<ExternalSigningLoadResult>;
@@ -85,7 +86,7 @@ export function createExternalSigningRoutes(options: ExternalSigningRoutesOption
 
   return new Hono()
     .post('/external-signing/invite', async (c) => {
-      const admin = await requireAdmin(c, authResolver);
+      const admin = await requireAdminVia(c, authResolver);
       if (!admin.ok) return c.json({ error: admin.error }, admin.status);
 
       const body = await c.req.json().catch(() => null);
@@ -181,7 +182,7 @@ export function createExternalSigningRoutes(options: ExternalSigningRoutesOption
       return c.json({ success: true });
     })
     .post('/external-signing/parse-pdf', async (c) => {
-      const admin = await requireAdmin(c, authResolver);
+      const admin = await requireAdminVia(c, authResolver);
       if (!admin.ok) return c.json({ error: admin.error }, admin.status);
 
       const formData = await c.req.formData();
@@ -273,7 +274,7 @@ ${rawText}`,
       return c.redirect(signed.signedUrl, 302);
     })
     .post('/external-signing/sync', async (c) => {
-      const admin = await requireAdmin(c, authResolver);
+      const admin = await requireAdminVia(c, authResolver);
       if (!admin.ok) return c.json({ error: admin.error }, admin.status);
 
       const { invite_id } = await c.req.json().catch(() => ({ invite_id: '' }));
@@ -384,7 +385,7 @@ ${rawText}`,
       return c.json(result.initialData);
     })
     .post('/external-signing/resend', async (c) => {
-      const admin = await requireAdmin(c, authResolver);
+      const admin = await requireAdminVia(c, authResolver);
       if (!admin.ok) return c.json({ error: admin.error }, admin.status);
 
       const { invite_id } = await c.req.json().catch(() => ({ invite_id: '' }));
@@ -453,7 +454,7 @@ ${rawText}`,
       return c.json({ success: true });
     })
     .post('/external-signing/revoke', async (c) => {
-      const admin = await requireAdmin(c, authResolver);
+      const admin = await requireAdminVia(c, authResolver);
       if (!admin.ok) return c.json({ error: admin.error }, admin.status);
 
       const { invite_id } = await c.req.json().catch(() => ({ invite_id: '' }));
@@ -1048,25 +1049,6 @@ function getClientIp(request: Request) {
   if (!forwarded) return 'unknown';
   const parts = forwarded.split(',').map((part) => part.trim()).filter(Boolean);
   return parts.length > 0 ? parts[parts.length - 1]! : 'unknown';
-}
-
-async function requireAdmin(c: Context, authResolver: AuthResolver) {
-  const user = await authResolver(c);
-  if (!user) return { ok: false as const, status: 401 as const, error: 'Unauthorized' };
-
-  const service = getServiceClient();
-  const { data, error } = await service
-    .from('profiles')
-    .select('is_admin')
-    .eq('id', user.id)
-    .single();
-
-  if (error) throw error;
-  if (!(data as { is_admin?: boolean } | null)?.is_admin) {
-    return { ok: false as const, status: 403 as const, error: 'Forbidden' };
-  }
-
-  return { ok: true as const, user };
 }
 
 function isRateLimited(

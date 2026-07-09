@@ -1,15 +1,21 @@
 import { getServiceClient } from '@/lib/supabase/service';
+import { isAdminUser } from '../auth-utils';
 import { AgentActionError } from './errors';
 
-/** Admin gate — verbatim from routes/agent.ts's assertAdminUser. */
+/**
+ * Admin gate for the EKO write-approval path. This is the hard stop between
+ * a staged pending action and a committed write (see executeById in
+ * routes/agent.ts) — it MUST throw for any non-admin. profiles.is_admin
+ * itself is read by the single shared isAdminUser query in auth-utils.ts.
+ */
 export async function assertAdmin(userId: string): Promise<void> {
-  const { data, error } = await getServiceClient()
-    .from('profiles')
-    .select('is_admin')
-    .eq('id', userId)
-    .maybeSingle();
-  if (error) throw new AgentActionError('EKO could not verify your permissions.', 500);
-  if (!data?.is_admin) throw new AgentActionError('Only admins can approve EKO writes.', 403);
+  let admin: boolean;
+  try {
+    admin = await isAdminUser(userId);
+  } catch {
+    throw new AgentActionError('EKO could not verify your permissions.', 500);
+  }
+  if (!admin) throw new AgentActionError('Only admins can approve EKO writes.', 403);
 }
 
 /** Normalize a due-date token to an ISO date or null (verbatim from agent.ts). */
