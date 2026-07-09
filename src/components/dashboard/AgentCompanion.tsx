@@ -7,7 +7,6 @@ import {
   CircleAlert,
   FileText,
   LoaderCircle,
-  Pencil,
   Plus,
   RotateCcw,
   Send,
@@ -16,7 +15,26 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { emitEkoEvent, requestEkoSpotlight } from '@/lib/eko-bus';
-import { newConversationId, executedTarget } from '@/lib/eko-agent-client';
+import { newConversationId, executedTarget, shouldOpenApprovalCard } from '@/lib/eko-agent-client';
+import { confirmationRoute } from '@/lib/agent-confirmation';
+
+/**
+ * Cycling "working" labels shown while the in-server tool-use loop runs (~60s,
+ * no streaming). Each line must be TRUE at any moment of a read→reason→stage
+ * loop — the agent genuinely re-reads the board and re-reasons across steps —
+ * so the sequence can loop without ever falsely claiming completion. Ordered
+ * to read as forward progress on the first pass; looping after that is honest
+ * because a multi-step loop keeps reading and reasoning.
+ */
+const THINKING_STEPS = [
+  'Reading the live board…',
+  'Checking areas and milestones…',
+  'Cross-checking tasks and dates…',
+  'Reasoning through your request…',
+  'Pulling it together…',
+] as const;
+/** Dwell per label — long enough to read a short phrase, short enough to feel alive. */
+const THINKING_STEP_MS = 2000;
 
 const suggestions = [
   {
@@ -274,23 +292,21 @@ function shouldOpenApprovalFlow(reply: string) {
 }
 
 function shouldOpenApprovalFromResponse(response: EkoApiResponse) {
+  // Structured signal wins: any staged write from the tool-use loop opens the
+  // card, regardless of how the model phrased its reply. The intent/prose checks
+  // below are legacy fallbacks (the current server sends neither).
+  if (shouldOpenApprovalCard(response)) return true;
   if (response.intent === 'approval_required' || response.intent === 'details_needed') return true;
   if (response.intent) return false;
   return shouldOpenApprovalFlow(response.reply);
 }
 
 function responseNeedsWriteDetails(response: EkoApiResponse) {
+  // A staged action is already fully resolved server-side — no slot-fill wizard.
+  if (shouldOpenApprovalCard(response)) return false;
   if (response.intent === 'details_needed') return true;
   if (response.intent === 'approval_required') return false;
   return needsInlineWriteDetails(response.reply);
-}
-
-function isApprovalConfirmationPrompt(prompt: string) {
-  return /\b(i (?:already )?approved|approved it|approve it|i approve|confirmed?|go ahead|proceed|do it|yes)\b/i.test(prompt);
-}
-
-function isAmbiguousStandaloneConfirmation(prompt: string) {
-  return /^\s*(?:yes|yeah|yep|ok|okay|sure|do it|confirmed?|confirm|go ahead|proceed|approve it|approved it|i approve|i already approved it)\s*[.!?]*\s*$/i.test(prompt);
 }
 
 function needsInlineWriteDetails(reply: string) {
@@ -336,7 +352,13 @@ function createGeneratedApprovalSuggestion(_prompt: string, reply: string): Sugg
 }
 
 function createGeneratedApprovalSuggestionFromResponse(prompt: string, response: EkoApiResponse): Suggestion {
-  const title = response.approval?.title || getGeneratedApprovalLabel(prompt, response.reply);
+  const staged = response.pendingActions ?? [];
+  // Staged writes carry their own resolved summaries — title from those, not prose.
+  const title = staged.length === 1
+    ? staged[0].summary
+    : staged.length > 1
+      ? `${staged.length} changes to review`
+      : response.approval?.title || getGeneratedApprovalLabel(prompt, response.reply);
   const copy = response.approval?.copy || response.reply;
   return {
     ...suggestions[2],
@@ -425,6 +447,7 @@ export function AgentCompanion({ userKey }: { userKey?: string }) {
   const [suggestionStats, setSuggestionStats] = useState<SuggestionStats>({});
   const [actionFeedback, setActionFeedback] = useState<'approve' | 'edit' | 'reject' | null>(null);
   const [pendingActionIds, setPendingActionIds] = useState<string[]>([]);
+  const [thinkingStepIndex, setThinkingStepIndex] = useState(0);
   const reduceMotion = useReducedMotion();
   const conversationIdRef = useRef<string>(newConversationId());
   const decisionTimerRef = useRef<number | null>(null);
@@ -561,7 +584,7 @@ export function AgentCompanion({ userKey }: { userKey?: string }) {
       ? [{
           id: 'eko-thinking-row',
           role: 'eko' as const,
-          text: 'Checking live dashboard context',
+          text: THINKING_STEPS[thinkingStepIndex],
           pending: true,
         }]
       : []),
@@ -585,7 +608,7 @@ export function AgentCompanion({ userKey }: { userKey?: string }) {
           : phase === 'committing'
             ? approvalStatus === 'approved'
               ? 'Approving action'
-              : 'Rejecting action'
+              : 'Denying action'
           : shouldCollectWriteDetails
             ? 'Details needed before approval'
           : approvalStatus === 'editing'
@@ -594,7 +617,7 @@ export function AgentCompanion({ userKey }: { userKey?: string }) {
             ? 'Answer ready.'
             : approvalStatus === 'approved'
             ? 'Action approved. Draft is ready.'
-            : 'Rejected. Dashboard unchanged.';
+            : 'Denied. Dashboard unchanged.';
   const statusDetail =
     phase === 'idle'
       ? 'Choose a suggested studio action or ask EKO directly.'
@@ -623,7 +646,7 @@ export function AgentCompanion({ userKey }: { userKey?: string }) {
     approvalStatus === 'approved'
       ? 'Approved'
       : approvalStatus === 'rejected'
-        ? 'Rejected'
+        ? 'Denied'
         : shouldCollectWriteDetails
           ? 'Details needed'
         : approvalStatus === 'editing'
@@ -743,6 +766,21 @@ export function AgentCompanion({ userKey }: { userKey?: string }) {
 
     return () => window.clearTimeout(timer);
   }, [activeSuggestion, phase, reduceMotion]);
+
+  // Advance the cycling "working" label while the loop runs; hold on the last
+  // rendered index otherwise so the next run's crossfade starts from rest.
+  // Reduced motion still cycles the WORDS (progress feedback, not vestibular
+  // motion) — the blur/slide crossfade is what gets guarded, in the render.
+  useEffect(() => {
+    if (phase !== 'thinking') {
+      setThinkingStepIndex((i) => (i === 0 ? i : 0));
+      return;
+    }
+    const id = window.setInterval(() => {
+      setThinkingStepIndex((i) => (i + 1) % THINKING_STEPS.length);
+    }, THINKING_STEP_MS);
+    return () => window.clearInterval(id);
+  }, [phase]);
 
   useEffect(() => {
     if (!actionFeedback) return;
@@ -1100,7 +1138,7 @@ export function AgentCompanion({ userKey }: { userKey?: string }) {
       setRevisedRequest('');
       setPendingWriteDraft(emptyPendingWriteDraft);
       setWriteDetailsStep('title');
-      setWorkflowSteps((steps) => (steps.length ? [...steps, 'Rejected'].slice(-4) : steps));
+      setWorkflowSteps((steps) => (steps.length ? [...steps, 'Denied'].slice(-4) : steps));
     } catch (error) {
       setApprovalStatus('pending');
       failAgent({
@@ -1295,7 +1333,8 @@ export function AgentCompanion({ userKey }: { userKey?: string }) {
       return;
     }
 
-    if (activeSuggestion && phase === 'approval' && isApprovalConfirmationPrompt(prompt)) {
+    const hasVisibleApprovalCard = Boolean(activeSuggestion && phase === 'approval');
+    if (confirmationRoute(prompt, { hasVisibleApprovalCard }) === 'approve-visible-card') {
       if (approvalStatus === 'pending' && !shouldCollectWriteDetails) {
         void approveAction();
         return;
@@ -1311,24 +1350,9 @@ export function AgentCompanion({ userKey }: { userKey?: string }) {
       }
     }
 
-    if (isAmbiguousStandaloneConfirmation(prompt)) {
-      const reply = 'Tell me the specific action you want EKO to prepare. I will keep any write gated for approval.';
-      setActiveSuggestion(null);
-      setEditValue('');
-      setRevisedRequest('');
-      setGeneratedApprovalCopy('');
-      setActiveApproval(null);
-      setPendingWriteDraft(emptyPendingWriteDraft);
-      setWriteDetailsStep('title');
-      setWorkflowSteps([]);
-      setApprovalStatus('answered');
-      setActionFeedback(null);
-      setAgentError(null);
-      setPhase('complete');
-      setDemoResponse('');
-      appendHistory({ role: 'eko', text: reply });
-      return;
-    }
+    // A bare "yes" with no visible approval card is NOT deflected here — it flows to
+    // the server, which threads the conversation history so EKO acts on the offer it
+    // made last turn and stages the writes (still behind the approval gate).
 
     setActiveSuggestion(null);
     setEditValue('');
@@ -1364,7 +1388,7 @@ export function AgentCompanion({ userKey }: { userKey?: string }) {
         }),
       );
       if (requestId !== promptRequestRef.current) return;
-      if (shouldOpenApprovalFromResponse(response) && !isAmbiguousStandaloneConfirmation(prompt)) {
+      if (shouldOpenApprovalFromResponse(response)) {
         const generatedSuggestion = createGeneratedApprovalSuggestionFromResponse(prompt, response);
         const inferredDraft = draftFromResponse(response, prompt);
         setActiveSuggestion(generatedSuggestion);
@@ -1764,9 +1788,25 @@ export function AgentCompanion({ userKey }: { userKey?: string }) {
                       animate={{ opacity: 1, y: 0, filter: 'blur(0px)', transition: swapEnterTransition }}
                       exit={reduceMotion ? { opacity: 0 } : { opacity: 0, filter: 'blur(2px)' }}
                       transition={swapExitTransition}
-                      className="relative z-[1] order-2 space-y-1.5 px-3 pb-2 pt-3"
+                      className="relative z-[1] order-2 px-3 pb-2 pt-3"
                     >
-                      {visibleChatRows.map((item) => (
+                      {visibleChatRows.map((item, index) => {
+                        const prev = index > 0 ? visibleChatRows[index - 1] : null;
+                        // Chat grouping rhythm: tight within one speaker's run, a
+                        // clear beat at each turn boundary — the widest gap before a
+                        // new user question. 'action' + 'eko' are EKO's response side,
+                        // so they stay grouped; only user↔EKO is a real turn change.
+                        const sameSide = prev ? (prev.role === 'user') === (item.role === 'user') : false;
+                        const gapClass = !prev
+                          ? ''
+                          : sameSide
+                            ? prev.role === item.role
+                              ? 'mt-1'
+                              : 'mt-1.5'
+                            : item.role === 'user'
+                              ? 'mt-[18px]'
+                              : 'mt-3';
+                        return (
                         <motion.div
                           key={item.id}
                           layout
@@ -1776,6 +1816,7 @@ export function AgentCompanion({ userKey }: { userKey?: string }) {
                           transition={fadeTransition}
                           className={cn(
                             'flex',
+                            gapClass,
                             item.role === 'user' ? 'justify-end' : 'justify-start',
                           )}
                         >
@@ -1797,14 +1838,44 @@ export function AgentCompanion({ userKey }: { userKey?: string }) {
                             {item.pending ? (
                               <span className="flex items-center gap-2">
                                 <DotMatrixAgentLoader state="thinking" className="size-5 shrink-0 text-[#d7e8ff]" />
-                                <span className="eko-shimmer-text">{item.text}</span>
+                                {/* Grid overlay: invisible ghosts reserve the widest label so the
+                                    row width is stable across messages (no pulse); the live label
+                                    crossfades over them as the loop advances. */}
+                                <span className="relative grid min-h-[15px] flex-none">
+                                  {THINKING_STEPS.map((step) => (
+                                    <span
+                                      key={`ghost-${step}`}
+                                      aria-hidden
+                                      className="invisible col-start-1 row-start-1 whitespace-nowrap eko-shimmer-text"
+                                    >
+                                      {step}
+                                    </span>
+                                  ))}
+                                  <AnimatePresence initial={false}>
+                                    <motion.span
+                                      key={item.text}
+                                      className="col-start-1 row-start-1 whitespace-nowrap eko-shimmer-text"
+                                      initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 4, filter: 'blur(2px)' }}
+                                      animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                                      exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -4, filter: 'blur(2px)' }}
+                                      transition={
+                                        reduceMotion
+                                          ? { duration: 0.12 }
+                                          : { type: 'spring', visualDuration: 0.2, bounce: 0 }
+                                      }
+                                    >
+                                      {item.text}
+                                    </motion.span>
+                                  </AnimatePresence>
+                                </span>
                               </span>
                             ) : (
                               <span className="block text-pretty break-words">{item.text}</span>
                             )}
                           </div>
                         </motion.div>
-                      ))}
+                        );
+                      })}
                     </motion.div>
                   ) : null}
                 </AnimatePresence>
@@ -1917,50 +1988,17 @@ export function AgentCompanion({ userKey }: { userKey?: string }) {
                               <p className="whitespace-pre-line text-[13px] font-medium leading-[17px] text-white/88">
                                 {approvalCopy}
                               </p>
-                              {shouldCollectWriteDetails ? null : approvalStatus === 'editing' ? (
-                                <motion.textarea
-                                  ref={editTextareaRef}
-                                  layout
-                                  rows={3}
-                                  value={editValue}
-                                  onChange={(event) => setEditValue(event.target.value)}
-                                  initial={reduceMotion ? { opacity: 1 } : { opacity: 0, y: 4, filter: 'blur(2px)' }}
-                                  animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-                                  transition={fadeTransition}
-                                  aria-label="Edit EKO request"
-                                  placeholder="Describe the revision"
-                                  className="mt-2 w-full resize-none rounded-[12px] bg-white/[0.09] px-2.5 py-2 text-[12px] font-medium leading-4 text-white/84 outline-none shadow-[inset_0_0_0_1px_rgba(255,255,255,0.11),inset_0_1px_0_rgba(255,255,255,0.08)] placeholder:text-white/42 focus:bg-white/[0.13] focus:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.17),inset_0_1px_0_rgba(255,255,255,0.1)]"
-                                />
-                              ) : null}
                               {!shouldCollectWriteDetails ? (
-                              <div className="mt-2.5 flex items-center gap-2">
-                                {approvalStatus === 'editing' && !shouldCollectWriteDetails ? (
-                                  <motion.button
-                                    type="button"
-                                    onClick={saveEditAction}
-                                    disabled={isCommitting || !editValue.trim()}
-                                    whileTap={reduceMotion ? undefined : { scale: 0.96 }}
-                                    animate={actionFeedback === 'edit' ? { scale: [1, 1.012, 1] } : { scale: 1 }}
-                                    transition={pulseTransition}
-                                    className="h-8 rounded-full bg-white px-3 text-[12px] font-medium leading-4 text-[#14213b] transition-[background-color,opacity,transform] duration-150 ease-out hover:bg-[#f5f5f5] disabled:pointer-events-none disabled:opacity-42"
-                                  >
-                                    Save edit
-                                  </motion.button>
-                                ) : null}
+                              <div className="mt-3 flex items-center gap-2">
                                 <motion.button
                                   type="button"
                                   onClick={approveAction}
                                   disabled={isCommitting}
                                   whileTap={reduceMotion ? undefined : { scale: 0.96 }}
-                                  animate={
-                                    actionFeedback === 'approve'
-                                      ? { scale: [1, 1.04, 1], filter: ['blur(0px)', 'blur(0px)', 'blur(0px)'] }
-                                      : { scale: 1 }
-                                  }
+                                  animate={actionFeedback === 'approve' ? { scale: [1, 1.04, 1] } : { scale: 1 }}
                                   transition={pulseTransition}
                                   className={cn(
-                                    'h-8 rounded-full bg-white px-3 text-[12px] font-medium leading-4 text-[#14213b] transition-[background-color,box-shadow,opacity] duration-150 ease-out hover:bg-[#f5f5f5] disabled:pointer-events-none',
-                                    approvalStatus === 'editing' ? 'hidden' : '',
+                                    'h-8 rounded-full bg-white px-4 text-[12px] font-semibold leading-4 text-[#14213b] transition-[background-color,box-shadow,opacity] duration-150 ease-out hover:bg-[#f5f5f5] active:bg-[#ececec] disabled:pointer-events-none',
                                     approvalStatus === 'approved'
                                       ? 'bg-[#dff5eb] text-[#176b42] shadow-[0_0_0_3px_rgba(51,190,120,0.12)]'
                                       : '',
@@ -1971,40 +2009,20 @@ export function AgentCompanion({ userKey }: { userKey?: string }) {
                                 </motion.button>
                                 <motion.button
                                   type="button"
-                                  onClick={approvalStatus === 'editing' ? () => {
-                                    setApprovalStatus('pending');
-                                    setEditValue('');
-                                  } : editAction}
-                                  disabled={isCommitting}
-                                  whileTap={reduceMotion ? undefined : { scale: 0.96 }}
-                                  animate={actionFeedback === 'edit' ? { scale: [1, 1.012, 1] } : { scale: 1 }}
-                                  transition={pulseTransition}
-                                  className={cn(
-                                    'inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-[12px] font-medium leading-4 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)] transition-[background-color,box-shadow,opacity] duration-150 ease-out hover:bg-white/[0.14] disabled:pointer-events-none disabled:opacity-45',
-                                    approvalStatus === 'editing'
-                                      ? 'bg-white/10 text-white/68'
-                                      : 'bg-white/10 text-white/75',
-                                  )}
-                                >
-                                  <Pencil className="size-3" aria-hidden />
-                                  {approvalStatus === 'editing' ? 'Cancel' : 'Edit'}
-                                </motion.button>
-                                <motion.button
-                                  type="button"
                                   onClick={rejectAction}
                                   disabled={isCommitting}
                                   whileTap={reduceMotion ? undefined : { scale: 0.96 }}
                                   animate={actionFeedback === 'reject' ? { scale: [1, 1.04, 1] } : { scale: 1 }}
                                   transition={pulseTransition}
                                   className={cn(
-                                    'h-8 rounded-full px-3 text-[12px] font-medium leading-4 text-[#ffb2a8] transition-[background-color,box-shadow,opacity] duration-150 ease-out hover:bg-[#d4503e]/[0.16] disabled:pointer-events-none',
+                                    'h-8 rounded-full bg-white/[0.05] px-4 text-[12px] font-medium leading-4 text-white/82 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.2)] transition-[background-color,box-shadow,opacity] duration-150 ease-out hover:bg-white/[0.1] hover:text-white hover:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.28)] disabled:pointer-events-none',
                                     approvalStatus === 'rejected'
-                                      ? 'bg-[#d4503e]/[0.16] shadow-[0_0_0_3px_rgba(212,80,62,0.12)]'
+                                      ? 'bg-white/[0.12] text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.32),0_0_0_3px_rgba(255,255,255,0.08)]'
                                       : '',
                                     isCommitting && approvalStatus !== 'rejected' ? 'opacity-45' : '',
                                   )}
                                 >
-                                  {approvalStatus === 'rejected' ? 'Rejected' : 'Reject'}
+                                  {approvalStatus === 'rejected' ? 'Denied' : 'Deny'}
                                 </motion.button>
                               </div>
                               ) : null}
