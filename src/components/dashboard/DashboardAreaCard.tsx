@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion } from 'motion/react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/lib/react-router-adapters';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -34,6 +34,7 @@ export function DashboardAreaCard({ area, isAdmin }: DashboardAreaCardProps) {
   const [phase, setPhase] = useState(area.phase ?? '');
   const [status, setStatus] = useState(area.status ?? 'Active');
   const [description, setDescription] = useState(area.description ?? '');
+  const [targetDate, setTargetDate] = useState(area.target_date ?? '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -43,6 +44,7 @@ export function DashboardAreaCard({ area, isAdmin }: DashboardAreaCardProps) {
     setPhase(area.phase ?? '');
     setStatus(area.status ?? 'Active');
     setDescription(area.description ?? '');
+    setTargetDate(area.target_date ?? '');
     setError(null);
     setOpen(true);
   };
@@ -59,6 +61,7 @@ export function DashboardAreaCard({ area, isAdmin }: DashboardAreaCardProps) {
           phase: phase || null,
           status: status || null,
           description: description.trim() || null,
+          target_date: targetDate || null,
         }),
       });
       const data = await res.json();
@@ -134,7 +137,7 @@ export function DashboardAreaCard({ area, isAdmin }: DashboardAreaCardProps) {
         {/* Progress — hero field with live bar */}
         <div className="mb-5">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Progress</span>
+            <span className="text-[11px] font-medium text-muted-foreground">Progress</span>
             <div className="flex items-baseline gap-1">
               <input
                 type="number"
@@ -153,7 +156,7 @@ export function DashboardAreaCard({ area, isAdmin }: DashboardAreaCardProps) {
         {/* Status + Phase — side by side */}
         <div className="grid grid-cols-2 gap-3 mb-4">
           <div className="space-y-1.5">
-            <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Status</span>
+            <span className="text-[11px] font-medium text-muted-foreground">Status</span>
             <Select
               value={status}
               onChange={e => setStatus(e.target.value)}
@@ -164,7 +167,7 @@ export function DashboardAreaCard({ area, isAdmin }: DashboardAreaCardProps) {
             </Select>
           </div>
           <div className="space-y-1.5">
-            <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Phase</span>
+            <span className="text-[11px] font-medium text-muted-foreground">Phase</span>
             <Select
               value={phase}
               onChange={e => setPhase(e.target.value)}
@@ -177,9 +180,20 @@ export function DashboardAreaCard({ area, isAdmin }: DashboardAreaCardProps) {
           </div>
         </div>
 
+        {/* Target date */}
+        <div className="mb-4">
+          <span className="text-[11px] font-medium text-muted-foreground mb-1.5 block">Target date</span>
+          <input
+            type="date"
+            value={targetDate}
+            onChange={e => setTargetDate(e.target.value)}
+            className="flex w-full rounded-lg border-0 bg-card px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [color-scheme:dark]"
+          />
+        </div>
+
         {/* Description */}
         <div className="mb-5">
-          <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground mb-1.5 block">Description</span>
+          <span className="text-[11px] font-medium text-muted-foreground mb-1.5 block">Description</span>
           <textarea
             value={description}
             onChange={e => setDescription(e.target.value)}

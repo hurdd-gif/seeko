@@ -1,0 +1,523 @@
+:root {
+  --font-inter: 'Inter';
+}
+
+:root {
+  color: #f0f0f0;
+  background: #1a1a1a;
+  font-family: var(--font-inter), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-weight: 500;
+  font-synthesis: none;
+}
+
+body {
+  margin: 0;
+}
+
+/* NOTE: no un-layered `button/input { font: inherit }` here — Tailwind v4's
+ * preflight already does this in @layer base. An un-layered copy outranks
+ * @layer utilities and wipes every text-*/font-* utility on form controls
+ * (the post-migration "fonts are too big" bug: 13px inputs/pills → 16px). */
+
+.rr-shell {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  min-height: 100vh;
+  background: #1a1a1a;
+}
+
+.rr-sidebar {
+  border-right: 1px solid #2e2e2e;
+  background: #151515;
+  padding: 20px 14px;
+}
+
+.rr-brand {
+  align-items: center;
+  color: #f0f0f0;
+  display: flex;
+  font-size: 14px;
+  font-weight:500;
+  gap: 10px;
+  letter-spacing: 0;
+  margin-bottom: 24px;
+  text-decoration: none;
+}
+
+.rr-brand img {
+  height: 28px;
+  width: 28px;
+}
+
+.rr-sidebar nav {
+  display: grid;
+  gap: 4px;
+}
+
+.rr-sidebar nav a {
+  border-radius: 8px;
+  color: #b7b7b7;
+  font-size: 14px;
+  padding: 9px 10px;
+  text-decoration: none;
+}
+
+.rr-sidebar nav a:hover {
+  background: #262626;
+  color: #f0f0f0;
+}
+
+.rr-main {
+  min-width: 0;
+  padding: 36px;
+}
+
+.rr-page {
+  margin: 0 auto;
+  max-width: 1040px;
+}
+
+.rr-heading {
+  margin-bottom: 28px;
+}
+
+.rr-heading p {
+  color: #0d7aff;
+  font-size: 13px;
+  font-weight:500;
+  margin: 0 0 8px;
+}
+
+.rr-heading h1 {
+  color: #f0f0f0;
+  font-size: clamp(32px, 4vw, 56px);
+  font-weight:500;
+  letter-spacing: 0;
+  line-height: 0.96;
+  margin: 0;
+  max-width: 740px;
+}
+
+.rr-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.rr-panel {
+  background: #222222;
+  border: 1px solid #2e2e2e;
+  border-radius: 8px;
+  box-shadow: var(--shadow-elevated);
+  padding: 18px;
+}
+
+.rr-panel h2 {
+  color: #f0f0f0;
+  font-size: 16px;
+  margin: 0 0 14px;
+}
+
+.rr-panel ul {
+  display: grid;
+  gap: 10px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.rr-panel li {
+  display: grid;
+  gap: 4px;
+}
+
+.rr-panel a {
+  color: #f0f0f0;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.rr-panel a:hover {
+  color: #0d7aff;
+}
+
+.rr-panel span,
+.rr-detail dd {
+  color: #808080;
+  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  font-size: 12px;
+}
+
+.rr-detail dl {
+  display: grid;
+  gap: 16px;
+  margin: 0;
+}
+
+.rr-detail dt {
+  color: #f0f0f0;
+  font-size: 13px;
+  font-weight:500;
+  margin-bottom: 5px;
+}
+
+.rr-detail dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.rr-auth-page {
+  align-items: center;
+  display: flex;
+  min-height: calc(100vh - 72px);
+  justify-content: center;
+}
+
+.rr-auth-card {
+  display: grid;
+  gap: 16px;
+  max-width: 360px;
+  width: min(100%, 360px);
+}
+
+.rr-auth-logo {
+  height: 42px;
+  justify-self: center;
+  width: 42px;
+}
+
+.rr-auth-heading {
+  text-align: center;
+}
+
+.rr-auth-heading h1 {
+  color: #f0f0f0;
+  font-size: 24px;
+  line-height: 1.1;
+  margin: 0;
+}
+
+.rr-auth-heading p {
+  color: #808080;
+  font-size: 14px;
+  margin: 8px 0 0;
+}
+
+.rr-auth-tabs {
+  background: #222222;
+  border: 1px solid #2e2e2e;
+  border-radius: 8px;
+  display: grid;
+  gap: 4px;
+  grid-template-columns: 1fr 1fr;
+  padding: 4px;
+}
+
+.rr-auth-tabs button {
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  color: #9a9a9a;
+  cursor: pointer;
+  padding: 8px 10px;
+}
+
+.rr-auth-tabs button.active {
+  background: #0d7aff;
+  color: #1a1a1a;
+  font-weight:500;
+}
+
+.rr-auth-card label {
+  display: grid;
+  gap: 7px;
+}
+
+.rr-auth-card label span {
+  color: #9a9a9a;
+  font-size: 12px;
+  font-weight:500;
+}
+
+.rr-auth-card input {
+  background: #222222;
+  border: 1px solid #2e2e2e;
+  border-radius: 8px;
+  color: #f0f0f0;
+  min-height: 42px;
+  outline: none;
+  padding: 0 12px;
+}
+
+.rr-auth-card select {
+  appearance: none;
+  background: #222222;
+  border: 1px solid #2e2e2e;
+  border-radius: 8px;
+  color: #f0f0f0;
+  min-height: 42px;
+  outline: none;
+  padding: 0 12px;
+}
+
+.rr-auth-card input:focus,
+.rr-auth-card select:focus {
+  border-color: rgba(13, 122, 255, 0.65);
+}
+
+.rr-auth-error {
+  background: rgba(239, 68, 68, 0.12);
+  border-radius: 8px;
+  color: #ff8b8f;
+  font-size: 13px;
+  margin: 0;
+  padding: 10px 12px;
+}
+
+.rr-auth-submit {
+  align-items: center;
+  background: #0d7aff;
+  border: 0;
+  border-radius: 8px;
+  color: #1a1a1a;
+  cursor: pointer;
+  display: inline-flex;
+  gap: 8px;
+  font-weight: 750;
+  justify-content: center;
+  min-height: 42px;
+}
+
+.rr-auth-submit:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.rr-onboarding-card {
+  max-width: 400px;
+  width: min(100%, 400px);
+}
+
+.rr-avatar-field {
+  align-items: center;
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+}
+
+.rr-avatar-field label {
+  align-items: center;
+  background: #222222;
+  border: 1px solid #2e2e2e;
+  border-radius: 999px;
+  cursor: pointer;
+  display: grid;
+  height: 84px;
+  justify-items: center;
+  overflow: hidden;
+  position: relative;
+  width: 84px;
+}
+
+.rr-avatar-field img,
+.rr-avatar-field span {
+  align-items: center;
+  display: flex;
+  height: 100%;
+  justify-content: center;
+  width: 100%;
+}
+
+.rr-avatar-field img {
+  object-fit: cover;
+}
+
+.rr-avatar-field span {
+  color: #f0f0f0;
+  font-size: 22px;
+  font-weight: 750;
+}
+
+.rr-avatar-field input {
+  display: none;
+}
+
+.rr-avatar-field svg {
+  background: rgba(0, 0, 0, 0.64);
+  border-radius: 999px;
+  bottom: 6px;
+  color: #f0f0f0;
+  padding: 4px;
+  position: absolute;
+  right: 6px;
+}
+
+.rr-avatar-field p {
+  color: #808080;
+  font-size: 12px;
+  margin: 0;
+}
+
+.rr-agreement-page {
+  background: #1a1a1a;
+  min-height: 100vh;
+  padding: max(48px, env(safe-area-inset-top)) 16px max(48px, env(safe-area-inset-bottom));
+}
+
+.rr-agreement {
+  display: grid;
+  gap: 24px;
+  margin: 0 auto;
+  max-width: 760px;
+}
+
+.rr-agreement-doc,
+.rr-agreement-form {
+  background: #222222;
+  border: 1px solid #2e2e2e;
+  border-radius: 8px;
+  box-shadow: var(--shadow-elevated);
+  padding: 22px;
+}
+
+.rr-agreement-doc {
+  max-height: 52vh;
+  overflow: auto;
+}
+
+.rr-agreement-doc section + section {
+  border-top: 1px solid #2e2e2e;
+  margin-top: 20px;
+  padding-top: 20px;
+}
+
+.rr-agreement-doc h2,
+.rr-agreement-form h2 {
+  color: #f0f0f0;
+  font-size: 16px;
+  margin: 0 0 12px;
+}
+
+.rr-agreement-doc p,
+.rr-agreement-doc li {
+  color: #c8c8c8;
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.rr-agreement-doc ul {
+  padding-left: 20px;
+}
+
+.rr-agreement-form {
+  display: grid;
+  gap: 16px;
+}
+
+.rr-agreement-form-heading {
+  align-items: center;
+  color: #0d7aff;
+  display: flex;
+  gap: 8px;
+}
+
+.rr-agreement-form-heading h2 {
+  margin: 0;
+}
+
+.rr-agreement-form label {
+  display: grid;
+  gap: 7px;
+}
+
+.rr-agreement-form label span {
+  color: #9a9a9a;
+  font-size: 12px;
+  font-weight:500;
+}
+
+.rr-agreement-form input,
+.rr-agreement-form textarea,
+.rr-agreement-form select {
+  background: #1a1a1a;
+  border: 1px solid #2e2e2e;
+  border-radius: 8px;
+  color: #f0f0f0;
+  outline: none;
+  padding: 10px 12px;
+}
+
+.rr-agreement-form input,
+.rr-agreement-form select {
+  min-height: 42px;
+}
+
+.rr-agreement-form textarea {
+  resize: vertical;
+}
+
+.rr-agreement-form input:focus,
+.rr-agreement-form textarea:focus,
+.rr-agreement-form select:focus {
+  border-color: rgba(13, 122, 255, 0.65);
+}
+
+.rr-settings-form {
+  display: grid;
+  gap: 20px;
+}
+
+.rr-settings-form label {
+  display: grid;
+  gap: 7px;
+}
+
+.rr-settings-form label span {
+  color: #9a9a9a;
+  font-size: 12px;
+  font-weight:500;
+}
+
+.rr-settings-form input,
+.rr-settings-form select {
+  background: #1a1a1a;
+  border: 1px solid #2e2e2e;
+  border-radius: 8px;
+  color: #f0f0f0;
+  min-height: 42px;
+  outline: none;
+  padding: 0 12px;
+}
+
+.rr-settings-form input:focus,
+.rr-settings-form select:focus {
+  border-color: rgba(13, 122, 255, 0.65);
+}
+
+.rr-settings-form .rr-auth-submit {
+  justify-self: end;
+  min-width: 140px;
+}
+
+@media (max-width: 760px) {
+  .rr-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .rr-sidebar {
+    border-bottom: 1px solid #2e2e2e;
+    border-right: 0;
+  }
+
+  .rr-sidebar nav {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .rr-main {
+    padding: 24px 16px;
+  }
+
+  .rr-grid {
+    grid-template-columns: 1fr;
+  }
+}

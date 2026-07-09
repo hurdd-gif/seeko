@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import Link from 'next/link';
+import { Link } from '@/lib/react-router-adapters';
 import { motion } from 'motion/react';
 import { Lock, KeyRound, Loader2, ChevronLeft } from 'lucide-react';
 import { startRegistration, startAuthentication } from '@simplewebauthn/browser';
@@ -150,7 +150,7 @@ export function PaymentsPasskeyGate({ onAuthenticated }: PaymentsPasskeyGateProp
 
   const breadcrumb = (
     <Link
-      href="/"
+      href="/tasks"
       className="flex items-center gap-1 text-[13px] text-[#9a9a9a] transition-colors hover:text-[#3a3a3a]"
     >
       <ChevronLeft className="size-3.5" />

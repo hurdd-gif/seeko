@@ -1,10 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/lib/react-router-adapters';
 import { createBrowserClient } from '@supabase/ssr';
 import { motion, AnimatePresence } from 'motion/react';
-import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
@@ -12,6 +11,15 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Camera, Loader2, ArrowRight } from 'lucide-react';
 import { springs, DURATION_STATE_MS } from '@/lib/motion';
 import { useHaptics } from '@/components/HapticsProvider';
+import { cn } from '@/lib/utils';
+import { LIGHT_INPUT, BTN_PRIMARY, LIGHT_FOCUS_RING } from '@/components/dashboard/lightKit';
+
+// Light Paper port: migrated dark→light to rejoin the design system. The dark
+// shadcn Card → a white `shadow-seeko` surface; Input relit via LIGHT_INPUT;
+// the searchable Select uses its `light` variant; the CTA is the canonical black
+// pill. The gradient AvatarFallback, the hover camera overlay, and all motion
+// (avatar hover spring, button whileHover/whileTap + AnimatePresence state swap)
+// are preserved verbatim — only colors changed.
 
 const COMMON_TIMEZONES = [
   'America/New_York',
@@ -164,16 +172,16 @@ export function OnboardingForm({
     }
 
     trigger('success');
-    router.push('/');
+    router.push('/issues'); // Issues is the landing page (Overview removed)
     router.refresh();
   }
 
   return (
-    <Card>
-      <CardContent className="pt-6">
+    <div className="overflow-hidden rounded-2xl bg-white shadow-seeko">
+      <div className="p-6">
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="flex flex-col items-center gap-3">
-            <p className="text-sm text-muted-foreground text-center">
+            <p className="text-center text-sm text-[#808080]">
               Upload a photo for your profile (optional).
             </p>
             <motion.div
@@ -181,11 +189,11 @@ export function OnboardingForm({
               whileHover={{ scale: 1.05 }}
               transition={springs.snappy}
             >
-              <Avatar className="size-20 border-2 border-border">
+              <Avatar className="size-20 border-2 border-black/[0.08]">
                 {avatarUrl ? (
                   <img src={avatarUrl} alt="Avatar" className="size-full object-cover rounded-full" />
                 ) : (
-                  <AvatarFallback className="text-lg bg-secondary text-foreground">
+                  <AvatarFallback className="text-lg">
                     {getInitials(name)}
                   </AvatarFallback>
                 )}
@@ -201,29 +209,31 @@ export function OnboardingForm({
                 />
               </label>
             </motion.div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-[#808080]">
               {uploading ? 'Uploading...' : 'Click the avatar to upload (optional)'}
             </p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="display-name">Display Name</Label>
+            <Label htmlFor="display-name" className="text-[#808080]">Display Name</Label>
             <Input
               id="display-name"
               value={name}
               onChange={e => setName(e.target.value)}
               placeholder="Your name"
               autoFocus
+              className={LIGHT_INPUT}
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="timezone">Timezone</Label>
+            <Label htmlFor="timezone" className="text-[#808080]">Timezone</Label>
             <Select
               id="timezone"
               value={timezone}
               onChange={e => setTimezone(e.target.value)}
               searchable
+              light
             >
               {COMMON_TIMEZONES.map(tz => (
                 <option key={tz} value={tz}>{formatTzLabel(tz)}</option>
@@ -232,17 +242,21 @@ export function OnboardingForm({
                 <option value={timezone}>{formatTzLabel(timezone)}</option>
               )}
             </Select>
-            <p className="text-xs text-muted-foreground">Auto-detected from your browser. Change if needed.</p>
+            <p className="text-xs text-[#808080]">Auto-detected from your browser. Change if needed.</p>
           </div>
 
           {error && (
-            <p className="text-sm text-destructive">{error}</p>
+            <p className="text-sm text-[#d4503e]">{error}</p>
           )}
 
           <motion.button
             type="submit"
             disabled={saving || uploading}
-            className="inline-flex w-full items-center justify-center gap-2 whitespace-nowrap rounded-md bg-primary text-primary-foreground text-sm font-medium h-9 px-4 py-2 transition-colors transition-[box-shadow_var(--focus-ring-duration)_ease-out] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
+            className={cn(
+              BTN_PRIMARY,
+              LIGHT_FOCUS_RING,
+              'inline-flex h-10 w-full items-center justify-center gap-2 whitespace-nowrap text-sm font-semibold disabled:pointer-events-none disabled:opacity-50',
+            )}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             transition={springs.snappy}
@@ -271,7 +285,7 @@ export function OnboardingForm({
             </AnimatePresence>
           </motion.button>
         </form>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

@@ -35,6 +35,16 @@ export function firstPendingAction(response: EkoChatResponse): EkoPendingAction 
   return response.pendingActions?.[0] ?? null;
 }
 
+/**
+ * Structured card-open signal: the approval card opens iff the server staged at
+ * least one write. This replaces the legacy prose gate (matching a "Ready for
+ * approval:" prefix in the reply), which the in-server tool-use loop no longer
+ * emits — the loop returns natural language plus a populated `pendingActions`.
+ */
+export function shouldOpenApprovalCard(response: Pick<EkoChatResponse, 'pendingActions'>): boolean {
+  return (response.pendingActions?.length ?? 0) > 0;
+}
+
 export function executedTarget(response: EkoChatResponse): EkoWriteTarget | null {
   return response.executed?.find((action) => action.ok && action.target)?.target ?? null;
 }

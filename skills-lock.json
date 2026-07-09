@@ -16,6 +16,12 @@
       "sourceType": "github",
       "computedHash": "49cbdf9ca35de3c03d060363207d70fd40b6ec7390e67710887ca43976244b2c"
     },
+    "baseline-ui": {
+      "source": "ibelick/ui-skills",
+      "sourceType": "github",
+      "skillPath": "skills/baseline-ui/SKILL.md",
+      "computedHash": "dfcb3e778b57ad1cba92375689bb8265fa5aef78fba523a744f5220b3c619901"
+    },
     "bolder": {
       "source": "pbakaus/impeccable",
       "sourceType": "github",

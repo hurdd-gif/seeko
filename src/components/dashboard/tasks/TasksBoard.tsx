@@ -14,8 +14,9 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/lib/react-router-adapters';
 import { motion } from 'motion/react';
+import { toast } from 'sonner';
 
 /**
  * Rail open/close spring. Drives BOTH the outer slot width (0↔416) and the
@@ -24,7 +25,7 @@ import { motion } from 'motion/react';
  */
 const RAIL_SPRING = { type: 'spring' as const, stiffness: 320, damping: 34 };
 const RAIL_WIDTH = 416;
-import { PanelRight, LayoutGrid, Rows3, Plus } from 'lucide-react';
+import { PanelRight, LayoutGrid, Rows3 } from 'lucide-react';
 import type {
   Area,
   Milestone,
@@ -42,8 +43,9 @@ import { BoardDisplayPopover } from './BoardDisplayPopover';
 import { TaskDeleteUndoToastSlot, UNDO_WINDOW_MS } from './TaskDeleteUndoToast';
 import { CreateTaskComposer } from './CreateTaskComposer';
 import { TasksIssueList } from './TasksIssueList';
-import { LightShell } from '@/components/dashboard/LightShell';
+import { LightShell, type AccountPillProps } from '@/components/dashboard/LightShell';
 import { createClient } from '@/lib/supabase/client';
+import { requestEkoSpotlight } from '@/lib/eko-bus';
 
 type ViewMode = 'board' | 'list';
 
@@ -73,6 +75,7 @@ export function TasksBoard({
   projectMilestones,
   isAdmin = false,
   currentUserId = '',
+  account,
 }: {
   tasks: TaskWithAssignee[];
   team: Profile[];
@@ -81,12 +84,32 @@ export function TasksBoard({
   projectMilestones: Milestone[];
   isAdmin?: boolean;
   currentUserId?: string;
+  /** Global account cluster — Issues owns the chrome now that Overview is gone. */
+  account: AccountPillProps;
 }) {
   /** Local mirror of tasks so optimistic edits in the rail re-render the grid. */
   const [localTasks, setLocalTasks] = useState<TaskWithAssignee[]>(tasks);
   useEffect(() => {
     setLocalTasks(tasks);
   }, [tasks]);
+
+  /**
+   * EKO deep-link fallback: `/issues?spotlight=<taskId>` parks a spotlight on
+   * the bus (UI choreography only) and strips the param so refresh/back don't
+   * replay it. The SPA path doesn't need this — the bus singleton survives
+   * client navigations — but a hard load (or a link shared into a new tab)
+   * arrives with fresh module state, and this keeps the receipt link working.
+   */
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const spotlightId = url.searchParams.get('spotlight');
+    if (!spotlightId) return;
+    requestEkoSpotlight({ id: spotlightId });
+    url.searchParams.delete('spotlight');
+    window.history.replaceState(window.history.state, '', url);
+    // Run once on mount — a hard load is the only entry path for the param.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   /** Statuses the user has explicitly pinned visible (overrides the auto-hide of empties). */
   const [pinnedVisible, setPinnedVisible] = useState<Set<TaskStatus>>(new Set());
@@ -144,6 +167,41 @@ export function TasksBoard({
       }
     },
     [localTasks, team],
+  );
+
+  /**
+   * Quick status change from a card's StatusPopover (the status dot).
+   * Mirrors handleAssign: optimistic patch on localTasks (so the card hops
+   * to the target column immediately) → Supabase mutation → revert + toast
+   * on error. The activity_log row is written by the DB trigger, not here.
+   */
+  const handleStatusChange = useCallback(
+    async (taskId: string, nextStatus: TaskStatus) => {
+      const prev = localTasks.find((t) => t.id === taskId);
+      if (!prev || prev.status === nextStatus) return;
+      const prevStatus = prev.status;
+
+      setLocalTasks((cur) =>
+        cur.map((t) => (t.id === taskId ? { ...t, status: nextStatus } : t)),
+      );
+
+      const supabase = createClient();
+      const { error } = await supabase
+        .from('tasks')
+        .update({ status: nextStatus })
+        .eq('id', taskId);
+      if (error) {
+        // Revert.
+        setLocalTasks((cur) =>
+          cur.map((t) => (t.id === taskId ? { ...t, status: prevStatus } : t)),
+        );
+        console.error('Failed to update task.status:', error);
+        toast.error('Failed to change status. Please try again.');
+      } else {
+        toast.success(nextStatus === 'Done' ? 'Marked done' : `Status changed to ${nextStatus}`);
+      }
+    },
+    [localTasks],
   );
 
   /**
@@ -340,18 +398,11 @@ export function TasksBoard({
     });
   }
 
-  const boardActions = (
+  // Board controls share the global bar row (passed to LightShell as `actions`,
+  // rendered just left of the account cluster). The global Create button covers
+  // "new issue"; per-column "+ add" stays for status-preselected creation.
+  const boardControls = (
     <div className="flex items-center gap-1">
-      {isAdmin && (
-        <button
-          type="button"
-          aria-label="New issue"
-          onClick={() => openComposer()}
-          className="mr-1 inline-flex size-9 items-center justify-center rounded-full bg-[#f4f4f4] text-[#2a2a2a] transition hover:bg-[#ececec] active:scale-[0.98]"
-        >
-          <Plus className="size-4" strokeWidth={2.25} />
-        </button>
-      )}
       <BoardFilterPopover filter={filter} onChange={setFilter} team={team} />
       <BoardDisplayPopover
         pinnedVisible={pinnedVisible}
@@ -365,8 +416,8 @@ export function TasksBoard({
         onClick={() => setViewMode((v) => (v === 'board' ? 'list' : 'board'))}
         className={
           viewMode === 'list'
-            ? 'flex size-9 items-center justify-center rounded-full bg-black/[0.05] text-[#3a3a3a] transition'
-            : 'flex size-9 items-center justify-center rounded-full text-[#9a9a9a] transition hover:bg-black/[0.04] hover:text-[#505050]'
+            ? 'flex size-9 items-center justify-center rounded-full bg-black/[0.05] text-[#3a3a3a] transition-[background-color,color,transform] duration-150 ease-out motion-safe:active:scale-[0.97]'
+            : 'flex size-9 items-center justify-center rounded-full text-[#6e6e6e] transition-[background-color,color,transform] duration-150 ease-out hover:bg-black/[0.04] hover:text-[#3a3a3a] motion-safe:active:scale-[0.97]'
         }
       >
         {viewMode === 'board' ? <Rows3 className="size-4" /> : <LayoutGrid className="size-4" />}
@@ -378,8 +429,8 @@ export function TasksBoard({
         onClick={() => setRailOpen((v) => !v)}
         className={
           railOpen
-            ? 'flex size-9 items-center justify-center rounded-full bg-black/[0.05] text-[#3a3a3a] transition'
-            : 'flex size-9 items-center justify-center rounded-full text-[#9a9a9a] transition hover:bg-black/[0.04] hover:text-[#505050]'
+            ? 'flex size-9 items-center justify-center rounded-full bg-black/[0.05] text-[#3a3a3a] transition-[background-color,color,transform] duration-150 ease-out motion-safe:active:scale-[0.97]'
+            : 'flex size-9 items-center justify-center rounded-full text-[#6e6e6e] transition-[background-color,color,transform] duration-150 ease-out hover:bg-black/[0.04] hover:text-[#3a3a3a] motion-safe:active:scale-[0.97]'
         }
       >
         <PanelRight className="size-4" />
@@ -388,10 +439,17 @@ export function TasksBoard({
   );
 
   return (
-    <LightShell activeTab="issues" navLabel="Project sections" fill bordered actions={boardActions}>
+    <LightShell
+      activeTab="issues"
+      navLabel="Project sections"
+      fill
+      bordered
+      account={account}
+      actions={boardControls}
+    >
       {/* ── Board area + right rail ────────────────────────────── */}
       <div className="flex min-h-0 flex-1">
-        <main className="min-h-0 flex-1 overflow-x-auto overflow-y-hidden">
+        <main className="scroll-mask-x min-h-0 flex-1 overflow-x-auto overflow-y-hidden">
           {viewMode === 'board' ? (
             <div className="flex h-full items-start gap-4 px-6 pb-8 pt-2">
               {visibleStatuses.map((status, i) => (
@@ -405,7 +463,10 @@ export function TasksBoard({
                   isAdmin={isAdmin}
                   team={team}
                   onAssign={handleAssign}
+                  onStatusChange={isAdmin ? handleStatusChange : undefined}
+                  onDeleteTask={isAdmin ? handleTaskDeleted : undefined}
                   onAddTask={isAdmin ? () => openComposer(status) : undefined}
+                  muted={TERMINAL.includes(status)}
                 />
               ))}
 
@@ -413,7 +474,7 @@ export function TasksBoard({
                 <HiddenColumnsStack
                   hiddenStatuses={hiddenStatuses}
                   countsByStatus={countsByStatus}
-                  defaultOpen
+                  defaultOpen={false}
                   onExpandColumn={pinHiddenColumn}
                 />
               )}
@@ -427,6 +488,7 @@ export function TasksBoard({
                 onSelectTask={(t) => router.push(`/tasks/${t.id}`)}
                 isAdmin={isAdmin}
                 onAssign={handleAssign}
+                onDeleteTask={isAdmin ? handleTaskDeleted : undefined}
               />
             </div>
           )}

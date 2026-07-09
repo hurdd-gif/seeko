@@ -1,0 +1,7 @@
+interface:
+  display_name: "SEEKO Feature Surface Mapper"
+  short_description: "Map affected SEEKO feature surfaces"
+  default_prompt: "Use $seeko-feature-surface-mapper to map affected SEEKO surfaces before changing code."
+
+policy:
+  allow_implicit_invocation: true

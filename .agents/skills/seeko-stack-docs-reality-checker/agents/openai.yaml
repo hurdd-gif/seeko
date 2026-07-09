@@ -1,0 +1,7 @@
+interface:
+  display_name: "SEEKO Stack Docs Reality Checker"
+  short_description: "Align SEEKO docs with real stack"
+  default_prompt: "Use $seeko-stack-docs-reality-checker to check docs against the current SEEKO stack."
+
+policy:
+  allow_implicit_invocation: true

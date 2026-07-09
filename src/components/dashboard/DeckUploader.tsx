@@ -3,9 +3,11 @@
 import { useState, useCallback } from 'react';
 import { FileUp, Loader2, Upload, X } from 'lucide-react';
 import { ProgressBar } from '@/components/ui/progress';
+import type { PDFPageProxy } from 'pdfjs-dist';
 
 interface Slide {
   url: string;
+  thumbnail_url?: string;
   sort_order: number;
 }
 
@@ -22,6 +24,28 @@ export function DeckUploader({ deckId, getDeckId, existingSlides = [], onSlidesC
   const [progress, setProgress] = useState({ current: 0, total: 0 });
   const [slides, setSlides] = useState<Slide[]>(existingSlides);
   const [error, setError] = useState('');
+
+  const renderPageBlob = useCallback(async (
+    page: PDFPageProxy,
+    maxWidth: number,
+    quality: number,
+  ) => {
+    const baseViewport = page.getViewport({ scale: 1 });
+    const scale = Math.min(maxWidth / baseViewport.width, 1.5);
+    const viewport = page.getViewport({ scale });
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(viewport.width);
+    canvas.height = Math.round(viewport.height);
+
+    await page.render({ canvas, viewport }).promise;
+
+    return new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob((blob) => {
+        if (blob) resolve(blob);
+        else reject(new Error('Failed to render slide image'));
+      }, 'image/webp', quality);
+    });
+  }, []);
 
   const processPdf = useCallback(async (file: File) => {
     setUploading(true);
@@ -57,22 +81,16 @@ export function DeckUploader({ deckId, getDeckId, existingSlides = [], onSlidesC
 
       for (let i = 1; i <= totalPages; i++) {
         const page = await pdf.getPage(i);
-        const viewport = page.getViewport({ scale: 2 });
-
-        const canvas = document.createElement('canvas');
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
-
-        await page.render({ canvas, viewport }).promise;
-
-        const blob = await new Promise<Blob>((resolve) => {
-          canvas.toBlob((b) => resolve(b!), 'image/webp', 0.85);
-        });
+        const [blob, thumbnailBlob] = await Promise.all([
+          renderPageBlob(page, 1600, 0.82),
+          renderPageBlob(page, 320, 0.72),
+        ]);
 
         const formData = new FormData();
         formData.append('deckId', id);
         formData.append('slideIndex', String(i - 1));
         formData.append('file', blob, `slide-${i}.webp`);
+        formData.append('thumbnail', thumbnailBlob, `slide-${i}-thumb.webp`);
 
         const res = await fetch('/api/docs/upload-deck', { method: 'POST', body: formData });
         if (!res.ok) {
@@ -81,7 +99,7 @@ export function DeckUploader({ deckId, getDeckId, existingSlides = [], onSlidesC
         }
 
         const data = await res.json();
-        newSlides.push({ url: data.url, sort_order: data.sort_order });
+        newSlides.push({ url: data.url, thumbnail_url: data.thumbnail_url, sort_order: data.sort_order });
         setProgress({ current: i, total: totalPages });
       }
 
@@ -94,7 +112,7 @@ export function DeckUploader({ deckId, getDeckId, existingSlides = [], onSlidesC
     } finally {
       setUploading(false);
     }
-  }, [deckId, getDeckId, onSlidesChange]);
+  }, [deckId, getDeckId, onSlidesChange, renderPageBlob]);
 
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -157,7 +175,7 @@ export function DeckUploader({ deckId, getDeckId, existingSlides = [], onSlidesC
           <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
             {slides.map((slide, i) => (
               <div key={i} className="relative group aspect-[16/9] rounded-md overflow-hidden bg-[#f4f4f4] outline outline-1 -outline-offset-1 outline-black/[0.06]">
-                <img src={slide.url} alt={`Slide ${i + 1}`} className="w-full h-full object-cover" />
+                <img src={slide.thumbnail_url ?? slide.url} alt={`Slide ${i + 1}`} className="w-full h-full object-cover" loading="lazy" decoding="async" />
                 <span className="absolute bottom-1 left-1 text-[10px] font-mono text-white/80 bg-black/50 px-1 rounded">
                   {i + 1}
                 </span>

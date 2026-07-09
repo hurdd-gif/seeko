@@ -4,7 +4,7 @@ import { AgreementForm } from '../AgreementForm';
 
 // AgreementForm pulls in the router, haptics, and scroll-lock — none relevant to
 // the signature-wiring behavior under test, so stub them.
-vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }) }));
+vi.mock('@/lib/react-router-adapters', () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }) }));
 vi.mock('@/components/HapticsProvider', () => ({ useHaptics: () => ({ trigger: vi.fn() }) }));
 vi.mock('@/lib/scroll-lock', () => ({ acquireScrollLock: vi.fn(), releaseScrollLock: vi.fn() }));
 

@@ -1,0 +1,4 @@
+interface:
+  display_name: "SEEKO Supabase Mutation Reviewer"
+  short_description: "Review Supabase writes and auth boundaries."
+  default_prompt: "Review SEEKO Supabase mutations for placement, auth, and RLS assumptions."

@@ -79,13 +79,13 @@ export function SignaturePad({ onChange, light = false }: SignaturePadProps) {
   }, [mode, setupCanvas]);
 
   // Shrink the typed signature to fit the pad. Measured against a hidden span in
-  // the same handwriting face at TYPED_MAX_PX, then scaled down by the overflow
+  // the same Inter face at TYPED_MAX_PX, then scaled down by the overflow
   // ratio so the name stays centered and whole instead of scroll-clipping at the
   // input's left edge. Empty → back to full size.
   //
   // Runs in useLayoutEffect (pre-paint, so a long name is never shown clipped for
   // a frame) AND re-fits once `document.fonts.ready` resolves: measuring before
-  // the Caveat web font settles reads the fallback face's metrics and under-shoots
+  // the Inter web font settles reads the fallback face's metrics and under-shoots
   // the ratio, which is exactly how the clip slipped through the old post-paint
   // useEffect. A ResizeObserver re-fits on width changes (mobile sheet ⇄ desktop
   // dialog, orientation). The TYPED_FIT_MARGIN guards sub-pixel overflow.
@@ -288,7 +288,7 @@ export function SignaturePad({ onChange, light = false }: SignaturePadProps) {
               aria-label="Type your signature"
               autoComplete="off"
               spellCheck={false}
-              style={{ fontFamily: 'var(--font-caveat), cursive', fontSize: typedFontPx }}
+              style={{ fontFamily: 'var(--font-inter), sans-serif', fontSize: typedFontPx }}
               className={cn(
                 'absolute inset-x-5 bottom-[2.75rem] overflow-hidden bg-transparent text-center leading-none outline-none',
                 'transition-[font-size] duration-100 ease-out motion-reduce:transition-none',
@@ -302,7 +302,7 @@ export function SignaturePad({ onChange, light = false }: SignaturePadProps) {
               ref={typedMeasureRef}
               aria-hidden
               style={{
-                fontFamily: 'var(--font-caveat), cursive',
+                fontFamily: 'var(--font-inter), sans-serif',
                 fontSize: TYPED_MAX_PX,
                 position: 'absolute',
                 left: -9999,

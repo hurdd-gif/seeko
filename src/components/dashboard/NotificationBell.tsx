@@ -21,7 +21,8 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { useRouter } from 'next/navigation';
+import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
+import { useRouter } from '@/lib/react-router-adapters';
 import { createBrowserClient } from '@supabase/ssr';
 import { Notification } from '@/lib/types';
 import { useIsDesktop } from '@/lib/hooks/useIsDesktop';
@@ -29,7 +30,7 @@ import { acquireScrollLock, releaseScrollLock } from '@/lib/scroll-lock';
 import { BellToggle } from './notifications/BellToggle';
 import { DesktopNotificationPanel } from './notifications/DesktopNotificationPanel';
 import { MobileNotificationSheet } from './notifications/MobileNotificationSheet';
-import { groupNotifications } from './notifications/utils';
+import { groupNotificationsFlat } from './notifications/utils';
 import type { DisplayNotification } from './notifications/types';
 import { useLiveToast } from './notifications/LiveToastContext';
 import { LiveToastContainer } from './notifications/LiveToastContainer';
@@ -38,11 +39,14 @@ interface NotificationBellProps {
   userId: string;
   initialCount: number;
   initialNotifications: Notification[];
+  /** Relight the trigger for a light surface (StudioHeaderActions). Default dark. */
+  light?: boolean;
 }
 
-export function NotificationBell({ userId, initialCount, initialNotifications }: NotificationBellProps) {
+export function NotificationBell({ userId, initialCount, initialNotifications, light = false }: NotificationBellProps) {
   const router = useRouter();
   const isDesktop = useIsDesktop();
+  const reduce = useReducedMotion();
   const [open, setOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(initialCount);
   const [notifications, setNotifications] = useState<Notification[]>(initialNotifications);
@@ -153,41 +157,6 @@ export function NotificationBell({ userId, initialCount, initialNotifications }:
     await supabase.from('notifications').update({ read: true }).eq('id', notifId);
   }, [supabase]);
 
-  // Swipe mark-read: toggle read state for given IDs
-  const swipeMarkRead = useCallback(async (ids: string[]) => {
-    // Check if all are already read — if so, mark unread
-    const allRead = ids.every(id => notifications.find(n => n.id === id)?.read);
-
-    if (allRead) {
-      // Mark unread
-      setNotifications(prev =>
-        prev.map(n => ids.includes(n.id) ? { ...n, read: false } : n)
-      );
-      setUnreadCount(c => c + ids.length);
-      for (const id of ids) {
-        await supabase.from('notifications').update({ read: false }).eq('id', id);
-      }
-    } else {
-      // Mark read
-      const unreadIds = ids.filter(id => !notifications.find(n => n.id === id)?.read);
-      setNotifications(prev =>
-        prev.map(n => ids.includes(n.id) ? { ...n, read: true } : n)
-      );
-      setUnreadCount(c => Math.max(0, c - unreadIds.length));
-      for (const id of unreadIds) {
-        await supabase.from('notifications').update({ read: true }).eq('id', id);
-      }
-    }
-  }, [supabase, notifications]);
-
-  // Dismiss = delete from DB + remove from list
-  const dismissNotification = useCallback(async (ids: string[]) => {
-    const unreadDismissed = ids.filter(id => !notifications.find(n => n.id === id)?.read).length;
-    setNotifications(prev => prev.filter(n => !ids.includes(n.id)));
-    setUnreadCount(c => Math.max(0, c - unreadDismissed));
-    await supabase.from('notifications').delete().in('id', ids);
-  }, [supabase, notifications]);
-
   // Click notification = mark read + navigate
   const handleNotificationTap = useCallback((notif: DisplayNotification) => {
     for (const id of notif.ids) {
@@ -199,17 +168,58 @@ export function NotificationBell({ userId, initialCount, initialNotifications }:
     }
   }, [notifications, markOneRead, router]);
 
-  const grouped = useMemo(() => groupNotifications(notifications), [notifications]);
+  const grouped = useMemo(() => groupNotificationsFlat(notifications), [notifications]);
 
   return (
+    // `relative` so the desktop panel anchors to the inbox trigger itself, not
+    // the pill's outer `.relative`. Right-aligning the panel to a 244px pill
+    // when the trigger sits on its LEFT edge puts the panel's content 300px
+    // away from where the user just clicked.
     <div className="relative">
-      {/* Bell button — always rendered, morphs icon to X when open */}
-      <BellToggle
-        ref={bellRef}
-        open={open}
-        unreadCount={unreadCount}
-        onClick={() => setOpen(o => !o)}
-      />
+      {/* Bell button — always rendered, morphs icon to X when open.
+          Raised to the panel's z-[9999] ONLY while open on desktop, so the active
+          trigger stays lit above the scrim (z-[9998]) and its X-to-close affordance
+          stays clickable.
+          IMPORTANT — this elevation is gated, not unconditional: NotificationBell
+          is a shared component mounted twice on desktop (the visible LightShell
+          cluster AND the legacy DesktopHeader/PageHeaderUser cluster, which sits
+          hidden behind LightShell's opaque `fixed inset-0 z-40` overlay). An
+          unconditional z-[9999] here lifts the hidden legacy bell THROUGH that
+          overlay, producing a phantom duplicate bell over the bar. Gating on
+          `isDesktop && open` keeps the legacy bell at its natural z (it's never
+          open — unclickable behind the overlay) so only the active visible bell
+          ever rises. */}
+      <div className={`relative${isDesktop && open ? ' z-[9999]' : ''}`}>
+        <BellToggle
+          ref={bellRef}
+          open={open}
+          unreadCount={unreadCount}
+          onClick={() => setOpen(o => !o)}
+          light={light}
+        />
+      </div>
+
+      {/* Desktop: dim the page behind the open panel; click-away to dismiss.
+          Sits just under the panel/bell (z-[9998] < z-[9999]). It's an
+          inline `fixed inset-0` (not portaled) for the same reason the panel's
+          own z-[9999] already wins over page content — no transformed ancestor
+          traps it here, so it covers the viewport and the panel paints on top. */}
+      {isDesktop && (
+        <AnimatePresence>
+          {open && (
+            <motion.div
+              key="notif-scrim"
+              aria-hidden
+              onClick={() => setOpen(false)}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0, transition: reduce ? { duration: 0 } : { duration: 0.13, ease: [0.4, 0, 1, 1] } }}
+              transition={reduce ? { duration: 0 } : { duration: 0.18, ease: 'easeOut' }}
+              className="fixed inset-0 z-[9998] bg-black/20"
+            />
+          )}
+        </AnimatePresence>
+      )}
 
       {/* Desktop: dropdown panel */}
       {isDesktop && (
@@ -221,8 +231,6 @@ export function NotificationBell({ userId, initialCount, initialNotifications }:
           unreadCount={unreadCount}
           onMarkAllRead={markAllRead}
           onTap={handleNotificationTap}
-          onDismiss={dismissNotification}
-          onMarkRead={swipeMarkRead}
         />
       )}
 
@@ -237,8 +245,6 @@ export function NotificationBell({ userId, initialCount, initialNotifications }:
           onClose={() => setOpen(false)}
           onMarkAllRead={markAllRead}
           onTap={handleNotificationTap}
-          onDismiss={dismissNotification}
-          onMarkRead={swipeMarkRead}
         />,
         document.body
       )}

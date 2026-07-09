@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams } from '@/lib/react-router-adapters';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { createBrowserClient } from '@supabase/ssr';
 import {
@@ -126,7 +126,7 @@ const STATUS_ICONS: Record<string, { icon: typeof Circle; className: string }> =
 
 const STATUS_BADGE_STYLE: Record<string, string> = {
   'In Progress': 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-  'Complete':    'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+  'Complete':    'bg-sky-500/10 text-sky-400 border-sky-500/20',
   'In Review':   'bg-blue-500/10 text-blue-400 border-blue-500/20',
   'Blocked':     'bg-red-500/10 text-red-400 border-red-500/20',
 };
@@ -161,7 +161,9 @@ const TASK_DIALS = {
   },
 };
 
-const ALL_STATUSES: TaskStatus[] = ['Complete', 'In Progress', 'In Review', 'Blocked'];
+// Minimal subset kept for the legacy TaskList view; full 7-status set is in src/lib/types.ts TASK_STATUSES.
+// This component is replaced in Phase B (TasksBoard) — see docs/plans/2026-05-19-tasks-board-redesign.md.
+const ALL_STATUSES: TaskStatus[] = ['Done', 'In Progress', 'In Review', 'Backlog'];
 const DEPARTMENTS: Department[] = ['Coding', 'Visual Art', 'UI/UX', 'Animation', 'Asset Creation'];
 const PRIORITIES: Priority[] = ['High', 'Medium', 'Low'];
 
@@ -264,7 +266,7 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
 
   const handleStatusChange = useCallback(async (taskId: string, newStatus: TaskStatus) => {
     // Non-admin trying to complete → open deliverable dialog (will submit for review)
-    if (newStatus === 'Complete' && !isAdmin) {
+    if (newStatus === 'Done' && !isAdmin) {
       const task = allTasks.find(t => t.id === taskId);
       if (task) setDeliverableTask(task);
       return;
@@ -279,10 +281,10 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
     if (task?.assignee_id && task.assignee_id !== currentUserId) {
       const changerName = team.find(m => m.id === currentUserId)?.display_name ?? 'Someone';
       const kindMap: Record<string, string> = {
-        'Complete': 'task_completed',
+        'Done': 'task_completed',
         'In Review': 'task_submitted_review',
         'In Progress': 'task_review_denied',
-        'Blocked': 'task_review_denied',
+        'Backlog': 'task_review_denied',
       };
       fetch('/api/notify/user', {
         method: 'POST',
@@ -300,8 +302,8 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
     // Log activity
     if (task) {
       const actionMap: Record<string, string> = {
-        'Complete': 'Completed',
-        'Blocked': 'Blocked',
+        'Done': 'Completed',
+        'Backlog': 'Blocked',
         'In Review': 'Moved to review',
         'In Progress': 'Started',
       };
@@ -317,8 +319,8 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
   const doCompleteTask = useCallback(async (taskId: string) => {
     const task = allTasks.find(t => t.id === taskId);
     if (isAdmin) {
-      setTaskStatuses(prev => ({ ...prev, [taskId]: 'Complete' }));
-      await supabase.from('tasks').update({ status: 'Complete' }).eq('id', taskId);
+      setTaskStatuses(prev => ({ ...prev, [taskId]: 'Done' }));
+      await supabase.from('tasks').update({ status: 'Done' }).eq('id', taskId);
     } else {
       setTaskStatuses(prev => ({ ...prev, [taskId]: 'In Review' }));
       await supabase.from('tasks').update({ status: 'In Review' }).eq('id', taskId);
@@ -473,7 +475,7 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
     const BadgeIcon = STATUS_BADGE_ICON[status] ?? Timer;
     const dl = task.deadline ? formatDeadline(task.deadline) : null;
     const isOverdue = dl?.className === 'text-red-400';
-    const isBlocked = status === 'Blocked';
+    const isBlocked = status === 'Backlog';
     const isUrgentRow = isOverdue || isBlocked;
 
     const statusBadge = (
@@ -639,10 +641,10 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
               )}
               {!isAdmin && task.assignee_id === currentUserId && (
                 <>
-                  {ALL_STATUSES.filter(s => s !== status && s !== 'Blocked' && s !== 'In Review').map(s => {
+                  {ALL_STATUSES.filter(s => s !== status && s !== 'Backlog' && s !== 'In Review').map(s => {
                     const cfg = STATUS_ICONS[s];
                     const Icon = cfg.icon;
-                    const label = s === 'Complete' ? 'Submit for Review' : s;
+                    const label = s === 'Done' ? 'Submit for Review' : s;
                     const locked = status === 'In Review';
                     return (
                       <DropdownMenuItem
@@ -944,7 +946,7 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
           <span className="text-[13px] tabular-nums">{filtered.length} task{filtered.length !== 1 ? 's' : ''}</span>
           {(() => {
             const inProgress = filtered.filter(t => getEffectiveStatus(t) === 'In Progress').length;
-            const blocked = filtered.filter(t => getEffectiveStatus(t) === 'Blocked').length;
+            const blocked = filtered.filter(t => getEffectiveStatus(t) === 'Backlog').length;
             const inReview = filtered.filter(t => getEffectiveStatus(t) === 'In Review').length;
             return (
               <>
@@ -1121,7 +1123,7 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
                 </button>
               </div>
               <div className="grid grid-cols-2 gap-2 px-4 py-3">
-                {ALL_STATUSES.filter(s => isAdmin || (s !== 'Blocked' && s !== 'In Review')).map(s => {
+                {ALL_STATUSES.filter(s => isAdmin || (s !== 'Backlog' && s !== 'In Review')).map(s => {
                   const cfg = STATUS_ICONS[s];
                   const Icon = cfg.icon;
                   const currentStatus = getEffectiveStatus(statusSheetTask);
@@ -1151,7 +1153,7 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
                       <Icon className={cn('size-5', isLockedForReview ? 'text-muted-foreground' : cfg.className)} />
                       <div>
                         <p className={cn('text-sm font-medium', isCurrentStatus ? '' : 'text-foreground')}>
-                          {!isAdmin && s === 'Complete' ? 'Submit for Review' : s}
+                          {!isAdmin && s === 'Done' ? 'Submit for Review' : s}
                         </p>
                         {isCurrentStatus && (
                           <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Current</p>

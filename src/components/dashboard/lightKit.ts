@@ -2,18 +2,28 @@
  * `@theme inline` tokens that bake literal hex into utilities at build time,
  * so a runtime token override can't relight them — we override per-element
  * via className, which twMerge resolves last-wins). ───────────────────── */
+/* Text inputs indicate focus with a border-stroke change only — no ring glow
+ * (user-decided 2026-07-03). `ring-0` defeats the shadcn Input base ring.
+ * The root app is dark (`color-scheme: dark`), so Chrome paints autofilled
+ * inputs grey-blue with white text — force light scheme per input and paint
+ * over the autofill tint with an inset shadow + explicit text-fill. */
 export const LIGHT_INPUT =
-  'border border-black/[0.08] bg-white text-[#2a2a2a] placeholder:text-[#b3b3b3] rounded-lg focus-visible:ring-2 focus-visible:ring-[#0d7aff]/30';
+  'border border-black/[0.08] bg-white text-[#2a2a2a] placeholder:text-[#b3b3b3] rounded-lg [color-scheme:light] autofill:shadow-[inset_0_0_0_1000px_#fff] autofill:[-webkit-text-fill-color:#2a2a2a] transition-[border-color] duration-150 ease-out focus-visible:ring-0 focus-visible:border-[#0d7aff]';
 export const BTN_BASE =
-  'rounded-full px-4 h-9 text-[13px] font-medium transition-[background-color,transform] duration-150 ease-out active:scale-[0.98]';
+  'rounded-[14px] px-4 h-9 text-[13px] font-medium transition-[background-color,transform] duration-150 ease-out active:scale-[0.98]';
 export const BTN_PRIMARY = `${BTN_BASE} bg-[#111] text-white hover:bg-[#2a2a2a]`;
 export const BTN_SECONDARY = `${BTN_BASE} bg-[#f4f4f4] text-[#2a2a2a] hover:bg-[#ececec]`;
 export const CARD_TITLE = 'text-[15px] font-semibold text-[#111]';
 export const CARD_DESC = 'text-[13px] text-[#808080]';
 export const HAIRLINE = 'h-px bg-black/[0.06]';
 /* Dialog footer/action buttons in the light theme: black primary, subtle ghost.
- * Appended to shadcn <Button> className so twMerge recolors them last-wins. */
-export const DIALOG_SAVE = 'bg-[#111] text-white hover:bg-[#2a2a2a]';
+ * Appended to shadcn <Button> className so twMerge recolors them last-wins.
+ * Disabled: the Button base fades to opacity-50, which turns the black pill into
+ * a solid mid-grey that reads as an ENABLED secondary button — so override with
+ * an unmistakably inert washed-grey fill + grey label (the Wise/Mercury pattern:
+ * disabled primaries lose their fill, they don't just dim). */
+export const DIALOG_SAVE =
+  'bg-[#111] text-white hover:bg-[#2a2a2a] disabled:opacity-100 disabled:bg-black/[0.06] disabled:text-black/35';
 export const DIALOG_CANCEL = 'text-[#505050] hover:bg-black/[0.04] hover:text-[#111]';
 
 /* Restrained AA-on-white department label colors (see 2026-05-26 phase1-team
@@ -52,25 +62,42 @@ export const LIGHT_INVOICE_STATUS: Record<string, string> = {
 };
 
 /* External-signing invite status on white (External Signing admin). The loudness
- * ladder differs from invoices: here `pending` is the LOUD status (it blocks an
- * external party from acting) and `signed`/`expired` are quiet (done/dead), the
- * inverse emphasis of LIGHT_INVOICE_STATUS. Mapped to the same AA-on-white ramp:
- * amber `#946a00` = pending (needs attention), azure `#0a63cc` = verified (mid-flow),
- * neutral grey = signed/expired (quiet), destructive `#d4503e` = revoked. */
+ * ladder differs from invoices. Mapped to the AA-on-white ramp:
+ *   pending  = amber  `#946a00` — LOUD (blocks an external party from acting),
+ *   verified = azure  `#0a63cc` — mid-flow (recipient verified, about to sign),
+ *   signed   = green  `#15803d` — the terminal ACHIEVEMENT of the custody chain.
+ *              Single-sourced with the signer's OWN success screen (LIGHT_TERMINAL_ICON
+ *              .signed / LIGHT_SUCCESS_CHIP), so a completed signature reads the same
+ *              celebrated green to admin and signer alike — not the dead grey it was.
+ *   expired  = neutral grey `#9a9a9a` — stale/dead (not alarming),
+ *   revoked  = destructive `#d4503e` — admin hard-stop. */
 export const LIGHT_SIGNING_STATUS: Record<string, string> = {
   pending:  'text-[#946a00] border-[#b8801a]/40 bg-[#b8801a]/10',
   verified: 'text-[#0a63cc] border-[#0a63cc]/30 bg-[#0a63cc]/10',
-  signed:   'text-[#808080] border-black/[0.08]',
+  signed:   'text-[#15803d] border-[#15803d]/30 bg-[#15803d]/10',
   expired:  'text-[#9a9a9a] border-black/[0.08]',
   revoked:  'text-[#d4503e] border-[#d4503e]/30 bg-[#d4503e]/10',
+};
+
+/* Humanized custody-phase labels for the admin table status cell — the textual
+ * twin of LIGHT_SIGNING_STATUS. Raw DB enums ("pending"/"verified") read as
+ * implementation leaking through; these phrase WHERE the document sits in the
+ * signing chain, so the status column becomes the table's spine rather than a
+ * lowercase tag. Fall back to the raw status for any unmapped value. */
+export const SIGNING_STATUS_LABEL: Record<string, string> = {
+  pending:  'Awaiting verification',
+  verified: 'Ready to sign',
+  signed:   'Signed',
+  expired:  'Expired',
+  revoked:  'Revoked',
 };
 
 /* ── Light recipient-ceremony kit (external signer `/sign/[token]`, migrated
  * dark→light to rejoin the design system). Built on the same AA-on-white ramp
  * as the kits above and reuses the canonical `shadow-seeko` elevation token
  * (never re-inline a shadow) so the ceremony card reads as the SAME material as
- * every other light app card — that consistency is the entire point of the
- * migration. Decisions from the before-critique (docs/qa/external-signing/):
+ * every other light app card. Decisions from the before-critique
+ * (docs/qa/external-signing/):
  * lift the card with shadow-over-border (not a faint hairline), and preserve
  * the terminal color ladder signed=azure / expired=amber / revoked=red. ──── */
 
@@ -87,7 +114,7 @@ export const LIGHT_RECIPIENT_TITLE = 'text-[#111] font-semibold';
 // used elsewhere precisely because this copy carries real meaning on the ceremony.
 export const LIGHT_RECIPIENT_MUTED = 'text-[#6e6e6e]';
 // Faintest text — fine print only. (There is no "Powered by" footer; the signer
-// migration removed the footer + logo, so reserve this strictly for decorative /
+// light-theme pass removed the footer + logo, so reserve this strictly for decorative /
 // non-essential glyphs — never for instructional copy, which must clear AA.)
 export const LIGHT_RECIPIENT_FAINT = 'text-[#9a9a9a]';
 // Divider / inset border within the ceremony (apply with border-t / border-b).
@@ -99,7 +126,7 @@ export const LIGHT_RECIPIENT_HAIRLINE = 'border-black/[0.06]';
 // plain <button> on the ceremony (segmented Draw/Type, Clear, Resend, the
 // collapsed agreement toggle, the sheet close) would have NO visible keyboard
 // focus indicator. They all reuse this azure ring — the design lock reserves
-// `#0d7aff` for focus — mirroring the azure ring already proven on LIGHT_INPUT /
+// `#0d7aff` for focus — mirroring the azure ring already proven on
 // LIGHT_OTP_CELL, with an offset so it reads on both the white card and the
 // black-pill CTA. Append to a control's className; twMerge resolves it last-wins
 // over the dark `ring-ring` default.

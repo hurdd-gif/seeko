@@ -552,16 +552,6 @@ export const router = createBrowserRouter([
           };
         },
       },
-      {
-        path: 'payments',
-        lazy: async () => {
-          const route = await import('./routes/investor-payments');
-          return {
-            loader: route.investorPaymentsLoader,
-            Component: route.InvestorPaymentsRoute,
-          };
-        },
-      },
     ],
   },
   {
@@ -577,6 +567,29 @@ export const router = createBrowserRouter([
       return {
         loader: route.investorSettingsLoader,
         Component: route.InvestorSettingsRoute,
+      };
+    },
+  },
+  {
+    // Investor Payments IS the shared studio payments screen (read-only), NOT a
+    // bespoke investor view — per user call: "the payment page investors see
+    // should be the exact same one from the main studio." It reuses /payments'
+    // own loader + <PaymentsAdmin>, which renders in viewerMode for a non-admin
+    // investor: the passkey gate is skipped, every admin control (New Payment,
+    // approve/deny, refund, invoice queue) is hidden, and the back link points to
+    // /investor. Like /investor/settings above, it mounts OUTSIDE the investor
+    // sidebar chrome because PaymentsAdmin owns its own fixed-inset <LightShell>
+    // (+ AgentCompanion/EkoBus singletons) — nesting it would double both.
+    // Server-side, every mutation still requires the admin passkey token an
+    // investor never holds, and the list endpoint scopes investors to paid rows;
+    // viewerMode is defense-in-depth, not the only gate.
+    path: '/investor/payments',
+    ErrorBoundary: StandaloneErrorBoundary,
+    lazy: async () => {
+      const route = await import('./routes/payments');
+      return {
+        loader: route.paymentsLoader,
+        Component: route.PaymentsRoute,
       };
     },
   },

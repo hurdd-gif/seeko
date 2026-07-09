@@ -23,7 +23,7 @@
  * ───────────────────────────────────────────────────────── */
 
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/lib/react-router-adapters';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { acquireScrollLock, releaseScrollLock } from '@/lib/scroll-lock';
 import { Card, CardContent } from '@/components/ui/card';

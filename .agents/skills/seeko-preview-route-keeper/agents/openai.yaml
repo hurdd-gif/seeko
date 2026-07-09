@@ -1,0 +1,4 @@
+interface:
+  display_name: "SEEKO Preview Route Keeper"
+  short_description: "Keep SEEKO dev preview routes compiling."
+  default_prompt: "Audit SEEKO preview routes for drift from live components."

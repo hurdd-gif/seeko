@@ -1,0 +1,38 @@
+/* SEEKO brand tokens — SOURCE OF TRUTH (reference copy; NOT build-consumed).
+ *
+ * In the app these come from next/font/google (layout.tsx), which injects
+ * --font-outfit / --font-jetbrains-mono / --font-caveat at runtime. A static
+ * Claude Design bundle has neither the faces nor the vars.
+ *
+ * WHY THIS FILE ISN'T WIRED INTO THE BUILD:
+ * The package-shape converter ships only styles.css's @import closure. Its only
+ * token hook (cfg.tokensGlob/tokensPkg → copyTokens) resolves the glob INSIDE a
+ * node_modules package — which `npm ci` wipes before every sync — so a standalone
+ * repo-path token file can't ship that way. cfg.extraFonts only runs extractFonts
+ * (it grabs @font-face rules and would drop a Google @import + :root vars), and
+ * remoteStyleImports is storybook-only. So there is no first-class hook to inject
+ * this CSS for the package shape.
+ *
+ * WHERE IT ACTUALLY LIVES: mirrored verbatim into the top of
+ * .design-sync/seeko-tailwind.css (the snapshot copied to _ds_bundle.css, which
+ * IS in the closure and IS where the compiled utilities reference these vars),
+ * behind the `/* @seeko-tokens v1 *\/` sentinel. If you refresh the Tailwind
+ * snapshot (migrate:web:build → cp), re-apply the header via
+ * `node $CLAUDE_JOB_DIR/tmp/patch-snapshot.mjs` (idempotent — checks the sentinel)
+ * or re-prepend the block below by hand. Keep this file and that header in sync.
+ *
+ * Also baked into the header: --seeko-accent: var(--color-seeko-accent,#0d7aff)
+ * (one component references the un-prefixed --seeko-accent; Tailwind only emits
+ * the --color- prefixed token).
+ */
+@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+  --font-outfit: 'Outfit', Arial, sans-serif;
+  --font-jetbrains-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --font-caveat: 'Caveat', cursive;
+  --font-sans: var(--font-outfit);
+  --font-mono: var(--font-jetbrains-mono);
+  --font-handwriting: var(--font-caveat);
+  --seeko-accent: var(--color-seeko-accent, #0d7aff);
+}

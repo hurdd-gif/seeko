@@ -111,8 +111,8 @@ export function PaymentRequestDialog({ open, onOpenChange, onCreated, onSubmitte
       <PaymentConfetti active={success} />
       {success ? (
         <div className="flex flex-col items-center gap-4 py-8">
-          <div className="flex size-14 items-center justify-center rounded-full bg-emerald-500/10">
-            <CheckCircle2 className="size-7 text-emerald-400" />
+          <div className="flex size-14 items-center justify-center rounded-full bg-sky-500/10">
+            <CheckCircle2 className="size-7 text-sky-400" />
           </div>
           <div className="text-center">
             <p className="text-lg font-semibold text-foreground">Request Submitted</p>
@@ -188,7 +188,7 @@ export function PaymentRequestDialog({ open, onOpenChange, onCreated, onSubmitte
                   {items.map((item, i) => (
                     <div key={i} className="flex items-center gap-2">
                       {item.task_id && (
-                        <Check className="size-3.5 text-emerald-400 shrink-0" />
+                        <Check className="size-3.5 text-sky-400 shrink-0" />
                       )}
                       <Input
                         value={item.label}

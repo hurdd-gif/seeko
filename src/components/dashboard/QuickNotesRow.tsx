@@ -15,10 +15,12 @@ export function QuickNotesRow({ notes }: { notes: QuickNoteItem[] }) {
         {notes.map((n) => (
           <article
             key={n.id}
-            className="flex h-[140px] w-[200px] flex-shrink-0 snap-start flex-col rounded-xl bg-[var(--color-glass)] p-4 backdrop-blur-[48px]"
+            className="flex h-[140px] w-[200px] flex-shrink-0 snap-start flex-col rounded-2xl bg-[var(--ov-row,var(--color-glass))] p-4 shadow-[var(--ov-shadow-row,none)]"
           >
-            <p className="line-clamp-4 text-sm text-foreground">{n.body}</p>
-            <time className="mt-auto text-xs text-muted-foreground">
+            <p className="line-clamp-4 text-sm text-[var(--ov-text,var(--color-foreground))]">
+              {n.body}
+            </p>
+            <time className="mt-auto text-xs tabular-nums text-[var(--ov-muted,var(--color-muted-foreground))]">
               {new Date(n.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
             </time>
           </article>

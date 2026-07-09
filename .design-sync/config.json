@@ -1,0 +1,10 @@
+{
+  "projectId": "97af49e3-4135-4f73-ac56-d3a408caf2d3",
+  "pkg": "seeko-studio",
+  "globalName": "Seeko",
+  "shape": "package",
+  "entry": "./.design-sync/seeko-entry.ts",
+  "srcDir": "src/components/ui",
+  "tsconfig": "./tsconfig.json",
+  "cssEntry": "./.design-sync/seeko-tailwind.css"
+}

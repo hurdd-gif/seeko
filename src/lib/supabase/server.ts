@@ -1,27 +1,19 @@
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
+import type { Database } from './database.types';
 
 export async function createClient() {
-  const cookieStore = await cookies();
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-        setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
-            );
-          } catch {
-            // Server component — cookies can't be set in RSC context
-          }
-        },
-      },
-    }
-  );
+  if (!url || !anonKey) {
+    throw new Error('Supabase client requires NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.');
+  }
+
+  return createSupabaseClient<Database>(url, anonKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+    },
+  });
 }

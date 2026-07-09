@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
+import { useRouter } from '@/lib/react-router-adapters';
+import { Link } from '@/lib/react-router-adapters';
 import { createBrowserClient } from '@supabase/ssr';
-import { revalidateDashboard } from '@/app/(dashboard)/settings/actions';
+import { revalidateDashboard } from '@/lib/dashboard-actions';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
@@ -308,7 +308,7 @@ export function SettingsPanel({ profile, isAdmin, team, revalidate, completedTas
       bordered
       leftSlot={
         <Link
-          href="/"
+          href="/tasks"
           className="flex items-center gap-1 text-[13px] text-[#9a9a9a] transition-colors hover:text-[#3a3a3a]"
         >
           <ChevronLeft className="size-3.5" />
@@ -316,7 +316,7 @@ export function SettingsPanel({ profile, isAdmin, team, revalidate, completedTas
         </Link>
       }
     >
-      <main className="min-h-0 flex-1 overflow-y-auto">
+      <main className="scroll-mask-y scrollbar-paper min-h-0 flex-1 overflow-y-auto">
         <div className="mx-auto flex w-full max-w-3xl flex-col gap-10 px-6 py-10">
           <div>
             <h1 className="text-[22px] font-semibold tracking-tight text-[#111]">Settings</h1>
@@ -747,7 +747,7 @@ export function SettingsPanel({ profile, isAdmin, team, revalidate, completedTas
                             </div>
                             <button
                               type="button"
-                              className="inline-flex shrink-0 items-center gap-1.5 rounded-full h-8 px-3 text-[13px] font-medium text-[#d4503e] transition-[background-color,transform] duration-150 ease-out hover:bg-[#d4503e]/10 active:scale-[0.98]"
+                              className="inline-flex shrink-0 items-center gap-1.5 rounded-full h-8 pl-2.5 pr-3 text-[13px] font-medium text-[#d4503e] transition-[background-color,transform] duration-150 ease-out hover:bg-[#d4503e]/10 active:scale-[0.98]"
                               onClick={() => { setBootTarget(member); setBootPassword(''); setBootError(''); }}
                             >
                               <UserX className="size-3.5" />

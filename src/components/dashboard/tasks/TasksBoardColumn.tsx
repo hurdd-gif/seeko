@@ -53,6 +53,9 @@ export function TasksBoardColumn({
   isAdmin = false,
   team,
   onAssign,
+  onStatusChange,
+  onDeleteTask,
+  muted = false,
 }: {
   status: TaskStatus;
   tasks: TaskWithAssignee[];
@@ -68,6 +71,15 @@ export function TasksBoardColumn({
   isAdmin?: boolean;
   team?: Profile[];
   onAssign?: (taskId: string, profileId: string | null) => void;
+  /** Forwarded to TaskCard for the quick status switcher (admin only). */
+  onStatusChange?: (taskId: string, next: TaskStatus) => void;
+  /** Forwarded to TaskCard for right-click quick delete (admin only). */
+  onDeleteTask?: (taskId: string) => void;
+  /**
+   * Quiets a terminal column (Done/Canceled/Duplicate): dimmer header label and
+   * flat cards, so the active In Progress / In Review columns stay the hero.
+   */
+  muted?: boolean;
 }) {
   const reduce = useReducedMotion();
   const count = tasks.length;
@@ -157,8 +169,10 @@ export function TasksBoardColumn({
       transition={{ ...springs.smooth, delay: reduce ? 0 : 0.04 + columnIndex * 0.05 }}
       className={cn(
         // Column tray: subtle channel against --ov-bg so the status group reads
-        // as a contained unit. Cards float at 280px inside the tray's padding.
-        'flex w-[296px] shrink-0 flex-col gap-2 rounded-xl bg-black/[0.035] p-2',
+        // as a contained unit. Cards float at 312px inside the tray's padding
+        // (328px tray − p-2 ×2) — larger, more substantial card footprint.
+        // 20px radius = card rounded-xl (12) + p-2 gap (8) → concentric corners.
+        'flex w-[328px] shrink-0 flex-col gap-2 rounded-[20px] bg-black/[0.035] p-2',
         className,
       )}
       aria-label={`${status} column`}
@@ -166,7 +180,14 @@ export function TasksBoardColumn({
       {/* Column header */}
       <div className="group/header flex items-center gap-2 px-1 pt-0.5 pb-1">
         <StatusDot status={status} size="md" className="shrink-0" />
-        <span className="text-[13px] font-semibold text-[#222222]">{status}</span>
+        <span
+          className={cn(
+            'text-[13px] font-semibold',
+            muted ? 'text-[#9a9a9a]' : 'text-[#222222]',
+          )}
+        >
+          {status}
+        </span>
         <span className="text-[12px] tabular-nums text-[#9a9a9a]">{count}</span>
 
         <span className="ml-auto flex items-center gap-0.5">
@@ -206,6 +227,9 @@ export function TasksBoardColumn({
             isAdmin={isAdmin}
             team={team}
             onAssign={onAssign}
+            onStatusChange={onStatusChange}
+            onDelete={onDeleteTask}
+            muted={muted}
           />
         ))}
       </div>

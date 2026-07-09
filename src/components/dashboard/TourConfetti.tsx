@@ -4,12 +4,12 @@ import { useEffect, useRef } from 'react';
 import confetti from 'canvas-confetti';
 
 const CONFETTI_COLORS = [
-  '#6ee7b7', // seeko-accent
+  '#0d7aff', // seeko-accent
   '#93c5fd',
   '#c4b5fd',
   '#fbbf24',
   '#f9a8d4',
-  '#22c55e',
+  '#0d7aff',
   '#a855f7',
   '#06b6d4',
   '#f97316',

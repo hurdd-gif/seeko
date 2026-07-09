@@ -31,7 +31,7 @@ import {
 } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
-import { Check, Trash2 } from 'lucide-react';
+import { Check, Search, Trash2 } from 'lucide-react';
 import type { Milestone, MilestoneHealth, TaskWithAssignee } from '@/lib/types';
 import { createClient } from '@/lib/supabase/client';
 import {
@@ -118,6 +118,7 @@ export function MilestoneEditPopover({
   const [linkedIds, setLinkedIds] = useState<Set<string>>(new Set());
   const [originalLinkedIds, setOriginalLinkedIds] = useState<Set<string>>(new Set());
   const [loadingLinks, setLoadingLinks] = useState(false);
+  const [taskQuery, setTaskQuery] = useState('');
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -134,6 +135,7 @@ export function MilestoneEditPopover({
     setHealth(milestone.health ?? null);
     setError(null);
     setConfirmDelete(false);
+    setTaskQuery('');
     setLoadingLinks(true);
     const supabase = createClient();
     supabase
@@ -192,6 +194,19 @@ export function MilestoneEditPopover({
       document.removeEventListener('keydown', onKey);
     };
   }, [open]);
+
+  // Filter by name or task number ("14" matches task 14). Checked
+  // state lives in linkedIds, so filtered-out selections are preserved.
+  const visibleTasks = useMemo(() => {
+    const q = taskQuery.trim().toLowerCase();
+    if (!q) return allTasks;
+    const num = q.replace(/^dih-/, '');
+    return allTasks.filter(
+      (t) =>
+        t.name.toLowerCase().includes(q) ||
+        (t.task_number != null && String(t.task_number).includes(num)),
+    );
+  }, [allTasks, taskQuery]);
 
   function toggleTask(taskId: string) {
     setLinkedIds((prev) => {
@@ -391,8 +406,25 @@ export function MilestoneEditPopover({
             ) : allTasks.length === 0 ? (
               <div className="px-2 py-2 text-[12px] text-[#9a9a9a]">No tasks in this project.</div>
             ) : (
+              <>
+                <div className="relative mb-1">
+                  <Search className="pointer-events-none absolute left-2 top-1/2 size-3 -translate-y-1/2 text-[#9a9a9a]" />
+                  <input
+                    type="text"
+                    value={taskQuery}
+                    onChange={(e) => setTaskQuery(e.target.value)}
+                    placeholder="Search tasks"
+                    aria-label="Search tasks"
+                    className="block w-full rounded-md border border-black/[0.06] bg-white py-1.5 pl-7 pr-2.5 text-[12.5px] text-[#1a1a1a] placeholder:text-[#b8b8b8] transition-colors focus:border-[#0d7aff] focus:outline-none"
+                  />
+                </div>
+                {visibleTasks.length === 0 ? (
+                  <div className="px-2 py-2 text-[12px] text-[#9a9a9a]">
+                    No tasks match &ldquo;{taskQuery.trim()}&rdquo;
+                  </div>
+                ) : (
               <div className="scrollbar-paper max-h-[180px] overflow-y-auto rounded-md">
-                {allTasks.map((t) => {
+                {visibleTasks.map((t) => {
                   const checked = linkedIds.has(t.id);
                   return (
                     <label
@@ -427,6 +459,8 @@ export function MilestoneEditPopover({
                   );
                 })}
               </div>
+                )}
+              </>
             )}
           </div>
 

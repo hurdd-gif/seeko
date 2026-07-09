@@ -38,7 +38,7 @@ function formatCompact(amount: number): string {
 
 /* ─── Department color map ───────────────────────────────── */
 const DEPT_COLORS: Record<string, string> = {
-  'Coding':          '#6ee7b7',
+  'Coding':          '#0d7aff',
   'Visual Art':      '#93c5fd',
   'UI/UX':           '#c4b5fd',
   'Animation':       '#fbbf24',
@@ -46,7 +46,7 @@ const DEPT_COLORS: Record<string, string> = {
 };
 
 function deptColor(dept: string): string {
-  return DEPT_COLORS[dept] ?? '#6ee7b7';
+  return DEPT_COLORS[dept] ?? '#0d7aff';
 }
 
 /* ─── Props ──────────────────────────────────────────────── */

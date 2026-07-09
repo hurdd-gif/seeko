@@ -3,7 +3,7 @@
  *
  * Surface layout:
  *   ┌────────────────────────────────────────────────────────┐
- *   │ breadcrumb · DIH-NN                          [actions] │
+ *   │ breadcrumb · NN                          [actions] │
  *   ├──────────────────────────────────┬─────────────────────┤
  *   │  Title                           │  Properties         │
  *   │  Description / body              │  Milestones         │
@@ -26,8 +26,8 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
+import { useRouter } from '@/lib/react-router-adapters';
+import { Link } from '@/lib/react-router-adapters';
 import { ChevronRight, ChevronLeft } from 'lucide-react';
 import type {
   Area,
@@ -66,7 +66,7 @@ export function TaskDetailPage({
   const [task, setTask] = useState<TaskWithAssignee>(initialTask);
   const [milestones, setMilestones] = useState<Milestone[]>(initialMilestones);
 
-  const idLabel = task.task_number != null ? `DIH-${task.task_number}` : null;
+  const idLabel = task.task_number != null ? String(task.task_number) : null;
 
   const handleTaskUpdated = useCallback(
     (_id: string, patch: Partial<TaskWithAssignee>) => {
@@ -85,36 +85,43 @@ export function TaskDetailPage({
   return (
     <div className="overview-light fixed inset-0 z-40 flex flex-col overflow-hidden bg-[var(--ov-bg)] antialiased">
       {/* ── Top chrome: breadcrumb + actions ───────────────────── */}
+      {/* One-row bar at the canonical chrome geometry (matches LightShell:
+          `flex w-full items-center justify-between gap-3 px-[52px] pt-11 pb-3`).
+          Breadcrumb stays bespoke (back-link, not the Issues·Docs tabs) per
+          the chrome-redesign decision, but rides the same inset/baseline as
+          every other light page so the top bar is consistent. */}
       <header className="shrink-0 border-b border-black/[0.06] bg-[var(--ov-bg)]">
-        <FadeRise y={6} delay={0.04}>
-          <div className="flex items-center gap-2 px-6 pt-5 pb-2">
-            <Link
-              href="/tasks"
-              className="flex items-center gap-1 text-[13px] text-[#9a9a9a] transition-colors hover:text-[#3a3a3a]"
-            >
-              <ChevronLeft className="size-3.5" />
-              <span>Issues</span>
-            </Link>
-            <ChevronRight className="size-3 text-[#c5c5c5]" />
-            {idLabel && (
-              <span className="font-mono text-[12px] tabular-nums text-[#7a7a7a]">
-                {idLabel}
-              </span>
-            )}
-          </div>
-        </FadeRise>
+        <div className="flex w-full items-center justify-between gap-3 px-[52px] pt-11 pb-3">
+          <FadeRise y={6} delay={0.04}>
+            <div className="flex h-8 items-center gap-2">
+              <Link
+                href="/tasks"
+                className="flex items-center gap-1 text-[13.5px] leading-[18px] tracking-[-0.27px] text-[#9a9a9a] transition-colors hover:text-[#3a3a3a]"
+              >
+                <ChevronLeft className="size-3.5" />
+                <span>Issues</span>
+              </Link>
+              <ChevronRight className="size-3 text-[#c5c5c5]" />
+              {idLabel && (
+                <span className="font-mono text-[12px] tabular-nums text-[#7a7a7a]">
+                  {idLabel}
+                </span>
+              )}
+            </div>
+          </FadeRise>
 
-        <FadeRise y={6} delay={0.08}>
-          <div className="flex items-center justify-end gap-1 px-6 pb-3">
-            {isAdmin && (
-              <TaskActionsMenu
-                taskId={task.id}
-                taskName={task.name}
-                onDeleted={handleTaskDeleted}
-              />
-            )}
-          </div>
-        </FadeRise>
+          {isAdmin && (
+            <FadeRise y={6} delay={0.08}>
+              <div className="flex items-center gap-1">
+                <TaskActionsMenu
+                  taskId={task.id}
+                  taskName={task.name}
+                  onDeleted={handleTaskDeleted}
+                />
+              </div>
+            </FadeRise>
+          )}
+        </div>
       </header>
 
       {/* ── Body: main content + right sidebar ─────────────────── */}

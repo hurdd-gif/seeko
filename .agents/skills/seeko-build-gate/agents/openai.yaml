@@ -1,0 +1,4 @@
+interface:
+  display_name: "SEEKO Build Gate"
+  short_description: "Run and triage SEEKO build and tests."
+  default_prompt: "Run SEEKO verification and summarize actionable failures."

@@ -1,0 +1,7 @@
+interface:
+  display_name: "SEEKO Payments Flow Auditor"
+  short_description: "Audit SEEKO payment workflow risks"
+  default_prompt: "Use $seeko-payments-flow-auditor to audit this SEEKO payments change."
+
+policy:
+  allow_implicit_invocation: true

@@ -1,11 +1,13 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { motion, useReducedMotion } from 'motion/react';
 import { Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
+import { TAB_PILL_SPRING } from '@/lib/motion';
 import type { Doc, Profile } from '@/lib/types';
 import { useHaptics } from '@/components/HapticsProvider';
 import { useDialogFooter } from '@/components/ui/dialog';
@@ -27,12 +29,14 @@ export function DeckEditor({ doc, onSave, onCancel, team = [] }: DeckEditorProps
   const [description, setDescription] = useState(doc?.content ?? '');
   const [departments, setDepartments] = useState<string[]>(doc?.restricted_department ?? []);
   const [grantedIds, setGrantedIds] = useState<string[]>(doc?.granted_user_ids ?? []);
-  const [slides, setSlides] = useState<{ url: string; sort_order: number }[]>(doc?.slides ?? []);
+  const [slides, setSlides] = useState<NonNullable<Doc['slides']>>(doc?.slides ?? []);
   const [orientation, setOrientation] = useState<'horizontal' | 'vertical'>(doc?.deck_orientation ?? 'horizontal');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [addUserValue, setAddUserValue] = useState('');
   const [deckId, setDeckId] = useState<string>(doc?.id ?? '');
+  const reduce = useReducedMotion();
+  const pillTransition = reduce ? { duration: 0 } : TAB_PILL_SPRING;
 
   const toggleDepartment = (dept: string) => {
     setDepartments(prev =>
@@ -278,31 +282,34 @@ export function DeckEditor({ doc, onSave, onCancel, team = [] }: DeckEditorProps
       {/* Orientation toggle */}
       <div className="flex items-center gap-3">
         <span className="text-xs text-[#808080] whitespace-nowrap">Layout:</span>
-        <div className="flex rounded-lg border border-black/[0.08] overflow-hidden">
-          <button
-            type="button"
-            onClick={() => setOrientation('horizontal')}
-            className={cn(
-              'px-3 py-1.5 text-xs font-medium transition-colors',
-              orientation === 'horizontal'
-                ? 'bg-[#0d7aff]/10 text-[#0d7aff]'
-                : 'text-[#808080] hover:text-[#111]'
-            )}
-          >
-            Slides
-          </button>
-          <button
-            type="button"
-            onClick={() => setOrientation('vertical')}
-            className={cn(
-              'px-3 py-1.5 text-xs font-medium transition-colors border-l border-black/[0.08]',
-              orientation === 'vertical'
-                ? 'bg-[#0d7aff]/10 text-[#0d7aff]'
-                : 'text-[#808080] hover:text-[#111]'
-            )}
-          >
-            Document
-          </button>
+        <div className="flex gap-0.5 rounded-lg border border-black/[0.08] p-0.5">
+          {([
+            { value: 'horizontal' as const, label: 'Slides' },
+            { value: 'vertical' as const, label: 'Document' },
+          ]).map(o => {
+            const active = orientation === o.value;
+            return (
+              <button
+                key={o.value}
+                type="button"
+                onClick={() => setOrientation(o.value)}
+                className={cn(
+                  'relative inline-flex items-center justify-center rounded-md px-3 py-1.5 text-xs font-medium transition-[color,transform] duration-150 active:scale-[0.97]',
+                  active ? 'text-[#0d7aff]' : 'text-[#808080] hover:text-[#111]'
+                )}
+              >
+                {active && (
+                  <motion.span
+                    layoutId="deckOrientationPill"
+                    initial={false}
+                    transition={pillTransition}
+                    className="absolute inset-0 rounded-md bg-[#0d7aff]/10"
+                  />
+                )}
+                <span className="relative z-10 inline-flex items-center">{o.label}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 

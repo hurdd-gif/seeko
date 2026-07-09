@@ -128,7 +128,7 @@ export function DeliverablesUploadDialog({
             {uploading ? 'Uploading…' : 'Submit & complete'}
           </Button>
           {onHandoff && (
-            <Button variant="outline" onClick={handleHandoff} disabled={uploading} className="w-full sm:w-auto gap-1.5">
+            <Button variant="outline" onClick={handleHandoff} disabled={uploading} className="w-full sm:w-auto gap-1.5 pl-3">
               <ArrowRightLeft className="size-3.5" />
               {uploading ? 'Uploading…' : 'Submit & hand off'}
             </Button>

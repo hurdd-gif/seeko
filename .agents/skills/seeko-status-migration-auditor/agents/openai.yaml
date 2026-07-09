@@ -1,0 +1,4 @@
+interface:
+  display_name: "SEEKO Status Migration Auditor"
+  short_description: "Audit SEEKO task status enum migrations."
+  default_prompt: "Audit SEEKO for legacy task statuses and enum migration drift."

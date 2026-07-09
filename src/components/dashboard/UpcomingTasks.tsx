@@ -12,7 +12,7 @@ import { TaskDetail } from '@/components/dashboard/TaskDetail';
 import { springs } from '@/lib/motion';
 
 const STATUS_ICONS: Record<string, { icon: typeof Circle; className: string; bg: string }> = {
-  'Complete':     { icon: CheckCircle2, className: 'text-[var(--color-status-complete)]', bg: 'bg-emerald-500/10' },
+  'Complete':     { icon: CheckCircle2, className: 'text-[var(--color-status-complete)]', bg: 'bg-sky-500/10' },
   'In Progress':  { icon: Timer,        className: 'text-[var(--color-status-progress)]', bg: 'bg-amber-500/10' },
   'In Review':    { icon: AlertCircle,   className: 'text-[var(--color-status-review)]',  bg: 'bg-blue-500/10' },
   'Blocked':      { icon: Circle,        className: 'text-[var(--color-status-blocked)]', bg: 'bg-red-500/10' },

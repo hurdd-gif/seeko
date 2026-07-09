@@ -1,0 +1,1313 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
+@plugin "@tailwindcss/typography";
+
+@theme inline {
+  /* Surfaces — calibrated to #1a1a1a background */
+  --color-background:        #1a1a1a;
+  --color-foreground:        #f0f0f0;
+  --color-card:              #222222;
+  --color-card-foreground:   #f0f0f0;
+  --color-popover:             #262626;
+  --color-popover-foreground:  #f0f0f0;
+  --color-border:            #2e2e2e;
+  --color-input:             #2e2e2e;
+  --color-muted:             #262626;
+  --color-muted-foreground:  #808080;
+  --color-secondary:         #262626;
+  --color-secondary-foreground: #f0f0f0;
+  --color-accent:            #333333;
+  --color-accent-foreground: #f0f0f0;
+  --color-primary:           #f0f0f0;
+  --color-primary-foreground: #1a1a1a;
+  --color-destructive:       #ef4444;
+  --color-destructive-foreground: #f0f0f0;
+  --color-ring:              rgba(240, 240, 240, 0.18);
+
+  /* Sidebar — darker than background for depth */
+  --color-sidebar:           #151515;
+  --color-sidebar-foreground: #f0f0f0;
+  --color-sidebar-accent:    #262626;
+  --color-sidebar-border:    #2a2a2a;
+
+  /* Seeko accent */
+  --color-seeko-accent:      #0d7aff;
+
+  /* Paper redesign — glass surface + eyebrow gray */
+  --color-glass:             rgba(32, 32, 32, 0.9);
+  --color-eyebrow:           #ADA9A3;
+
+  /* Status dots (used inline, not as badges) */
+  --color-status-complete:   #0d7aff;
+  --color-status-progress:   #fbbf24;
+  --color-status-review:     #93c5fd;
+  --color-status-blocked:    #f87171;
+
+  /* Department colors (UX persona — filters, tags, labels) */
+  --color-dept-coding:         #0d7aff;
+  --color-dept-visual-art:     #93c5fd;
+  --color-dept-ui-ux:          #c4b5fd;
+  --color-dept-animation:      #fbbf24;
+  --color-dept-asset-creation: #f9a8d4;
+
+  /* Fonts */
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-inter);
+  --font-handwriting: var(--font-inter);
+
+  /* Single-weight dashboard typography. Keep utility classes compatible while
+     resolving every requested weight to Inter Medium. */
+  --font-weight-normal: 500;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 500;
+  --font-weight-bold: 500;
+  --font-weight-extrabold: 500;
+  --font-weight-black: 500;
+
+  /* Border radius */
+  --radius: 0.5rem;
+  --radius-pill: var(--radius-pill);
+
+  /* Surface opacity scale */
+  --opacity-subtle:   0.02;
+  --opacity-faint:    0.03;
+  --opacity-soft:     0.04;
+  --opacity-muted:    0.06;
+  --opacity-border:   0.08;
+  --opacity-visible:  0.15;
+
+  /* Accent shadows */
+  --shadow-accent-glow:  0 0 12px rgba(13, 122, 255, 0.04);
+  --shadow-accent-inset: inset 0 0 0 1px rgba(13, 122, 255, 0.2);
+
+  /* Canonical SEEKO drop shadow — the chrome elevation for light surfaces
+     (overview top bar, nav tabs, cards, and dropdowns that hang from chrome).
+     Hairline ring defines the silhouette on near-white; the 1px/2px drop
+     keeps bar and popover reading as one connected material when they sit
+     side-by-side on the canvas. Tailwind v4 exposes this as `shadow-seeko`. */
+  --shadow-seeko: 0 0 0 0.5px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.04);
+
+  /* Fluid Functionalism elevated surfaces — light canvas payments UI. */
+  --color-surface-1: #ffffff;
+  --color-surface-2: #fbfbfb;
+  --color-surface-3: #f7f7f7;
+  --color-surface-4: #f2f2f2;
+  --color-surface-5: #ededed;
+  --color-surface-6: #e8e8e8;
+  --color-surface-7: #e2e2e2;
+  --color-surface-8: #dcdcdc;
+
+  --shadow-surface-1:
+    0 0 0 0.5px rgba(0, 0, 0, 0.055),
+    0 1px 2px rgba(0, 0, 0, 0.035);
+  --shadow-surface-2:
+    0 0 0 0.5px rgba(0, 0, 0, 0.06),
+    0 2px 6px -3px rgba(0, 0, 0, 0.14),
+    0 8px 18px -14px rgba(0, 0, 0, 0.16);
+  --shadow-surface-3:
+    0 0 0 0.5px rgba(0, 0, 0, 0.07),
+    0 6px 16px -8px rgba(0, 0, 0, 0.18),
+    0 18px 36px -24px rgba(0, 0, 0, 0.2);
+  --shadow-surface-4:
+    0 0 0 0.5px rgba(0, 0, 0, 0.075),
+    0 10px 24px -14px rgba(0, 0, 0, 0.2),
+    0 28px 52px -32px rgba(0, 0, 0, 0.22);
+  --shadow-surface-5:
+    0 0 0 0.5px rgba(0, 0, 0, 0.08),
+    0 14px 30px -18px rgba(0, 0, 0, 0.22),
+    0 36px 64px -38px rgba(0, 0, 0, 0.24);
+  --shadow-surface-6: var(--shadow-surface-5);
+  --shadow-surface-7: var(--shadow-surface-5);
+  --shadow-surface-8: var(--shadow-surface-5);
+
+  /* Lifted popover shadow — used by menus that float OVER `shadow-seeko`
+     surfaces (board cards, the column tray) rather than peeling off the
+     chrome. One step taller than `--shadow-seeko` so a quick-assign or
+     property popover reads as floating, not flat against the card behind it.
+     Layered: hairline ring → close crisp shadow → wide ambient pool.
+     Tailwind v4 exposes this as `shadow-seeko-pop`. */
+  --shadow-seeko-pop:
+    0 0 0 0.5px rgba(0, 0, 0, 0.06),
+    0 6px 16px -4px rgba(0, 0, 0, 0.08),
+    0 16px 32px -12px rgba(0, 0, 0, 0.12);
+
+  /* Elevated surface — dark-mode-correct depth.
+     Hairline ring defines silhouette; inner top highlight catches ambient light;
+     negative-spread drop pools beneath rather than around the card. */
+  --shadow-elevated:
+    0 0 0 1px rgba(255, 255, 255, 0.07),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 8px 20px -12px rgba(0, 0, 0, 0.5);
+  --color-chart-scale-pattern-color:        var(--chart-scale-pattern-color);
+  --color-chart-scale-05:        var(--chart-scale-05);
+  --color-chart-scale-04:        var(--chart-scale-04);
+  --color-chart-scale-03:        var(--chart-scale-03);
+  --color-chart-scale-02:        var(--chart-scale-02);
+  --color-chart-scale-01:        var(--chart-scale-01);
+  --color-chart-label:        var(--chart-label);
+  --color-chart-marker-foreground:        var(--chart-marker-foreground);
+  --color-chart-marker-border:        var(--chart-marker-border);
+  --color-chart-marker-background:        var(--chart-marker-background);
+  --color-chart-tooltip-muted:        var(--chart-tooltip-muted);
+  --color-chart-tooltip-foreground:        var(--chart-tooltip-foreground);
+  --color-chart-tooltip-background:        var(--chart-tooltip-background);
+  --chart-brush-border:        var(--chart-brush-border);
+  --color-chart-grid:        var(--chart-grid);
+  --color-chart-crosshair:        var(--chart-crosshair);
+  --chart-line-secondary:        var(--chart-line-secondary);
+  --chart-line-primary:        var(--chart-line-primary);
+  --color-chart-foreground-muted:        var(--chart-foreground-muted);
+  --color-chart-foreground:        var(--chart-foreground);
+  --color-chart-background:        var(--chart-background);
+  --color-chart-5:        var(--chart-5);
+  --color-chart-4:        var(--chart-4);
+  --color-chart-3:        var(--chart-3);
+  --color-chart-2:        var(--chart-2);
+  --color-chart-1:        var(--chart-1);
+}
+
+/* ── Overview light canvas (Paper redesign, node 1WK-0) ─────────────────────
+ * Scoped to the `/` overview subtree only. The dashboard shell + shared header
+ * stay dark; nothing here leaks to other routes. Hexes are the exact values
+ * extracted from the Paper file (node 1WK-0) — pixel-faithful, no overrides. */
+.overview-light {
+  --ov-bg:          #eeeeee;
+  --ov-row:         rgba(255, 255, 255, 0.90); /* 263×40 recent rows — #FFFFFFE6 */
+  --ov-panel:       #fefefe;                   /* side-by-side panel surface */
+  --ov-heading:     #111111;                   /* hero headline */
+  --ov-title:       #b3b3b3;                   /* recent-tile titles — exact mockup #B3B3B3 */
+  --ov-text:        #505050;                   /* task / body text */
+  --ov-muted:       #808080;                   /* timestamps, secondary */
+  --ov-faint:       #9a9a9a;                   /* leading glyphs */
+  --ov-eyebrow:     #808080;                   /* section eyebrows */
+  --ov-hairline:    #62241d0f;                 /* warm panel divider/ring */
+  --ov-pill-bg:     rgba(13, 122, 255, 0.06);  /* "View Tasks" — #0D7AFF0F */
+  --ov-pill-bg-hov: rgba(13, 122, 255, 0.11);
+  --ov-pill-fg:     #0d7aff;
+  --ov-chip-bg:     rgba(0, 0, 0, 0.045);      /* neutral pills (Open studio) */
+  --ov-chip-bg-hov: rgba(0, 0, 0, 0.075);
+  --ov-pri-high:    #ff6e5e;
+  --ov-pri-medium:  #ffce52;
+  --ov-pri-low:     #4c4c4c;
+  --ov-dot:         #0d7aff;
+  /* Panel: exact mockup elevation — warm 0.5px ring, faint pool, white bloom. */
+  --ov-shadow-panel:
+    0 0 0 0.5px #62241d0f,
+    0 2px 8px #00000005,
+    0 8px 24px #ffffff80;
+  --ov-shadow-row:
+    0 0 0 1px rgba(0, 0, 0, 0.04),
+    0 1px 2px -1px rgba(0, 0, 0, 0.05);
+  --ov-shadow-row-hov:
+    0 0 0 1px rgba(0, 0, 0, 0.05),
+    0 2px 6px -2px rgba(0, 0, 0, 0.12);
+  color: var(--ov-text);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Hover-only mono beam for payments chrome actions. Kept scoped here instead
+   of becoming a global button style: this is an attention affordance for two
+   admin CTAs, not a default surface treatment. */
+.payment-action-beam {
+  position: relative;
+  display: inline-flex;
+  isolation: isolate;
+}
+
+.payment-action-beam::before,
+.payment-action-beam::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 160ms ease-out;
+}
+
+.payment-action-beam::before {
+  inset: -1px;
+  z-index: -1;
+  border-radius: inherit;
+  padding: 1px;
+  background:
+    conic-gradient(
+      from 0deg,
+      transparent 0deg,
+      transparent 96deg,
+      rgba(255, 255, 255, 0.9) 132deg,
+      rgba(17, 17, 17, 0.32) 166deg,
+      transparent 214deg,
+      transparent 360deg
+    );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+
+.payment-action-beam::after {
+  inset: 1px;
+  border-radius: 15px;
+  box-shadow: inset 0 0 0 1px rgba(17, 17, 17, 0.16);
+}
+
+.payment-action-beam:hover::before {
+  opacity: 1;
+  animation: payment-border-beam-spin 1800ms linear infinite;
+}
+
+.payment-action-beam:hover::after {
+  opacity: 0.37;
+  animation: payment-border-beam-pulse 1400ms ease-in-out infinite;
+}
+
+@keyframes payment-border-beam-spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+@keyframes payment-border-beam-pulse {
+  50% {
+    opacity: 0.16;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .payment-action-beam:hover::before,
+  .payment-action-beam:hover::after {
+    animation: none;
+  }
+}
+
+/* transitions.dev — plus/menu morph for global quick-add.
+   Closed: Create pill. Open: compact issue panel grown from the same surface. */
+:root {
+  --morph-open-dur: 350ms;
+  --morph-close-dur: 250ms;
+  --morph-ease: cubic-bezier(0.34, 1.25, 0.64, 1);
+  --morph-close-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --morph-r-closed: 40px;
+  --morph-r-open: 20px;
+  --morph-fade-dur: 200ms;
+  --morph-slide: 40px;
+  --morph-rotate: 45deg;
+  --morph-scale: 0.97;
+  --morph-blur: 2px;
+  --create-morph-closed-w: 94px;
+  --create-morph-closed-h: 36px;
+  --create-morph-open-w: 320px;
+  --create-morph-open-h: 218px;
+  --chart-1:        oklch(0.32 0 none);
+  --chart-2:        oklch(0.41 0 none);
+  --chart-3:        oklch(0.54 0 none);
+  --chart-4:        oklch(0.71 0 none);
+  --chart-5:        oklch(0.89 0 none);
+  --chart-background:        oklch(1 0 0);
+  --chart-foreground:        oklch(0.145 0.004 285);
+  --chart-foreground-muted:        oklch(0.55 0.014 260);
+  --chart-line-primary:        var(--chart-1);
+  --chart-line-secondary:        var(--chart-2);
+  /* Neutral crosshair — the registry default is a purple-blue that's off the
+     SEEKO light palette (accent #0d7aff is reserved for the online dot). */
+  --chart-crosshair:        oklch(0.45 0 0);
+  --chart-grid:        oklch(0.9 0 0);
+  --chart-brush-border:        var(--chart-grid);
+  --chart-tooltip-background:        oklch(0.21 0.006 285 / 0.8);
+  --chart-tooltip-foreground:        oklch(0.985 0 0);
+  --chart-tooltip-muted:        oklch(0.65 0.01 260);
+  --chart-marker-background:        oklch(0.97 0.005 260);
+  --chart-marker-border:        oklch(0.85 0.01 260);
+  --chart-marker-foreground:        oklch(0.3 0.01 260);
+  --chart-label:        oklch(0.45 0.01 260);
+  --chart-scale-01:        oklch(0.98 0.003 106);
+  --chart-scale-02:        oklch(0.92 0.008 106);
+  --chart-scale-03:        oklch(0.82 0.015 106);
+  --chart-scale-04:        oklch(0.68 0.02 106);
+  --chart-scale-05:        oklch(0.55 0.025 106);
+  --chart-scale-pattern-color:        oklch(0.96 0.005 106);
+}
+
+.create-morph-anchor {
+  position: relative;
+  z-index: 80;
+  width: var(--create-morph-closed-w);
+  height: var(--create-morph-closed-h);
+  flex: 0 0 var(--create-morph-closed-w);
+}
+
+.t-morph.create-morph {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: var(--create-morph-closed-w);
+  height: var(--create-morph-closed-h);
+  overflow: hidden;
+  border-radius: var(--morph-r-closed);
+  background: #ffffff;
+  box-shadow: var(--shadow-seeko);
+  color: #111111;
+  transform-origin: top right;
+  transition:
+    width var(--morph-close-dur) var(--morph-close-ease),
+    height var(--morph-close-dur) var(--morph-close-ease),
+    border-radius var(--morph-close-dur) var(--morph-close-ease),
+    box-shadow var(--morph-close-dur) var(--morph-close-ease);
+}
+
+.t-morph.create-morph[data-open="true"] {
+  width: var(--create-morph-open-w);
+  height: var(--create-morph-open-h);
+  border-radius: var(--morph-r-open);
+  box-shadow: var(--shadow-seeko-pop);
+  transition:
+    width var(--morph-open-dur) var(--morph-ease),
+    height var(--morph-open-dur) var(--morph-ease),
+    border-radius var(--morph-open-dur) var(--morph-ease),
+    box-shadow var(--morph-open-dur) var(--morph-ease);
+}
+
+.create-morph-plus {
+  position: absolute;
+  inset: 0 0 auto auto;
+  width: var(--create-morph-closed-w);
+  height: var(--create-morph-closed-h);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 0;
+  background: transparent;
+  color: #0d0d0d;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 18px;
+  letter-spacing: -0.28px;
+  transition:
+    background-color 150ms ease-out,
+    opacity var(--morph-fade-dur) var(--morph-close-ease),
+    transform var(--morph-open-dur) var(--morph-close-ease),
+    filter var(--morph-fade-dur) var(--morph-close-ease);
+}
+
+.create-morph-plus:hover {
+  background: #f7f7f7;
+}
+
+.create-morph-plus:active {
+  transform: scale(0.96);
+}
+
+.create-morph-plus svg {
+  transition: transform var(--morph-open-dur) var(--morph-close-ease);
+}
+
+.t-morph.create-morph[data-open="true"] .create-morph-plus {
+  opacity: 0;
+  transform: translateX(calc(-1 * var(--morph-slide)));
+  filter: blur(var(--morph-blur));
+  pointer-events: none;
+}
+
+.t-morph.create-morph[data-open="true"] .create-morph-plus svg {
+  transform: scale(var(--morph-scale)) rotate(var(--morph-rotate));
+}
+
+.create-morph-menu {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+  opacity: 0;
+  transform: translateX(var(--morph-slide)) scale(var(--morph-scale));
+  filter: blur(var(--morph-blur));
+  pointer-events: none;
+  transition:
+    opacity var(--morph-fade-dur) var(--morph-close-ease),
+    transform var(--morph-open-dur) var(--morph-close-ease),
+    filter var(--morph-fade-dur) var(--morph-close-ease);
+}
+
+.t-morph.create-morph[data-open="true"] .create-morph-menu {
+  opacity: 1;
+  transform: translateX(0) scale(1);
+  filter: blur(0);
+  pointer-events: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .t-morph.create-morph,
+  .create-morph-plus,
+  .create-morph-plus svg,
+  .create-morph-menu {
+    transition: none !important;
+  }
+}
+
+@layer utilities {
+  .interactive-surface {
+    background-color: rgb(255 255 255 / 0.03);
+    border: 1px solid transparent;
+    transition: background-color 150ms, border-color 150ms, box-shadow 150ms;
+  }
+  .interactive-surface:hover {
+    background-color: rgb(255 255 255 / 0.06);
+    border-color: rgb(13 122 255 / 0.1);
+    box-shadow: 0 0 12px rgba(13, 122, 255, 0.04);
+  }
+}
+
+body {
+  background:
+    radial-gradient(circle at 50% 0%, oklch(0.14 0 0), oklch(0.10 0 0) 60%)
+    var(--color-background);
+  color: var(--color-foreground);
+  color-scheme: dark;
+  font-family: var(--font-inter), Arial, sans-serif;
+  font-weight: 500;
+  font-synthesis: none;
+  min-height: 100dvh;
+  min-height: 100vh;
+}
+
+html {
+  background-color: var(--color-background);
+}
+
+/* Focus ring — subtle, fades in for all users (admins and non-admins).
+ * Storyboard: 0ms no ring → 200ms ring fades in (ease-out). */
+:root {
+  --focus-ring-duration: 200ms;
+
+  /* Pill geometry — for interactive controls only (chips, pills, filter buttons) */
+  --radius-pill: 9999px;
+
+  /* Number pop-in (transitions.dev) — used by StatPills digit transitions.
+   * Easing is a real spring (bounce 0.3, perceptual 280ms) compiled to
+   * linear() via Motion Studio generate-css-spring; 550ms is its settle
+   * time and must travel with the curve. */
+  --digit-dur: 550ms;
+  --digit-distance: 8px;
+  --digit-stagger: 70ms;
+  --digit-blur: 2px;
+  --digit-ease: linear(
+    0, 0.1207, 0.3611, 0.6035, 0.7953, 0.9239, 0.9971, 1.0301, 1.0384,
+    1.0339, 1.0247, 1.0154, 1.008, 1.003, 1.0001, 0.9989, 1, 1
+  );
+  --digit-dir-x: 0;
+  --digit-dir-y: 1;
+}
+
+/* Tour: when Cmd+K step is active, lower palette z-index so tour overlay frames it */
+body.tour-cmd-k-active #command-palette-backdrop,
+body.tour-cmd-k-active #command-palette-container {
+  z-index: 99 !important;
+}
+body.tour-cmd-k-active #command-palette-container * {
+  pointer-events: none !important;
+}
+
+/* Toast timer fill: grows from bottom to top over AUTO_DISMISS_MS.
+   Paused on hover via animationPlayState. */
+@keyframes toast-fill {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}
+
+/* Undo toast drain bar: empties left-to-right over UNDO_WINDOW_MS.
+   Used by TaskDeleteUndoToast — when the bar reaches 0%, the parent
+   commits the deferred Supabase delete and unmounts the toast. */
+@keyframes seeko-undo-drain {
+  from { width: 100%; }
+  to   { width: 0%; }
+}
+
+/* Confetti burst: see TourConfetti.tsx CONFETTI/BURST storyboard.
+   Duration via --confetti-duration on container. */
+@keyframes confetti-burst {
+  0% {
+    opacity: 1;
+    transform: translateY(0) translateX(0) scale(1) rotate(0deg);
+  }
+  12% {
+    opacity: 1;
+    transform: translateY(-120px) translateX(var(--drift, 0)) scale(1.15) rotate(var(--rotation, 0deg));
+  }
+  75% {
+    opacity: 1;
+    transform: translateY(100px) translateX(calc(var(--drift, 0) * 2)) scale(1) rotate(calc(var(--rotation, 0) * 1.5));
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(180px) translateX(calc(var(--drift, 0) * 2.5)) scale(0.85) rotate(calc(var(--rotation, 0) * 2));
+  }
+}
+
+.animate-confetti-burst {
+  animation: confetti-burst var(--confetti-duration, 3.2s) cubic-bezier(0.25, 0.46, 0.45, 1) forwards;
+  animation-delay: var(--delay, 0s);
+}
+
+/* Document read view: single source of truth so admin and non-admin look identical.
+   Scoped under .doc-read-body so dialog content always gets these styles regardless of parent. */
+.doc-content,
+.doc-read-body .doc-content {
+  color: var(--color-foreground);
+}
+.doc-content-body,
+.doc-content article,
+.doc-read-body .doc-content-body,
+.doc-read-body .doc-content article {
+  color: var(--color-foreground);
+  line-height: 1.7;
+  max-width: none;
+  font-size: 0.9375rem;
+}
+.doc-content strong,
+.doc-read-body .doc-content strong {
+  color: var(--color-foreground);
+  font-weight:500;
+}
+.doc-content p,
+.doc-read-body .doc-content p {
+  margin-bottom: 0.875rem;
+  color: rgba(240, 240, 240, 0.85);
+}
+.doc-content p:last-child,
+.doc-read-body .doc-content p:last-child {
+  margin-bottom: 0;
+}
+.doc-content h1,
+.doc-read-body .doc-content h1 {
+  font-size: 1.75rem;
+  font-weight:500;
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+  line-height: 1.25;
+  color: var(--color-foreground);
+}
+.doc-content h1:first-child,
+.doc-read-body .doc-content h1:first-child {
+  margin-top: 0;
+}
+.doc-content h2,
+.doc-read-body .doc-content h2 {
+  font-size: 1.375rem;
+  font-weight:500;
+  margin-top: 1.75rem;
+  margin-bottom: 0.5rem;
+  line-height: 1.3;
+  color: var(--color-foreground);
+}
+.doc-content h3,
+.doc-read-body .doc-content h3 {
+  font-size: 1.125rem;
+  font-weight:500;
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+  color: var(--color-foreground);
+}
+.doc-content ul,
+.doc-content ol,
+.doc-read-body .doc-content ul,
+.doc-read-body .doc-content ol {
+  margin-top: 0.75rem;
+  margin-bottom: 0.75rem;
+  padding-left: 1.5rem;
+}
+.doc-content li,
+.doc-read-body .doc-content li {
+  margin-bottom: 0.25rem;
+}
+.doc-content li::marker,
+.doc-read-body .doc-content li::marker {
+  color: var(--color-muted-foreground);
+}
+.doc-content code,
+.doc-read-body .doc-content code {
+  font-size: 0.875em;
+  padding: 0.125rem 0.25rem;
+  border-radius: 0.25rem;
+  background: var(--color-muted);
+  font-family: var(--font-inter), sans-serif;
+}
+.doc-content a,
+.doc-read-body .doc-content a {
+  color: var(--color-seeko-accent);
+}
+.doc-content blockquote,
+.doc-content pre,
+.doc-read-body .doc-content blockquote,
+.doc-read-body .doc-content pre {
+  margin-top: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+.doc-content hr,
+.doc-read-body .doc-content hr {
+  margin-top: 1.5rem;
+  margin-bottom: 1.5rem;
+  border-color: var(--color-border);
+}
+
+/* Tables — read view and editor */
+.doc-content table,
+.doc-read-body .doc-content table,
+.ProseMirror table {
+  width: auto;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+.doc-content th,
+.doc-read-body .doc-content th,
+.ProseMirror th {
+  background: var(--color-muted);
+  color: var(--color-foreground);
+  font-weight:500;
+  text-align: left;
+  padding: 0.625rem 1rem;
+  border-bottom: 1px solid var(--color-border);
+  border-right: 1px solid var(--color-border);
+  min-width: 120px;
+}
+.doc-content th:last-child,
+.doc-read-body .doc-content th:last-child,
+.ProseMirror th:last-child {
+  border-right: none;
+}
+.doc-content td,
+.doc-read-body .doc-content td,
+.ProseMirror td {
+  padding: 0.625rem 1rem;
+  border-bottom: 1px solid var(--color-border);
+  border-right: 1px solid var(--color-border);
+  color: rgba(240, 240, 240, 0.85);
+  vertical-align: top;
+  min-width: 120px;
+}
+.doc-content td:last-child,
+.doc-read-body .doc-content td:last-child,
+.ProseMirror td:last-child {
+  border-right: none;
+}
+.doc-content tr:last-child td,
+.doc-read-body .doc-content tr:last-child td,
+.ProseMirror tr:last-child td {
+  border-bottom: none;
+}
+
+/* ── Light doc prose (read dialog AND editor) ───────────────────────────────
+ * Two anchors, both winning over the dark base by source order:
+ *   • `.overview-light` — the desktop editor (.ProseMirror / .doc-content)
+ *     renders INLINE inside the light shell, so it is relit via this ancestor.
+ *   • `.doc-read-body`  — the read dialog wraps its content in `.doc-read-body`,
+ *     which sits INSIDE the Dialog panel. The Dialog portals to <body> (to
+ *     escape transformed ancestors), so it no longer inherits `.overview-light`;
+ *     `.doc-read-body` travels with the portaled subtree and relights it there.
+ * External /shared, /invoice and /sign viewers use neither anchor and keep the
+ * dark base untouched. */
+.overview-light .doc-content,
+.overview-light .doc-content-body,
+.overview-light .doc-content article,
+.doc-read-body .doc-content,
+.doc-read-body .doc-content-body,
+.doc-read-body .doc-content article {
+  color: #2a2a2a;
+}
+.overview-light .doc-content strong,
+.overview-light .doc-content h1,
+.overview-light .doc-content h2,
+.overview-light .doc-content h3,
+.doc-read-body .doc-content strong,
+.doc-read-body .doc-content h1,
+.doc-read-body .doc-content h2,
+.doc-read-body .doc-content h3 {
+  color: #111111;
+}
+.overview-light .doc-content p,
+.doc-read-body .doc-content p {
+  color: #3a3a3a;
+}
+.overview-light .doc-content li::marker,
+.doc-read-body .doc-content li::marker {
+  color: #9a9a9a;
+}
+.overview-light .doc-content code,
+.doc-read-body .doc-content code {
+  background: rgba(0, 0, 0, 0.05);
+  color: #2a2a2a;
+}
+.overview-light .doc-content a,
+.doc-read-body .doc-content a {
+  color: #0d7aff;
+}
+.overview-light .doc-content hr,
+.doc-read-body .doc-content hr {
+  border-color: rgba(0, 0, 0, 0.08);
+}
+.overview-light .doc-content table,
+.overview-light .doc-content th,
+.overview-light .doc-content td,
+.doc-read-body .doc-content table,
+.doc-read-body .doc-content th,
+.doc-read-body .doc-content td {
+  border-color: rgba(0, 0, 0, 0.08);
+}
+.overview-light .doc-content th,
+.doc-read-body .doc-content th {
+  background: #f4f4f4;
+  color: #111111;
+}
+.overview-light .doc-content td,
+.doc-read-body .doc-content td {
+  color: #3a3a3a;
+}
+/* Editor table cell selection highlight (light) */
+.overview-light .ProseMirror .selectedCell {
+  background: rgba(13, 122, 255, 0.08);
+}
+.ProseMirror .selectedCell {
+  background: var(--color-muted);
+  outline: 2px solid var(--color-seeko-accent);
+  outline-offset: -1px;
+}
+/* Column resize handle — Tiptap injects this div; we show the I► icon */
+.ProseMirror .column-resize-handle {
+  position: absolute;
+  right: -10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-seeko-accent);
+  opacity: 0;
+  cursor: col-resize;
+  pointer-events: all;
+  transition: opacity 0.12s;
+  z-index: 20;
+  border-radius: 3px;
+}
+.ProseMirror th:hover .column-resize-handle,
+.ProseMirror td:hover .column-resize-handle {
+  opacity: 1;
+}
+.ProseMirror.resize-cursor {
+  cursor: col-resize;
+}
+
+/* Sonner toast overrides */
+[data-sonner-toaster][data-y-position="top"] {
+  top: calc(1rem + env(safe-area-inset-top, 0px)) !important;
+}
+
+[data-sonner-toaster] [data-sonner-toast] {
+  --normal-bg: rgba(34, 34, 34, 0.85);
+  --normal-border: var(--color-border);
+  --normal-text: var(--color-foreground);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid var(--color-border);
+  font-family: var(--font-inter);
+}
+
+/* Rich structured toast (src/components/ui/rich-toast.tsx) — the card owns its
+   own dark surface, border, shadow and padding, so neutralise Sonner's default
+   glassy wrapper for these toasts only. */
+[data-sonner-toaster] [data-sonner-toast].seeko-toast-rich {
+  width: auto !important;
+  padding: 0 !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Mobile fixed chrome: promote to own layer so it stays fixed during scroll (iOS) */
+.mobile-fixed-layer {
+  transform: translateZ(0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+
+/* Hide mobile bottom nav when a full-screen modal is open */
+:root[data-modal-open] .mobile-bottom-nav {
+  display: none !important;
+}
+
+/* Lock ALL scroll containers when a dialog/drawer is open */
+:root[data-modal-open] body,
+:root[data-modal-open] #dashboard-scroll,
+:root[data-modal-open] #tour-main {
+  overflow: hidden !important;
+  overscroll-behavior: none !important;
+  touch-action: none !important;
+}
+
+:root[data-modal-open] {
+  overflow: hidden !important;
+  overscroll-behavior: none !important;
+}
+
+/* Kill paragraph margin inside table cells so rows aren't bloated */
+.doc-content td p,
+.doc-content th p,
+.doc-read-body .doc-content td p,
+.doc-read-body .doc-content th p,
+.ProseMirror td p,
+.ProseMirror th p {
+  margin: 0;
+  padding: 0;
+}
+
+/* transitions-dev: number pop-in (drives StatPillCount) */
+@keyframes t-digit-pop-in {
+  0% {
+    transform: translate(
+      calc(var(--digit-distance) * var(--digit-dir-x)),
+      calc(var(--digit-distance) * var(--digit-dir-y))
+    );
+    opacity: 0;
+    filter: blur(var(--digit-blur));
+  }
+  100% {
+    transform: translate(0, 0);
+    opacity: 1;
+    filter: blur(0);
+  }
+}
+
+.t-digit-group {
+  display: inline-flex;
+  align-items: baseline;
+}
+.t-digit {
+  display: inline-block;
+  will-change: transform, opacity, filter;
+}
+.t-digit-group.is-animating .t-digit {
+  animation: t-digit-pop-in var(--digit-dur) var(--digit-ease) both;
+}
+.t-digit-group.is-animating .t-digit[data-stagger="1"] {
+  animation-delay: var(--digit-stagger);
+}
+.t-digit-group.is-animating .t-digit[data-stagger="2"] {
+  animation-delay: calc(var(--digit-stagger) * 2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .t-digit-group .t-digit {
+    animation: none !important;
+  }
+}
+
+/* transitions-dev: unread-badge slide-in + pop (drives BellToggle's .t-badge).
+   The badge stays mounted; `data-open` toggles both directions so the pop-OUT
+   plays when it hides. Vars scoped to .t-badge (inherited by .t-badge-dot). */
+.t-badge {
+  --badge-slide-dur: 260ms;
+  --badge-pop-dur: 700ms;
+  --badge-pop-close-dur: 180ms;
+  --badge-fade-dur: 400ms;
+  --badge-fade-close-dur: 180ms;
+  --badge-blur: 2px;
+  --badge-offset-x: -8.2px;
+  --badge-offset-y: 12.4px;
+  --badge-slide-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  /* Real spring (bounce 0.4, perceptual 250ms → 700ms settle) from Motion
+   * Studio generate-css-spring — replaces the faux-overshoot bezier. The
+   * >1 overshoot clamps harmlessly on opacity/blur; close keeps its quick
+   * non-springy exit below. */
+  --badge-pop-ease: linear(
+    0, 0.0702, 0.226, 0.4079, 0.5805, 0.7263, 0.8392, 0.92, 0.9735, 1.0055,
+    1.0219, 1.0279, 1.0276, 1.0239, 1.0189, 1.0138, 1.0093, 1.0057, 1.0031,
+    1.0013, 1.0001, 0.9995, 1
+  );
+  --badge-close-ease: cubic-bezier(0.4, 0, 0.2, 1);
+
+  position: absolute;
+  top: -6px;
+  right: -8px;
+  pointer-events: none;
+  will-change: transform;
+}
+@keyframes t-badge-slide-in {
+  from {
+    transform: translate(var(--badge-offset-x), var(--badge-offset-y));
+  }
+  to {
+    transform: translate(0, 0);
+  }
+}
+.t-badge[data-open="true"] {
+  animation: t-badge-slide-in var(--badge-slide-dur) var(--badge-slide-ease);
+}
+.t-badge-dot {
+  transform-origin: center;
+  transform: scale(1);
+  opacity: 1;
+  filter: blur(0);
+  transition:
+    transform var(--badge-pop-dur) var(--badge-pop-ease),
+    opacity var(--badge-fade-dur) var(--badge-pop-ease),
+    filter var(--badge-pop-dur) var(--badge-pop-ease);
+  will-change: transform, opacity, filter;
+}
+.t-badge[data-open="false"] .t-badge-dot {
+  transform: scale(0);
+  opacity: 0;
+  filter: blur(var(--badge-blur));
+  transition:
+    transform var(--badge-pop-close-dur) var(--badge-close-ease),
+    opacity var(--badge-fade-close-dur) var(--badge-close-ease),
+    filter var(--badge-pop-close-dur) var(--badge-close-ease);
+}
+@media (prefers-reduced-motion: reduce) {
+  .t-badge,
+  .t-badge-dot {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* InterfaceKit (dev-only): anchor its floating toolbar to the bottom, not the
+   top — it otherwise collides with the header pill. The toolbar carries no data
+   attribute, so it's matched by its unique class signature (high z + shadow-lg +
+   select-none; the editing panels use shadow-xl and are intentionally excluded).
+   Overrides the package's inline fixed-position styles, hence !important. */
+[class*="z-[999999]"][class*="shadow-lg"][class*="select-none"] {
+  top: auto !important;
+  bottom: 24px !important;
+}
+
+/* Thin overlay scrollbar — replaces the loud default track on horizontal
+   tile rows. Transparent track, low-contrast pill thumb that lifts on hover. */
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: #f7f5f31f transparent;
+}
+.scrollbar-thin::-webkit-scrollbar {
+  height: 6px;
+  width: 6px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: #f7f5f31f;
+  border-radius: 9999px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background-color: #f7f5f33f;
+}
+
+/* Light-mode variant — black-tinted thumb on transparent track, for use
+   inside white popovers/menus. Same pill shape, inverted contrast. */
+.scrollbar-paper {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.16) transparent;
+}
+.scrollbar-paper::-webkit-scrollbar {
+  height: 6px;
+  width: 6px;
+}
+.scrollbar-paper::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-paper::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.16);
+  border-radius: 9999px;
+}
+.scrollbar-paper::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(0, 0, 0, 0.28);
+}
+
+/* ── Scroll mask (scroll-driven edge fade) ──────────────────────────────────
+ * Fades the leading/trailing edge of a horizontal scroller, but ONLY when
+ * there is content scrolled past that edge — a pure-CSS "more this way" cue.
+ * Technique: https://twilson.net/scroll-mask (ported to Tailwind v4 as a plain
+ * utility, matching the .scrollbar-* / .t-digit-group precedent above).
+ *
+ * One mask gradient (transparent → opaque → opaque → transparent) whose two
+ * fade widths are driven by `animation-timeline: scroll(self inline)`:
+ *   • at scrollLeft = 0   → left width 0 (no fade), right width = size (fade)
+ *   • mid-scroll          → both edges faded
+ *   • at scrollLeft = max → left width = size (fade), right width 0 (no fade)
+ * Single gradient → no mask-composite, so it's robust across engines.
+ *
+ * Whole thing is @supports-gated: browsers without scroll() simply get no
+ * mask (the unmasked hard edge — today's behavior). The @property initial of
+ * 0px also means a non-overflowing / list-view scroller stays fully opaque,
+ * because an inactive scroll timeline leaves the custom props at their initial
+ * value. Suppressed under prefers-reduced-motion (positional, but it moves). */
+@property --scroll-mask-l-size {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+@property --scroll-mask-r-size {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+@keyframes scroll-mask-x-l {
+  0%       { --scroll-mask-l-size: 0px; }
+  4%, 100% { --scroll-mask-l-size: var(--scroll-mask-size, 56px); }
+}
+@keyframes scroll-mask-x-r {
+  0%, 96%  { --scroll-mask-r-size: var(--scroll-mask-size, 56px); }
+  100%     { --scroll-mask-r-size: 0px; }
+}
+
+@supports (animation-timeline: scroll()) {
+  .scroll-mask-x {
+    --scroll-mask-size: 56px;
+    -webkit-mask-image: linear-gradient(
+      to right,
+      transparent,
+      #000 var(--scroll-mask-l-size),
+      #000 calc(100% - var(--scroll-mask-r-size)),
+      transparent
+    );
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      #000 var(--scroll-mask-l-size),
+      #000 calc(100% - var(--scroll-mask-r-size)),
+      transparent
+    );
+    /* shorthand first, then assign the timeline as a longhand so it isn't reset */
+    animation: scroll-mask-x-l linear, scroll-mask-x-r linear;
+    animation-timeline: scroll(self inline), scroll(self inline);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scroll-mask-x {
+    animation: none;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+}
+
+/* Vertical mirror of .scroll-mask-x — top/bottom edge fade on a vertical
+ * scroller, driven by `animation-timeline: scroll(self block)`:
+ *   • at scrollTop = 0   → top width 0 (no fade), bottom width = size (fade)
+ *   • mid-scroll         → both edges faded
+ *   • at scrollTop = max → top width = size (fade), bottom width 0 (no fade)
+ * Same @supports-gate + reduced-motion + 0px-initial inert behavior. */
+@property --scroll-mask-t-size {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+@property --scroll-mask-b-size {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+@keyframes scroll-mask-y-t {
+  0%       { --scroll-mask-t-size: 0px; }
+  4%, 100% { --scroll-mask-t-size: var(--scroll-mask-size, 56px); }
+}
+@keyframes scroll-mask-y-b {
+  0%, 96%  { --scroll-mask-b-size: var(--scroll-mask-size, 56px); }
+  100%     { --scroll-mask-b-size: 0px; }
+}
+
+@supports (animation-timeline: scroll()) {
+  .scroll-mask-y {
+    --scroll-mask-size: 56px;
+    -webkit-mask-image: linear-gradient(
+      to bottom,
+      transparent,
+      #000 var(--scroll-mask-t-size),
+      #000 calc(100% - var(--scroll-mask-b-size)),
+      transparent
+    );
+    mask-image: linear-gradient(
+      to bottom,
+      transparent,
+      #000 var(--scroll-mask-t-size),
+      #000 calc(100% - var(--scroll-mask-b-size)),
+      transparent
+    );
+    animation: scroll-mask-y-t linear, scroll-mask-y-b linear;
+    animation-timeline: scroll(self block), scroll(self block);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scroll-mask-y {
+    animation: none;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+}
+
+/* ── Scroll-edge blur damper ────────────────────────────────────────────────
+ * Reduce backdrop blur on scroll-edge chrome while the user is scrolling.
+ * Heavy blur during motion destroys perceived smoothness and increases GPU
+ * workload; dropping it dynamically keeps the interface crisp.
+ *
+ * src/lib/scroll-blur.ts toggles data-scrolling on <html>; each surface
+ * declares its resting radius via --edge-blur (+ optional --edge-saturate)
+ * and this utility scales it by the root --edge-blur-scale token.
+ *
+ * Timing is asymmetric on purpose: the drop is instant (transition-duration
+ * 0 while scrolling — no point animating a blur while frames are at a
+ * premium), the restore eases back over 200ms at rest. Exact transition
+ * properties only — backdrop-filter and its -webkit- twin. */
+:root {
+  --edge-blur-scale: 1;
+}
+:root[data-scrolling] {
+  --edge-blur-scale: 0.4;
+}
+
+.scroll-edge-blur {
+  backdrop-filter: saturate(var(--edge-saturate, 100%))
+    blur(calc(var(--edge-blur, 16px) * var(--edge-blur-scale, 1)));
+  -webkit-backdrop-filter: saturate(var(--edge-saturate, 100%))
+    blur(calc(var(--edge-blur, 16px) * var(--edge-blur-scale, 1)));
+  /* opacity is included (Tailwind-default curve) because this unlayered rule
+   * beats utility classes — chrome that fades (mobile bottom nav) would lose
+   * its transition-opacity otherwise. Longhands, not the shorthand: the CSS
+   * minifier collapses mixed per-property timings in `transition`. Zeroing
+   * while scrolling re-lists the blur durations only, so a fade in flight is
+   * never snapped. */
+  transition-property: backdrop-filter, -webkit-backdrop-filter, opacity;
+  transition-duration: 200ms, 200ms, 150ms;
+  transition-timing-function: ease-out, ease-out, cubic-bezier(0.4, 0, 0.2, 1);
+}
+:root[data-scrolling] .scroll-edge-blur {
+  transition-duration: 0ms, 0ms, 150ms;
+}
+
+/* ── CSS spring easing (Motion Studio AI Kit) ─────────────────────
+ * Real spring physics compiled to linear() with generate-css-spring, for
+ * CSS-only components that can't reach src/lib/motion.ts (no motion/react).
+ * Duration + curve are one unit: the duration is the spring's settle time,
+ * generated together — never retime one without regenerating both. When
+ * coordinating other properties alongside, run them at the (shorter)
+ * perceptual duration noted per token, not the settle time.
+ *
+ * spring-transform — bounce 0.15, perceptual 250ms → 350ms settle.
+ * Micro-interactions that slide or scale (switch thumb). */
+.spring-transform {
+  transition: transform 350ms
+    linear(
+      0, 0.347, 0.7676, 0.9735, 1.0268, 1.0223, 1.0093, 1.0018, 0.9994, 1,
+      0.9996, 1
+    );
+}
+
+/* ── EKO spotlight ──────────────────────────────────────────────────────────
+ * Post-write receipt deep-link: clicking the receipt row in the EKO tray
+ * scrolls the changed task card into view and plays this pulse on it
+ * (useEkoSpotlight toggles the class; the bus carries choreography only).
+ *
+ * Anatomy: an ::after overlay inheriting the card's own radius (concentric by
+ * inheritance, never a guessed value). One 4.2s run: two soft accent swells
+ * in the first ~1.2s, then a 1px #0d7aff ring lingers and fades over the
+ * remaining 3s (opacity-only for the long phase). ease-out per segment — the
+ * swell leads, never trails. Hook removes the class after the run; the
+ * animation ends at opacity 0 so removal is invisible. */
+.eko-spotlight {
+  position: relative;
+}
+.eko-spotlight::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  animation: eko-spotlight 4200ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+@keyframes eko-spotlight {
+  0% {
+    box-shadow:
+      0 0 0 1px rgba(13, 122, 255, 0.55),
+      0 0 0 0 rgba(13, 122, 255, 0.3);
+    opacity: 1;
+  }
+  /* pulse one — swell to 10px, alpha to 0 */
+  8% {
+    box-shadow:
+      0 0 0 1px rgba(13, 122, 255, 0.55),
+      0 0 0 10px rgba(13, 122, 255, 0);
+  }
+  14% {
+    box-shadow:
+      0 0 0 1px rgba(13, 122, 255, 0.55),
+      0 0 0 0 rgba(13, 122, 255, 0.22);
+  }
+  /* pulse two — slightly quieter */
+  22% {
+    box-shadow:
+      0 0 0 1px rgba(13, 122, 255, 0.55),
+      0 0 0 10px rgba(13, 122, 255, 0);
+  }
+  28% {
+    box-shadow:
+      0 0 0 1px rgba(13, 122, 255, 0.5),
+      0 0 0 0 rgba(13, 122, 255, 0);
+    opacity: 1;
+  }
+  /* linger — the 1px ring fades out over the remaining 3s */
+  100% {
+    box-shadow:
+      0 0 0 1px rgba(13, 122, 255, 0.5),
+      0 0 0 0 rgba(13, 122, 255, 0);
+    opacity: 0;
+  }
+}
+
+/* Reduced motion: static highlight, no animation — a quiet held ring that the
+ * hook clears after a beat. */
+@media (prefers-reduced-motion: reduce) {
+  .eko-spotlight::after {
+    animation: none;
+    box-shadow:
+      0 0 0 1px rgba(13, 122, 255, 0.55),
+      0 0 0 4px rgba(13, 122, 255, 0.14);
+    opacity: 1;
+  }
+}
+
+.dark {
+  --chart-1:        oklch(1 0 none);
+  --chart-2:        oklch(0.73 0 none);
+  --chart-3:        oklch(0.51 0 none);
+  --chart-4:        oklch(0.39 0 none);
+  --chart-5:        oklch(0.32 0 none);
+  --chart-background:        oklch(0.145 0 0);
+  --chart-foreground:        oklch(0.45 0 0);
+  --chart-foreground-muted:        oklch(0.65 0.01 260);
+  --chart-crosshair:        oklch(0.45 0 0);
+  --chart-grid:        oklch(0.25 0 0);
+  --chart-brush-border:        var(--chart-grid);
+  --chart-marker-background:        oklch(0.25 0.01 260);
+  --chart-marker-border:        oklch(0.4 0.01 260);
+  --chart-marker-foreground:        oklch(0.9 0 0);
+  --chart-label:        oklch(0.75 0.01 260);
+  --chart-scale-01:        oklch(0.28 0.03 270);
+  --chart-scale-02:        oklch(0.38 0.04 270);
+  --chart-scale-03:        oklch(0.48 0.05 270);
+  --chart-scale-04:        oklch(0.58 0.06 270);
+  --chart-scale-05:        oklch(0.68 0.07 270);
+  --chart-scale-pattern-color:        oklch(0.145 0 0);
+}

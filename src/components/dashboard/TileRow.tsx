@@ -14,7 +14,7 @@ export function TileRow({
   return (
     <section>
       <SectionEyebrow icon={icon}>{eyebrow}</SectionEyebrow>
-      <div className="flex snap-x snap-mandatory gap-2 overflow-x-auto pb-2">
+      <div className="scrollbar-thin flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2">
         {children}
       </div>
     </section>

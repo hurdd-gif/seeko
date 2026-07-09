@@ -1,21 +1,29 @@
 import { describe, it, expect, vi } from 'vitest';
 import { fetchRecentItems } from '../data';
 
+// The real `tasks` table has NO `updated_at` column — only `created_at`
+// (docs/supabase-schema.sql:118-129). This mock models that: ordering by
+// any column other than `created_at` mimics Postgres' "column does not
+// exist" error (data: null), exactly as the live DB behaves. A query that
+// asks for `updated_at` therefore yields an empty row and the section
+// vanishes — the regression this test guards against.
+const TASK_ROWS = [
+  { id: 't1', name: 'Task one', created_at: '2026-05-13T10:00:00Z' },
+  { id: 't2', name: 'Task two', created_at: '2026-05-13T12:00:00Z' },
+  { id: 't3', name: 'Task three', created_at: '2026-05-13T08:00:00Z' },
+];
+
 vi.mock('../server', () => ({
   createClient: vi.fn(async () => ({
     from: (table: string) => ({
-      select: () => ({
-        order: () => ({
+      select: (cols: string) => ({
+        order: (col: string) => ({
           limit: () =>
-            Promise.resolve({
-              data:
-                table === 'tasks'
-                  ? [{ id: 't1', name: 'Task one', updated_at: '2026-05-13T10:00:00Z' }]
-                  : table === 'docs'
-                    ? [{ id: 'd1', title: 'Doc one', updated_at: '2026-05-13T11:00:00Z' }]
-                    : [{ id: 'a1', name: 'Area one', updated_at: '2026-05-13T09:00:00Z' }],
-              error: null,
-            }),
+            Promise.resolve(
+              table === 'tasks' && col === 'created_at' && /created_at/.test(cols)
+                ? { data: TASK_ROWS, error: null }
+                : { data: null, error: { message: `column "${col}" does not exist` } },
+            ),
         }),
       }),
     }),
@@ -23,11 +31,18 @@ vi.mock('../server', () => ({
 }));
 
 describe('fetchRecentItems', () => {
-  it('returns union of tasks/docs/areas sorted by updated_at desc, capped at limit', async () => {
+  it('returns ONLY tasks, ordered by an existing column, newest first', async () => {
     const items = await fetchRecentItems('user-1', 3);
-    expect(items.map((i) => i.id)).toEqual(['d1', 't1', 'a1']);
-    expect(items[0]).toMatchObject({ kind: 'doc', title: 'Doc one', href: '/docs/d1' });
-    expect(items[1]).toMatchObject({ kind: 'task', title: 'Task one', href: '/tasks/t1' });
-    expect(items[2]).toMatchObject({ kind: 'area', title: 'Area one', href: '/areas/a1' });
+
+    expect(items.map((i) => i.id)).toEqual(['t2', 't1', 't3']);
+    expect(items.every((i) => i.kind === 'task')).toBe(true);
+    expect(items.every((i) => i.href === `/tasks/${i.id}`)).toBe(true);
+    expect(items[0]).toMatchObject({ kind: 'task', title: 'Task two', href: '/tasks/t2' });
+  });
+
+  it('caps the result at the requested limit', async () => {
+    const items = await fetchRecentItems('user-1', 2);
+    expect(items).toHaveLength(2);
+    expect(items.map((i) => i.id)).toEqual(['t2', 't1']);
   });
 });

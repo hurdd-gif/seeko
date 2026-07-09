@@ -25,7 +25,7 @@ const FROM_EMAIL = 'SEEKO Studio <noreply@seekostudios.com>';
 
 /* ── Shared HTML helpers ─────────────────────────────────── */
 
-const FONT_STACK = `-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif`;
+const FONT_STACK = `'Inter','Segoe UI',Arial,sans-serif`;
 
 /** Minimal shell: no background, centered content, max-width constraint */
 function shell(inner: string, width = 540): string {
@@ -47,7 +47,7 @@ function shell(inner: string, width = 540): string {
 /** Bold "SEEKO" brand mark — large text, like SCRL reference */
 function brandHeader(): string {
   return `<tr><td style="padding:0 0 32px;">
-  <p style="margin:0;font-size:32px;font-weight:800;color:#111;letter-spacing:-0.5px;">SEEKO</p>
+  <p style="margin:0;font-size:32px;font-weight:500;color:#111;letter-spacing:-0.5px;">SEEKO</p>
 </td></tr>`;
 }
 
@@ -72,7 +72,7 @@ function codeDigits(code: string): string {
       (d, i) => {
         const pl = i === 0 ? '0' : '4px';
         const pr = i === code.length - 1 ? '0' : '4px';
-        return `<td style="padding:0 ${pr} 0 ${pl};"><div style="width:44px;height:52px;background:#f3f3f3;border-radius:8px;text-align:center;line-height:52px;font-size:24px;font-weight:700;color:#111;font-family:'SF Mono','Fira Code','Courier New',monospace;">${d}</div></td>`;
+        return `<td style="padding:0 ${pr} 0 ${pl};"><div style="width:44px;height:52px;background:#f3f3f3;border-radius:8px;text-align:center;line-height:52px;font-size:24px;font-weight:500;color:#111;font-family:'Inter','Segoe UI',Arial,sans-serif;">${d}</div></td>`;
       }
     )
     .join('');
@@ -105,9 +105,9 @@ export async function sendInviteEmail({ recipientEmail, inviteCode }: SendInvite
       ${brandHeader()}
       ${divider()}
       <tr><td style="padding:32px 0;">
-        <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#111;">Join the team.</h1>
+        <h1 style="margin:0 0 12px;font-size:22px;font-weight:500;color:#111;">Join the team.</h1>
         <p style="margin:0 0 32px;font-size:15px;color:#666;line-height:1.6;">You've been added to SEEKO Studio. Use the code below to complete your account setup.</p>
-        <p style="margin:0 0 12px;font-size:13px;font-weight:600;color:#999;letter-spacing:1px;text-transform:uppercase;text-align:center;">Invite Code:</p>
+        <p style="margin:0 0 12px;font-size:13px;font-weight:500;color:#999;letter-spacing:1px;text-transform:uppercase;text-align:center;">Invite Code:</p>
         ${codeDigits(inviteCode)}
         <p style="margin:28px 0 0;font-size:14px;color:#999;line-height:1.6;">This code expires in 24 hours. Enter it on the login page under <strong style="color:#666;">Join the team</strong>.</p>
       </td></tr>
@@ -131,10 +131,10 @@ function buildAgreementHtml(
         <table width="100%" cellpadding="0" cellspacing="0">
           <tr>
             <td width="28" valign="top" style="padding-top:2px;">
-              <div style="width:24px;height:24px;border-radius:6px;background:#f3f3f3;text-align:center;line-height:24px;font-size:11px;font-family:'Courier New',monospace;color:#999;">${s.number}</div>
+              <div style="width:24px;height:24px;border-radius:6px;background:#f3f3f3;text-align:center;line-height:24px;font-size:11px;font-family:'Inter','Segoe UI',Arial,sans-serif;color:#999;">${s.number}</div>
             </td>
             <td style="padding-left:12px;">
-              <p style="margin:0 0 6px;font-size:15px;font-weight:600;color:#111;">${esc(s.title)}</p>
+              <p style="margin:0 0 6px;font-size:15px;font-weight:500;color:#111;">${esc(s.title)}</p>
               <div style="font-size:14px;color:#555;line-height:1.65;">${sanitizeEmailHtml(s.content)}</div>
             </td>
           </tr>
@@ -147,7 +147,7 @@ function buildAgreementHtml(
     ${divider()}
     <!-- Intro -->
     <tr><td style="padding:32px 0 16px;">
-      <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#111;">${esc(title)}</h1>
+      <h1 style="margin:0 0 8px;font-size:22px;font-weight:500;color:#111;">${esc(title)}</h1>
       <p style="margin:0;font-size:14px;color:#999;">Signed copy for your records</p>
     </td></tr>
     <!-- Signer info -->
@@ -155,11 +155,11 @@ function buildAgreementHtml(
       <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9f9f9;border-radius:8px;">
         <tr>
           <td style="padding:16px 20px;">
-            <p style="margin:0 0 2px;font-size:11px;font-weight:600;color:#999;letter-spacing:1px;text-transform:uppercase;">Signed by</p>
-            <p style="margin:0;font-size:15px;font-weight:600;color:#111;">${esc(signerName)}</p>
+            <p style="margin:0 0 2px;font-size:11px;font-weight:500;color:#999;letter-spacing:1px;text-transform:uppercase;">Signed by</p>
+            <p style="margin:0;font-size:15px;font-weight:500;color:#111;">${esc(signerName)}</p>
           </td>
           <td style="padding:16px 20px;text-align:right;">
-            <p style="margin:0 0 2px;font-size:11px;font-weight:600;color:#999;letter-spacing:1px;text-transform:uppercase;">Date</p>
+            <p style="margin:0 0 2px;font-size:11px;font-weight:500;color:#999;letter-spacing:1px;text-transform:uppercase;">Date</p>
             <p style="margin:0;font-size:15px;color:#111;">${esc(signedDate)}</p>
           </td>
         </tr>
@@ -172,8 +172,8 @@ function buildAgreementHtml(
     <!-- Signature -->
     <tr><td style="padding:8px 0 32px;">
       <div style="border-top:1px solid #e5e5e5;padding-top:24px;">
-        <p style="margin:0 0 4px;font-size:11px;font-weight:600;color:#999;letter-spacing:1.5px;text-transform:uppercase;">Digital Signature</p>
-        <p style="margin:0 0 8px;font-size:28px;font-family:'Caveat','Segoe Script','Brush Script MT',cursive;color:#111;">${esc(signerName)}</p>
+        <p style="margin:0 0 4px;font-size:11px;font-weight:500;color:#999;letter-spacing:1.5px;text-transform:uppercase;">Digital Signature</p>
+        <p style="margin:0 0 8px;font-size:28px;font-family:'Inter','Segoe UI',Arial,sans-serif;font-weight:500;color:#111;">${esc(signerName)}</p>
         <div style="width:180px;height:1px;background:#ccc;margin-bottom:16px;"></div>
         <p style="margin:0;font-size:13px;color:#999;">Signed electronically via SEEKO Studio</p>
       </div>
@@ -246,7 +246,7 @@ export async function sendExternalInviteEmail({
   const noteBlock = personalNote
     ? `<table cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 28px;">
         <tr>
-          <td width="28" valign="top" style="padding-top:2px;font-size:24px;color:#ccc;font-family:Georgia,serif;">&ldquo;</td>
+          <td width="28" valign="top" style="padding-top:2px;font-size:24px;color:#ccc;font-family:'Inter','Segoe UI',Arial,sans-serif;">&ldquo;</td>
           <td style="padding:0 0 0 4px;">
             <p style="margin:0 0 6px;font-size:15px;color:#333;line-height:1.5;font-style:italic;">${esc(personalNote)}</p>
             <p style="margin:0;font-size:12px;color:#aaa;">&mdash; the sender</p>
@@ -264,15 +264,20 @@ export async function sendExternalInviteEmail({
       ${brandHeader()}
       ${divider()}
       <tr><td style="padding:32px 0;">
-        <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#111;">${esc(templateName)}</h1>
+        <h1 style="margin:0 0 12px;font-size:22px;font-weight:500;color:#111;">${esc(templateName)}</h1>
         <p style="margin:0 0 24px;font-size:15px;color:#666;line-height:1.6;">You've been invited to review and sign this document. Click below to get started.</p>
         ${noteBlock}
         <table cellpadding="0" cellspacing="0" width="100%">
-          <tr><td align="center">
-            <a href="${signUrl}" style="display:inline-block;background:#111;color:#fff;padding:14px 40px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;">Review &amp; Sign Document</a>
+          <tr><td align="center" style="padding:4px 0 0;">
+            <a href="${signUrl}" style="display:inline-block;background:#111111;color:#ffffff;padding:16px 46px;border-radius:10px;text-decoration:none;font-weight:600;font-size:15px;letter-spacing:0.01em;box-shadow:0 2px 5px rgba(0,0,0,0.14);">Review &amp; sign&nbsp;&nbsp;&rarr;</a>
           </td></tr>
         </table>
-        <p style="margin:24px 0 0;font-size:13px;color:#999;line-height:1.6;text-align:center;">This link expires on ${expiresFormatted}</p>
+        <table cellpadding="0" cellspacing="0" width="100%" style="margin:18px 0 0;">
+          <tr><td align="center">
+            <span style="display:inline-block;background:#f3f3f3;border-radius:999px;padding:6px 14px;font-size:12px;font-weight:500;color:#808080;">Expires ${expiresFormatted}</span>
+          </td></tr>
+        </table>
+        <p style="margin:22px 0 0;font-size:12px;color:#bbbbbb;line-height:1.6;text-align:center;">Button not working? Paste this link into your browser:<br><a href="${signUrl}" style="color:#999999;text-decoration:underline;word-break:break-all;">${signUrl}</a></p>
       </td></tr>
       ${divider()}
       ${footer("If you didn't expect this email, you can safely ignore it.")}
@@ -326,7 +331,7 @@ export async function sendInvoiceRequestEmail({
   const noteBlock = personalNote
     ? `<table cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 28px;">
         <tr>
-          <td width="28" valign="top" style="padding-top:2px;font-size:24px;color:#ccc;font-family:Georgia,serif;">&ldquo;</td>
+          <td width="28" valign="top" style="padding-top:2px;font-size:24px;color:#ccc;font-family:'Inter','Segoe UI',Arial,sans-serif;">&ldquo;</td>
           <td style="padding:0 0 0 4px;">
             <p style="margin:0 0 6px;font-size:15px;color:#333;line-height:1.5;font-style:italic;">${esc(personalNote)}</p>
             <p style="margin:0;font-size:12px;color:#aaa;">&mdash; the sender</p>
@@ -344,12 +349,12 @@ export async function sendInvoiceRequestEmail({
       ${brandHeader()}
       ${divider()}
       <tr><td style="padding:32px 0;">
-        <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#111;">Invoice Request</h1>
+        <h1 style="margin:0 0 12px;font-size:22px;font-weight:500;color:#111;">Invoice Request</h1>
         <p style="margin:0 0 24px;font-size:15px;color:#666;line-height:1.6;">You've been asked to submit an invoice. Click below to fill in your line items and payment details.</p>
         ${noteBlock}
         <table cellpadding="0" cellspacing="0" width="100%">
           <tr><td align="center">
-            <a href="${invoiceUrl}" style="display:inline-block;background:#111;color:#fff;padding:14px 40px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;">Submit Invoice</a>
+            <a href="${invoiceUrl}" style="display:inline-block;background:#111;color:#fff;padding:14px 40px;border-radius:8px;text-decoration:none;font-weight:500;font-size:15px;">Submit Invoice</a>
           </td></tr>
         </table>
         <p style="margin:24px 0 0;font-size:13px;color:#999;line-height:1.6;text-align:center;">This link expires on ${expiresFormatted}</p>
@@ -387,7 +392,7 @@ export async function sendDocShareEmail({
   const noteBlock = personalNote
     ? `<table cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 28px;">
         <tr>
-          <td width="28" valign="top" style="padding-top:2px;font-size:24px;color:#ccc;font-family:Georgia,serif;">&ldquo;</td>
+          <td width="28" valign="top" style="padding-top:2px;font-size:24px;color:#ccc;font-family:'Inter','Segoe UI',Arial,sans-serif;">&ldquo;</td>
           <td style="padding:0 0 0 4px;">
             <p style="margin:0 0 6px;font-size:15px;color:#333;line-height:1.5;font-style:italic;">${esc(personalNote)}</p>
             <p style="margin:0;font-size:12px;color:#aaa;">&mdash; the sender</p>
@@ -405,12 +410,12 @@ export async function sendDocShareEmail({
       ${brandHeader()}
       ${divider()}
       <tr><td style="padding:32px 0;">
-        <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#111;">Document Shared With You</h1>
+        <h1 style="margin:0 0 12px;font-size:22px;font-weight:500;color:#111;">Document Shared With You</h1>
         <p style="margin:0 0 24px;font-size:15px;color:#666;line-height:1.6;">You've been given access to <strong>${esc(docTitle)}</strong>. Click below to verify your identity and view the document.</p>
         ${noteBlock}
         <table cellpadding="0" cellspacing="0" width="100%">
           <tr><td align="center">
-            <a href="${shareUrl}" style="display:inline-block;background:#111;color:#fff;padding:14px 40px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;">View Document</a>
+            <a href="${shareUrl}" style="display:inline-block;background:#111;color:#fff;padding:14px 40px;border-radius:8px;text-decoration:none;font-weight:500;font-size:15px;">View Document</a>
           </td></tr>
         </table>
         <p style="margin:24px 0 0;font-size:13px;color:#999;line-height:1.6;text-align:center;">This link expires on ${expiresFormatted}</p>
@@ -441,9 +446,9 @@ export async function sendVerificationCodeEmail({
       ${brandHeader()}
       ${divider()}
       <tr><td style="padding:32px 0;">
-        <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#111;">Verification Code.</h1>
+        <h1 style="margin:0 0 12px;font-size:22px;font-weight:500;color:#111;">Verification Code.</h1>
         <p style="margin:0 0 32px;font-size:15px;color:#666;line-height:1.6;">Enter this code to verify your identity and access the document.</p>
-        <p style="margin:0 0 12px;font-size:13px;font-weight:600;color:#999;letter-spacing:1px;text-transform:uppercase;text-align:center;">One-Time Password:</p>
+        <p style="margin:0 0 12px;font-size:13px;font-weight:500;color:#999;letter-spacing:1px;text-transform:uppercase;text-align:center;">One-Time Password:</p>
         ${codeDigits(code)}
         <p style="margin:28px 0 0;font-size:14px;color:#999;line-height:1.6;text-align:center;">This code expires in 10 minutes. Do not share it with anyone.</p>
       </td></tr>
@@ -471,7 +476,7 @@ export async function sendBugReportEmail(params: SendBugReportEmailParams) {
 
   const screenshotRow = params.screenshotUrl
     ? `<tr><td style="padding:16px 0 0;">
-        <p style="margin:0 0 8px;font-size:13px;font-weight:600;color:#111;">Screenshot</p>
+        <p style="margin:0 0 8px;font-size:13px;font-weight:500;color:#111;">Screenshot</p>
         <img src="${esc(params.screenshotUrl)}" alt="Bug screenshot" style="max-width:100%;border-radius:8px;border:1px solid #e5e5e5;" />
       </td></tr>`
     : '';
@@ -479,23 +484,23 @@ export async function sendBugReportEmail(params: SendBugReportEmailParams) {
   const html = shell(`
     ${brandHeader()}
     <tr><td style="padding:0 0 24px;">
-      <p style="margin:0 0 4px;font-size:20px;font-weight:700;color:#111;">Bug Report</p>
+      <p style="margin:0 0 4px;font-size:20px;font-weight:500;color:#111;">Bug Report</p>
       <p style="margin:0;font-size:14px;color:#666;">From ${esc(params.reporterName)} (${esc(params.reporterEmail)})</p>
     </td></tr>
     ${divider()}
     <tr><td style="padding:16px 0 0;">
-      <p style="margin:0 0 8px;font-size:13px;font-weight:600;color:#111;">Description</p>
+      <p style="margin:0 0 8px;font-size:13px;font-weight:500;color:#111;">Description</p>
       <p style="margin:0;font-size:14px;color:#333;line-height:1.6;white-space:pre-wrap;">${esc(params.description)}</p>
     </td></tr>
     ${screenshotRow}
     ${divider()}
     <tr><td style="padding:16px 0 0;">
-      <p style="margin:0 0 8px;font-size:13px;font-weight:600;color:#111;">Context</p>
+      <p style="margin:0 0 8px;font-size:13px;font-weight:500;color:#111;">Context</p>
       <table cellpadding="0" cellspacing="0" style="font-size:13px;color:#666;line-height:1.8;">
-        <tr><td style="padding-right:12px;font-weight:600;color:#444;">Page</td><td>${esc(params.pageUrl)}</td></tr>
-        <tr><td style="padding-right:12px;font-weight:600;color:#444;">Screen</td><td>${esc(params.screenSize)}</td></tr>
-        <tr><td style="padding-right:12px;font-weight:600;color:#444;">PWA</td><td>${params.isPwa ? 'Yes' : 'No'}</td></tr>
-        <tr><td style="padding-right:12px;font-weight:600;color:#444;">Browser</td><td style="word-break:break-all;">${esc(params.userAgent)}</td></tr>
+        <tr><td style="padding-right:12px;font-weight:500;color:#444;">Page</td><td>${esc(params.pageUrl)}</td></tr>
+        <tr><td style="padding-right:12px;font-weight:500;color:#444;">Screen</td><td>${esc(params.screenSize)}</td></tr>
+        <tr><td style="padding-right:12px;font-weight:500;color:#444;">PWA</td><td>${params.isPwa ? 'Yes' : 'No'}</td></tr>
+        <tr><td style="padding-right:12px;font-weight:500;color:#444;">Browser</td><td style="word-break:break-all;">${esc(params.userAgent)}</td></tr>
       </table>
     </td></tr>
     ${footer('This bug report was submitted from the SEEKO Studio dashboard.')}

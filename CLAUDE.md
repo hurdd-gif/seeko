@@ -28,6 +28,16 @@
 | Design system / tokens             | design-tokens                                  |
 | Visual QA                          | visual-qa                                      |
 | API security review                | sharp-edges                                    |
+| Task status enum migration audit   | seeko-status-migration-auditor                 |
+| Build/test verification gate       | seeko-build-gate                               |
+| Supabase mutation/auth review      | seeko-supabase-mutation-reviewer               |
+| Feature blast-radius mapping       | seeko-feature-surface-mapper                   |
+| Payments/refunds flow audit        | seeko-payments-flow-auditor                    |
+| Dev preview route drift            | seeko-preview-route-keeper                     |
+| Plan vs implementation drift       | seeko-plan-drift-reviewer                      |
+| UI regression / screenshot review  | seeko-ui-regression-reviewer                   |
+| Stack/docs reality check           | seeko-stack-docs-reality-checker               |
+| Working tree / commit hygiene      | seeko-repo-hygiene                             |
 
 ## Routing: MCPs
 

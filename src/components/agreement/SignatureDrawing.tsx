@@ -84,7 +84,7 @@ export function SignatureDrawing({
                 }}
                 className={cn('inline-block leading-tight', light ? 'text-[#111]' : 'text-foreground')}
                 style={{
-                  fontFamily: 'var(--font-caveat), cursive',
+                  fontFamily: 'var(--font-inter), sans-serif',
                   fontSize,
                   whiteSpace: 'pre',
                 }}

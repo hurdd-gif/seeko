@@ -1,0 +1,4 @@
+interface:
+  display_name: "SEEKO UI Regression Reviewer"
+  short_description: "Review SEEKO UI regressions and screenshots."
+  default_prompt: "Review SEEKO UI changes for layout, theme, motion, and responsive regressions."

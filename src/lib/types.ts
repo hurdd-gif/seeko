@@ -1,5 +1,25 @@
-export type TaskStatus = 'Complete' | 'In Progress' | 'In Review' | 'Blocked';
-export type Priority = 'High' | 'Medium' | 'Low';
+// Linear-style 7-status enum (migration 20260519000001).
+// Legacy 'Complete' → 'Done'; legacy 'Blocked' → 'Backlog' (use 'Canceled' for permanent stops).
+export type TaskStatus =
+  | 'Backlog'
+  | 'Todo'
+  | 'In Progress'
+  | 'In Review'
+  | 'Done'
+  | 'Canceled'
+  | 'Duplicate';
+
+export const TASK_STATUSES: readonly TaskStatus[] = [
+  'Backlog',
+  'Todo',
+  'In Progress',
+  'In Review',
+  'Done',
+  'Canceled',
+  'Duplicate',
+] as const;
+
+export type Priority = 'Urgent' | 'High' | 'Medium' | 'Low';
 export type Department =
   | 'Coding'
   | 'Visual Art'
@@ -9,6 +29,7 @@ export type Department =
 
 export type Task = {
   id: string;
+  task_number?: number;
   name: string;
   department: Department | string;
   status: TaskStatus;
@@ -18,8 +39,51 @@ export type Task = {
   deadline?: string;
   description?: string;
   bounty?: number;
+  progress?: number;
   created_at?: string;
   updated_at?: string;
+};
+
+// Milestones (schema only this round — empty-state UI in Phase C).
+export type MilestoneHealth = 'on_track' | 'at_risk' | 'off_track';
+
+export type Milestone = {
+  id: string;
+  name: string;
+  target_date?: string;
+  area_id?: string;
+  sort_order: number;
+  health?: MilestoneHealth | null;
+  created_at: string;
+};
+
+// Activity entries are rows of public.activity_log filtered by task_id.
+// Typed events have `kind` set; legacy/free-text events have `kind` null and rely on `action`/`target`.
+export type TaskActivityKind =
+  | 'created'
+  | 'status_changed'
+  | 'assignee_changed'
+  | 'milestone_linked'
+  | 'milestone_unlinked'
+  | 'progress_changed';
+
+export type TaskActivity = {
+  id: string;
+  user_id?: string;
+  action: string;
+  target: string;
+  task_id?: string;
+  doc_id?: string;
+  kind?: TaskActivityKind;
+  before_value?: unknown;
+  after_value?: unknown;
+  /** Which actor wrote the row. 'human' (default, incl. DB-trigger rows) or
+   *  'eko' — a write EKO's executors performed; the feed brands those as EKO. */
+  source?: 'human' | 'eko';
+  created_at: string;
+  /** Actor profile join (`profiles(display_name, avatar_url)` in
+   *  ACTIVITY_SELECT) — present on rows loaded for the Activity page. */
+  profiles?: { display_name?: string | null; avatar_url?: string | null } | null;
 };
 
 export type Area = {
@@ -67,7 +131,7 @@ export type Doc = {
   granted_user_ids?: string[];
   type?: 'doc' | 'deck';
   deck_orientation?: 'horizontal' | 'vertical';
-  slides?: { url: string; sort_order: number }[];
+  slides?: { url: string; thumbnail_url?: string; sort_order: number }[];
 };
 
 export type TaskWithAssignee = Task & {
@@ -137,9 +201,14 @@ export type Payment = {
   description?: string;
   status: PaymentStatus;
   paid_at?: string;
+  refund_amount?: number;
+  refunded_at?: string;
+  refund_note?: string;
   created_by: string;
   created_at: string;
   recipient_email?: string;
+  /** Manual external payee (vendor/subscription) — set instead of recipient_id. */
+  payee_name?: string | null;
   recipient?: Pick<Profile, 'id' | 'display_name' | 'avatar_url' | 'department' | 'paypal_email'>;
   items?: PaymentItem[];
 };
@@ -233,6 +302,11 @@ export type ExternalSigningInvite = {
   created_at: string;
   is_guardian_signing?: boolean;
   minor_name?: string;
+  signing_provider?: 'internal' | 'docusign';
+  docusign_envelope_id?: string;
+  docusign_status?: string;
+  docusign_completed_at?: string;
+  docusign_last_event_at?: string;
 };
 
 export type NoteStatus = 'open' | 'archived';

@@ -11,9 +11,9 @@
 
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/lib/react-router-adapters';
 import {
-  LayoutDashboard, Users, FileText, Activity, Settings, Search, PanelLeftClose, DollarSign, Presentation,
+  LayoutGrid, Users, FileText, Activity, Settings, Search, PanelLeftClose, DollarSign, Presentation,
 } from 'lucide-react';
 import { useCommandPalette } from '@/lib/hooks/useCommandPalette';
 import { acquireScrollLock, releaseScrollLock } from '@/lib/scroll-lock';
@@ -60,7 +60,7 @@ export function CommandPalette({ team, docs, decks = [], isContractor = false, i
 
   const items = useMemo<CommandItem[]>(() => {
     const pages: CommandItem[] = [
-      { id: 'p-overview', label: 'Overview', section: 'Pages', icon: LayoutDashboard, action: () => go('/') },
+      { id: 'p-issues', label: 'Issues', section: 'Pages', icon: LayoutGrid, action: () => go('/tasks') },
       { id: 'p-team', label: 'Team', section: 'Pages', icon: Users, action: () => go('/team') },
       { id: 'p-docs', label: 'Docs', section: 'Pages', icon: FileText, action: () => go('/docs') },
       ...(!isContractor ? [{ id: 'p-activity', label: 'Activity', section: 'Pages' as const, icon: Activity, action: () => go('/activity') }] : []),

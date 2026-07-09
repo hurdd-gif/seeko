@@ -1,0 +1,4 @@
+interface:
+  display_name: "SEEKO Repo Hygiene"
+  short_description: "Check SEEKO git and artifact hygiene."
+  default_prompt: "Audit SEEKO working tree hygiene before commit or PR."

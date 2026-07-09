@@ -1,6 +1,6 @@
 'use client';
 
-import DOMPurify from 'dompurify';
+import { sanitizeHtml } from '@/lib/sanitize';
 import { GameTreeTimeline } from './GameTreeTimeline';
 
 const SLOTS: Record<string, React.ReactNode> = {
@@ -36,7 +36,7 @@ export function DocContent({ html }: { html: string }) {
           <article
             key={i}
             className={DOC_BODY_CLASS}
-            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(part.content) }}
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(part.content) }}
           />
         ) : (
           <div key={i} className="my-4">

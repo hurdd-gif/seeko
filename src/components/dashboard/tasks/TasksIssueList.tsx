@@ -8,7 +8,7 @@
  * containing every group and row, separated by inset hairlines.
  *
  * Row anatomy (left → right):
- *   [StatusDot]  DIH-NN  Title (truncate)  [PriorityIcon]  [Dept chip]  [Avatar]  Deadline
+ *   [StatusDot]  NN  Title (truncate)  [PriorityIcon]  [Dept chip]  [Avatar]  Deadline
  *
  * ANIMATION STORYBOARD
  *
@@ -22,10 +22,19 @@
 
 'use client';
 
-import { memo, useMemo } from 'react';
-import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
-import { motion, useReducedMotion } from 'motion/react';
-import { UserPlus } from 'lucide-react';
+import {
+  memo,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type MouseEvent as ReactMouseEvent,
+} from 'react';
+import { createPortal } from 'react-dom';
+import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
+import { Pencil, Trash2, UserPlus } from 'lucide-react';
 import type { Profile, TaskStatus, TaskWithAssignee } from '@/lib/types';
 import { TASK_STATUSES } from '@/lib/types';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -54,6 +63,29 @@ function shortDate(dateStr?: string): string | null {
 
 const ROW_STAGGER_MS = 18;
 const ROW_STAGGER_CAP = 10; // rows beyond this share the same delay so long lists don't feel slow
+const CONTEXT_MENU_WIDTH = 168;
+const CONTEXT_MENU_GAP = 8;
+
+type ContextMenuCoords = { left: number; top: number };
+
+function placeContextMenu(x: number, y: number, menuHeight: number): ContextMenuCoords {
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  let left = x;
+  let top = y;
+
+  if (left + CONTEXT_MENU_WIDTH + CONTEXT_MENU_GAP > vw) {
+    left = vw - CONTEXT_MENU_WIDTH - CONTEXT_MENU_GAP;
+  }
+  if (left < CONTEXT_MENU_GAP) left = CONTEXT_MENU_GAP;
+
+  if (top + menuHeight + CONTEXT_MENU_GAP > vh) {
+    top = vh - menuHeight - CONTEXT_MENU_GAP;
+  }
+  if (top < CONTEXT_MENU_GAP) top = CONTEXT_MENU_GAP;
+
+  return { left, top };
+}
 
 /* ── component ───────────────────────────────────────────── */
 
@@ -64,6 +96,7 @@ export const TasksIssueList = memo(function TasksIssueList({
   onSelectTask,
   isAdmin = false,
   onAssign,
+  onDeleteTask,
 }: {
   tasks: TaskWithAssignee[];
   team: Profile[];
@@ -71,6 +104,7 @@ export const TasksIssueList = memo(function TasksIssueList({
   onSelectTask: (task: TaskWithAssignee) => void;
   isAdmin?: boolean;
   onAssign?: (taskId: string, profileId: string | null) => void;
+  onDeleteTask?: (taskId: string) => void;
 }) {
   const reduce = useReducedMotion();
 
@@ -142,6 +176,7 @@ export const TasksIssueList = memo(function TasksIssueList({
                   isAdmin={isAdmin}
                   team={team}
                   onAssign={onAssign}
+                  onDelete={onDeleteTask}
                 />
               );
             })}
@@ -164,6 +199,7 @@ function IssueRow({
   isAdmin,
   team,
   onAssign,
+  onDelete,
 }: {
   task: TaskWithAssignee;
   isSelected: boolean;
@@ -174,12 +210,42 @@ function IssueRow({
   isAdmin: boolean;
   team: Profile[];
   onAssign?: (taskId: string, profileId: string | null) => void;
+  onDelete?: (taskId: string) => void;
 }) {
-  const idLabel = task.task_number != null ? `DIH-${task.task_number}` : null;
+  const [contextOpen, setContextOpen] = useState(false);
+  const [contextCoords, setContextCoords] = useState<ContextMenuCoords | null>(null);
+  const contextMenuRef = useRef<HTMLDivElement>(null);
+  const contextPointerRef = useRef<ContextMenuCoords | null>(null);
+  const idLabel = task.task_number != null ? String(task.task_number) : null;
   const dept = typeof task.department === 'string' ? task.department : null;
   const date = shortDate(task.deadline ?? task.created_at);
   const assignee = task.assignee;
   const canQuickAssign = isAdmin && !!onAssign;
+  const canContextDelete = isAdmin && !!onDelete;
+
+  useLayoutEffect(() => {
+    if (!contextOpen || !contextPointerRef.current) return;
+    const h = contextMenuRef.current?.offsetHeight ?? 88;
+    setContextCoords(placeContextMenu(contextPointerRef.current.left, contextPointerRef.current.top, h));
+  }, [contextOpen]);
+
+  useEffect(() => {
+    if (!contextOpen) return;
+    function onDocPointer(event: MouseEvent) {
+      const target = event.target as Node;
+      if (contextMenuRef.current?.contains(target)) return;
+      setContextOpen(false);
+    }
+    function onKey(event: KeyboardEvent) {
+      if (event.key === 'Escape') setContextOpen(false);
+    }
+    document.addEventListener('mousedown', onDocPointer);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDocPointer);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [contextOpen]);
 
   function handleKeyDown(e: ReactKeyboardEvent<HTMLLIElement>) {
     if (e.defaultPrevented) return;
@@ -188,6 +254,70 @@ function IssueRow({
       onClick();
     }
   }
+
+  function handleContextMenu(event: ReactMouseEvent<HTMLLIElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+    contextPointerRef.current = { left: event.clientX, top: event.clientY };
+    setContextCoords(placeContextMenu(event.clientX, event.clientY, 88));
+    setContextOpen(true);
+  }
+
+  function handleEditFromContext() {
+    setContextOpen(false);
+    onClick();
+  }
+
+  function handleDeleteFromContext() {
+    setContextOpen(false);
+    onDelete?.(task.id);
+  }
+
+  const contextMenu = (
+    <AnimatePresence>
+      {contextOpen && contextCoords && (
+        <motion.div
+          ref={contextMenuRef}
+          key="issue-list-context-menu"
+          role="menu"
+          aria-label={`Quick actions for ${task.name}`}
+          initial={reduce ? false : { opacity: 0, y: -4, scale: 0.98 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={reduce ? { opacity: 0 } : { opacity: 0, y: -4, scale: 0.98 }}
+          transition={reduce ? { duration: 0 } : { type: 'spring', stiffness: 420, damping: 34 }}
+          style={{
+            position: 'fixed',
+            left: contextCoords.left,
+            top: contextCoords.top,
+            width: CONTEXT_MENU_WIDTH,
+            transformOrigin: 'top left',
+          }}
+          className="z-[220] overflow-hidden rounded-[14px] bg-white p-1 shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_2px_4px_-1px_rgba(0,0,0,0.08),0_10px_24px_-12px_rgba(0,0,0,0.22),0_24px_44px_-28px_rgba(0,0,0,0.18)]"
+        >
+          <button
+            type="button"
+            role="menuitem"
+            onClick={handleEditFromContext}
+            className="flex h-8 w-full items-center gap-2 rounded-[10px] px-2 text-left text-[12.5px] text-[#242424] transition-colors hover:bg-black/[0.045]"
+          >
+            <Pencil className="size-3.5 text-[#777777]" />
+            <span className="flex-1 truncate">Edit issue</span>
+          </button>
+          {canContextDelete && (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={handleDeleteFromContext}
+              className="flex h-8 w-full items-center gap-2 rounded-[10px] px-2 text-left text-[12.5px] text-[#dc2626] transition-colors hover:bg-[#fef2f2]"
+            >
+              <Trash2 className="size-3.5" />
+              <span className="flex-1 truncate">Delete issue</span>
+            </button>
+          )}
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
 
   const avatarVisual = assignee ? (
     <Avatar className="size-6 shrink-0 ring-1 ring-black/[0.04]">
@@ -219,28 +349,30 @@ function IssueRow({
   );
 
   return (
-    <motion.li
-      role="listitem"
-      tabIndex={0}
-      aria-label={`Open ${task.name}`}
-      aria-current={isSelected ? 'true' : undefined}
-      onClick={onClick}
-      onKeyDown={handleKeyDown}
-      initial={reduce ? false : { opacity: 0, y: 4 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={
-        reduce ? { duration: 0 } : { ...springs.smooth, delay: delayMs / 1000 }
-      }
-      className={cn(
-        'group/row flex cursor-pointer items-center gap-4 px-5 py-2.5 outline-none transition-colors',
-        'focus-visible:bg-[#0000000d]',
-        isSelected ? 'bg-[#0000000d]' : 'hover:bg-[#0000000a]',
-        !isLastInGroup &&
-          'relative after:absolute after:bottom-0 after:left-5 after:right-5 after:h-px after:bg-[#0000000d]',
-      )}
-    >
-      {/* Status */}
-      <StatusDot status={task.status} size="sm" className="shrink-0" />
+    <>
+      <motion.li
+        role="listitem"
+        tabIndex={0}
+        aria-label={`Open ${task.name}`}
+        aria-current={isSelected ? 'true' : undefined}
+        onClick={onClick}
+        onKeyDown={handleKeyDown}
+        onContextMenu={handleContextMenu}
+        initial={reduce ? false : { opacity: 0, y: 4 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={
+          reduce ? { duration: 0 } : { ...springs.smooth, delay: delayMs / 1000 }
+        }
+        className={cn(
+          'group/row flex cursor-pointer items-center gap-4 px-5 py-2.5 outline-none transition-colors',
+          'focus-visible:bg-[#0000000d]',
+          isSelected || contextOpen ? 'bg-[#0000000d]' : 'hover:bg-[#0000000a]',
+          !isLastInGroup &&
+            'relative after:absolute after:bottom-0 after:left-5 after:right-5 after:h-px after:bg-[#0000000d]',
+        )}
+      >
+        {/* Status */}
+        <StatusDot status={task.status} size="sm" className="shrink-0" />
 
       {/* ID — fixed width so titles align across rows */}
       {idLabel ? (
@@ -291,6 +423,8 @@ function IssueRow({
       ) : (
         <span className="hidden w-[64px] shrink-0 sm:inline-block" aria-hidden />
       )}
-    </motion.li>
+      </motion.li>
+      {typeof document !== 'undefined' ? createPortal(contextMenu, document.body) : null}
+    </>
   );
 }

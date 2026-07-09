@@ -9,7 +9,8 @@
  * for the canonical table). Backlog renders a dashed ring (Linear convention);
  * Done renders a filled accent disk with an inline check.
  *
- * `size` is the visual diameter — sm = 8px (card row), md = 14px (column header).
+ * `size` is the visual diameter — sm = 8px (card row), md = 14px (column
+ * header), lg = 18px (rich toast subject row).
  */
 
 import { Check, X } from 'lucide-react';
@@ -26,9 +27,9 @@ export const STATUS_COLOR: Record<TaskStatus, string> = {
   Duplicate:     '#a3a3a3', // neutral-400
 };
 
-type Size = 'sm' | 'md';
+type Size = 'sm' | 'md' | 'lg';
 
-const SIZE_PX: Record<Size, number> = { sm: 8, md: 14 };
+const SIZE_PX: Record<Size, number> = { sm: 8, md: 14, lg: 18 };
 
 export function StatusDot({
   status,
@@ -51,7 +52,7 @@ export function StatusDot({
         style={{ width: px, height: px, backgroundColor: color }}
         aria-label="Done"
       >
-        {size === 'md' && <Check className="size-2.5" strokeWidth={3} />}
+        {size !== 'sm' && <Check className="size-2.5" strokeWidth={3} />}
       </span>
     );
   }
@@ -69,7 +70,7 @@ export function StatusDot({
         }}
         aria-label={status}
       >
-        {size === 'md' && <X className="size-2.5" strokeWidth={3} />}
+        {size !== 'sm' && <X className="size-2.5" strokeWidth={3} />}
       </span>
     );
   }

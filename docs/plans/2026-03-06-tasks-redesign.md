@@ -1,5 +1,7 @@
 # Tasks Redesign Implementation Plan
 
+> **⚠️ SUPERSEDED** by `docs/plans/2026-05-19-tasks-board-redesign.md` (Linear-style board redesign, 2026-05-19). The flat 3-column table described below has been replaced by a column-per-status board with a right rail. This file is kept for history only; do not execute it.
+
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** Redesign the TaskList component from a grouped, feature-heavy layout to a clean 3-column flat table with pill filters, matching the reference image aesthetic in dark theme.

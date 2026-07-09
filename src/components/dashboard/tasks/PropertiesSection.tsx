@@ -9,6 +9,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { toast } from 'sonner';
 import { Calendar as CalendarIcon } from 'lucide-react';
 import type {
   Area,
@@ -174,6 +175,9 @@ export function PropertiesSection({
       const revert = { [column]: task[column] } as Partial<TaskWithAssignee>;
       onTaskUpdated?.(task.id, revert);
       console.error(`Failed to update task.${String(column)}:`, error);
+    } else if (column === 'status') {
+      const nextStatus = String(next);
+      toast.success(nextStatus === 'Done' ? 'Marked done' : `Status changed to ${nextStatus}`);
     }
   }
 

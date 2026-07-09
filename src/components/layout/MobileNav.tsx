@@ -3,10 +3,9 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { Link } from '@/lib/react-router-adapters';
+import { usePathname } from '@/lib/react-router-adapters';
 import {
-  LayoutDashboard,
   CheckSquare,
   Users,
   FileText,
@@ -17,12 +16,12 @@ import {
   MoreHorizontal,
   X,
 } from 'lucide-react';
-import dynamic from 'next/dynamic';
+import { dynamic } from '@/lib/react-router-adapters';
 import { Notification } from '@/lib/types';
 import { getInitials } from '@/lib/utils';
 import { TOUR_STEP_IDS_MOBILE } from '@/lib/tour-constants';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import Image from 'next/image';
+import { Image } from '@/lib/react-router-adapters';
 import { useHaptics } from '@/components/HapticsProvider';
 import { springs } from '@/lib/motion';
 
@@ -37,7 +36,6 @@ const NotificationBell = dynamic(
 );
 
 const NAV_BASE = [
-  { href: '/',         label: 'Overview',   mobileLabel: 'Home',   icon: LayoutDashboard, tourKey: 'OVERVIEW' as const },
   { href: '/tasks',    label: '__TASKS__',  mobileLabel: '__TASKS__', icon: CheckSquare,  tourKey: 'TASKS' as const },
   { href: '/team',     label: 'Team',       mobileLabel: 'Team',   icon: Users,           tourKey: 'TEAM' as const },
   { href: '/docs',     label: 'Docs',       mobileLabel: 'Docs',   icon: FileText,        tourKey: 'DOCS' as const },
@@ -103,12 +101,12 @@ export function MobileNav({
     <>
       {createPortal(
         <header
-          className={`md:hidden flex items-center justify-between px-4 h-14 w-full shrink-0 border-b border-border/50 ${!useHeaderSlot ? 'fixed top-0 left-0 right-0 z-40 mobile-fixed-layer' : ''}`}
+          className={`md:hidden flex items-center justify-between px-4 h-14 w-full shrink-0 border-b border-border/50 scroll-edge-blur ${!useHeaderSlot ? 'fixed top-0 left-0 right-0 z-40 mobile-fixed-layer' : ''}`}
           style={{
             background: 'rgba(26, 26, 26, 0.92)',
-            backdropFilter: 'saturate(180%) blur(16px)',
-            WebkitBackdropFilter: 'saturate(180%) blur(16px)',
-          }}
+            '--edge-blur': '16px',
+            '--edge-saturate': '180%',
+          } as React.CSSProperties}
         >
           <div className="flex items-center gap-2.5">
             <Image src="/seeko-s.png" alt="SEEKO" width={20} height={20} unoptimized />
@@ -137,13 +135,13 @@ export function MobileNav({
       {createPortal(
         <>
           <nav
-            className={`md:hidden fixed bottom-0 left-0 right-0 z-50 transition-opacity duration-150 mobile-bottom-nav ${moreOpen || modalOpen ? 'opacity-0 pointer-events-none' : ''}`}
+            className={`md:hidden fixed bottom-0 left-0 right-0 z-50 mobile-bottom-nav scroll-edge-blur ${moreOpen || modalOpen ? 'opacity-0 pointer-events-none' : ''}`}
             style={{
               background: 'rgba(26, 26, 26, 0.96)',
-              backdropFilter: 'saturate(180%) blur(16px)',
-              WebkitBackdropFilter: 'saturate(180%) blur(16px)',
+              '--edge-blur': '16px',
+              '--edge-saturate': '180%',
               paddingBottom: 'env(safe-area-inset-bottom)',
-            }}
+            } as React.CSSProperties}
           >
             {/* Active indicator bar */}
             <div className="relative flex items-stretch h-14">

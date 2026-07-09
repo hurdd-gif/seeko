@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
+import { Link } from '@/lib/react-router-adapters';
 import { Stagger, StaggerItem } from '@/components/motion';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -62,18 +62,18 @@ const FILTER_ACTIONS: Record<Exclude<FilterKey, 'all'>, string[]> = {
 const ACTION_CONFIG: Record<string, ActionConfig> = {
   Created:              { icon: Plus,          className: 'text-seeko-accent' },
   Assigned:             { icon: UserPlus,      className: 'text-blue-400', significant: true },
-  Completed:            { icon: CheckCircle2,  className: 'text-emerald-400', significant: true },
+  Completed:            { icon: CheckCircle2,  className: 'text-sky-400', significant: true },
   Started:              { icon: Play,          className: 'text-amber-400' },
   'Moved to review':    { icon: SendHorizontal, className: 'text-blue-400' },
   'Returned task':      { icon: Undo2,         className: 'text-orange-400', significant: true },
-  'Approved task':      { icon: CheckCircle2,  className: 'text-emerald-400', significant: true },
+  'Approved task':      { icon: CheckCircle2,  className: 'text-sky-400', significant: true },
   Blocked:              { icon: AlertCircle,   className: 'text-red-400', significant: true },
   Deleted:              { icon: Trash2,        className: 'text-red-400', significant: true },
   'Commented on':       { icon: MessageSquare, className: 'text-purple-400' },
   'Changed priority':   { icon: RefreshCw,     className: 'text-amber-400' },
   'Changed department': { icon: RefreshCw,     className: 'text-blue-400' },
   'Requested extension':  { icon: Clock,        className: 'text-amber-400' },
-  'Approved extension':   { icon: CheckCircle2,  className: 'text-emerald-400', significant: true },
+  'Approved extension':   { icon: CheckCircle2,  className: 'text-sky-400', significant: true },
   'Denied extension':     { icon: AlertCircle,   className: 'text-red-400', significant: true },
 };
 

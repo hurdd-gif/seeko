@@ -1,12 +1,25 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/lib/react-router-adapters';
 import { motion, AnimatePresence } from 'motion/react';
 import { Loader2, ArrowRight } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useHaptics } from '@/components/HapticsProvider';
 import { DURATION_STATE_MS } from '@/lib/motion';
+import { cn } from '@/lib/utils';
+import { LIGHT_INPUT, BTN_PRIMARY, LIGHT_FOCUS_RING } from '@/components/dashboard/lightKit';
+
+// Light Paper port: the field + button surface migrated dark→light onto the
+// canonical lightKit (white `shadow-seeko` card, #808080 labels, azure-ring
+// inputs, black-pill CTA) so the set-password step matches the light app and
+// the signer ceremony. The AnimatePresence button state (idle ⇄ saving with the
+// ArrowRight / spinner) is preserved verbatim — only the colors changed.
+const FIELD_LABEL = 'block text-xs font-medium text-[#808080] mb-1.5';
+const FIELD_INPUT = cn(
+  'w-full px-3 py-2 text-sm transition-[border-color,box-shadow] duration-150 focus-visible:outline-none',
+  LIGHT_INPUT,
+);
 
 export function SetPasswordForm() {
   const router = useRouter();
@@ -52,9 +65,9 @@ export function SetPasswordForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-4 rounded-2xl bg-white p-6 shadow-seeko">
       <div>
-        <label htmlFor="password" className="block text-xs font-medium text-muted-foreground mb-1.5">
+        <label htmlFor="password" className={FIELD_LABEL}>
           Password
         </label>
         <input
@@ -65,12 +78,12 @@ export function SetPasswordForm() {
           required
           minLength={8}
           placeholder="At least 8 characters"
-          className="w-full px-3 py-2 rounded-lg bg-card border border-border text-foreground text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:border-seeko-accent transition-colors"
+          className={FIELD_INPUT}
         />
       </div>
 
       <div>
-        <label htmlFor="confirm" className="block text-xs font-medium text-muted-foreground mb-1.5">
+        <label htmlFor="confirm" className={FIELD_LABEL}>
           Confirm password
         </label>
         <input
@@ -80,18 +93,22 @@ export function SetPasswordForm() {
           onChange={e => setConfirm(e.target.value)}
           required
           placeholder="Re-enter password"
-          className="w-full px-3 py-2 rounded-lg bg-card border border-border text-foreground text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:border-seeko-accent transition-colors"
+          className={FIELD_INPUT}
         />
       </div>
 
       {error && (
-        <p className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-lg">{error}</p>
+        <p className="rounded-lg bg-[#d4503e]/10 px-3 py-2 text-sm text-[#d4503e]">{error}</p>
       )}
 
       <button
         type="submit"
         disabled={loading}
-        className="w-full py-2 px-4 rounded-lg bg-seeko-accent text-primary-foreground font-semibold text-sm hover:bg-seeko-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors min-w-[140px] inline-flex items-center justify-center gap-2"
+        className={cn(
+          BTN_PRIMARY,
+          LIGHT_FOCUS_RING,
+          'mt-1 inline-flex h-10 w-full items-center justify-center gap-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50',
+        )}
       >
         <AnimatePresence mode="wait">
           <motion.span

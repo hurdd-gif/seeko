@@ -4,7 +4,12 @@ import { DashboardHero } from '../DashboardHero';
 
 describe('DashboardHero', () => {
   it('renders greeting + name', () => {
-    render(<DashboardHero greeting="Good evening" name="Karti" />);
+    render(<DashboardHero greeting="Good evening" name="Karti" dateLabel="Monday, June 1" />);
     expect(screen.getByText('Good evening, Karti')).toBeInTheDocument();
+  });
+
+  it('renders the date subtitle', () => {
+    render(<DashboardHero greeting="Good evening" name="Karti" dateLabel="Monday, June 1" />);
+    expect(screen.getByText('Monday, June 1')).toBeInTheDocument();
   });
 });

@@ -48,6 +48,16 @@ create trigger profiles_block_privilege_escalation_trigger
   before update on public.profiles
   for each row execute procedure public.profiles_block_privilege_escalation();
 
+create or replace function public.is_admin_for_rls(p_user_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select coalesce((select p.is_admin from public.profiles p where p.id = p_user_id), false)
+$$;
+
 -- When an invited user signs up, set their profile from pending_invites (match email case-insensitively; delete row after apply).
 create or replace function public.handle_new_user()
 returns trigger as $$
@@ -94,6 +104,8 @@ create table public.areas (
   progress    int  default 0,
   description text,
   phase       public.area_phase,
+  sort_order  int  default 0,
+  target_date date,
   created_at  timestamptz default now()
 );
 
@@ -110,27 +122,101 @@ create policy "Admins can update areas"
 
 -- ─── Tasks ────────────────────────────────────────────────────────────────────
 
-create type public.task_status as enum ('Complete', 'In Progress', 'In Review', 'Blocked');
+-- task_status expanded to Linear-7 in migration 20260519000001
+-- (Complete → Done, Blocked → Backlog; use Canceled for permanent stops).
+create type public.task_status as enum (
+  'Backlog', 'Todo', 'In Progress', 'In Review', 'Done', 'Canceled', 'Duplicate'
+);
 create type public.priority as enum ('High', 'Medium', 'Low');
+create type public.task_activity_kind as enum (
+  'created', 'status_changed', 'assignee_changed',
+  'milestone_linked', 'milestone_unlinked', 'progress_changed'
+);
+
+create sequence public.task_number_seq;
 
 create table public.tasks (
   id          uuid primary key default gen_random_uuid(),
   name        text not null,
   department  public.department,
-  status      public.task_status default 'In Progress',
+  status      public.task_status not null default 'Backlog',
   priority    public.priority default 'Medium',
   area_id     uuid references public.areas(id),
   assignee_id uuid references public.profiles(id),
   deadline    date,
   description text,
-  created_at  timestamptz default now()
+  bounty      numeric,
+  task_number bigint not null default nextval('public.task_number_seq'),
+  progress    smallint not null default 0 check (progress between 0 and 100),
+  created_at  timestamptz default now(),
+  updated_at  timestamptz not null default now()
 );
+
+create unique index tasks_task_number_idx on public.tasks (task_number);
+
+-- Milestones (schema only this round; CRUD UI is a follow-up)
+create table public.milestones (
+  id          uuid primary key default gen_random_uuid(),
+  name        text not null,
+  target_date date,
+  area_id     uuid references public.areas(id) on delete set null,
+  sort_order  int not null default 0,
+  created_at  timestamptz not null default now()
+);
+
+create table public.task_milestone (
+  task_id      uuid not null references public.tasks(id) on delete cascade,
+  milestone_id uuid not null references public.milestones(id) on delete cascade,
+  primary key (task_id, milestone_id)
+);
+
+alter table public.milestones      enable row level security;
+alter table public.task_milestone  enable row level security;
+-- Read: any authenticated; Modify: admins only.
+
+-- activity_log was extended in 20260519000001:
+--   added columns: kind (task_activity_kind, nullable), before_value (jsonb), after_value (jsonb)
+--   index: activity_log_task_id_created_at_idx (task_id, created_at DESC) WHERE task_id IS NOT NULL
+-- AFTER INSERT/UPDATE/DELETE triggers on tasks and task_milestone write typed rows.
+-- activity_log was extended again in 20260704140000:
+--   added column: source text NOT NULL DEFAULT 'human' CHECK (source IN ('human','eko'))
+--   'eko' marks rows EKO's write executors created; the feed renders EKO's own
+--   badge/name for those instead of the admin who ran the agent. Trigger-written
+--   rows keep the 'human' default.
 
 alter table public.tasks enable row level security;
 
-create policy "Authenticated users can read tasks"
+create or replace function public.can_read_task_for_rls(p_task_id uuid, p_user_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select
+    public.is_admin_for_rls(p_user_id)
+    or coalesce((select t.assignee_id = p_user_id from public.tasks t where t.id = p_task_id), false)
+$$;
+
+create policy "Authorized users can read tasks"
   on public.tasks for select
-  using (auth.role() = 'authenticated');
+  using (public.can_read_task_for_rls(id, auth.uid()));
+
+create policy "Authorized users can read task_milestone"
+  on public.task_milestone for select
+  using (public.can_read_task_for_rls(task_id, auth.uid()));
+
+create policy "Authorized users can read milestones"
+  on public.milestones for select
+  using (
+    public.is_admin_for_rls(auth.uid())
+    or exists (
+      select 1
+      from public.task_milestone tm
+      where tm.milestone_id = milestones.id
+        and public.can_read_task_for_rls(tm.task_id, auth.uid())
+    )
+  );
 
 -- ─── Task Deliverables ────────────────────────────────────────────────────────
 -- Files uploaded when completing a task. Visible only to admins (Deliverables tab).
@@ -168,21 +254,61 @@ create table public.docs (
   content    text,
   parent_id  uuid references public.docs(id),
   sort_order int default 0,
+  restricted_department text[] default null,
   granted_user_ids uuid[] default null,  -- allow specific users when doc is department-restricted
   created_at timestamptz default now()
 );
 
 alter table public.docs enable row level security;
 
-create policy "Authenticated users can read docs"
+create or replace function public.can_read_doc_for_rls(
+  p_restricted_departments text[],
+  p_granted_user_ids uuid[],
+  p_user_id uuid
+)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select
+    public.is_admin_for_rls(p_user_id)
+    or coalesce(cardinality(p_restricted_departments), 0) = 0
+    or p_user_id = any(coalesce(p_granted_user_ids, array[]::uuid[]))
+    or exists (
+      select 1
+      from public.profiles p
+      where p.id = p_user_id
+        and p.department::text = any(coalesce(p_restricted_departments, array[]::text[]))
+    )
+$$;
+
+create or replace function public.can_read_doc_id_for_rls(p_doc_id uuid, p_user_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select coalesce((
+    select public.can_read_doc_for_rls(d.restricted_department, d.granted_user_ids, p_user_id)
+    from public.docs d
+    where d.id = p_doc_id
+  ), false)
+$$;
+
+create policy "Authorized users can read docs"
   on public.docs for select
-  using (auth.role() = 'authenticated');
+  using (public.can_read_doc_for_rls(restricted_department, granted_user_ids, auth.uid()));
 
 -- ─── Activity Log ─────────────────────────────────────────────────────────────
 
 create table public.activity_log (
   id         uuid primary key default gen_random_uuid(),
   user_id    uuid references public.profiles(id),
+  task_id    uuid references public.tasks(id) on delete set null,
+  doc_id     uuid references public.docs(id) on delete set null,
   action     text not null,
   target     text not null,
   created_at timestamptz default now()
@@ -190,9 +316,14 @@ create table public.activity_log (
 
 alter table public.activity_log enable row level security;
 
-create policy "Authenticated users can read activity"
+create policy "Authorized users can read activity"
   on public.activity_log for select
-  using (auth.role() = 'authenticated');
+  using (
+    public.is_admin_for_rls(auth.uid())
+    or user_id = auth.uid()
+    or (task_id is not null and public.can_read_task_for_rls(task_id, auth.uid()))
+    or (doc_id is not null and public.can_read_doc_id_for_rls(doc_id, auth.uid()))
+  );
 
 create policy "Authenticated users can insert activity"
   on public.activity_log for insert
@@ -238,15 +369,21 @@ alter table public.pending_invites enable row level security;
 create type public.payment_status as enum ('pending', 'paid', 'cancelled');
 
 create table public.payments (
-  id           uuid primary key default gen_random_uuid(),
-  recipient_id uuid not null references public.profiles(id),
-  amount       decimal not null,
-  currency     text not null default 'USD',
-  description  text,
-  status       public.payment_status not null default 'pending',
-  paid_at      timestamptz,
-  created_by   uuid not null references public.profiles(id),
-  created_at   timestamptz default now()
+  id              uuid primary key default gen_random_uuid(),
+  recipient_id    uuid references public.profiles(id),  -- null for external payees/invoices (20260310100000)
+  recipient_email text,                                 -- external invoice flow (20260310100000)
+  payee_name      text,                                 -- manual external payee, e.g. a vendor/subscription (20260703120000)
+  amount          decimal not null,
+  currency        text not null default 'USD',
+  description     text,
+  status          public.payment_status not null default 'pending',
+  paid_at         timestamptz,
+  created_by      uuid not null references public.profiles(id),
+  created_at      timestamptz default now(),
+  -- Identity rules: never both a profile and a payee name; always at least one
+  -- of profile / payee name / recipient email.
+  constraint payments_payee_not_both check (recipient_id is null or payee_name is null),
+  constraint payments_payee_identity check (recipient_id is not null or payee_name is not null or recipient_email is not null)
 );
 
 create table public.payment_items (

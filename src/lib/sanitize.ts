@@ -8,7 +8,7 @@ import DOMPurify from 'isomorphic-dompurify';
  * `DOMPurify.sanitize is not a function` (a 500). `isomorphic-dompurify` wires
  * up jsdom on the server and the native DOM in the browser, so this works in
  * both contexts. Centralized here so every call site is SSR-safe by default and
- * the dependency stays swappable for the planned framework migration.
+ * the dependency stays swappable if the rendering runtime changes again.
  */
 export function sanitizeHtml(dirty: string): string {
   return DOMPurify.sanitize(dirty ?? '');

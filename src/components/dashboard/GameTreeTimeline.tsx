@@ -2,7 +2,7 @@
 
 import { useLayoutEffect, useRef, useState, useCallback } from 'react';
 
-const ACCENT = '#6ee7b7';
+const ACCENT = '#0d7aff';
 const LINE_X = 8;
 
 const TREE = [

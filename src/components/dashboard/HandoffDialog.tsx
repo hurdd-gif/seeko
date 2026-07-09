@@ -16,7 +16,7 @@ function getInitials(name: string): string {
 }
 
 const DEPT_COLOR: Record<string, string> = {
-  'Coding':         'text-emerald-400',
+  'Coding':         'text-sky-400',
   'Visual Art':     'text-blue-300',
   'UI/UX':          'text-violet-300',
   'Animation':      'text-amber-400',

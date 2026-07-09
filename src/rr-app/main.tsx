@@ -6,11 +6,18 @@ import './globals.css';
 import './styles.css';
 import { CookieNotice } from '@/components/CookieNotice';
 import { LiveToastProvider } from '@/components/dashboard/notifications/LiveToastContext';
+import { setAppNavigate } from '@/lib/app-navigate';
 import { initScrollEdgeBlurDamper } from '@/lib/scroll-blur';
 import { router } from './routes';
 
 // Dims .scroll-edge-blur chrome while any container is scrolling (globals.css).
 initScrollEdgeBlurDamper();
+
+// Let code outside the Router context (e.g. rich toasts' "View issue" link)
+// perform SPA navigation without importing the router directly.
+setAppNavigate((to) => {
+  void router.navigate(to);
+});
 
 const root = document.getElementById('root');
 

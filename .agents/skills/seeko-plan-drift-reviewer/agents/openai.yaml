@@ -1,0 +1,4 @@
+interface:
+  display_name: "SEEKO Plan Drift Reviewer"
+  short_description: "Compare SEEKO work against plans."
+  default_prompt: "Review SEEKO implementation drift against docs/plans."
