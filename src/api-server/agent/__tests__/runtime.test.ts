@@ -216,4 +216,8 @@ describe('EKO_AGENT_SYSTEM', () => {
     expect(EKO_AGENT_SYSTEM).toContain('line break');
     expect(EKO_AGENT_SYSTEM.toLowerCase()).toContain('never one long paragraph');
   });
+
+  it('instructs a blank line before a closing question so the ask stands apart', () => {
+    expect(EKO_AGENT_SYSTEM.toLowerCase()).toContain('blank line');
+  });
 });
