@@ -2,6 +2,7 @@ import { useEffect, useMemo } from 'react';
 import { useDataRouter } from '@/lib/react-router-adapters';
 import { subscribeEkoBus } from '@/lib/eko-bus';
 import { createClient } from '@/lib/supabase/client';
+import { subscribeToTable, type SupabaseLike } from '@/lib/realtime';
 
 /**
  * Live Issues board: re-runs the active route's loaders when tasks change, so
@@ -35,7 +36,6 @@ export function useTasksRealtimeRefresh() {
   useEffect(() => {
     if (!router) return;
 
-    let disposed = false;
     let timer: number | null = null;
 
     const scheduleRevalidate = () => {
@@ -55,37 +55,23 @@ export function useTasksRealtimeRefresh() {
       }
     });
 
-    // 2. Realtime row events. Attach the session token to the socket BEFORE
-    // subscribing — the channel otherwise joins as anon and RLS silently
-    // filters out every row.
-    const channel = supabase
-      ? supabase
-          .channel('tasks-board-live')
-          .on(
-            'postgres_changes',
-            { event: '*', schema: 'public', table: 'tasks' },
-            scheduleRevalidate,
-          )
-      : null;
-
-    if (supabase && channel) {
-      void supabase.auth.getSession().then(({ data: { session } }) => {
-        if (disposed) return;
-        if (session) supabase.realtime.setAuth(session.access_token);
-        channel.subscribe();
-      });
-    }
+    // 2. Realtime row events — subscribeToTable owns the setAuth-before-
+    // subscribe invariant.
+    const disposeRealtime = supabase
+      ? subscribeToTable(supabase as unknown as SupabaseLike, 'tasks-board-live', [
+          { event: '*', table: 'tasks', handler: scheduleRevalidate },
+        ])
+      : () => {};
 
     // 3. Catch-up on returning to the tab.
     const onFocus = () => scheduleRevalidate();
     window.addEventListener('focus', onFocus);
 
     return () => {
-      disposed = true;
       if (timer !== null) window.clearTimeout(timer);
       window.removeEventListener('focus', onFocus);
       unsubscribeBus();
-      if (supabase && channel) void supabase.removeChannel(channel);
+      disposeRealtime();
     };
   }, [router, supabase]);
 }

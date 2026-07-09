@@ -26,6 +26,7 @@ import { useRouter } from '@/lib/react-router-adapters';
 import { createBrowserClient } from '@supabase/ssr';
 import { Notification } from '@/lib/types';
 import { useIsDesktop } from '@/lib/hooks/useIsDesktop';
+import { subscribeToTable, type SupabaseLike } from '@/lib/realtime';
 import { acquireScrollLock, releaseScrollLock } from '@/lib/scroll-lock';
 import { BellToggle } from './notifications/BellToggle';
 import { DesktopNotificationPanel } from './notifications/DesktopNotificationPanel';
@@ -101,46 +102,48 @@ export function NotificationBell({ userId, initialCount, initialNotifications, l
     return () => window.removeEventListener('keydown', handleKey);
   }, [open]);
 
-  // Real-time subscription
+  // Real-time subscription — subscribeToTable owns the setAuth-before-
+  // subscribe invariant.
   useEffect(() => {
-    const channel = supabase
-      .channel('notifications')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` },
-        (payload) => {
+    return subscribeToTable(supabase as unknown as SupabaseLike, 'notifications', [
+      {
+        event: 'INSERT',
+        table: 'notifications',
+        filter: `user_id=eq.${userId}`,
+        handler: (payload) => {
           const notif = payload.new as Notification;
           setNotifications(prev => [notif, ...prev].slice(0, 20));
           setUnreadCount(c => c + 1);
           addLiveToast(notif);
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` },
-        (payload) => {
+        },
+      },
+      {
+        event: 'UPDATE',
+        table: 'notifications',
+        filter: `user_id=eq.${userId}`,
+        handler: (payload) => {
           const updated = payload.new as Notification;
           setNotifications(prev => {
             const next = prev.map(n => n.id === updated.id ? { ...n, read: updated.read } : n);
             setUnreadCount(next.filter(n => !n.read).length);
             return next;
           });
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: 'DELETE', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` },
-        (payload) => {
+        },
+      },
+      {
+        event: 'DELETE',
+        table: 'notifications',
+        filter: `user_id=eq.${userId}`,
+        handler: (payload) => {
           const deletedId = (payload.old as { id: string }).id;
           setNotifications(prev => {
             const next = prev.filter(n => n.id !== deletedId);
             setUnreadCount(next.filter(n => !n.read).length);
             return next;
           });
-        }
-      )
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
+        },
+      },
+    ]);
   }, [userId, supabase]);
 
   const markAllRead = useCallback(async () => {

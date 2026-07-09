@@ -14,6 +14,8 @@ import { LiveToastProvider } from '../notifications/LiveToastContext';
 
 // Stub the browser Supabase client so the bell's realtime channel doesn't open a
 // real socket — we only assert that the live bell mounts vs. the static glyph.
+// Shape matches SupabaseLike (src/lib/realtime.ts): subscribeToTable calls
+// auth.getSession() before subscribing, so the stub must carry it.
 vi.mock('@supabase/ssr', () => ({
   createBrowserClient: () => {
     const channel = {
@@ -23,6 +25,8 @@ vi.mock('@supabase/ssr', () => ({
     return {
       channel: () => channel,
       removeChannel: () => {},
+      realtime: { setAuth: () => {} },
+      auth: { getSession: () => Promise.resolve({ data: { session: null } }) },
       from: () => ({
         update: () => ({ eq: () => ({ eq: () => Promise.resolve({ error: null }) }) }),
       }),

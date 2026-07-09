@@ -39,6 +39,7 @@ import { Separator } from '@/components/ui/separator';
 import { springs, TAB_PILL_SPRING, DURATION_BACKDROP_MS, PANEL_SPRING, PANEL, SLIDEOUT, SLIDEOUT_SPRING } from '@/lib/motion';
 import { formatDeadline, formatDeadlineFull } from '@/lib/format-deadline';
 import { acquireScrollLock, releaseScrollLock } from '@/lib/scroll-lock';
+import { subscribeToTable, type SupabaseLike } from '@/lib/realtime';
 
 const REACTION_EMOJIS = ['👍', '👎', '🎉', '😂', '❓', '🔥', '❤️'];
 
@@ -937,12 +938,12 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
 
     let isMounted = true;
 
-    const channel = supabase
-      .channel(`comments:${task.id}`)
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'task_comments', filter: `task_id=eq.${task.id}` },
-        (payload) => {
+    const disposeRealtime = subscribeToTable(supabase as unknown as SupabaseLike, `comments:${task.id}`, [
+      {
+        event: 'INSERT',
+        table: 'task_comments',
+        filter: `task_id=eq.${task.id}`,
+        handler: (payload) => {
           const incoming = payload.new as TaskComment;
           // Skip if this is our own comment (already optimistically added)
           if (incoming.user_id === currentUserId) return;
@@ -959,31 +960,33 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
                 setComments(prev => [...prev, mapped]);
               }
             });
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'task_comments', filter: `task_id=eq.${task.id}` },
-        (payload) => {
+        },
+      },
+      {
+        event: 'UPDATE',
+        table: 'task_comments',
+        filter: `task_id=eq.${task.id}`,
+        handler: (payload) => {
           const updated = payload.new as TaskComment;
           setComments(prev =>
             prev.map(c => c.id === updated.id ? { ...c, content: updated.content, updated_at: updated.updated_at } : c)
           );
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: 'DELETE', schema: 'public', table: 'task_comments', filter: `task_id=eq.${task.id}` },
-        (payload) => {
+        },
+      },
+      {
+        event: 'DELETE',
+        table: 'task_comments',
+        filter: `task_id=eq.${task.id}`,
+        handler: (payload) => {
           const deleted = payload.old as { id: string };
           setComments(prev => prev.filter(c => c.id !== deleted.id));
-        }
-      )
-      .subscribe();
+        },
+      },
+    ]);
 
     return () => {
       isMounted = false;
-      supabase.removeChannel(channel);
+      disposeRealtime();
     };
   }, [open, task.id, currentUserId, supabase]);
 
