@@ -209,4 +209,11 @@ describe('EKO_AGENT_SYSTEM', () => {
   it('lets EKO acknowledge an already approved and executed write', () => {
     expect(EKO_AGENT_SYSTEM).toContain('already approved and executed');
   });
+
+  it('instructs replies to break distinct points onto separate lines, never one paragraph', () => {
+    // The tray renders replies in a narrow bubble; a single dense paragraph is
+    // unreadable there. The prompt must demand short, line-broken replies.
+    expect(EKO_AGENT_SYSTEM).toContain('line break');
+    expect(EKO_AGENT_SYSTEM.toLowerCase()).toContain('never one long paragraph');
+  });
 });

@@ -1870,7 +1870,9 @@ export function AgentCompanion({ userKey }: { userKey?: string }) {
                                 </span>
                               </span>
                             ) : (
-                              <span className="block text-pretty break-words">{item.text}</span>
+                              // pre-line: EKO separates points with line breaks (per its prompt);
+                              // render them as breaks instead of collapsing to one paragraph.
+                              <span className="block whitespace-pre-line text-pretty break-words">{item.text}</span>
                             )}
                           </div>
                         </motion.div>
