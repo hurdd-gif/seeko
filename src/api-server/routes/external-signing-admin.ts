@@ -1,9 +1,9 @@
 import { Hono, type Context } from 'hono';
 import {
-  ExternalSigningAdminAccessError,
   loadExternalSigningAdminIndex,
   type ExternalSigningAdminData,
 } from '@/lib/external-signing-admin';
+import { AccessError, accessErrorStatus } from '@/lib/access-error';
 import { getAuthenticatedUser, type AuthenticatedUser } from '../supabase';
 
 type AuthResolver = (c: Context) => Promise<AuthenticatedUser | null>;
@@ -28,8 +28,8 @@ export function createExternalSigningAdminRoutes(options: ExternalSigningAdminRo
     try {
       return c.json(await externalSigningAdminLoader(user));
     } catch (error) {
-      if (error instanceof ExternalSigningAdminAccessError) {
-        return c.json({ error: error.code }, error.code === 'admin_required' ? 403 : 404);
+      if (error instanceof AccessError) {
+        return c.json({ error: error.message }, accessErrorStatus(error.reason));
       }
 
       console.error('[hono external-signing-admin] load failed:', error);

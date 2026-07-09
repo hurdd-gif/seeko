@@ -51,7 +51,7 @@ describe('DocsRouteContent', () => {
   });
 
   it('renders the real DocList inside the Docs LightShell', () => {
-    renderDocs({ status: 'ready', index });
+    renderDocs({ status: 'ready', data: index });
 
     // LightShell chrome (Issues + Docs flat tabs) + redesigned docs work surface.
     expect(screen.getByTestId('Documents tab')).toBeInTheDocument();

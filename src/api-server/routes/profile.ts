@@ -2,10 +2,10 @@ import { Hono, type Context } from 'hono';
 import {
   completeOnboardingProfile,
   loadOnboardingProfile,
-  OnboardingAccessError,
   type CompleteOnboardingInput,
   type OnboardingData,
 } from '@/lib/onboarding-index';
+import { AccessError, accessErrorStatus } from '@/lib/access-error';
 import { getServiceClient } from '@/lib/supabase/service';
 import { getAuthenticatedUser, type AuthenticatedUser } from '../supabase';
 import { requireAdminVia } from '../auth-utils';
@@ -63,8 +63,8 @@ export function createProfileRoutes(options: ProfileRoutesOptions = {}) {
     try {
       return c.json(await onboardingLoader(user));
     } catch (error) {
-      if (error instanceof OnboardingAccessError) {
-        return c.json({ error: error.code }, 404);
+      if (error instanceof AccessError) {
+        return c.json({ error: error.message }, accessErrorStatus(error.reason));
       }
 
       console.error('[hono profile/onboarding] load failed:', error);
@@ -88,8 +88,8 @@ export function createProfileRoutes(options: ProfileRoutesOptions = {}) {
     try {
       return c.json(await onboardingUpdater(user, body));
     } catch (error) {
-      if (error instanceof OnboardingAccessError) {
-        return c.json({ error: error.code }, 404);
+      if (error instanceof AccessError) {
+        return c.json({ error: error.message }, accessErrorStatus(error.reason));
       }
       if (error instanceof Error && error.message === 'display_name_required') {
         return c.json({ error: 'display_name_required' }, 400);

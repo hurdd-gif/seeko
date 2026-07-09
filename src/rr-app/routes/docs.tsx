@@ -3,21 +3,13 @@ import { DocList } from '@/components/dashboard/DocList';
 import { LightShell } from '@/components/dashboard/LightShell';
 import { SidePanelSlot } from '@/components/ui/side-panel';
 import type { DocsViewData } from '@/lib/dashboard-views';
+import { loadView, type ViewState } from '../load-view';
 import { PaperState } from './_paper-state';
 
-type DocsLoaderData =
-  | { status: 'ready'; index: DocsViewData }
-  | { status: 'unauthorized' }
-  | { status: 'forbidden' }
-  | { status: 'not_found' };
+type DocsLoaderData = ViewState<DocsViewData>;
 
 export async function docsLoader(_args: LoaderFunctionArgs): Promise<DocsLoaderData> {
-  const response = await fetch('/api/docs-view');
-  if (response.status === 401) return { status: 'unauthorized' };
-  if (response.status === 403) return { status: 'forbidden' };
-  if (response.status === 404) return { status: 'not_found' };
-  if (!response.ok) throw new Response('Unable to load documents', { status: response.status });
-  return { status: 'ready', index: (await response.json()) as DocsViewData };
+  return loadView<DocsViewData>('/api/docs-view', 'Unable to load documents');
 }
 
 export function DocsRoute() {
@@ -36,7 +28,7 @@ export function DocsRouteContent({ data }: { data: DocsLoaderData }) {
     return <PaperState title="Profile not found" description="Your account does not have a team profile yet." />;
   }
 
-  const { account, docs, team, userDepartment, isAdmin, currentUserId } = data.index;
+  const { account, docs, team, userDepartment, isAdmin, currentUserId } = data.data;
 
   return (
     <LightShell activeTab="docs" navLabel="Sections" account={account} fill bordered>

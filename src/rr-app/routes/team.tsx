@@ -20,13 +20,10 @@ import { InviteForm } from '@/components/dashboard/InviteForm';
 import { DepartmentSelect } from '@/components/dashboard/DepartmentSelect';
 import { ContractorToggle } from '@/components/dashboard/ContractorToggle';
 import { LIGHT_DEPT_BADGE } from '@/components/dashboard/lightKit';
+import { loadView, type ViewState } from '../load-view';
 import { PaperState } from './_paper-state';
 
-type TeamLoaderData =
-  | { status: 'ready'; roster: TeamRosterData }
-  | { status: 'unauthorized' }
-  | { status: 'forbidden' }
-  | { status: 'not_found' };
+type TeamLoaderData = ViewState<TeamRosterData>;
 
 const TIMING = {
   heading: 0,
@@ -39,18 +36,7 @@ const TIMING = {
 const delay = (ms: number) => ms / 1000;
 
 export async function teamLoader(_args: LoaderFunctionArgs): Promise<TeamLoaderData> {
-  const response = await fetch('/api/team');
-
-  if (response.status === 401) return { status: 'unauthorized' };
-  if (response.status === 403) return { status: 'forbidden' };
-  if (response.status === 404) return { status: 'not_found' };
-
-  if (!response.ok) {
-    throw new Response('Unable to load team', { status: response.status });
-  }
-
-  const roster = (await response.json()) as TeamRosterData;
-  return { status: 'ready', roster };
+  return loadView<TeamRosterData>('/api/team', 'Unable to load team');
 }
 
 export function TeamRoute() {
@@ -71,7 +57,7 @@ export function TeamRouteContent({ data }: { data: TeamLoaderData }) {
     return <PaperState title="Profile not found" description="Your account does not have a team profile yet." />;
   }
 
-  const { roster } = data;
+  const roster = data.data;
   const { isAdmin, onlineCount } = roster;
   // The loader returns members/contractors already department-sorted server-side
   // (compareTeamRosterMembers), so we render them in order as-is.

@@ -2,21 +2,13 @@ import { useLoaderData, type LoaderFunctionArgs } from 'react-router';
 import { SettingsPanel } from '@/components/dashboard/SettingsPanel';
 import { FadeRise } from '@/components/motion';
 import type { SettingsViewData } from '@/lib/dashboard-views';
+import { loadView, type ViewState } from '../load-view';
 import { PaperState } from './_paper-state';
 
-type SettingsLoaderData =
-  | { status: 'ready'; view: SettingsViewData }
-  | { status: 'unauthorized' }
-  | { status: 'forbidden' }
-  | { status: 'not_found' };
+type SettingsLoaderData = ViewState<SettingsViewData>;
 
 export async function settingsLoader(_args: LoaderFunctionArgs): Promise<SettingsLoaderData> {
-  const response = await fetch('/api/settings-view');
-  if (response.status === 401) return { status: 'unauthorized' };
-  if (response.status === 403) return { status: 'forbidden' };
-  if (response.status === 404) return { status: 'not_found' };
-  if (!response.ok) throw new Response('Unable to load settings', { status: response.status });
-  return { status: 'ready', view: (await response.json()) as SettingsViewData };
+  return loadView<SettingsViewData>('/api/settings-view', 'Unable to load settings');
 }
 
 export function SettingsRoute() {
@@ -35,7 +27,7 @@ export function SettingsRouteContent({ data }: { data: SettingsLoaderData }) {
     return <PaperState title="Profile not found" description="Your account does not have a team profile yet." />;
   }
 
-  const { profile, isAdmin, team, completedTasks } = data.view;
+  const { profile, isAdmin, team, completedTasks } = data.data;
 
   // The original `(dashboard)/settings/page.tsx` rendered the SettingsPanel —
   // which owns its own full-bleed <LightShell> — wrapped in a single FadeRise.

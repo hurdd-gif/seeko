@@ -58,7 +58,7 @@ function renderDetail(data: Parameters<typeof TaskDetailRouteContent>[0]['data']
 
 describe('TaskDetailRouteContent', () => {
   it('renders the real TaskDetailPage from the full board shape', () => {
-    renderDetail({ status: 'ready', detail });
+    renderDetail({ status: 'ready', data: detail });
 
     expect(screen.getByRole('heading', { name: 'Ship task detail' })).toBeInTheDocument();
     expect(screen.getByText('Move task detail into Hono.')).toBeInTheDocument();

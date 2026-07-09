@@ -1,6 +1,5 @@
 import { Hono, type Context } from 'hono';
 import {
-  DashboardAccessError,
   loadActivityIndex,
   loadNotificationsIndex,
   loadProgressIndex,
@@ -22,6 +21,7 @@ import {
   type ProgressViewData,
   type SettingsViewData,
 } from '@/lib/dashboard-views';
+import { AccessError, accessErrorStatus } from '@/lib/access-error';
 import { getAuthenticatedUser, type AuthenticatedUser } from '../supabase';
 
 type AuthResolver = (c: Context) => Promise<AuthenticatedUser | null>;
@@ -79,9 +79,8 @@ async function handleDashboardLoad<T>(
   try {
     return c.json(await loader(user));
   } catch (error) {
-    if (error instanceof DashboardAccessError) {
-      // Only a missing profile is a 404; investor/non-admin gates are 403.
-      return c.json({ error: error.code }, error.code === 'profile_not_found' ? 404 : 403);
+    if (error instanceof AccessError) {
+      return c.json({ error: error.message }, accessErrorStatus(error.reason));
     }
 
     console.error('[hono dashboard] load failed:', error);

@@ -3,6 +3,7 @@ import { SettingsPanel } from '@/components/dashboard/SettingsPanel';
 import { FadeRise } from '@/components/motion';
 import type { Profile } from '@/lib/types';
 import type { InvestorProfile, InvestorSettingsData } from '@/lib/investor-index';
+import { loadView, type ViewState } from '../load-view';
 
 /* ─────────────────────────────────────────────────────────
  * Investor Settings — faithful light Paper port.
@@ -17,25 +18,10 @@ import type { InvestorProfile, InvestorSettingsData } from '@/lib/investor-index
  * route (Family A): SettingsPanel's fixed-inset LightShell is its own chrome.
  * ───────────────────────────────────────────────────────── */
 
-type InvestorSettingsLoaderData =
-  | { status: 'ready'; index: InvestorSettingsData }
-  | { status: 'unauthorized' }
-  | { status: 'forbidden' }
-  | { status: 'not_found' };
+type InvestorSettingsLoaderData = ViewState<InvestorSettingsData>;
 
 export async function investorSettingsLoader(_args: LoaderFunctionArgs): Promise<InvestorSettingsLoaderData> {
-  const response = await fetch('/api/investor-settings-index');
-
-  if (response.status === 401) return { status: 'unauthorized' };
-  if (response.status === 403) return { status: 'forbidden' };
-  if (response.status === 404) return { status: 'not_found' };
-
-  if (!response.ok) {
-    throw new Response('Unable to load investor settings', { status: response.status });
-  }
-
-  const index = (await response.json()) as InvestorSettingsData;
-  return { status: 'ready', index };
+  return loadView<InvestorSettingsData>('/api/investor-settings-index', 'Unable to load investor settings');
 }
 
 export function InvestorSettingsRoute() {
@@ -52,7 +38,7 @@ export function InvestorSettingsRouteContent({ data }: { data: InvestorSettingsL
   // matching the team `/settings` route.
   return (
     <FadeRise delay={0} y={16}>
-      <SettingsPanel profile={toProfile(data.index.profile)} isAdmin={false} team={[]} />
+      <SettingsPanel profile={toProfile(data.data.profile)} isAdmin={false} team={[]} />
     </FadeRise>
   );
 }

@@ -2,26 +2,12 @@ import { useLoaderData, type LoaderFunctionArgs } from 'react-router';
 import { TasksBoard } from '@/components/dashboard/tasks/TasksBoard';
 import { useTasksRealtimeRefresh } from '@/lib/hooks/useTasksRealtimeRefresh';
 import type { TasksBoardData } from '@/lib/tasks-board';
+import { loadView, type ViewState } from '../load-view';
 
-type TasksLoaderData =
-  | { status: 'ready'; board: TasksBoardData }
-  | { status: 'unauthorized' }
-  | { status: 'forbidden' }
-  | { status: 'not_found' };
+type TasksLoaderData = ViewState<TasksBoardData>;
 
 export async function tasksLoader(_args: LoaderFunctionArgs): Promise<TasksLoaderData> {
-  const response = await fetch('/api/tasks-board');
-
-  if (response.status === 401) return { status: 'unauthorized' };
-  if (response.status === 403) return { status: 'forbidden' };
-  if (response.status === 404) return { status: 'not_found' };
-
-  if (!response.ok) {
-    throw new Response('Unable to load tasks', { status: response.status });
-  }
-
-  const board = (await response.json()) as TasksBoardData;
-  return { status: 'ready', board };
+  return loadView<TasksBoardData>('/api/tasks-board', 'Unable to load tasks');
 }
 
 export function TasksRoute() {
@@ -60,7 +46,7 @@ export function TasksRouteContent({ data }: { data: TasksLoaderData }) {
   // controls), so this route mounts OUTSIDE the shared ShellFrame — exactly like
   // the shipped Next.js /tasks page, which was the landing surface that owned the
   // global chrome.
-  return <TasksBoard {...data.board} />;
+  return <TasksBoard {...data.data} />;
 }
 
 // Tasks owns full-screen chrome, so its access states stand alone on the bare

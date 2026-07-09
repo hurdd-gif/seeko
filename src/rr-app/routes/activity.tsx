@@ -2,21 +2,13 @@ import { useLoaderData, type LoaderFunctionArgs } from 'react-router';
 import { LightShell } from '@/components/dashboard/LightShell';
 import { ActivityView } from '@/components/dashboard/ActivityView';
 import type { ActivityViewData } from '@/lib/dashboard-views';
+import { loadView, type ViewState } from '../load-view';
 import { PaperState } from './_paper-state';
 
-type ActivityLoaderData =
-  | { status: 'ready'; view: ActivityViewData }
-  | { status: 'unauthorized' }
-  | { status: 'forbidden' }
-  | { status: 'not_found' };
+type ActivityLoaderData = ViewState<ActivityViewData>;
 
 export async function activityLoader(_args: LoaderFunctionArgs): Promise<ActivityLoaderData> {
-  const response = await fetch('/api/activity-view');
-  if (response.status === 401) return { status: 'unauthorized' };
-  if (response.status === 403) return { status: 'forbidden' };
-  if (response.status === 404) return { status: 'not_found' };
-  if (!response.ok) throw new Response('Unable to load activity', { status: response.status });
-  return { status: 'ready', view: (await response.json()) as ActivityViewData };
+  return loadView<ActivityViewData>('/api/activity-view', 'Unable to load activity');
 }
 
 export function ActivityRoute() {
@@ -35,13 +27,13 @@ export function ActivityRouteContent({ data }: { data: ActivityLoaderData }) {
     return <PaperState title="Profile not found" description="Your account does not have a team profile yet." />;
   }
 
-  const { account } = data.view;
+  const { account } = data.data;
 
   return (
     <LightShell navLabel="Sections" account={account} fill bordered>
       <main className="scroll-mask-y scrollbar-paper min-h-0 flex-1 overflow-y-auto">
         <div className="mx-auto max-w-3xl px-6 py-8">
-          <ActivityView view={data.view} />
+          <ActivityView view={data.data} />
         </div>
       </main>
     </LightShell>

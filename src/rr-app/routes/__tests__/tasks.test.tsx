@@ -81,7 +81,7 @@ describe('TasksRouteContent', () => {
   });
 
   it('renders the original board with its chrome', () => {
-    renderBoard({ status: 'ready', board });
+    renderBoard({ status: 'ready', data: board });
 
     // Task card from the real <TasksBoard> grid.
     expect(screen.getByText('Ship task index')).toBeInTheDocument();

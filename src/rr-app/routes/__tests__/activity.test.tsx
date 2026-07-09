@@ -56,7 +56,7 @@ describe('ActivityRouteContent', () => {
   });
 
   it('renders the ActivityView (heatmap + feed) inside the LightShell', () => {
-    renderActivity({ status: 'ready', view });
+    renderActivity({ status: 'ready', data: view });
 
     expect(screen.getByText('Issues')).toBeInTheDocument();
     // Heatmap card header sums the daily counts.
@@ -70,7 +70,7 @@ describe('ActivityRouteContent', () => {
   });
 
   it('shows the empty state when there is no activity', () => {
-    renderActivity({ status: 'ready', view: { ...view, activity: [] } });
+    renderActivity({ status: 'ready', data: { ...view, activity: [] } });
 
     expect(screen.getByText('No activity yet.')).toBeInTheDocument();
   });

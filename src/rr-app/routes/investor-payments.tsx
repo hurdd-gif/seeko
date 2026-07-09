@@ -35,28 +35,14 @@ import { FadeRise, Stagger, StaggerItem, HoverCard } from '@/components/motion';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { springs } from '@/lib/motion';
 import type { InvestorPaymentsData } from '@/lib/investor-index';
+import { loadView, type ViewState } from '../load-view';
 
 type PaymentRow = InvestorPaymentsData['payments'][number];
 
-type InvestorPaymentsLoaderData =
-  | { status: 'ready'; index: InvestorPaymentsData }
-  | { status: 'unauthorized' }
-  | { status: 'forbidden' }
-  | { status: 'not_found' };
+type InvestorPaymentsLoaderData = ViewState<InvestorPaymentsData>;
 
 export async function investorPaymentsLoader(_args: LoaderFunctionArgs): Promise<InvestorPaymentsLoaderData> {
-  const response = await fetch('/api/investor-payments-index');
-
-  if (response.status === 401) return { status: 'unauthorized' };
-  if (response.status === 403) return { status: 'forbidden' };
-  if (response.status === 404) return { status: 'not_found' };
-
-  if (!response.ok) {
-    throw new Response('Unable to load investor payments', { status: response.status });
-  }
-
-  const index = (await response.json()) as InvestorPaymentsData;
-  return { status: 'ready', index };
+  return loadView<InvestorPaymentsData>('/api/investor-payments-index', 'Unable to load investor payments');
 }
 
 export function InvestorPaymentsRoute() {
@@ -69,7 +55,7 @@ export function InvestorPaymentsRouteContent({ data }: { data: InvestorPaymentsL
   if (data.status === 'forbidden') return <State title="Investor access required" description="Payments are available to investors and admins." />;
   if (data.status === 'not_found') return <State title="Profile not found" description="Your account does not have a SEEKO profile yet." />;
 
-  return <InvestorPaymentsIndex index={data.index} />;
+  return <InvestorPaymentsIndex index={data.data} />;
 }
 
 /* ─── Helpers ─────────────────────────────────────────────── */

@@ -80,7 +80,7 @@ export function InvestorPreviewRoute() {
   // letting visual QA see the full faithful page without an authed session.
   return (
     <InvestorShell profile={previewData.profile}>
-      <InvestorRouteContent data={{ status: 'ready', index: previewData, payments: paymentsPreviewData }} />
+      <InvestorRouteContent data={{ status: 'ready', data: { index: previewData, payments: paymentsPreviewData } }} />
     </InvestorShell>
   );
 }
@@ -149,7 +149,7 @@ const docsPreviewData: InvestorDocsData = {
 export function InvestorDocsPreviewRoute() {
   return (
     <InvestorShell profile={docsPreviewData.profile}>
-      <InvestorDocsRouteContent data={{ status: 'ready', index: docsPreviewData }} />
+      <InvestorDocsRouteContent data={{ status: 'ready', data: docsPreviewData }} />
     </InvestorShell>
   );
 }
@@ -237,7 +237,7 @@ const paymentsPreviewData: InvestorPaymentsData = {
 export function InvestorPaymentsPreviewRoute() {
   return (
     <InvestorShell profile={paymentsPreviewData.profile}>
-      <InvestorPaymentsRouteContent data={{ status: 'ready', index: paymentsPreviewData }} />
+      <InvestorPaymentsRouteContent data={{ status: 'ready', data: paymentsPreviewData }} />
     </InvestorShell>
   );
 }

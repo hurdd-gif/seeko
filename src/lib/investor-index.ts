@@ -1,4 +1,5 @@
 import { getServiceClient } from '@/lib/supabase/service';
+import { AccessError } from '@/lib/access-error';
 import type { Database } from '@/lib/supabase/database.types';
 import { TASKS_INDEX_SELECT, toTasksIndexItem, type TasksIndexItem } from '@/lib/tasks-index';
 import type { Doc, Profile } from '@/lib/types';
@@ -140,13 +141,6 @@ export type InvestorSettingsInput = {
   timezone?: string | null;
   paypalEmail?: string | null;
 };
-
-export class InvestorAccessError extends Error {
-  constructor(public readonly code: 'profile_not_found' | 'investor_required') {
-    super(code);
-    this.name = 'InvestorAccessError';
-  }
-}
 
 export async function loadInvestorOverview(currentUser: { id: string }): Promise<InvestorOverviewData> {
   const service = getServiceClient();
@@ -331,10 +325,10 @@ async function loadInvestorProfile(userId: string): Promise<InvestorProfile> {
     .maybeSingle();
 
   if (error) throw error;
-  if (!data) throw new InvestorAccessError('profile_not_found');
+  if (!data) throw new AccessError('profile_not_found');
 
   const profile = data as ProfileRow;
-  if (!profile.is_investor && !profile.is_admin) throw new InvestorAccessError('investor_required');
+  if (!profile.is_investor && !profile.is_admin) throw new AccessError('forbidden', 'investor_required');
 
   return {
     id: profile.id,

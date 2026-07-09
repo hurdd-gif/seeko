@@ -1,6 +1,5 @@
 import { Hono, type Context } from 'hono';
 import {
-  InvestorAccessError,
   loadInvestorDocs,
   loadInvestorOverview,
   loadInvestorPayments,
@@ -12,6 +11,7 @@ import {
   type InvestorSettingsData,
   type InvestorSettingsInput,
 } from '@/lib/investor-index';
+import { AccessError, accessErrorStatus } from '@/lib/access-error';
 import { getAuthenticatedUser, type AuthenticatedUser } from '../supabase';
 
 type AuthResolver = (c: Context) => Promise<AuthenticatedUser | null>;
@@ -55,8 +55,8 @@ export function createInvestorRoutes(options: InvestorRoutesOptions = {}) {
       try {
         return c.json(await investorSettingsUpdater(user, input));
       } catch (error) {
-        if (error instanceof InvestorAccessError) {
-          return c.json({ error: error.code }, error.code === 'investor_required' ? 403 : 404);
+        if (error instanceof AccessError) {
+          return c.json({ error: error.message }, accessErrorStatus(error.reason));
         }
         if (error instanceof Error && error.message === 'display_name_required') {
           return c.json({ error: 'display_name_required' }, 400);
@@ -85,8 +85,8 @@ async function handleInvestorLoad<T>(
   try {
     return c.json(await loader(user));
   } catch (error) {
-    if (error instanceof InvestorAccessError) {
-      return c.json({ error: error.code }, error.code === 'investor_required' ? 403 : 404);
+    if (error instanceof AccessError) {
+      return c.json({ error: error.message }, accessErrorStatus(error.reason));
     }
 
     console.error('[hono investor] load failed:', error);

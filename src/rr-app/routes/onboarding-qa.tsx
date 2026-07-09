@@ -19,5 +19,5 @@ const SEED: OnboardingData = {
 };
 
 export function OnboardingQaRoute() {
-  return <OnboardingRouteContent data={{ status: 'ready', index: SEED }} />;
+  return <OnboardingRouteContent data={{ status: 'ready', data: SEED }} />;
 }

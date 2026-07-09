@@ -1,4 +1,5 @@
 import { getServiceClient } from '@/lib/supabase/service';
+import { AccessError } from '@/lib/access-error';
 import type { Profile } from '@/lib/types';
 
 export const TEAM_DEPARTMENT_ORDER = ['Coding', 'Visual Art', 'UI/UX', 'Animation', 'Asset Creation'] as const;
@@ -36,13 +37,6 @@ export type TeamRosterData = {
   onlineCount: number;
 };
 
-export class TeamRosterAccessError extends Error {
-  constructor(public readonly code: 'profile_not_found' | 'investor_forbidden') {
-    super(code);
-    this.name = 'TeamRosterAccessError';
-  }
-}
-
 export async function loadTeamRoster(currentUser: {
   id: string;
   email?: string | null;
@@ -59,11 +53,11 @@ export async function loadTeamRoster(currentUser: {
   const currentProfile = profiles.find((profile) => profile.id === currentUser.id) ?? null;
 
   if (!currentProfile) {
-    throw new TeamRosterAccessError('profile_not_found');
+    throw new AccessError('profile_not_found');
   }
 
   if (currentProfile.is_investor && !currentProfile.is_admin) {
-    throw new TeamRosterAccessError('investor_forbidden');
+    throw new AccessError('forbidden', 'investor_forbidden');
   }
 
   const team = profiles

@@ -1,23 +1,15 @@
 import { useLoaderData, type LoaderFunctionArgs } from 'react-router';
 import { TaskDetailPage } from '@/components/dashboard/tasks/TaskDetailPage';
 import type { TaskDetailFullData } from '@/lib/tasks-board';
+import { loadView, type ViewState } from '../load-view';
 
-type TaskDetailLoaderData =
-  | { status: 'ready'; detail: TaskDetailFullData }
-  | { status: 'unauthorized' }
-  | { status: 'forbidden' }
-  | { status: 'not_found' };
+type TaskDetailLoaderData = ViewState<TaskDetailFullData>;
 
 export async function taskDetailLoader({ params }: LoaderFunctionArgs): Promise<TaskDetailLoaderData> {
   const id = params.id;
   if (!id) return { status: 'not_found' };
 
-  const response = await fetch(`/api/task-detail/${encodeURIComponent(id)}`);
-  if (response.status === 401) return { status: 'unauthorized' };
-  if (response.status === 403) return { status: 'forbidden' };
-  if (response.status === 404) return { status: 'not_found' };
-  if (!response.ok) throw new Response('Unable to load task', { status: response.status });
-  return { status: 'ready', detail: (await response.json()) as TaskDetailFullData };
+  return loadView<TaskDetailFullData>(`/api/task-detail/${encodeURIComponent(id)}`, 'Unable to load task');
 }
 
 export function TaskDetailRoute() {
@@ -51,7 +43,7 @@ export function TaskDetailRouteContent({ data }: { data: TaskDetailLoaderData })
     );
   }
 
-  const { task, areas, team, milestones, activity, isAdmin } = data.detail;
+  const { task, areas, team, milestones, activity, isAdmin } = data.data;
   return (
     <TaskDetailPage
       task={task}

@@ -2,18 +2,16 @@ import { Hono, type Context } from 'hono';
 import {
   loadTaskDetail,
   loadTasksIndex,
-  TaskDetailAccessError,
-  TasksIndexAccessError,
   type TaskDetailData,
   type TasksIndexData,
 } from '@/lib/tasks-index';
 import {
   loadTasksBoard,
   loadTaskDetailFull,
-  TasksBoardAccessError,
   type TasksBoardData,
   type TaskDetailFullData,
 } from '@/lib/tasks-board';
+import { AccessError, accessErrorStatus } from '@/lib/access-error';
 import { fetchMilestones, fetchTaskActivity } from '@/lib/supabase/data';
 import { getServiceClient } from '@/lib/supabase/service';
 import { getAuthenticatedUser, type AuthenticatedUser } from '../supabase';
@@ -61,11 +59,8 @@ export function createTasksRoutes(options: TasksRoutesOptions = {}) {
         const data = await taskDetailFullLoader(user, c.req.param('id'));
         return c.json(data);
       } catch (error) {
-        if (error instanceof TaskDetailAccessError) {
-          if (error.code === 'forbidden' || error.code === 'investor_forbidden') {
-            return c.json({ error: error.code }, 403);
-          }
-          return c.json({ error: error.code }, 404);
+        if (error instanceof AccessError) {
+          return c.json({ error: error.message }, accessErrorStatus(error.reason));
         }
 
         console.error('[hono task-detail/:id] load failed:', error);
@@ -83,8 +78,8 @@ export function createTasksRoutes(options: TasksRoutesOptions = {}) {
         const data = await tasksBoardLoader(user);
         return c.json(data);
       } catch (error) {
-        if (error instanceof TasksBoardAccessError) {
-          return c.json({ error: error.code }, error.code === 'investor_forbidden' ? 403 : 404);
+        if (error instanceof AccessError) {
+          return c.json({ error: error.message }, accessErrorStatus(error.reason));
         }
 
         console.error('[hono tasks-board] load failed:', error);
@@ -102,8 +97,8 @@ export function createTasksRoutes(options: TasksRoutesOptions = {}) {
       const data = await tasksIndexLoader(user);
       return c.json(data);
     } catch (error) {
-      if (error instanceof TasksIndexAccessError) {
-        return c.json({ error: error.code }, error.code === 'investor_forbidden' ? 403 : 404);
+      if (error instanceof AccessError) {
+        return c.json({ error: error.message }, accessErrorStatus(error.reason));
       }
 
       console.error('[hono tasks-index] load failed:', error);
@@ -121,11 +116,8 @@ export function createTasksRoutes(options: TasksRoutesOptions = {}) {
         const data = await taskDetailLoader(user, c.req.param('id'));
         return c.json(data);
       } catch (error) {
-        if (error instanceof TaskDetailAccessError) {
-          if (error.code === 'forbidden' || error.code === 'investor_forbidden') {
-            return c.json({ error: error.code }, 403);
-          }
-          return c.json({ error: error.code }, 404);
+        if (error instanceof AccessError) {
+          return c.json({ error: error.message }, accessErrorStatus(error.reason));
         }
 
         console.error('[hono tasks-index/:id] load failed:', error);

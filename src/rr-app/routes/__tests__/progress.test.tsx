@@ -43,7 +43,7 @@ describe('ProgressRouteContent', () => {
   });
 
   it('renders the real StudioProgressRing inside the LightShell', () => {
-    renderProgress({ status: 'ready', view });
+    renderProgress({ status: 'ready', data: view });
 
     expect(screen.getByRole('heading', { name: 'Progress' })).toBeInTheDocument();
     expect(screen.getByText('Issues')).toBeInTheDocument();

@@ -1,6 +1,6 @@
 import { getServiceClient } from '@/lib/supabase/service';
 import { getInitials } from '@/lib/utils';
-import { TaskDetailAccessError } from '@/lib/tasks-index';
+import { AccessError } from '@/lib/access-error';
 import type {
   Area,
   Milestone,
@@ -9,8 +9,6 @@ import type {
   TaskActivity,
   TaskWithAssignee,
 } from '@/lib/types';
-
-export { TaskDetailAccessError };
 
 /**
  * Rich payload for the original `<TasksBoard>` (the Linear/Height-style board on
@@ -61,13 +59,6 @@ const MILESTONE_SELECT =
 const NOTIFICATION_SELECT =
   'id, user_id, kind, title, body, link, read, created_at' as const;
 
-export class TasksBoardAccessError extends Error {
-  constructor(public readonly code: 'profile_not_found' | 'investor_forbidden') {
-    super(code);
-    this.name = 'TasksBoardAccessError';
-  }
-}
-
 export async function loadTasksBoard(currentUser: {
   id: string;
   email?: string | null;
@@ -81,9 +72,9 @@ export async function loadTasksBoard(currentUser: {
     .maybeSingle();
 
   if (profileError) throw profileError;
-  if (!profile) throw new TasksBoardAccessError('profile_not_found');
+  if (!profile) throw new AccessError('profile_not_found');
   if (profile.is_investor && !profile.is_admin) {
-    throw new TasksBoardAccessError('investor_forbidden');
+    throw new AccessError('forbidden', 'investor_forbidden');
   }
 
   const isAdmin = Boolean(profile.is_admin);
@@ -205,9 +196,9 @@ export async function loadTaskDetailFull(
     .maybeSingle();
 
   if (profileError) throw profileError;
-  if (!profile) throw new TaskDetailAccessError('profile_not_found');
+  if (!profile) throw new AccessError('profile_not_found');
   if (profile.is_investor && !profile.is_admin) {
-    throw new TaskDetailAccessError('investor_forbidden');
+    throw new AccessError('forbidden', 'investor_forbidden');
   }
 
   const isAdmin = Boolean(profile.is_admin);
@@ -219,14 +210,14 @@ export async function loadTaskDetailFull(
     .maybeSingle();
 
   if (taskError) throw taskError;
-  if (!taskRow) throw new TaskDetailAccessError('not_found');
+  if (!taskRow) throw new AccessError('not_found');
 
   const task = taskRow as unknown as TaskWithAssignee;
 
   // Non-admins may only open their own assigned tasks (matches the original
   // page's notFound() guard).
   if (!isAdmin && task.assignee_id !== currentUser.id) {
-    throw new TaskDetailAccessError('forbidden');
+    throw new AccessError('forbidden');
   }
 
   const [teamResult, areasResult, milestonesResult, activityResult] = await Promise.all([

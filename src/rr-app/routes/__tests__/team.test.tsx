@@ -95,7 +95,7 @@ describe('TeamRouteContent', () => {
   });
 
   it('renders the Team header with member + contractor sections inside the LightShell', () => {
-    renderTeam({ status: 'ready', roster });
+    renderTeam({ status: 'ready', data: roster });
 
     // Full-bleed Paper chrome: a back-link returns to the board (/tasks).
     const backLink = screen.getByRole('link', { name: /Team/i });
@@ -109,7 +109,7 @@ describe('TeamRouteContent', () => {
   });
 
   it('shows the invite form and per-member admin controls for admins', () => {
-    renderTeam({ status: 'ready', roster });
+    renderTeam({ status: 'ready', data: roster });
 
     // InviteForm header (collapsed, but its title is always visible)
     expect(screen.getByText('Invite Member')).toBeInTheDocument();
@@ -121,7 +121,7 @@ describe('TeamRouteContent', () => {
   });
 
   it('shows department chips and hides admin controls for non-admins', () => {
-    renderTeam({ status: 'ready', roster: nonAdminRoster() });
+    renderTeam({ status: 'ready', data: nonAdminRoster() });
 
     expect(screen.queryByText('Invite Member')).not.toBeInTheDocument();
     expect(screen.queryByText('Make Contractor')).not.toBeInTheDocument();

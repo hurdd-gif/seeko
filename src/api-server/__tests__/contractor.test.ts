@@ -2,7 +2,8 @@ import { Hono } from 'hono';
 import { describe, expect, it } from 'vitest';
 import type { AuthenticatedUser } from '../supabase';
 import { createContractorRoutes } from '../routes/contractor';
-import { ContractorAccessError, type ContractorOverviewData } from '@/lib/contractor-index';
+import { type ContractorOverviewData } from '@/lib/contractor-index';
+import { AccessError } from '@/lib/access-error';
 
 const READY: ContractorOverviewData = {
   profile: {
@@ -31,7 +32,7 @@ describe('GET /api/contractor-index', () => {
     const app = appWith({
       authResolver: async () => ({ id: 'u1', email: 'x' }) as AuthenticatedUser,
       contractorOverviewLoader: async () => {
-        throw new ContractorAccessError('contractor_required');
+        throw new AccessError('forbidden', 'contractor_required');
       },
     });
     const res = await app.request('/api/contractor-index');
@@ -43,7 +44,7 @@ describe('GET /api/contractor-index', () => {
     const app = appWith({
       authResolver: async () => ({ id: 'u1', email: 'x' }) as AuthenticatedUser,
       contractorOverviewLoader: async () => {
-        throw new ContractorAccessError('profile_not_found');
+        throw new AccessError('profile_not_found');
       },
     });
     const res = await app.request('/api/contractor-index');

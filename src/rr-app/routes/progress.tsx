@@ -3,21 +3,13 @@ import { LightShell } from '@/components/dashboard/LightShell';
 import { StudioProgressRing } from '@/components/dashboard/StudioProgressRing';
 import { FadeRise } from '@/components/motion';
 import type { ProgressViewData } from '@/lib/dashboard-views';
+import { loadView, type ViewState } from '../load-view';
 import { PaperState } from './_paper-state';
 
-type ProgressLoaderData =
-  | { status: 'ready'; view: ProgressViewData }
-  | { status: 'unauthorized' }
-  | { status: 'forbidden' }
-  | { status: 'not_found' };
+type ProgressLoaderData = ViewState<ProgressViewData>;
 
 export async function progressLoader(_args: LoaderFunctionArgs): Promise<ProgressLoaderData> {
-  const response = await fetch('/api/progress-view');
-  if (response.status === 401) return { status: 'unauthorized' };
-  if (response.status === 403) return { status: 'forbidden' };
-  if (response.status === 404) return { status: 'not_found' };
-  if (!response.ok) throw new Response('Unable to load progress', { status: response.status });
-  return { status: 'ready', view: (await response.json()) as ProgressViewData };
+  return loadView<ProgressViewData>('/api/progress-view', 'Unable to load progress');
 }
 
 export function ProgressRoute() {
@@ -36,7 +28,7 @@ export function ProgressRouteContent({ data }: { data: ProgressLoaderData }) {
     return <PaperState title="Profile not found" description="Your account does not have a team profile yet." />;
   }
 
-  const { account, areas, milestones, isAdmin } = data.view;
+  const { account, areas, milestones, isAdmin } = data.data;
 
   return (
     <LightShell navLabel="Sections" account={account} fill bordered>

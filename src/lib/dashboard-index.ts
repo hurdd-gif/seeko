@@ -1,4 +1,5 @@
 import { getServiceClient } from '@/lib/supabase/service';
+import { AccessError } from '@/lib/access-error';
 import type { Database } from '@/lib/supabase/database.types';
 
 const PROFILE_SELECT =
@@ -108,13 +109,6 @@ export type ProgressIndexData = {
   overallProgress: number;
   activeCount: number;
 };
-
-export class DashboardAccessError extends Error {
-  constructor(public readonly code: 'profile_not_found' | 'investor_forbidden' | 'not_admin') {
-    super(code);
-    this.name = 'DashboardAccessError';
-  }
-}
 
 export async function loadActivityIndex(currentUser: { id: string }): Promise<ActivityIndexData> {
   const { profile } = await loadDashboardProfile(currentUser.id);
@@ -247,8 +241,8 @@ async function loadDashboardProfile(userId: string) {
     .maybeSingle();
 
   if (error) throw error;
-  if (!data) throw new DashboardAccessError('profile_not_found');
-  if (data.is_investor && !data.is_admin) throw new DashboardAccessError('investor_forbidden');
+  if (!data) throw new AccessError('profile_not_found');
+  if (data.is_investor && !data.is_admin) throw new AccessError('forbidden', 'investor_forbidden');
 
   return {
     rawProfile: data as ProfileRow,

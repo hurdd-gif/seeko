@@ -1,5 +1,6 @@
 import { filterSigningInvites } from '@/lib/invite-filters';
 import { getServiceClient } from '@/lib/supabase/service';
+import { AccessError } from '@/lib/access-error';
 import type { Database } from '@/lib/supabase/database.types';
 import type { ExternalSigningInvite } from '@/lib/types';
 
@@ -49,13 +50,6 @@ export type ExternalSigningAdminData = {
   };
 };
 
-export class ExternalSigningAdminAccessError extends Error {
-  constructor(public readonly code: 'profile_not_found' | 'admin_required') {
-    super(code);
-    this.name = 'ExternalSigningAdminAccessError';
-  }
-}
-
 export async function loadExternalSigningAdminIndex(currentUser: { id: string }): Promise<ExternalSigningAdminData> {
   const service = getServiceClient();
   const { data: profileData, error: profileError } = await service
@@ -65,10 +59,10 @@ export async function loadExternalSigningAdminIndex(currentUser: { id: string })
     .maybeSingle();
 
   if (profileError) throw profileError;
-  if (!profileData) throw new ExternalSigningAdminAccessError('profile_not_found');
+  if (!profileData) throw new AccessError('profile_not_found');
 
   const profile = profileData as ProfileRow;
-  if (!profile.is_admin) throw new ExternalSigningAdminAccessError('admin_required');
+  if (!profile.is_admin) throw new AccessError('forbidden', 'admin_required');
 
   const { data, error } = await service
     .from('external_signing_invites')

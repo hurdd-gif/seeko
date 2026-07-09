@@ -1,12 +1,6 @@
 import { getServiceClient } from '@/lib/supabase/service';
+import { AccessError } from '@/lib/access-error';
 import type { Priority, TaskStatus } from './types';
-
-export class ContractorAccessError extends Error {
-  constructor(public readonly code: 'profile_not_found' | 'contractor_required') {
-    super(code);
-    this.name = 'ContractorAccessError';
-  }
-}
 
 export type ContractorProfile = {
   id: string;
@@ -57,7 +51,7 @@ export function assertContractorAccess(profile: {
   is_admin: boolean | null;
 }): void {
   if (!profile.is_contractor && !profile.is_admin) {
-    throw new ContractorAccessError('contractor_required');
+    throw new AccessError('forbidden', 'contractor_required');
   }
 }
 
@@ -70,7 +64,7 @@ async function loadContractorProfile(userId: string): Promise<ContractorProfile>
     .maybeSingle();
 
   if (error) throw error;
-  if (!data) throw new ContractorAccessError('profile_not_found');
+  if (!data) throw new AccessError('profile_not_found');
 
   const p = data as {
     id: string;

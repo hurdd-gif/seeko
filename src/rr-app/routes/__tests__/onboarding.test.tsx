@@ -42,7 +42,7 @@ describe('OnboardingRouteContent', () => {
   it('mounts the original OnboardingForm inside the light auth shell', () => {
     render(
       <MemoryRouter>
-        <OnboardingRouteContent data={{ status: 'ready', index }} />
+        <OnboardingRouteContent data={{ status: 'ready', data: index }} />
       </MemoryRouter>
     );
 

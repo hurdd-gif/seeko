@@ -1,4 +1,5 @@
 import { getServiceClient } from '@/lib/supabase/service';
+import { AccessError } from '@/lib/access-error';
 import type { Database } from '@/lib/supabase/database.types';
 import type { Priority, TaskStatus } from '@/lib/types';
 import { TASK_STATUSES } from '@/lib/types';
@@ -84,20 +85,6 @@ export type TaskDetailData = {
   }[];
 };
 
-export class TasksIndexAccessError extends Error {
-  constructor(public readonly code: 'profile_not_found' | 'investor_forbidden') {
-    super(code);
-    this.name = 'TasksIndexAccessError';
-  }
-}
-
-export class TaskDetailAccessError extends Error {
-  constructor(public readonly code: 'not_found' | 'forbidden' | 'profile_not_found' | 'investor_forbidden') {
-    super(code);
-    this.name = 'TaskDetailAccessError';
-  }
-}
-
 export async function loadTasksIndex(currentUser: {
   id: string;
   email?: string | null;
@@ -110,8 +97,8 @@ export async function loadTasksIndex(currentUser: {
     .maybeSingle();
 
   if (profileError) throw profileError;
-  if (!profile) throw new TasksIndexAccessError('profile_not_found');
-  if (profile.is_investor && !profile.is_admin) throw new TasksIndexAccessError('investor_forbidden');
+  if (!profile) throw new AccessError('profile_not_found');
+  if (profile.is_investor && !profile.is_admin) throw new AccessError('forbidden', 'investor_forbidden');
 
   let query = service
     .from('tasks')
@@ -156,8 +143,8 @@ export async function loadTaskDetail(
     .maybeSingle();
 
   if (profileError) throw profileError;
-  if (!profile) throw new TaskDetailAccessError('profile_not_found');
-  if (profile.is_investor && !profile.is_admin) throw new TaskDetailAccessError('investor_forbidden');
+  if (!profile) throw new AccessError('profile_not_found');
+  if (profile.is_investor && !profile.is_admin) throw new AccessError('forbidden', 'investor_forbidden');
 
   const { data, error } = await service
     .from('tasks')
@@ -166,12 +153,12 @@ export async function loadTaskDetail(
     .maybeSingle();
 
   if (error) throw error;
-  if (!data) throw new TaskDetailAccessError('not_found');
+  if (!data) throw new AccessError('not_found');
 
   const task = toTasksIndexItem(data as unknown as TaskIndexRow);
 
   if (!profile.is_admin && task.assigneeId !== currentUser.id) {
-    throw new TaskDetailAccessError('forbidden');
+    throw new AccessError('forbidden');
   }
 
   const { data: activity } = await service

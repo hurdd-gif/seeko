@@ -1,6 +1,6 @@
 import { getServiceClient } from '@/lib/supabase/service';
 import { getInitials } from '@/lib/utils';
-import { DashboardAccessError } from '@/lib/dashboard-index';
+import { AccessError } from '@/lib/access-error';
 import type { TasksBoardAccount } from '@/lib/tasks-board';
 import type { Area, Doc, Milestone, Profile, Task, TaskActivity } from '@/lib/types';
 
@@ -14,7 +14,6 @@ import type { Area, Doc, Milestone, Profile, Task, TaskActivity } from '@/lib/ty
  * loader carries `account.userId` so the header mounts the live realtime
  * NotificationBell (it opens a Supabase channel at mount) over the static glyph.
  */
-export { DashboardAccessError };
 
 const ACCOUNT_PROFILE_SELECT =
   'id, display_name, department, avatar_url, is_admin, is_investor' as const;
@@ -105,9 +104,9 @@ async function loadShellContext(currentUser: {
     .maybeSingle();
 
   if (profileError) throw profileError;
-  if (!profile) throw new DashboardAccessError('profile_not_found');
+  if (!profile) throw new AccessError('profile_not_found');
   if (profile.is_investor && !profile.is_admin) {
-    throw new DashboardAccessError('investor_forbidden');
+    throw new AccessError('forbidden', 'investor_forbidden');
   }
 
   const isAdmin = Boolean(profile.is_admin);
@@ -265,9 +264,9 @@ export async function loadSettingsView(currentUser: {
     .maybeSingle();
 
   if (profileError) throw profileError;
-  if (!profile) throw new DashboardAccessError('profile_not_found');
+  if (!profile) throw new AccessError('profile_not_found');
   if (profile.is_investor && !profile.is_admin) {
-    throw new DashboardAccessError('investor_forbidden');
+    throw new AccessError('forbidden', 'investor_forbidden');
   }
 
   const isAdmin = Boolean(profile.is_admin);
@@ -314,8 +313,8 @@ export async function loadPaymentsView(currentUser: {
     .maybeSingle();
 
   if (profileError) throw profileError;
-  if (!profile) throw new DashboardAccessError('profile_not_found');
-  if (!profile.is_admin && !profile.is_investor) throw new DashboardAccessError('not_admin');
+  if (!profile) throw new AccessError('profile_not_found');
+  if (!profile.is_admin && !profile.is_investor) throw new AccessError('forbidden', 'not_admin');
 
   const { data, error } = await service
     .from('profiles')

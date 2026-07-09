@@ -131,7 +131,7 @@ const payments: InvestorPaymentsData = {
 
 describe('investor routes', () => {
   it('renders the investor-focused dashboard overview', () => {
-    render(<InvestorRouteContent data={{ status: 'ready', index: overview, payments }} />);
+    render(<InvestorRouteContent data={{ status: 'ready', data: { index: overview, payments } }} />);
 
     expect(screen.getByRole('heading', { name: 'Current state of SEEKO' })).toBeInTheDocument();
     expect(screen.getByText(/2 tasks completed this week\./)).toBeInTheDocument();
@@ -165,7 +165,7 @@ describe('investor routes', () => {
   it('renders the faithful investor docs (real DocList read-only view)', () => {
     render(
       <MemoryRouter>
-        <InvestorDocsRouteContent data={{ status: 'ready', index: docs }} />
+        <InvestorDocsRouteContent data={{ status: 'ready', data: docs }} />
       </MemoryRouter>
     );
 
@@ -189,7 +189,7 @@ describe('investor routes', () => {
   });
 
   it('renders the faithful investor payments page', () => {
-    render(<InvestorPaymentsRouteContent data={{ status: 'ready', index: payments }} />);
+    render(<InvestorPaymentsRouteContent data={{ status: 'ready', data: payments }} />);
 
     // The original page is an h1 "Payments" + a smart summary line, NOT the
     // scaffold's "Disbursement history" eyebrow. summaryLine uses this-month
@@ -226,7 +226,7 @@ describe('investor routes', () => {
   it('renders the faithful investor settings (real SettingsPanel, no payments section)', () => {
     render(
       <MemoryRouter>
-        <InvestorSettingsRouteContent data={{ status: 'ready', index: { profile } }} />
+        <InvestorSettingsRouteContent data={{ status: 'ready', data: { profile } }} />
       </MemoryRouter>
     );
 

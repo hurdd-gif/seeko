@@ -2,24 +2,12 @@ import { useLoaderData, type LoaderFunctionArgs } from 'react-router';
 import type { OnboardingData } from '@/lib/onboarding-index';
 import { LightAuthShell } from '@/components/auth/LightAuthShell';
 import { OnboardingForm } from '@/components/onboarding/OnboardingForm';
+import { loadView, type ViewState } from '../load-view';
 
-type OnboardingLoaderData =
-  | { status: 'ready'; index: OnboardingData }
-  | { status: 'unauthorized' }
-  | { status: 'not_found' };
+type OnboardingLoaderData = ViewState<OnboardingData>;
 
 export async function onboardingLoader(_args: LoaderFunctionArgs): Promise<OnboardingLoaderData> {
-  const response = await fetch('/api/profile/onboarding');
-
-  if (response.status === 401) return { status: 'unauthorized' };
-  if (response.status === 404) return { status: 'not_found' };
-
-  if (!response.ok) {
-    throw new Response('Unable to load onboarding', { status: response.status });
-  }
-
-  const index = (await response.json()) as OnboardingData;
-  return { status: 'ready', index };
+  return loadView<OnboardingData>('/api/profile/onboarding', 'Unable to load onboarding');
 }
 
 export function OnboardingRoute() {
@@ -45,6 +33,15 @@ export function OnboardingRouteContent({ data }: { data: OnboardingLoaderData })
     );
   }
 
+  if (data.status === 'forbidden') {
+    return (
+      <LightAuthShell
+        title="Onboarding unavailable"
+        subtitle="Your account cannot access onboarding right now."
+      />
+    );
+  }
+
   if (data.status === 'not_found') {
     return (
       <LightAuthShell
@@ -54,7 +51,7 @@ export function OnboardingRouteContent({ data }: { data: OnboardingLoaderData })
     );
   }
 
-  const { index } = data;
+  const index = data.data;
   return (
     <LightAuthShell
       title="Welcome aboard to SEEKO!"

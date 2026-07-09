@@ -1,9 +1,9 @@
 import { Hono, type Context } from 'hono';
 import {
   loadTeamRoster,
-  TeamRosterAccessError,
   type TeamRosterData,
 } from '@/lib/team-roster';
+import { AccessError, accessErrorStatus } from '@/lib/access-error';
 import { getAuthenticatedUser, type AuthenticatedUser } from '../supabase';
 
 type TeamLoader = (user: AuthenticatedUser) => Promise<TeamRosterData>;
@@ -29,8 +29,8 @@ export function createTeamRoutes(options: TeamRoutesOptions = {}) {
       const data = await teamLoader(user);
       return c.json(data);
     } catch (error) {
-      if (error instanceof TeamRosterAccessError) {
-        return c.json({ error: error.code }, error.code === 'investor_forbidden' ? 403 : 404);
+      if (error instanceof AccessError) {
+        return c.json({ error: error.message }, accessErrorStatus(error.reason));
       }
 
       console.error('[hono team] load failed:', error);

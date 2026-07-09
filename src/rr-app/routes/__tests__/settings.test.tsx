@@ -45,7 +45,7 @@ describe('SettingsRouteContent', () => {
   });
 
   it('renders the real SettingsPanel inside its full-bleed LightShell', () => {
-    renderSettings({ status: 'ready', view });
+    renderSettings({ status: 'ready', data: view });
 
     // Full-bleed Paper chrome: a back-link returns to the board (/tasks).
     const backLink = screen.getByRole('link', { name: /Settings/i });

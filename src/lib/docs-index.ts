@@ -1,4 +1,5 @@
 import { getServiceClient } from '@/lib/supabase/service';
+import { AccessError } from '@/lib/access-error';
 import type { Database } from '@/lib/supabase/database.types';
 
 const DOCS_INDEX_SELECT =
@@ -53,13 +54,6 @@ export type DocsIndexData = {
   lockedCount: number;
 };
 
-export class DocsIndexAccessError extends Error {
-  constructor(public readonly code: 'profile_not_found' | 'investor_forbidden') {
-    super(code);
-    this.name = 'DocsIndexAccessError';
-  }
-}
-
 export async function loadDocsIndex(currentUser: {
   id: string;
   email?: string | null;
@@ -81,8 +75,8 @@ export async function loadDocsIndex(currentUser: {
 
   if (profileError) throw profileError;
   if (error) throw error;
-  if (!profile) throw new DocsIndexAccessError('profile_not_found');
-  if (profile.is_investor && !profile.is_admin) throw new DocsIndexAccessError('investor_forbidden');
+  if (!profile) throw new AccessError('profile_not_found');
+  if (profile.is_investor && !profile.is_admin) throw new AccessError('forbidden', 'investor_forbidden');
 
   const docs = ((data ?? []) as DocsRow[]).map((doc) => toDocsIndexItem(doc, {
     currentUserId: currentUser.id,

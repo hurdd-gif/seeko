@@ -1,9 +1,9 @@
 import { Hono, type Context } from 'hono';
 import {
-  DocsIndexAccessError,
   loadDocsIndex,
   type DocsIndexData,
 } from '@/lib/docs-index';
+import { AccessError, accessErrorStatus } from '@/lib/access-error';
 import { getServiceClient } from '@/lib/supabase/service';
 import { requireAdmin } from '../auth-utils';
 import { getAuthenticatedUser, type AuthenticatedUser } from '../supabase';
@@ -32,8 +32,8 @@ export function createDocsRoutes(options: DocsRoutesOptions = {}) {
       const data = await docsIndexLoader(user);
       return c.json(data);
     } catch (error) {
-      if (error instanceof DocsIndexAccessError) {
-        return c.json({ error: error.code }, error.code === 'investor_forbidden' ? 403 : 404);
+      if (error instanceof AccessError) {
+        return c.json({ error: error.message }, accessErrorStatus(error.reason));
       }
 
       console.error('[hono docs-index] load failed:', error);

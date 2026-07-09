@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { assertContractorAccess, ContractorAccessError } from '@/lib/contractor-index';
+import { assertContractorAccess } from '@/lib/contractor-index';
+import { AccessError } from '@/lib/access-error';
 
 describe('assertContractorAccess', () => {
   it('allows a contractor', () => {
@@ -15,8 +16,9 @@ describe('assertContractorAccess', () => {
       assertContractorAccess({ is_contractor: false, is_admin: false });
       throw new Error('should have thrown');
     } catch (err) {
-      expect(err).toBeInstanceOf(ContractorAccessError);
-      expect((err as ContractorAccessError).code).toBe('contractor_required');
+      expect(err).toBeInstanceOf(AccessError);
+      expect((err as AccessError).reason).toBe('forbidden');
+      expect((err as AccessError).message).toBe('contractor_required');
     }
   });
 
@@ -25,8 +27,9 @@ describe('assertContractorAccess', () => {
       assertContractorAccess({ is_contractor: null, is_admin: null });
       throw new Error('should have thrown');
     } catch (err) {
-      expect(err).toBeInstanceOf(ContractorAccessError);
-      expect((err as ContractorAccessError).code).toBe('contractor_required');
+      expect(err).toBeInstanceOf(AccessError);
+      expect((err as AccessError).reason).toBe('forbidden');
+      expect((err as AccessError).message).toBe('contractor_required');
     }
   });
 });

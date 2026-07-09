@@ -31,12 +31,11 @@ import { useChartStable, useYScale } from '@/components/charts/chart-context';
 import { InvestorWhereWereGoing } from '@/components/dashboard/InvestorWhereWereGoing';
 import type { Area as AreaType } from '@/lib/types';
 import type { InvestorOverviewData, InvestorPaymentsData } from '@/lib/investor-index';
+import type { ViewState } from '../load-view';
 
-type InvestorLoaderData =
-  | { status: 'ready'; index: InvestorOverviewData; payments: InvestorPaymentsData | null }
-  | { status: 'unauthorized' }
-  | { status: 'forbidden' }
-  | { status: 'not_found' };
+type InvestorReadyData = { index: InvestorOverviewData; payments: InvestorPaymentsData | null };
+
+type InvestorLoaderData = ViewState<InvestorReadyData>;
 
 const TIMING = {
   hero: 0,
@@ -88,7 +87,7 @@ export async function investorLoader(_args: LoaderFunctionArgs): Promise<Investo
     ? ((await paymentsResponse.json()) as InvestorPaymentsData)
     : null;
 
-  return { status: 'ready', index, payments };
+  return { status: 'ready', data: { index, payments } };
 }
 
 export function InvestorRoute() {
@@ -109,7 +108,7 @@ export function InvestorRouteContent({ data }: { data: InvestorLoaderData }) {
     return <InvestorState title="Profile not found" description="Your account does not have a SEEKO profile yet." />;
   }
 
-  return <InvestorOverview index={data.index} payments={data.payments} />;
+  return <InvestorOverview index={data.data.index} payments={data.data.payments} />;
 }
 
 function InvestorOverview({

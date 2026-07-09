@@ -2,6 +2,7 @@ import { useLoaderData, type LoaderFunctionArgs } from 'react-router';
 import { DocList } from '@/components/dashboard/DocList';
 import { FadeRise } from '@/components/motion';
 import type { InvestorDocsData } from '@/lib/investor-index';
+import { loadView, type ViewState } from '../load-view';
 
 /* ─────────────────────────────────────────────────────────
  * ANIMATION STORYBOARD — Investor Documents
@@ -27,25 +28,10 @@ const TIMING = {
 
 const delay = (ms: number) => ms / 1000;
 
-type InvestorDocsLoaderData =
-  | { status: 'ready'; index: InvestorDocsData }
-  | { status: 'unauthorized' }
-  | { status: 'forbidden' }
-  | { status: 'not_found' };
+type InvestorDocsLoaderData = ViewState<InvestorDocsData>;
 
 export async function investorDocsLoader(_args: LoaderFunctionArgs): Promise<InvestorDocsLoaderData> {
-  const response = await fetch('/api/investor-docs-index');
-
-  if (response.status === 401) return { status: 'unauthorized' };
-  if (response.status === 403) return { status: 'forbidden' };
-  if (response.status === 404) return { status: 'not_found' };
-
-  if (!response.ok) {
-    throw new Response('Unable to load investor docs', { status: response.status });
-  }
-
-  const index = (await response.json()) as InvestorDocsData;
-  return { status: 'ready', index };
+  return loadView<InvestorDocsData>('/api/investor-docs-index', 'Unable to load investor docs');
 }
 
 export function InvestorDocsRoute() {
@@ -58,7 +44,7 @@ export function InvestorDocsRouteContent({ data }: { data: InvestorDocsLoaderDat
   if (data.status === 'forbidden') return <State title="Investor access required" description="Documents are available to investors and admins." />;
   if (data.status === 'not_found') return <State title="Profile not found" description="Your account does not have a SEEKO profile yet." />;
 
-  const { docs, team, profile } = data.index;
+  const { docs, team, profile } = data.data;
 
   return (
     <div className="flex flex-col gap-6">

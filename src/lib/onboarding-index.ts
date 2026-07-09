@@ -1,4 +1,5 @@
 import { getServiceClient } from '@/lib/supabase/service';
+import { AccessError } from '@/lib/access-error';
 import type { Database } from '@/lib/supabase/database.types';
 
 const PROFILE_SELECT = 'id, display_name, avatar_url, email, onboarded' as const;
@@ -28,13 +29,6 @@ export type CompleteOnboardingInput = {
   timezone?: string | null;
 };
 
-export class OnboardingAccessError extends Error {
-  constructor(public readonly code: 'profile_not_found') {
-    super(code);
-    this.name = 'OnboardingAccessError';
-  }
-}
-
 export async function loadOnboardingProfile(currentUser: {
   id: string;
   email?: string | null;
@@ -47,7 +41,7 @@ export async function loadOnboardingProfile(currentUser: {
     .maybeSingle();
 
   if (error) throw error;
-  if (!data) throw new OnboardingAccessError('profile_not_found');
+  if (!data) throw new AccessError('profile_not_found');
 
   return {
     currentUser,
