@@ -62,6 +62,31 @@ export function filterSigningInvites(invites: ExternalSigningInvite[]): External
   return invites.filter(isSigningInvite);
 }
 
+/**
+ * Cross-product isolation guard for the doc-share product. Mirrors
+ * `isSigningInvite` but keys off the `purpose` column (doc-share rows don't
+ * use a distinguishing `template_type` value the way signing rows do).
+ * Moved out of `doc-share.ts`, which open-coded this as a query-level
+ * `.eq('purpose', 'doc_share')` filter — same exact check, now available as
+ * a reusable predicate for the invites repo's post-fetch guard.
+ */
+export function isDocShareInvite<T extends { purpose: string }>(
+  invite: T | null | undefined,
+): invite is T {
+  return !!invite && invite.purpose === 'doc_share';
+}
+
+/**
+ * Cross-product isolation guard for the invoice-request product. Moved out
+ * of `invoice-request.ts`, which open-coded this as a query-level
+ * `.eq('purpose', 'invoice')` filter — same exact check.
+ */
+export function isInvoiceInvite<T extends { purpose: string }>(
+  invite: T | null | undefined,
+): invite is T {
+  return !!invite && invite.purpose === 'invoice';
+}
+
 export type InviteGroup = {
   email: string;
   invites: ExternalSigningInvite[];

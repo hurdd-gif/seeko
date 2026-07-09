@@ -43,6 +43,7 @@ describe('doc-share loader', () => {
         status: 'pending',
         expires_at: '2026-06-20T00:00:00.000Z',
         shared_doc_id: 'doc-1',
+        purpose: 'doc_share',
       },
       { title: 'Pitch Deck', type: 'deck' }
     );
@@ -71,6 +72,7 @@ describe('doc-share loader', () => {
       status: 'pending',
       expires_at: '2026-06-01T00:00:00.000Z',
       shared_doc_id: 'doc-1',
+      purpose: 'doc_share',
     });
 
     const result = await loadDocShare('expired-token', {
@@ -89,6 +91,7 @@ describe('doc-share loader', () => {
       status: 'revoked',
       expires_at: '2026-06-20T00:00:00.000Z',
       shared_doc_id: 'doc-1',
+      purpose: 'doc_share',
     });
 
     const result = await loadDocShare('revoked-token', { service });

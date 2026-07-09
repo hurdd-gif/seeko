@@ -1,3 +1,5 @@
+import { loadInviteByToken, maskEmail } from '@/lib/invites-repo';
+import type { ServiceClient } from '@/lib/invites-repo';
 import { getServiceClient } from '@/lib/supabase/service';
 
 export type DocShareInitialData =
@@ -15,27 +17,8 @@ export type DocShareLoadResult =
   | { found: false; initialData: Extract<DocShareInitialData, { status: 'not_found' }> }
   | { found: true; initialData: Exclude<DocShareInitialData, { status: 'not_found' }> };
 
-type DocShareInviteRow = {
-  id: string;
-  recipient_email: string;
-  status: 'pending' | 'verified' | 'signed' | 'expired' | 'revoked';
-  expires_at: string;
-  shared_doc_id: string;
-};
-
-type QueryBuilder = {
-  select: (columns: string) => QueryBuilder;
-  eq: (column: string, value: unknown) => QueryBuilder;
-  single: () => Promise<{ data: unknown | null; error?: unknown }>;
-  update: (values: Record<string, unknown>) => QueryBuilder;
-};
-
-type DocShareServiceClient = {
-  from: (table: string) => QueryBuilder;
-};
-
 type LoadDocShareOptions = {
-  service?: DocShareServiceClient;
+  service?: ServiceClient;
   now?: Date;
 };
 
@@ -43,35 +26,25 @@ export async function loadDocShare(
   token: string,
   options: LoadDocShareOptions = {}
 ): Promise<DocShareLoadResult> {
-  const service = options.service ?? (getServiceClient() as unknown as DocShareServiceClient);
-  const now = options.now ?? new Date();
+  const result = await loadInviteByToken({
+    token,
+    purpose: 'doc_share',
+    service: options.service,
+    now: options.now,
+  });
 
-  const { data } = await service
-    .from('external_signing_invites')
-    .select('id, recipient_email, status, expires_at, shared_doc_id')
-    .eq('token', token)
-    .eq('purpose', 'doc_share')
-    .single();
-
-  const invite = data as DocShareInviteRow | null;
-
-  if (!invite) {
-    return { found: false, initialData: { status: 'not_found' } };
+  if (!result.ok) {
+    if (result.reason === 'not_found') {
+      return { found: false, initialData: { status: 'not_found' } };
+    }
+    return { found: true, initialData: { status: result.reason } };
   }
 
-  if (new Date(invite.expires_at) < now && invite.status === 'pending') {
-    await service
-      .from('external_signing_invites')
-      .update({ status: 'expired' })
-      .eq('id', invite.id);
+  const invite = result.invite;
 
-    return { found: true, initialData: { status: 'expired' } };
-  }
-
-  if (invite.status === 'expired' || invite.status === 'revoked') {
-    return { found: true, initialData: { status: invite.status } };
-  }
-
+  // doc-share-specific join: the shared doc's title/type live on a
+  // separate table, not on the invite row.
+  const service = options.service ?? (getServiceClient() as unknown as ServiceClient);
   const { data: doc } = await service
     .from('docs')
     .select('title, type')
@@ -92,8 +65,4 @@ export async function loadDocShare(
   };
 }
 
-export function maskEmail(email: string) {
-  const [local = '', domain = ''] = email.split('@');
-  if (!local || !domain) return '***';
-  return `${local[0]}${'*'.repeat(Math.max(local.length - 1, 2))}@${domain}`;
-}
+export { maskEmail } from '@/lib/invites-repo';

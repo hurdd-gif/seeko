@@ -44,6 +44,7 @@ describe('invoice request loader', () => {
       personal_note: 'Hidden until verified',
       prefilled_items: [{ label: 'Animation', amount: 250 }],
       submitted_payment_id: null,
+      purpose: 'invoice',
     });
 
     const result = await loadInvoiceRequest('pending-token', {
@@ -70,6 +71,7 @@ describe('invoice request loader', () => {
       personal_note: null,
       prefilled_items: null,
       submitted_payment_id: null,
+      purpose: 'invoice',
     });
 
     const result = await loadInvoiceRequest('expired-token', {
@@ -91,6 +93,7 @@ describe('invoice request loader', () => {
         personal_note: null,
         prefilled_items: null,
         submitted_payment_id: 'payment-1',
+        purpose: 'invoice',
       },
       { status: 'paid', amount: 700 }
     );
@@ -117,6 +120,7 @@ describe('invoice request loader', () => {
       prefilled_items: [{ label: 'Animation', amount: 250 }],
       session_token: 'verified-session',
       submitted_payment_id: null,
+      purpose: 'invoice',
     });
 
     const result = await loadInvoiceRequest('verified-token', {
@@ -144,6 +148,7 @@ describe('invoice request loader', () => {
       prefilled_items: [{ label: 'Animation', amount: 250 }],
       session_token: 'verified-session',
       submitted_payment_id: null,
+      purpose: 'invoice',
     });
 
     const result = await loadInvoiceRequest('verified-token', {
