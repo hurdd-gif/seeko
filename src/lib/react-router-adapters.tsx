@@ -58,6 +58,16 @@ export function useSearchParams() {
   return params;
 }
 
+/**
+ * The data router when mounted under createBrowserRouter/createMemoryRouter,
+ * or null under a plain <MemoryRouter> (tests). The ONLY sanctioned access
+ * to UNSAFE_DataRouterContext outside this module is via this hook.
+ */
+export function useDataRouter() {
+  const ctx = React.useContext(UNSAFE_DataRouterContext);
+  return ctx?.router ?? null;
+}
+
 type DynamicOptions = {
   ssr?: boolean;
   loading?: ComponentType | (() => ReactNode);

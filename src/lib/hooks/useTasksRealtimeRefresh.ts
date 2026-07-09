@@ -1,5 +1,5 @@
-import { useContext, useEffect, useMemo } from 'react';
-import { UNSAFE_DataRouterContext } from 'react-router';
+import { useEffect, useMemo } from 'react';
+import { useDataRouter } from '@/lib/react-router-adapters';
 import { subscribeEkoBus } from '@/lib/eko-bus';
 import { createClient } from '@/lib/supabase/client';
 
@@ -22,8 +22,7 @@ import { createClient } from '@/lib/supabase/client';
  * in tests) or without Supabase env, the hook mounts as a no-op.
  */
 export function useTasksRealtimeRefresh() {
-  const dataRouter = useContext(UNSAFE_DataRouterContext);
-  const router = dataRouter?.router ?? null;
+  const router = useDataRouter();
 
   const supabase = useMemo(() => {
     try {
