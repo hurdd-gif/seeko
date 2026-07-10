@@ -198,21 +198,42 @@ as $$
     or coalesce((select t.assignee_id = p_user_id from public.tasks t where t.id = p_task_id), false)
 $$;
 
--- NOTE (2026-07-09): live policies verified via pg_policies; UPDATE-for-all is a known tightening candidate.
-create policy "Authenticated users can read tasks"
-  on public.tasks for select
-  using (auth.role() = 'authenticated');
+-- NOTE (2026-07-10): staff-scoped tasks access is live via
+-- 20260710193947_tasks_staff_rls (applied 2026-07-10). is_staff_for_rls =
+-- admin OR non-investor; this closed a verified hole where investor sessions
+-- could read and update every task directly. The same Phase A migration
+-- staff-scoped task_comments SELECT ("Staff can read task comments" using
+-- is_staff_for_rls). DEPLOY-STAGED next: 20260710200000_tasks_api_only_writes
+-- drops "Staff can insert tasks" + "Staff can update tasks" once this branch
+-- ships, making writes service-role/API-only; "Staff can read tasks" stays
+-- (the board realtime subscription needs it).
+create or replace function public.is_staff_for_rls(p_user_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select coalesce(
+    (select p.is_admin or not coalesce(p.is_investor, false)
+       from public.profiles p where p.id = p_user_id),
+    false)
+$$;
 
-create policy "Authenticated users can insert tasks"
+create policy "Staff can read tasks"
+  on public.tasks for select
+  using (public.is_staff_for_rls(auth.uid()));
+
+create policy "Staff can insert tasks"
   on public.tasks for insert
   to authenticated
-  with check (true);
+  with check (public.is_staff_for_rls(auth.uid()));
 
-create policy "Authenticated users can update tasks"
+create policy "Staff can update tasks"
   on public.tasks for update
   to authenticated
-  using (true)
-  with check (true);
+  using (public.is_staff_for_rls(auth.uid()))
+  with check (public.is_staff_for_rls(auth.uid()));
 
 create policy "Only admins can delete tasks"
   on public.tasks for delete

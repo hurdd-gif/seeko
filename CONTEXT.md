@@ -31,10 +31,16 @@ server routes still write `tasks` directly, bypassing this module: `admin.ts`
 (user-delete flow clears `assignee_id` on the deleted user's tasks, line
 ~110), `workflow.ts` (deadline-extension approval sets `deadline` on the
 task, line ~227), and `tasks.ts` (handoff reassignment sets `assignee_id`,
-line ~347). The write rule mirrors live RLS exactly: any authenticated user
-may create/patch whitelisted columns; only admins may delete — enforced by
-the HTTP layer (`routes/tasks.ts`), not this module, which is pure data
-access with no auth opinion of its own. `createTask` does not self-sanitize
+line ~347). The write rule tracks live RLS: as of 2026-07-10 `public.tasks` writes are
+staff-scoped (admin OR non-investor — `is_staff_for_rls`), enforced by the HTTP
+layer (`routes/tasks.ts`) and, at the DB, by the staff INSERT/UPDATE policies.
+The last direct-from-browser task write (`dashboard-actions.createTask`) was
+routed through `/api/tasks` on this branch, so every client write now crosses
+this door. The deploy-staged `20260710200000_tasks_api_only_writes` migration
+then drops the staff INSERT/UPDATE policies, making service-role callers (this
+module plus the three server routes above) the *only* writers the DB accepts;
+delete stays admin-only throughout. This module itself is pure data access with
+no auth opinion of its own. `createTask` does not self-sanitize
 its `fields` argument (the one caller, `routes/tasks.ts`, already runs
 `sanitizeTaskPatch` before calling it) — see Follow-ups.
 

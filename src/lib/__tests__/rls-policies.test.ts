@@ -5,46 +5,50 @@ import { describe, expect, it } from 'vitest';
 const root = path.resolve(__dirname, '../../..');
 
 describe('security RLS policies', () => {
-  it('ships a migration that replaces broad docs/tasks/activity/attachment access', () => {
+  it('retires the never-applied 20260619 hardening as an inert superseded stub', () => {
     const migration = fs.readFileSync(
       path.join(root, 'supabase/migrations/20260619000001_harden_rls_for_docs_tasks_attachments.sql'),
       'utf8'
     );
 
-    expect(migration).toContain('DROP POLICY IF EXISTS "Authenticated users can read docs"');
-    expect(migration).toContain('DROP POLICY IF EXISTS "Authenticated users can read tasks"');
-    expect(migration).toContain('DROP POLICY IF EXISTS "Authenticated users can read activity"');
-    expect(migration).toContain('DROP POLICY IF EXISTS "Authenticated can read comment attachments"');
-    expect(migration).toContain('DROP POLICY IF EXISTS "Authenticated can upload chat attachments"');
-    expect(migration).toContain('public.can_read_doc_for_rls(restricted_department, granted_user_ids, auth.uid())');
-    expect(migration).toContain('public.can_read_task_for_rls(id, auth.uid())');
-    expect(migration).toContain('public.can_read_task_comment_for_rls(comment_id, auth.uid())');
-    expect(migration).toContain("bucket_id = 'chat-attachments'");
-    expect(migration).toContain('public.can_read_task_path_for_rls((storage.foldername(name))[1], auth.uid())');
+    // The 20260619 assignee-only hardening was never applied (verified live
+    // 2026-07-10). Its body is emptied so a stray db push can't cold-apply it
+    // over the live staff policies; it points at the migrations that replaced it.
+    expect(migration).toContain('SUPERSEDED — never applied');
+    expect(migration).toContain('20260710193947_tasks_staff_rls');
+    expect(migration).toContain('20260710200000_tasks_api_only_writes');
+    // Inert: no policy/function DDL survives.
+    expect(migration).not.toMatch(/DROP POLICY/i);
+    expect(migration).not.toMatch(/CREATE POLICY/i);
+    expect(migration).not.toMatch(/CREATE OR REPLACE FUNCTION/i);
   });
 
-  it('keeps the bootstrap schema aligned with the live tasks RLS (open reads, admin-only delete) and hardened docs/activity reads', () => {
+  it('keeps the bootstrap schema aligned with the live staff-scoped tasks RLS + deploy-staged api-only writes', () => {
     const schema = fs.readFileSync(path.join(root, 'docs/supabase-schema.sql'), 'utf8');
 
-    // tasks: verified live via pg_policies 2026-07-09 — SELECT/INSERT/UPDATE open to any
-    // authenticated user, DELETE admin-only. The 20260619 can_read_task_for_rls SELECT gate
-    // is no longer in force on the live tasks table.
-    expect(schema).toContain('create policy "Authenticated users can read tasks"');
-    expect(schema).toContain("using (auth.role() = 'authenticated')");
-    expect(schema).toContain('create policy "Authenticated users can insert tasks"');
-    expect(schema).toContain('create policy "Authenticated users can update tasks"');
+    // tasks: verified live via pg_policies 2026-07-10 — SELECT/INSERT/UPDATE
+    // scoped to staff (is_staff_for_rls = admin OR non-investor), DELETE
+    // admin-only. The deploy-staged api-only migration will later drop the staff
+    // INSERT/UPDATE policies; the schema doc reflects the live Phase A state now.
+    expect(schema).toContain('create policy "Staff can read tasks"');
+    expect(schema).toContain('public.is_staff_for_rls(auth.uid())');
+    expect(schema).toContain('create policy "Staff can insert tasks"');
+    expect(schema).toContain('create policy "Staff can update tasks"');
     expect(schema).toContain('create policy "Only admins can delete tasks"');
-    expect(schema).toContain(
-      '-- NOTE (2026-07-09): live policies verified via pg_policies; UPDATE-for-all is a known tightening candidate.'
-    );
+    expect(schema).toContain('-- NOTE (2026-07-10): staff-scoped tasks access is live via');
+    // The old broad authenticated tasks policies are gone from the doc.
+    expect(schema).not.toContain('create policy "Authenticated users can read tasks"');
+    expect(schema).not.toContain('create policy "Authenticated users can insert tasks"');
+    expect(schema).not.toContain('create policy "Authenticated users can update tasks"');
     expect(schema).not.toContain('create policy "Authorized users can read tasks"');
 
-    // task_milestone/milestones still gate through can_read_task_for_rls
+    // task_milestone/milestones still gate through can_read_task_for_rls in the
+    // doc (live drift is tracked as a separate follow-up, not touched here).
     expect(schema).toContain('create policy "Authorized users can read task_milestone"');
     expect(schema).toContain('create policy "Authorized users can read milestones"');
     expect(schema).toContain('public.can_read_task_for_rls(task_id, auth.uid())');
 
-    // docs/activity remain hardened, unchanged by the tasks correction
+    // docs/activity remain as documented (unchanged by the tasks correction).
     expect(schema).toContain('create policy "Authorized users can read docs"');
     expect(schema).toContain('create policy "Authorized users can read activity"');
     expect(schema).toContain('restricted_department text[] default null');

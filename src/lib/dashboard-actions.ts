@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/client';
+import { createTask as storeCreateTask } from '@/lib/task-store';
 import type { Department, Priority, Task, TaskStatus } from '@/lib/types';
 
 export type CreateTaskInput = {
@@ -12,21 +12,15 @@ export type CreateTaskInput = {
   description?: string;
 };
 
+/**
+ * Create a task through the one write door: POST /api/tasks (served by the
+ * service-role tasks-repo). No direct browser Supabase write — the DB's task
+ * write policies are staff-scoped and, at deploy, drop to API-only. The three
+ * create dialogs stay admin-gated in the UI. Returns the created Task; throws
+ * on failure so callers' existing try/catch contract is preserved.
+ */
 export async function createTask(input: CreateTaskInput): Promise<Task> {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error('Unauthenticated');
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('is_admin')
-    .eq('id', user.id)
-    .single();
-  if (!profile?.is_admin) throw new Error('Forbidden');
-
-  const payload = {
+  const result = await storeCreateTask({
     name: input.name.trim(),
     department: input.department,
     priority: input.priority,
@@ -35,16 +29,9 @@ export async function createTask(input: CreateTaskInput): Promise<Task> {
     assignee_id: input.assignee_id || null,
     deadline: input.deadline || null,
     description: input.description?.trim() || null,
-  };
-
-  const { data, error } = await supabase
-    .from('tasks')
-    .insert(payload as never)
-    .select('*')
-    .single();
-  if (error) throw error;
-
-  return data as Task;
+  });
+  if (!result.ok) throw new Error(result.error);
+  return result.data.task as Task;
 }
 
 export async function revalidateDashboard() {
