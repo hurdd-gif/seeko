@@ -782,6 +782,106 @@ describe('API server', () => {
     });
   });
 
+  it('requires auth before creating a task', async () => {
+    const testApp = createApiApp({
+      tasksAuthResolver: async () => null,
+    });
+
+    const response = await testApp.request('/api/tasks', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ name: 'New task' }),
+    });
+
+    expect(response.status).toBe(401);
+    expect(await response.json()).toEqual({ error: 'unauthorized' });
+  });
+
+  it('creates a task and returns the created row', async () => {
+    const createTaskFn = vi.fn(async (fields: Record<string, unknown>) => ({
+      task: { id: 'task-9', name: fields.name, status: 'Todo' },
+    }));
+    const testApp = createApiApp({
+      tasksAuthResolver: async () => ({ id: 'user-1', email: 'member@example.invalid' }),
+      createTaskFn: createTaskFn as never,
+    });
+
+    const response = await testApp.request('/api/tasks', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ name: 'New task', status: 'Todo', evil: 'dropped' }),
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toEqual({ task: { id: 'task-9', name: 'New task', status: 'Todo' } });
+    expect(createTaskFn).toHaveBeenCalledWith({ name: 'New task', status: 'Todo' });
+  });
+
+  it('requires auth before updating a task', async () => {
+    const testApp = createApiApp({
+      tasksAuthResolver: async () => null,
+    });
+
+    const response = await testApp.request('/api/tasks/task-1', {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ status: 'Done' }),
+    });
+
+    expect(response.status).toBe(401);
+    expect(await response.json()).toEqual({ error: 'unauthorized' });
+  });
+
+  it('updates a task with the sanitized patch', async () => {
+    const updateTaskFn = vi.fn(async () => ({ ok: true as const }));
+    const testApp = createApiApp({
+      tasksAuthResolver: async () => ({ id: 'user-1', email: 'member@example.invalid' }),
+      updateTaskFn,
+    });
+
+    const response = await testApp.request('/api/tasks/task-1', {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ status: 'Done', task_number: 999 }),
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toEqual({ ok: true });
+    expect(updateTaskFn).toHaveBeenCalledWith('task-1', { status: 'Done' });
+  });
+
+  it('rejects a task patch that only contains unknown keys', async () => {
+    const updateTaskFn = vi.fn(async () => ({ ok: true as const }));
+    const testApp = createApiApp({
+      tasksAuthResolver: async () => ({ id: 'user-1', email: 'member@example.invalid' }),
+      updateTaskFn,
+    });
+
+    const response = await testApp.request('/api/tasks/task-1', {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ task_number: 999, id: 'nope' }),
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body).toEqual({ error: 'empty_patch' });
+    expect(updateTaskFn).not.toHaveBeenCalled();
+  });
+
+  it('requires auth before deleting a task', async () => {
+    const testApp = createApiApp({
+      tasksAuthResolver: async () => null,
+    });
+
+    const response = await testApp.request('/api/tasks/task-1', { method: 'DELETE' });
+
+    expect(response.status).toBe(401);
+    expect(await response.json()).toEqual({ error: 'Unauthorized' });
+  });
+
   it('requires an authenticated investor before returning investor overview data', async () => {
     const testApp = createApiApp({
       investorAuthResolver: async () => null,

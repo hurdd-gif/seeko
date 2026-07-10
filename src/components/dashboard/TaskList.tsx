@@ -40,6 +40,7 @@ import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { formatDeadline } from '@/lib/format-deadline';
 import { acquireScrollLock, releaseScrollLock } from '@/lib/scroll-lock';
 import { springs } from '@/lib/motion';
+import { createTask, updateTask, deleteTask } from '@/lib/task-store';
 
 /* ------------------------------------------------------------------ */
 /*  FilterPill                                                         */
@@ -242,27 +243,23 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
     if (!newName.trim()) return;
     setAdding(true);
 
-    const { data, error } = await supabase
-      .from('tasks')
-      .insert({
-        name: newName.trim(),
-        department: newDept,
-        priority: newPriority,
-        status: 'In Progress' as TaskStatus,
-        deadline: newDeadline || null,
-      })
-      .select()
-      .single();
+    const result = await createTask({
+      name: newName.trim(),
+      department: newDept,
+      priority: newPriority,
+      status: 'In Progress' as TaskStatus,
+      deadline: newDeadline || null,
+    });
 
-    if (!error && data) {
-      setLocalTasks(prev => [...prev, data as Task]);
+    if (result.ok) {
+      setLocalTasks(prev => [...prev, result.data.task as Task]);
     }
 
     setNewName('');
     setNewDeadline('');
     setAdding(false);
     setShowAddForm(false);
-  }, [newName, newDept, newPriority, newDeadline, supabase]);
+  }, [newName, newDept, newPriority, newDeadline]);
 
   const handleStatusChange = useCallback(async (taskId: string, newStatus: TaskStatus) => {
     // Non-admin trying to complete → open deliverable dialog (will submit for review)
@@ -274,7 +271,7 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
     // Non-admins cannot set "In Review" directly
     if (newStatus === 'In Review' && !isAdmin) return;
     setTaskStatuses(prev => ({ ...prev, [taskId]: newStatus }));
-    await supabase.from('tasks').update({ status: newStatus }).eq('id', taskId);
+    await updateTask(taskId, { status: newStatus });
 
     // Notify assignee about status change
     const task = allTasks.find(t => t.id === taskId);
@@ -320,10 +317,10 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
     const task = allTasks.find(t => t.id === taskId);
     if (isAdmin) {
       setTaskStatuses(prev => ({ ...prev, [taskId]: 'Done' }));
-      await supabase.from('tasks').update({ status: 'Done' }).eq('id', taskId);
+      await updateTask(taskId, { status: 'Done' });
     } else {
       setTaskStatuses(prev => ({ ...prev, [taskId]: 'In Review' }));
-      await supabase.from('tasks').update({ status: 'In Review' }).eq('id', taskId);
+      await updateTask(taskId, { status: 'In Review' });
     }
     // Log activity
     if (task) {
@@ -360,7 +357,7 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
 
   const handleAssign = useCallback(async (taskId: string, memberId: string | null) => {
     setAssignments(prev => ({ ...prev, [taskId]: memberId }));
-    await supabase.from('tasks').update({ assignee_id: memberId }).eq('id', taskId);
+    await updateTask(taskId, { assignee_id: memberId });
 
     if (memberId) {
       const task = allTasks.find(t => t.id === taskId);
@@ -376,12 +373,12 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
         }),
       });
     }
-  }, [supabase, allTasks]);
+  }, [allTasks]);
 
   const handleDelete = useCallback(async (taskId: string) => {
     setDeleted(prev => new Set(prev).add(taskId));
-    await supabase.from('tasks').delete().eq('id', taskId);
-  }, [supabase]);
+    await deleteTask(taskId);
+  }, []);
 
   const getEffectiveStatus = useCallback((task: Task): TaskStatus => taskStatuses[task.id] ?? task.status, [taskStatuses]);
   const getEffectivePriority = useCallback((task: Task): Priority => task.priority as Priority, []);

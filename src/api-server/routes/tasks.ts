@@ -14,14 +14,25 @@ import {
 import { AccessError, accessErrorStatus } from '@/lib/access-error';
 import { fetchMilestones, fetchTaskActivity } from '@/lib/supabase/data';
 import { getServiceClient } from '@/lib/supabase/service';
+import {
+  createTask as createTaskRepo,
+  updateTask as updateTaskRepo,
+  deleteTask as deleteTaskRepo,
+  sanitizeTaskPatch,
+  type TaskPatch,
+  type TaskRow,
+} from '@/lib/tasks-repo';
 import { getAuthenticatedUser, type AuthenticatedUser } from '../supabase';
-import { isAdminUser, isRateLimited } from '../auth-utils';
+import { isAdminUser, isRateLimited, requireAdminVia } from '../auth-utils';
 
 type TasksIndexLoader = (user: AuthenticatedUser) => Promise<TasksIndexData>;
 type TaskDetailLoader = (user: AuthenticatedUser, taskId: string) => Promise<TaskDetailData>;
 type TaskDetailFullLoader = (user: AuthenticatedUser, taskId: string) => Promise<TaskDetailFullData>;
 type TasksBoardLoader = (user: AuthenticatedUser) => Promise<TasksBoardData>;
 type AuthResolver = (c: Context) => Promise<AuthenticatedUser | null>;
+type CreateTaskFn = (fields: TaskPatch & { name: string }) => Promise<{ task: TaskRow } | { error: string }>;
+type UpdateTaskFn = (id: string, patch: TaskPatch) => Promise<{ ok: true } | { error: string }>;
+type DeleteTaskFn = (id: string) => Promise<{ ok: true; deleted?: boolean } | { error: string }>;
 
 type TasksRoutesOptions = {
   authResolver?: AuthResolver;
@@ -30,6 +41,9 @@ type TasksRoutesOptions = {
   taskDetailFullLoader?: TaskDetailFullLoader;
   tasksIndexLoader?: TasksIndexLoader;
   tasksBoardLoader?: TasksBoardLoader;
+  createTaskFn?: CreateTaskFn;
+  updateTaskFn?: UpdateTaskFn;
+  deleteTaskFn?: DeleteTaskFn;
 };
 
 const attachmentHits = new Map<string, { count: number; resetAt: number }>();
@@ -45,8 +59,48 @@ export function createTasksRoutes(options: TasksRoutesOptions = {}) {
   const taskDetailFullLoader = options.taskDetailFullLoader ?? loadTaskDetailFull;
   const tasksIndexLoader = options.tasksIndexLoader ?? loadTasksIndex;
   const tasksBoardLoader = options.tasksBoardLoader ?? loadTasksBoard;
+  const createTaskFn = options.createTaskFn ?? createTaskRepo;
+  const updateTaskFn = options.updateTaskFn ?? updateTaskRepo;
+  const deleteTaskFn = options.deleteTaskFn ?? deleteTaskRepo;
 
   return new Hono()
+    // The one write seam for tasks — any authenticated user may create/patch
+    // (whitelisted fields only, sanitizeTaskPatch drops the rest); delete is
+    // admin-only. Mirrors the live RLS write rule exactly.
+    .post('/tasks', async (c) => {
+      const user = await authResolver(c);
+      if (!user) return c.json({ error: 'unauthorized' }, 401);
+
+      const body = await c.req.json().catch(() => null);
+      if (!body || typeof body.name !== 'string' || !body.name.trim()) {
+        return c.json({ error: 'invalid_body' }, 400);
+      }
+
+      const fields = { ...sanitizeTaskPatch(body), name: body.name.trim() };
+      const result = await createTaskFn(fields);
+      if ('error' in result) return c.json({ error: result.error }, 500);
+      return c.json({ task: result.task });
+    })
+    .patch('/tasks/:id', async (c) => {
+      const user = await authResolver(c);
+      if (!user) return c.json({ error: 'unauthorized' }, 401);
+
+      const body = await c.req.json().catch(() => null);
+      const patch = body ? sanitizeTaskPatch(body) : {};
+      if (!Object.keys(patch).length) return c.json({ error: 'empty_patch' }, 400);
+
+      const result = await updateTaskFn(c.req.param('id'), patch);
+      if ('error' in result) return c.json({ error: result.error }, 500);
+      return c.json({ ok: true });
+    })
+    .delete('/tasks/:id', async (c) => {
+      const guard = await requireAdminVia(c, authResolver);
+      if (!guard.ok) return c.json({ error: guard.error }, guard.status);
+
+      const result = await deleteTaskFn(c.req.param('id'));
+      if ('error' in result) return c.json({ error: result.error }, 500);
+      return c.json({ ok: true });
+    })
     // Rich loaders for the faithful Paper pages (LinearBoard + full task detail).
     .get('/task-detail/:id', async (c) => {
       const user = await authResolver(c);

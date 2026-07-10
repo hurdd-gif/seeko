@@ -44,7 +44,7 @@ import { TaskDeleteUndoToastSlot, UNDO_WINDOW_MS } from './TaskDeleteUndoToast';
 import { CreateTaskComposer } from './CreateTaskComposer';
 import { TasksIssueList } from './TasksIssueList';
 import { LightShell, type AccountPillProps } from '@/components/dashboard/LightShell';
-import { createClient } from '@/lib/supabase/client';
+import { updateTask, deleteTask } from '@/lib/task-store';
 import { requestEkoSpotlight } from '@/lib/eko-bus';
 
 type ViewMode = 'board' | 'list';
@@ -149,12 +149,8 @@ export function TasksBoard({
       };
       setLocalTasks((cur) => cur.map((t) => (t.id === taskId ? { ...t, ...optimistic } : t)));
 
-      const supabase = createClient();
-      const { error } = await supabase
-        .from('tasks')
-        .update({ assignee_id: nextProfileId })
-        .eq('id', taskId);
-      if (error) {
+      const result = await updateTask(taskId, { assignee_id: nextProfileId });
+      if (!result.ok) {
         // Revert.
         setLocalTasks((cur) =>
           cur.map((t) =>
@@ -163,7 +159,7 @@ export function TasksBoard({
               : t,
           ),
         );
-        console.error('Failed to update task.assignee_id:', error);
+        console.error('Failed to update task.assignee_id:', result.error);
       }
     },
     [localTasks, team],
@@ -185,17 +181,13 @@ export function TasksBoard({
         cur.map((t) => (t.id === taskId ? { ...t, status: nextStatus } : t)),
       );
 
-      const supabase = createClient();
-      const { error } = await supabase
-        .from('tasks')
-        .update({ status: nextStatus })
-        .eq('id', taskId);
-      if (error) {
+      const result = await updateTask(taskId, { status: nextStatus });
+      if (!result.ok) {
         // Revert.
         setLocalTasks((cur) =>
           cur.map((t) => (t.id === taskId ? { ...t, status: prevStatus } : t)),
         );
-        console.error('Failed to update task.status:', error);
+        console.error('Failed to update task.status:', result.error);
         toast.error('Failed to change status. Please try again.');
       } else {
         toast.success(nextStatus === 'Done' ? 'Marked done' : `Status changed to ${nextStatus}`);
@@ -218,12 +210,11 @@ export function TasksBoard({
   const pendingTimerRef = useRef<number | null>(null);
 
   const commitDelete = useCallback(async (task: TaskWithAssignee) => {
-    const supabase = createClient();
-    const { error } = await supabase.from('tasks').delete().eq('id', task.id);
-    if (error) {
+    const result = await deleteTask(task.id);
+    if (!result.ok) {
       // DB delete failed — restore the task and surface the error.
       setLocalTasks((cur) => (cur.some((t) => t.id === task.id) ? cur : [...cur, task]));
-      console.error('Failed to delete task:', error);
+      console.error('Failed to delete task:', result.error);
     }
   }, []);
 

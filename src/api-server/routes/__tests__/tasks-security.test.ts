@@ -97,6 +97,37 @@ describe('task deliverables admin gate (requireAdminVia migration)', () => {
   });
 });
 
+describe('DELETE /tasks/:id admin gate (requireAdminVia)', () => {
+  function appWithAdminFlag(isAdmin: boolean, deleteTaskFn = vi.fn(async () => ({ ok: true as const }))) {
+    mocks.getServiceClient.mockReturnValue({
+      from: vi.fn((table: string) => createQuery(table, isAdmin)),
+    });
+    const app = new Hono().route('/api', createTasksRoutes({
+      authResolver: async () => ({ id: 'user-1', email: 'member@example.invalid' }),
+      deleteTaskFn,
+    }));
+    return { app, deleteTaskFn };
+  }
+
+  it('rejects a non-admin with 403', async () => {
+    const { app, deleteTaskFn } = appWithAdminFlag(false);
+    const response = await app.request('/api/tasks/task-1', { method: 'DELETE' });
+
+    expect(response.status).toBe(403);
+    expect(deleteTaskFn).not.toHaveBeenCalled();
+  });
+
+  it('allows an admin through and calls the repo delete function', async () => {
+    const { app, deleteTaskFn } = appWithAdminFlag(true);
+    const response = await app.request('/api/tasks/task-1', { method: 'DELETE' });
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toEqual({ ok: true });
+    expect(deleteTaskFn).toHaveBeenCalledWith('task-1');
+  });
+});
+
 describe('task deliverables admin gate — fails closed when the admin check query errors', () => {
   function appWithAdminCheckError() {
     const erroringQuery = {

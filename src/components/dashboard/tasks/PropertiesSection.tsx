@@ -22,7 +22,7 @@ import { TASK_STATUSES } from '@/lib/types';
 import { StatusDot } from './StatusDot';
 import { PropertyPopover, type PropertyOption } from './PropertyPopover';
 import { DatePopover } from './DatePopover';
-import { createClient } from '@/lib/supabase/client';
+import { updateTask } from '@/lib/task-store';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { PriorityIcon, PRIORITIES, PRIORITY_COLOR } from './PriorityIcon';
 
@@ -161,20 +161,16 @@ export function PropertiesSection({
     extraPatch?: Partial<TaskWithAssignee>,
   ) {
     setSaving(column);
-    const supabase = createClient();
     const patch = { [column]: next, ...extraPatch } as Partial<TaskWithAssignee>;
     // Optimistic update first; revert on error.
     onTaskUpdated?.(task.id, patch);
-    const { error } = await supabase
-      .from('tasks')
-      .update({ [column]: next })
-      .eq('id', task.id);
+    const result = await updateTask(task.id, { [column]: next });
     setSaving(null);
-    if (error) {
+    if (!result.ok) {
       // Revert by reapplying the previous value.
       const revert = { [column]: task[column] } as Partial<TaskWithAssignee>;
       onTaskUpdated?.(task.id, revert);
-      console.error(`Failed to update task.${String(column)}:`, error);
+      console.error(`Failed to update task.${String(column)}:`, result.error);
     } else if (column === 'status') {
       const nextStatus = String(next);
       toast.success(nextStatus === 'Done' ? 'Marked done' : `Status changed to ${nextStatus}`);

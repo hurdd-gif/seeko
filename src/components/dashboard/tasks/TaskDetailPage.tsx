@@ -43,7 +43,7 @@ import { MilestonesSection } from './MilestonesSection';
 import { ProgressSection } from './ProgressSection';
 import { ActivitySection } from './ActivitySection';
 import { TaskActionsMenu } from './TaskActionsMenu';
-import { createClient } from '@/lib/supabase/client';
+import { deleteTask } from '@/lib/task-store';
 
 export function TaskDetailPage({
   task: initialTask,
@@ -76,8 +76,7 @@ export function TaskDetailPage({
   );
 
   const handleTaskDeleted = useCallback(async () => {
-    const supabase = createClient();
-    await supabase.from('tasks').delete().eq('id', task.id);
+    await deleteTask(task.id);
     router.push('/tasks');
     router.refresh();
   }, [router, task.id]);

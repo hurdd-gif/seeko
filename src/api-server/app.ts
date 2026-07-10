@@ -67,6 +67,13 @@ import {
   type TasksIndexData,
 } from '@/lib/tasks-index';
 import {
+  createTask as createTaskRepo,
+  updateTask as updateTaskRepo,
+  deleteTask as deleteTaskRepo,
+  type TaskPatch,
+  type TaskRow,
+} from '@/lib/tasks-repo';
+import {
   loadTeamRoster,
   type TeamRosterData,
 } from '@/lib/team-roster';
@@ -108,6 +115,9 @@ type ApiDependencies = {
   taskDetailLoader?: (user: AuthenticatedUser, taskId: string) => Promise<TaskDetailData>;
   tasksAuthResolver?: (c: Context) => Promise<AuthenticatedUser | null>;
   tasksIndexLoader?: (user: AuthenticatedUser) => Promise<TasksIndexData>;
+  createTaskFn?: (fields: TaskPatch & { name: string }) => Promise<{ task: TaskRow } | { error: string }>;
+  updateTaskFn?: (id: string, patch: TaskPatch) => Promise<{ ok: true } | { error: string }>;
+  deleteTaskFn?: (id: string) => Promise<{ ok: true; deleted?: boolean } | { error: string }>;
   teamAuthResolver?: (c: Context) => Promise<AuthenticatedUser | null>;
   teamLoader?: (user: AuthenticatedUser) => Promise<TeamRosterData>;
   workflowUserGuard?: (c: Context) => Promise<AuthGuard>;
@@ -135,6 +145,9 @@ export function createApiApp(dependencies: ApiDependencies = {}) {
   const paymentsIndexLoader = dependencies.paymentsIndexLoader ?? loadPaymentsIndex;
   const taskDetailLoader = dependencies.taskDetailLoader ?? loadTaskDetail;
   const tasksIndexLoader = dependencies.tasksIndexLoader ?? loadTasksIndex;
+  const createTaskFn = dependencies.createTaskFn ?? createTaskRepo;
+  const updateTaskFn = dependencies.updateTaskFn ?? updateTaskRepo;
+  const deleteTaskFn = dependencies.deleteTaskFn ?? deleteTaskRepo;
   const teamLoader = dependencies.teamLoader ?? loadTeamRoster;
 
   return new Hono()
@@ -181,7 +194,14 @@ export function createApiApp(dependencies: ApiDependencies = {}) {
       onboardingLoader,
       onboardingUpdater,
     }))
-    .route('/api', createTasksRoutes({ authResolver: dependencies.tasksAuthResolver, taskDetailLoader, tasksIndexLoader }))
+    .route('/api', createTasksRoutes({
+      authResolver: dependencies.tasksAuthResolver,
+      taskDetailLoader,
+      tasksIndexLoader,
+      createTaskFn,
+      updateTaskFn,
+      deleteTaskFn,
+    }))
     .route('/api', createTeamRoutes({ authResolver: dependencies.teamAuthResolver, teamLoader }))
     .route('/api', createWorkflowRoutes({
       userGuard: dependencies.workflowUserGuard,

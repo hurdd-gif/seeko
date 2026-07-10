@@ -40,6 +40,7 @@ import { springs, TAB_PILL_SPRING, DURATION_BACKDROP_MS, PANEL_SPRING, PANEL, SL
 import { formatDeadline, formatDeadlineFull } from '@/lib/format-deadline';
 import { acquireScrollLock, releaseScrollLock } from '@/lib/scroll-lock';
 import { subscribeToTable, type SupabaseLike } from '@/lib/realtime';
+import { updateTask } from '@/lib/task-store';
 
 const REACTION_EMOJIS = ['👍', '👎', '🎉', '😂', '❓', '🔥', '❤️'];
 
@@ -850,7 +851,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
     setReviewDeciding(true);
     try {
       const newStatus = action === 'approve' ? 'Complete' : 'In Progress';
-      await supabase.from('tasks').update({ status: newStatus }).eq('id', task.id);
+      await updateTask(task.id, { status: newStatus });
       toast.success(action === 'approve' ? 'Task approved — marked complete' : 'Task sent back to In Progress');
       // Notify assignee + log activity before closing panel
       const adminName = team.find(m => m.id === currentUserId)?.display_name ?? 'An admin';
@@ -903,7 +904,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
       }
     }
     // Set status to In Review
-    await supabase.from('tasks').update({ status: 'In Review' }).eq('id', task.id);
+    await updateTask(task.id, { status: 'In Review' });
     toast.success('Submitted for review');
     // Notify admins
     const senderName = team.find(m => m.id === currentUserId)?.display_name ?? 'Someone';
@@ -1175,7 +1176,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
       setInput('');
       return true;
     }
-    await supabase.from('tasks').update({ status: newStatus }).eq('id', task.id);
+    await updateTask(task.id, { status: newStatus });
     toast.success(`Status changed to ${newStatus}`);
 
     // Send notification to assignee about status change
@@ -1593,7 +1594,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
               defaultValue={task.priority}
               onChange={async (e) => {
                 const newPriority = e.target.value;
-                await supabase.from('tasks').update({ priority: newPriority }).eq('id', task.id);
+                await updateTask(task.id, { priority: newPriority });
                 toast.success(`Priority changed to ${newPriority}`);
               }}
             >
@@ -1611,7 +1612,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
               defaultValue={task.department}
               onChange={async (e) => {
                 const newDept = e.target.value;
-                await supabase.from('tasks').update({ department: newDept }).eq('id', task.id);
+                await updateTask(task.id, { department: newDept });
                 toast.success(`Department changed to ${newDept}`);
               }}
             >

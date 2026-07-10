@@ -10,7 +10,7 @@ import {
   DialogTitle,
   DialogClose,
 } from '@/components/ui/dialog';
-import { createBrowserClient } from '@supabase/ssr';
+import { updateTask } from '@/lib/task-store';
 import { toast } from 'sonner';
 import { useHaptics } from '@/components/HapticsProvider';
 import type { Area } from '@/lib/types';
@@ -59,13 +59,6 @@ export function InvestorAreaCard({ area, tasksInArea, isAdmin = false }: Investo
     editDescription !== (area.description ?? '') ||
     editProgress !== area.progress;
 
-  const supabase = isAdmin
-    ? createBrowserClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      )
-    : null;
-
   /* ── Save area changes ─────────────────────────────────── */
   const handleSaveArea = useCallback(async () => {
     setSaving(true);
@@ -98,17 +91,16 @@ export function InvestorAreaCard({ area, tasksInArea, isAdmin = false }: Investo
 
   /* ── Update task status ────────────────────────────────── */
   const handleTaskStatusChange = useCallback(async (taskId: string, newStatus: string) => {
-    if (!supabase) return;
     setTaskStatuses(prev => ({ ...prev, [taskId]: newStatus }));
-    const { error } = await supabase.from('tasks').update({ status: newStatus }).eq('id', taskId);
-    if (error) {
+    const result = await updateTask(taskId, { status: newStatus });
+    if (!result.ok) {
       toast.error('Failed to update task');
       trigger('error');
     } else {
       toast.success('Task updated');
       trigger('success');
     }
-  }, [supabase, trigger]);
+  }, [trigger]);
 
   /* ── Shared select styling ─────────────────────────────── */
   const selectClass = 'bg-muted/50 border border-border rounded-md px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-seeko-accent/40';

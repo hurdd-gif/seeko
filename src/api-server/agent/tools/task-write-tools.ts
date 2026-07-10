@@ -1,5 +1,10 @@
 import type { WriteTool, ToolContext, StageResult, CommitResult } from '../tool-contract';
 import { getServiceClient } from '@/lib/supabase/service';
+import {
+  createTask as createTaskRepo,
+  updateTask as updateTaskRepo,
+  deleteTask as deleteTaskRepo,
+} from '@/lib/tasks-repo';
 import { TASK_STATUSES, type Priority, type TaskStatus } from '@/lib/types';
 import {
   buildTaskIndex,
@@ -63,21 +68,16 @@ const createTask: WriteTool = {
     };
   },
   async commit(args, user): Promise<CommitResult> {
-    const service = getServiceClient();
-    const { data, error } = await service
-      .from('tasks')
-      .insert({
-        name: args.name,
-        department: 'Coding',
-        status: args.status,
-        priority: args.priority,
-        deadline: args.deadline ?? null,
-        description: null,
-      } as never)
-      .select('id, task_number, name, status, priority, deadline')
-      .single();
-    if (error) throw new AgentActionError('EKO could not create the issue.', 500);
-    const created = data as unknown as { id: string; task_number?: number | null } | null;
+    const result = await createTaskRepo({
+      name: String(args.name),
+      department: 'Coding',
+      status: args.status,
+      priority: args.priority,
+      deadline: (args.deadline as string | null) ?? null,
+      description: null,
+    });
+    if ('error' in result) throw new AgentActionError('EKO could not create the issue.', 500);
+    const created = result.task as unknown as { id: string; task_number?: number | null } | null;
     if (created) await markLatestTaskActivityAsEko({ taskId: created.id, kind: 'created', userId: user.id });
     return {
       reply: `Created issue "${args.name}" in ${args.status}.`,
@@ -115,9 +115,8 @@ const setTaskStatus: WriteTool = {
     };
   },
   async commit(args, user): Promise<CommitResult> {
-    const service = getServiceClient();
-    const { error } = await service.from('tasks').update({ status: args.status } as never).eq('id', String(args.taskId));
-    if (error) throw new AgentActionError('EKO could not update the issue status.', 500);
+    const result = await updateTaskRepo(String(args.taskId), { status: args.status as TaskStatus });
+    if ('error' in result) throw new AgentActionError('EKO could not update the issue status.', 500);
     await markLatestTaskActivityAsEko({ taskId: String(args.taskId), kind: 'status_changed', userId: user.id });
     return {
       reply: `Moved "${args.taskName}" to ${args.status}.`,
@@ -156,9 +155,8 @@ const setTaskAssignee: WriteTool = {
     };
   },
   async commit(args, user): Promise<CommitResult> {
-    const service = getServiceClient();
-    const { error } = await service.from('tasks').update({ assignee_id: args.assigneeId } as never).eq('id', String(args.taskId));
-    if (error) throw new AgentActionError('EKO could not assign the issue.', 500);
+    const result = await updateTaskRepo(String(args.taskId), { assignee_id: args.assigneeId });
+    if ('error' in result) throw new AgentActionError('EKO could not assign the issue.', 500);
     await markLatestTaskActivityAsEko({ taskId: String(args.taskId), kind: 'assignee_changed', userId: user.id });
     await hideLatestHumanAssignedEcho({ taskId: String(args.taskId), taskName: String(args.taskName), userId: user.id });
     return {
@@ -192,9 +190,8 @@ const setTaskPriority: WriteTool = {
     };
   },
   async commit(args, user): Promise<CommitResult> {
-    const service = getServiceClient();
-    const { error } = await service.from('tasks').update({ priority: args.priority } as never).eq('id', String(args.taskId));
-    if (error) throw new AgentActionError('EKO could not update the issue priority.', 500);
+    const result = await updateTaskRepo(String(args.taskId), { priority: args.priority as Priority });
+    if ('error' in result) throw new AgentActionError('EKO could not update the issue priority.', 500);
     await markLatestTaskActivityAsEko({ taskId: String(args.taskId), action: 'Changed priority', userId: user.id });
     return {
       reply: `Set "${args.taskName}" to ${args.priority} priority.`,
@@ -232,8 +229,8 @@ const setTaskDue: WriteTool = {
   async commit(args, user): Promise<CommitResult> {
     const service = getServiceClient();
     const deadline = (args.deadline as string | null) ?? null;
-    const { error } = await service.from('tasks').update({ deadline } as never).eq('id', String(args.taskId));
-    if (error) throw new AgentActionError('EKO could not update the issue due date.', 500);
+    const result = await updateTaskRepo(String(args.taskId), { deadline });
+    if ('error' in result) throw new AgentActionError('EKO could not update the issue due date.', 500);
     await service.from('activity_log').insert({
       user_id: user.id,
       action: 'Due date changed',
@@ -272,10 +269,9 @@ const deleteTask: WriteTool = {
     };
   },
   async commit(args, user): Promise<CommitResult> {
-    const service = getServiceClient();
-    const { data, error } = await service.from('tasks').delete().eq('id', String(args.taskId)).select('id');
-    if (error) throw new AgentActionError('EKO could not delete the issue.', 500);
-    if (!(data as Array<unknown> | null)?.length) {
+    const result = await deleteTaskRepo(String(args.taskId));
+    if ('error' in result) throw new AgentActionError('EKO could not delete the issue.', 500);
+    if (!result.deleted) {
       return { reply: `"${args.taskName}" was already removed. No changes were made.` };
     }
     await markLatestDeletedTaskActivityAsEko({ taskName: String(args.taskName), userId: user.id });
