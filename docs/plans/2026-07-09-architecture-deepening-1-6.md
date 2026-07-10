@@ -744,3 +744,16 @@ git commit -m "docs: CONTEXT.md seam glossary; correct tasks RLS in schema doc; 
 Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
 Claude-Session: https://claude.ai/code/session_01UYh9KZ3r416eZwTN8hqbP5"
 ```
+
+## Follow-ups
+
+1. RLS tightening decision: tasks UPDATE-for-all-authenticated (any column) — decide whether to restrict to whitelisted columns/roles now that all writes flow through /api/tasks.
+2. Doc drift: repo CLAUDE.md + all 4 docs/personas/*.md still describe Next.js 16/proxy.ts/localhost:3000 — actively wrong for the Vite+Hono reality.
+3. Architecture-review candidates 7–11 not implemented (dialogs, notifyAdmins/rate-limit primitives incl. external-signing local getClientIp/isRateLimited copies, light context, EKO activity fixups, AgentCompanion split).
+4. .worktrees/external-signing may still carry the old fail-open DocuSign HMAC — check before merging that worktree; also add a startup assertion for missing DOCUSIGN_CONNECT_HMAC_SECRET when SIGNING_PROVIDER=docusign (silent-401 availability footgun).
+5. Admin-gate deferrals: workflow.ts:241 admin-OR-investor gate (untested), payments-auth.ts:65,69 passkey gates — consider folding into auth-utils with an allowInvestor/cookie-client variant.
+6. Three server routes still write tasks directly (admin.ts:110, workflow.ts:227, tasks.ts:347) — route through tasks-repo.
+7. Latent (pre-existing, preserved): signing invite guard keys off template_type not purpose — invariant maintained by insertion code; consider adding purpose==='signing' to isLocalSigningInvite.
+8. createTask in tasks-repo doesn't self-sanitize (callers currently safe) — add sanitize for defense-in-depth; add POST blank-name 400 test.
+9. Realtime polish: getSession().then() lacks .catch in realtime.ts; no component-level test that NotificationBell/TaskDetail wire correct table/filter specs; watch the lazy-bell test flake in CI.
+10. Schema-doc staleness beyond tasks: the can_read_task_for_rls function body and the task_milestone/milestones policy sections in docs/supabase-schema.sql may also be stale vs live; SECURITY: the 20260619 tasks-SELECT hardening (can_read_task_for_rls) is no longer in force on the live DB — tasks SELECT is open to any authenticated user (contractors/investors included). Decide whether to re-harden alongside the UPDATE tightening in item 1.

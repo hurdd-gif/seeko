@@ -198,9 +198,30 @@ as $$
     or coalesce((select t.assignee_id = p_user_id from public.tasks t where t.id = p_task_id), false)
 $$;
 
-create policy "Authorized users can read tasks"
+-- NOTE (2026-07-09): live policies verified via pg_policies; UPDATE-for-all is a known tightening candidate.
+create policy "Authenticated users can read tasks"
   on public.tasks for select
-  using (public.can_read_task_for_rls(id, auth.uid()));
+  using (auth.role() = 'authenticated');
+
+create policy "Authenticated users can insert tasks"
+  on public.tasks for insert
+  to authenticated
+  with check (true);
+
+create policy "Authenticated users can update tasks"
+  on public.tasks for update
+  to authenticated
+  using (true)
+  with check (true);
+
+create policy "Only admins can delete tasks"
+  on public.tasks for delete
+  using (
+    exists (
+      select 1 from public.profiles
+      where profiles.id = auth.uid() and profiles.is_admin = true
+    )
+  );
 
 create policy "Authorized users can read task_milestone"
   on public.task_milestone for select

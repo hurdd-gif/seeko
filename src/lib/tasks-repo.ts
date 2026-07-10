@@ -1,9 +1,14 @@
-/* tasks-repo — the one server-side seam for writing to public.tasks.
+/* tasks-repo — the server-side door to public.tasks for the task store
+ * (src/lib/task-store.ts) and the EKO agent's write tools.
  *
- * Every mutating write to the tasks table — ~13 direct browser-client
- * writes across TaskDetail/TaskList/TasksBoard/InvestorAreaCard/
- * TaskDetailPage/PropertiesSection, plus the EKO agent's write tools —
- * now goes through createTask/updateTask/deleteTask. The whitelist below
+ * The ~13 direct browser-client writes across TaskDetail/TaskList/
+ * TasksBoard/InvestorAreaCard/TaskDetailPage/PropertiesSection now go
+ * through createTask/updateTask/deleteTask here. Three server routes
+ * still write `tasks` directly, bypassing this module (admin.ts's
+ * user-delete unassign, workflow.ts's deadline-extension approval,
+ * tasks.ts's handoff reassign) — see CONTEXT.md and the Follow-ups
+ * section of docs/plans/2026-07-09-architecture-deepening-1-6.md.
+ * The whitelist below
  * is the superset of every column any of those call sites actually sends
  * (enumerated in the Task 6 commit message); `name`, `progress`, and
  * `bounty` are included even though no current write site sends them
