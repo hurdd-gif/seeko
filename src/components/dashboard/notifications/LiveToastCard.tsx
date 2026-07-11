@@ -22,6 +22,27 @@ import { springs } from '@/lib/motion';
 const SWIPE_THRESHOLD = 60;
 const VELOCITY_THRESHOLD = 300;
 
+// Delphi alert surface — matches rich-toast.tsx NEUTRAL and the sonner block
+// in globals.css so all three toast systems read as one card language.
+const SURFACE_BG = 'rgb(249 249 248)';
+const SURFACE_BORDER = '1px solid oklab(0.641295 -0.00290838 0.0098139 / 0.12)';
+const TITLE_COLOR = 'rgb(33 32 28)';
+const MUTED_COLOR = 'rgb(99 99 94)';
+
+// KIND_CONFIG icon classes are tuned for the dark notification chrome (bell
+// dropdown, sheet). This card is a light Delphi surface, so darken each hue a
+// step for contrast; the pastel cfg.bg washes already read fine on light.
+// Fallback = original class (seeko-accent azure holds up on light).
+const LIGHT_ICON: Record<string, string> = {
+  'text-blue-400': 'text-blue-600',
+  'text-amber-400': 'text-amber-600',
+  'text-emerald-500': 'text-emerald-600',
+  'text-violet-400': 'text-violet-600',
+  'text-cyan-400': 'text-cyan-600',
+  'text-red-400': 'text-red-600',
+  'text-purple-400': 'text-purple-600',
+};
+
 interface LiveToastCardProps {
   toast: LiveToast;
   onDismiss: (id: string) => void;
@@ -121,35 +142,36 @@ export function LiveToastCard({
       <motion.div style={{ opacity: dragOpacity, scale: dragScale }}>
       <button
         onClick={() => onTap(toast)}
-        className="relative flex w-full items-start gap-3 rounded-xl bg-[#2c2c2c] border border-white/[0.10] px-3.5 py-3 text-left overflow-hidden"
+        className="relative flex w-full items-start gap-2.5 rounded-[18px] px-4 py-3 text-left antialiased overflow-hidden"
+        style={{ background: SURFACE_BG, border: SURFACE_BORDER }}
       >
-        {/* Timer fill — grows from bottom to top, subtle blur wash */}
+        {/* Timer fill — elapsed-time wash grows bottom-to-top behind the text.
+            Flat tint (no backdrop blur: blur reads as broken on a light card). */}
         <div
           ref={progressRef}
-          className="absolute inset-0 rounded-xl"
+          className="absolute inset-0"
           style={{
-            backdropFilter: 'blur(8px) brightness(0.7)',
-            WebkitBackdropFilter: 'blur(8px) brightness(0.7)',
+            background: 'rgb(33 32 28 / 0.05)',
             transformOrigin: 'bottom',
             animation: `toast-fill ${progressDuration} linear forwards`,
             animationPlayState: progressPaused ? 'paused' : 'running',
           }}
         />
 
-        <div className={`relative mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg ${cfg.bg} ${cfg.className}`}>
+        <div className={`relative mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-md ${cfg.bg} ${LIGHT_ICON[cfg.className] ?? cfg.className}`}>
           <Icon className="size-3.5" />
         </div>
 
-        <div className="relative flex-1 min-w-0 pr-5">
-          <p className="text-[13px] leading-snug font-medium text-foreground">
+        <div className="relative flex-1 min-w-0 pr-6">
+          <p className="text-sm font-medium" style={{ lineHeight: '20px', color: TITLE_COLOR }}>
             {notification.title}
           </p>
           {notification.body && (
-            <p className="text-xs mt-0.5 line-clamp-1 text-muted-foreground/70">
+            <p className="text-sm mt-0.5 line-clamp-1" style={{ lineHeight: '20px', color: MUTED_COLOR }}>
               {notification.body}
             </p>
           )}
-          <p className="text-[11px] mt-1 text-muted-foreground/50">
+          <p className="text-xs mt-1" style={{ color: 'rgb(99 99 94 / 0.7)' }}>
             {formatTime(notification.created_at, 'Today')}
           </p>
         </div>
@@ -167,8 +189,8 @@ export function LiveToastCard({
             onDismiss(toast.id);
           }}
           className={[
-            'absolute top-2.5 right-2.5 flex size-6 items-center justify-center rounded-full',
-            'bg-white/[0.08] text-muted-foreground hover:bg-white/[0.15] hover:text-foreground transition-colors cursor-pointer',
+            'absolute top-3 right-3 flex size-6 items-center justify-center rounded-full',
+            'bg-black/[0.05] text-[rgb(99,99,94)] hover:bg-black/[0.09] hover:text-[rgb(33,32,28)] transition-colors cursor-pointer',
           ].join(' ')}
           role="button"
           aria-label="Dismiss notification"

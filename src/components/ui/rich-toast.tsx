@@ -3,7 +3,11 @@
 /* ─────────────────────────────────────────────────────────
  * RICH TOAST — canonical structured toast anatomy for SEEKO Studio.
  *
- * A dark, Linear/Sonner-style card that stays dark regardless of app theme.
+ * Surface follows the Delphi alert language (build.delphi.ai/system/alert):
+ * flat warm off-white card, 18px radius, 1px low-alpha border, no shadow.
+ * Success/info stay neutral (Delphi renders confirmations neutral); error and
+ * warning take the tinted-monochrome treatment — glyph, title, subject and
+ * action all share the variant hue on a 10% wash precomposited over white.
  * Rendered through Sonner via `showRichToast()`; Sonner owns stacking +
  * portal, WE own the timer + enter/exit motion (duration:Infinity) so we can
  * play a real exit before the node is removed.
@@ -40,16 +44,40 @@ import { springs } from '@/lib/motion';
 const DEFAULT_DURATION_MS = 5000;
 const SWIPE_THRESHOLD_PX = 56; // upward drag distance to dismiss
 const SWIPE_VELOCITY = 320; // px/s upward flick to dismiss
-const GLYPH_PX = 22; // leading variant glyph diameter
-const RAIL_GAP_PX = 12; // glyph → title gap; also sets the rail inset
-const RAIL_INSET_PX = GLYPH_PX + RAIL_GAP_PX; // 34px — one clean vertical rail
+const GLYPH_PX = 18; // leading variant glyph diameter (16px reference icon + breathing room)
+const RAIL_GAP_PX = 10; // glyph → title gap (reference icon-column gap); also the rail inset
+const RAIL_INSET_PX = GLYPH_PX + RAIL_GAP_PX; // 28px — one clean vertical rail
 
-// ── Variant → glyph (filled circle + inline icon) ──────────────
-const VARIANT_GLYPH: Record<RichToastVariant, { bg: string; Icon: typeof Check }> = {
-  success: { bg: '#30c85e', Icon: Check },
-  error: { bg: '#f04438', Icon: X },
-  info: { bg: '#4b8bf5', Icon: Info },
-  warning: { bg: '#f5a623', Icon: TriangleAlert },
+// ── Variant → surface + glyph (Delphi alert language) ──────────
+// Neutral values come straight off the reference; error is its destructive
+// variant. Warning derives by the same formula (one hue everywhere, 10% wash,
+// 20% border) — amber chosen to sit at the red's perceptual weight.
+const NEUTRAL = {
+  bg: 'rgb(249 249 248)',
+  border: '1px solid oklab(0.641295 -0.00290838 0.0098139 / 0.12)',
+  title: 'rgb(33 32 28)',
+  muted: 'rgb(99 99 94)',
+};
+const tinted = (hue: string, borderColor: string) => ({
+  bg: `color-mix(in oklab, ${hue} 10%, white)`,
+  border: `1px solid ${borderColor}`,
+  title: hue,
+  muted: hue,
+});
+type VariantStyle = typeof NEUTRAL & { glyphBg: string; Icon: typeof Check };
+const VARIANT_STYLE: Record<RichToastVariant, VariantStyle> = {
+  success: { ...NEUTRAL, glyphBg: 'rgb(33 32 28)', Icon: Check },
+  info: { ...NEUTRAL, glyphBg: 'rgb(99 99 94)', Icon: Info },
+  error: {
+    ...tinted('rgb(220 62 66)', 'oklab(0.625572 0.177957 0.0756395 / 0.2)'),
+    glyphBg: 'rgb(220 62 66)',
+    Icon: X,
+  },
+  warning: {
+    ...tinted('rgb(184 122 8)', 'color-mix(in oklab, rgb(184 122 8) 20%, transparent)'),
+    glyphBg: 'rgb(184 122 8)',
+    Icon: TriangleAlert,
+  },
 };
 
 export type RichToastVariant = 'success' | 'error' | 'info' | 'warning';
@@ -89,7 +117,7 @@ function RichToastCard({
 }: RichToastOptions & { id: string | number }) {
   const reduce = useReducedMotion();
   const [open, setOpen] = useState(true);
-  const { bg, Icon } = VARIANT_GLYPH[variant];
+  const { bg, border, title: titleColor, muted, glyphBg, Icon } = VARIANT_STYLE[variant];
 
   // ── Self-managed dismissal (so the exit animation plays before removal) ──
   const close = useCallback(() => setOpen(false), []);
@@ -166,20 +194,20 @@ function RichToastCard({
               role="status"
               className="relative antialiased"
               style={{
-                borderRadius: 16,
-                padding: 18,
-                background: '#1e1e20',
-                border: '1px solid rgba(255,255,255,0.09)',
-                boxShadow:
-                  '0 12px 32px rgba(0,0,0,0.45), 0 2px 8px rgba(0,0,0,0.35)',
+                borderRadius: 18,
+                padding: '12px 16px',
+                background: bg,
+                border,
+                boxShadow: 'none',
               }}
             >
-              {/* Close — top-aligned to the title, lightens + tints on hover */}
+              {/* Close — top-aligned to the title, darkens on a soft wash on hover */}
               <button
                 type="button"
                 onClick={close}
                 aria-label="Dismiss"
-                className="absolute right-[14px] top-4 flex size-6 items-center justify-center rounded-lg text-[#8a8a8a] transition-[color,background-color,transform] duration-150 ease-out hover:bg-white/[0.07] hover:text-[#d4d4d6] active:scale-95 active:bg-white/[0.12] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-white/30"
+                className="absolute right-[12px] top-[10px] flex size-6 items-center justify-center rounded-md transition-[background-color,transform] duration-150 ease-out hover:bg-black/[0.05] active:scale-95 active:bg-black/[0.09] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-black/20"
+                style={{ color: muted }}
               >
                 <X className="size-4" strokeWidth={2} />
               </button>
@@ -189,28 +217,28 @@ function RichToastCard({
                 <span
                   aria-hidden
                   className="flex shrink-0 items-center justify-center rounded-full text-white"
-                  style={{ width: GLYPH_PX, height: GLYPH_PX, background: bg }}
+                  style={{ width: GLYPH_PX, height: GLYPH_PX, background: glyphBg }}
                 >
-                  <Icon className="size-3.5" strokeWidth={3} />
+                  <Icon className="size-3" strokeWidth={3} />
                 </span>
                 <p
-                  className="font-semibold tracking-[-0.01em] text-[#f4f4f5]"
-                  style={{ fontSize: 16, lineHeight: '20px', paddingRight: 24 }}
+                  className="font-medium"
+                  style={{ fontSize: 14, lineHeight: '20px', paddingRight: 24, color: titleColor }}
                 >
                   {title}
                 </p>
               </div>
 
-              {/* Rows 2–3 — indented to the single rail (34px) */}
+              {/* Rows 2–3 — indented to the single rail (28px) */}
               {(subject || action) && (
                 <div
                   className="flex flex-col"
-                  style={{ paddingLeft: RAIL_INSET_PX, marginTop: 12, rowGap: 12 }}
+                  style={{ paddingLeft: RAIL_INSET_PX, marginTop: 2, rowGap: 8 }}
                 >
                   {subject && (
                     <div className="flex items-center gap-2">
                       {subject.statusIcon && <span className="flex shrink-0">{subject.statusIcon}</span>}
-                      <span className="text-[#e6e6e8]" style={{ fontSize: 15, fontWeight: 450 }}>
+                      <span style={{ fontSize: 14, lineHeight: '20px', fontWeight: 400, color: muted }}>
                         {subject.identifier && (
                           <span className="tabular-nums">{subject.identifier}</span>
                         )}
@@ -224,8 +252,8 @@ function RichToastCard({
                     <a
                       href={action.href ?? '#'}
                       onClick={handleAction}
-                      className="w-fit rounded-sm font-medium text-[#6470f2] underline-offset-2 transition-[color,opacity] duration-150 ease-out hover:text-[#7f89f6] hover:underline active:opacity-80 focus-visible:underline focus-visible:outline-none"
-                      style={{ fontSize: 15 }}
+                      className="w-fit rounded-sm font-medium underline underline-offset-[3px] transition-opacity duration-150 ease-out hover:opacity-70 active:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black/20"
+                      style={{ fontSize: 14, lineHeight: '20px', color: titleColor }}
                     >
                       {action.label}
                     </a>

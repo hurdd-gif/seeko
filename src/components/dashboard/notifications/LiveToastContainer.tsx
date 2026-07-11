@@ -43,7 +43,11 @@ export function LiveToastContainer({ onTapToast, onOpenPanel }: LiveToastContain
             exit={{ opacity: 0, scale: 0.8 }}
             transition={springs.snappy}
             onClick={onOpenPanel}
-            className="pointer-events-auto mb-2 px-3 py-1.5 rounded-full bg-card border border-border/50 text-xs font-medium text-muted-foreground hover:text-foreground hover:border-border transition-colors shadow-lg shadow-black/20 cursor-pointer"
+            className="pointer-events-auto mb-2 px-3 py-1.5 rounded-full text-xs font-medium text-[rgb(99,99,94)] hover:text-[rgb(33,32,28)] transition-colors cursor-pointer active:scale-95"
+            style={{
+              background: 'rgb(249 249 248)',
+              border: '1px solid oklab(0.641295 -0.00290838 0.0098139 / 0.12)',
+            }}
           >
             +{overflowCount} more
           </motion.button>

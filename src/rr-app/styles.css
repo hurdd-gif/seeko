@@ -16,7 +16,7 @@ body {
 
 /* NOTE: no un-layered `button/input { font: inherit }` here — Tailwind v4's
  * preflight already does this in @layer base. An un-layered copy outranks
- * @layer utilities and wipes every text-*/font-* utility on form controls
+ * @layer utilities and wipes every text- and font- utility on form controls
  * (the post-migration "fonts are too big" bug: 13px inputs/pills → 16px). */
 
 .rr-shell {

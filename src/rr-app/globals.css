@@ -805,19 +805,60 @@ body.tour-cmd-k-active #command-palette-container * {
   cursor: col-resize;
 }
 
-/* Sonner toast overrides */
+/* Sonner toast overrides — Delphi alert language (build.delphi.ai/system/alert).
+   Flat warm off-white card: no shadow, no blur; a 1px low-alpha border does the
+   separating. Values are extracted from the reference, not approximated.
+   Success/info stay the neutral card (Delphi renders confirmations neutral);
+   only errors take the tinted-monochrome treatment — icon, title and
+   description all share one red on a 10% wash. Toasts float over arbitrary
+   content, so the wash is precomposited over white (color-mix) instead of
+   left translucent like the inline reference. */
 [data-sonner-toaster][data-y-position="top"] {
   top: calc(1rem + env(safe-area-inset-top, 0px)) !important;
 }
 
-[data-sonner-toaster] [data-sonner-toast] {
-  --normal-bg: rgba(34, 34, 34, 0.85);
-  --normal-border: var(--color-border);
-  --normal-text: var(--color-foreground);
-  backdrop-filter: blur(16px) saturate(180%);
-  -webkit-backdrop-filter: blur(16px) saturate(180%);
-  border: 1px solid var(--color-border);
+/* The .seeko-toast class (set via toastOptions.className) keeps these above
+   sonner's bundled [data-sonner-toast][data-styled=true] block, which ties on
+   specificity and wins on cascade order otherwise. --border-radius mirrors the
+   radius because sonner resolves its own border-radius from that var. */
+[data-sonner-toaster] [data-sonner-toast].seeko-toast {
+  --normal-bg: rgb(249 249 248);
+  --normal-border: oklab(0.641295 -0.00290838 0.0098139 / 0.12);
+  --normal-text: rgb(33 32 28);
+  --border-radius: 18px;
+  background: var(--normal-bg);
+  border: 1px solid var(--normal-border);
+  color: var(--normal-text);
+  border-radius: 18px;
+  padding: 12px 16px;
+  box-shadow: none;
   font-family: var(--font-inter);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+[data-sonner-toaster] [data-sonner-toast].seeko-toast [data-title] {
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+[data-sonner-toaster] [data-sonner-toast].seeko-toast [data-description] {
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 20px;
+  color: rgb(99 99 94);
+}
+
+/* Destructive — everything shares the one red, per the reference. */
+[data-sonner-toaster] [data-sonner-toast].seeko-toast[data-type="error"] {
+  --normal-bg: color-mix(in oklab, rgb(220 62 66) 10%, white);
+  --normal-border: oklab(0.625572 0.177957 0.0756395 / 0.2);
+  --normal-text: rgb(220 62 66);
+}
+
+[data-sonner-toaster] [data-sonner-toast].seeko-toast[data-type="error"] [data-description] {
+  color: rgb(220 62 66);
 }
 
 /* Rich structured toast (src/components/ui/rich-toast.tsx) — the card owns its

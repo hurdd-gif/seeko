@@ -40,9 +40,13 @@ createRoot(root).render(
       <CookieNotice />
       {/* Mirrors the legacy src/app/layout.tsx Toaster — without it every
           sonner toast (success + error feedback) silently vanishes. */}
+      {/* No richColors — toasts follow the Delphi alert language (globals.css):
+          success stays a neutral quiet card, only errors take the red tint. */}
       <Toaster
-        richColors
         position="top-center"
+        // --width matches the rich toast + live toast cards (400px) so mixed
+        // stacks share one width instead of stepping in by 22px per side.
+        style={{ '--width': '400px' } as React.CSSProperties}
         toastOptions={{
           className: 'seeko-toast',
           duration: 4000,

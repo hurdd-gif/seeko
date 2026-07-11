@@ -772,6 +772,19 @@ export const router = createBrowserRouter([
     },
   },
   {
+    // No-backend visual-QA preview (no loader gate) for all three toast
+    // systems (sonner, rich toast, live notification toast) in the Delphi
+    // alert language. Not in routeInventory.
+    path: '/toast-qa',
+    ErrorBoundary: StandaloneErrorBoundary,
+    lazy: async () => {
+      const route = await import('./routes/toast-qa');
+      return {
+        Component: route.ToastQaRoute,
+      };
+    },
+  },
+  {
     // No-backend visual-QA preview (no passkey gate) for the payments Outflow
     // chart's loading/loaded/empty states. Not in routeInventory.
     path: '/payments-chart-qa',
