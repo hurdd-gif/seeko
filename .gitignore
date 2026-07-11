@@ -102,3 +102,6 @@ ds-bundle/
 .design-sync/learnings/
 /index.d.ts
 /types/
+
+# local api-server log (nohup relaunch)
+.api-server.log

@@ -28,4 +28,10 @@ Depends on this branch (`task-store`/`tasks-repo` API-only writes) reaching prod
 - Update `CONTEXT.md` (tasks-repo seam note) + memory.
 
 ## Sequencing constraint
-Phase A is live. Phase B ships as code; its migration (`_tasks_api_only_writes`) must be applied **only after** this branch is deployed to production. `db push` at deploy applies it in order.
+Phase A is live. Phase B ships as code; its migration (`_tasks_api_only_writes`) must be applied **only after** this branch is deployed to production. NOTE: this DB has no automated `db push` — only `20260710193947` is in `schema_migrations` though later migrations are known-applied — so migrations are applied MANUALLY (dashboard/MCP). Apply `20260710200000_tasks_api_only_writes` by hand immediately after deploy.
+
+## Status — COMPLETE (2026-07-10, committed `4eddbc3`, pushed)
+- **Phase A** applied live (`20260710193947`), investor-lockout verified.
+- **Phase B** B1/B2/B3 done TDD; gate: 662 passing / 7 pre-existing baseline UI failures (0 new) · tsc pre-existing noise only · vite build green. Independent opus review = APPROVE. Committed `4eddbc3`, pushed to origin. Staged only the 11 Phase-B files (parallel uncommitted work — legal.tsx/scroll-glide/auth-method-memory/LoginForm — deliberately excluded).
+- **Deploy-time actions (2026-07-10):** (1) api-server RESTARTED on 8788 → B2 service-role read fix now active. (2) `20260710200000_tasks_api_only_writes` **HELD until deploy (user decision)** — verified `origin/main` writes tasks directly from the browser (TaskDetail/TaskList/InvestorAreaCard, 10+ sites) with no `/api/tasks` door, so applying now would break staff task edits in prod. Apply by hand ONLY after this branch deploys.
+- **Open follow-up (flagged to user, not changed):** `POST/PATCH /api/tasks` admit any authenticated user → investors retain an API task-write path (user-decided any-auth contract). Accept-or-tighten (`requireStaffVia`) is a user call. Separate doc drift (#10): milestones/docs/activity schema-doc policies still show non-live `can_read_*_for_rls` hardened wording.
