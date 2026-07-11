@@ -90,7 +90,7 @@ describe('TaskDetailRouteContent', () => {
   it('never shows the deadline-extension banner to a non-admin, even with a pending extension', () => {
     renderDetail({
       status: 'ready',
-      detail: withPendingExtension({ isAdmin: false, pendingExtension: PENDING_EXTENSION }),
+      data: withPendingExtension({ isAdmin: false, pendingExtension: PENDING_EXTENSION }),
     });
 
     expect(screen.queryByText(/requested a deadline extension/)).not.toBeInTheDocument();
@@ -100,7 +100,7 @@ describe('TaskDetailRouteContent', () => {
   it('shows the deadline-extension banner to an admin with a pending extension', () => {
     renderDetail({
       status: 'ready',
-      detail: withPendingExtension({ isAdmin: true, pendingExtension: PENDING_EXTENSION }),
+      data: withPendingExtension({ isAdmin: true, pendingExtension: PENDING_EXTENSION }),
     });
 
     expect(screen.getByText(/requested a deadline extension/)).toBeInTheDocument();
