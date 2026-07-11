@@ -1,27 +1,16 @@
 import { describe, it, expect } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { generatePalette } from '@outpacelabs/avatars';
 import { GradientAvatar } from '../gradient-avatar';
 
-// The only real hazard for this component is an SSR/CSR hydration mismatch, so
-// the contract we guard is determinism: the same seed must always produce byte-
-// identical markup (no Math.random / Date in the render path).
-describe('GradientAvatar — deterministic, SSR-safe', () => {
-  it('renders an <svg> for a seed', () => {
+// Rendering is delegated to @outpacelabs/avatars, which paints a <canvas> in
+// an effect — so markup no longer varies by seed. The contracts left to guard
+// here are the wrapper's: the accessible-name behavior it restores, and that
+// the vendor's palette engine stays deterministic per seed.
+describe('GradientAvatar — vendor-rendered mesh gradient', () => {
+  it('renders the vendor canvas', () => {
     const html = renderToStaticMarkup(<GradientAvatar seed="user-1" />);
-    expect(html).toContain('<svg');
-    expect(html).toContain('radialGradient');
-  });
-
-  it('is byte-identical across repeated renders of the same seed', () => {
-    const a = renderToStaticMarkup(<GradientAvatar seed="7887ae1d-2b5a-42e8" label="Youngan" />);
-    const b = renderToStaticMarkup(<GradientAvatar seed="7887ae1d-2b5a-42e8" label="Youngan" />);
-    expect(a).toBe(b);
-  });
-
-  it('produces different gradients for different seeds', () => {
-    const a = renderToStaticMarkup(<GradientAvatar seed="alice" />);
-    const b = renderToStaticMarkup(<GradientAvatar seed="bob" />);
-    expect(a).not.toBe(b);
+    expect(html).toContain('<canvas');
   });
 
   it('exposes an accessible name when a label is given, else is decorative', () => {
@@ -29,5 +18,15 @@ describe('GradientAvatar — deterministic, SSR-safe', () => {
       'aria-label="Sam Rivera"',
     );
     expect(renderToStaticMarkup(<GradientAvatar seed="x" />)).toContain('aria-hidden');
+  });
+
+  it('derives identical palettes across repeated calls for the same seed', () => {
+    const a = generatePalette('7887ae1d-2b5a-42e8');
+    const b = generatePalette('7887ae1d-2b5a-42e8');
+    expect(a).toEqual(b);
+  });
+
+  it('derives different palettes for different seeds', () => {
+    expect(generatePalette('alice').colors).not.toEqual(generatePalette('bob').colors);
   });
 });

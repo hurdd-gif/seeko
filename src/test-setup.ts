@@ -66,6 +66,9 @@ if (typeof HTMLCanvasElement !== 'undefined') {
     restore: () => {},
     arc: () => {},
     fill: () => {},
+    // @outpacelabs/avatars paints mesh-gradient avatar fallbacks with radial
+    // gradients in a mount effect — the stub gradient just needs addColorStop.
+    createRadialGradient: () => ({ addColorStop: () => {} }),
     }),
   });
 }
