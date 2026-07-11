@@ -700,8 +700,8 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
   const [extSubmitting, setExtSubmitting] = useState(false);
   const [pendingExt, setPendingExt] = useState<{
     id: string;
-    extra_hours: number;
-    new_deadline: string;
+    requested_deadline: string;
+    reason?: string | null;
     status: string;
     profiles?: { display_name?: string };
   } | null>(null);
@@ -767,7 +767,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
     const fetchExt = async () => {
       const res = await supabase
         .from('deadline_extensions')
-        .select('id, extra_hours, new_deadline, status, profiles!requested_by(display_name)')
+        .select('id, requested_deadline, reason, status, profiles!requested_by(display_name)')
         .eq('task_id', task.id)
         .eq('status', 'pending')
         .limit(1)
@@ -1326,6 +1326,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
   const detailsContent = (
     <>
       {/* Admin: pending extension banner */}
+      {/* LEGACY (unmounted): extension flow superseded by the contractor portal + migrated TaskDetailPage banner */}
       {isAdmin && pendingExt && (
         <div className="rounded-lg border border-amber-500/20 bg-amber-500/[0.06] px-3.5 py-3 mb-4 space-y-2.5">
           <div className="flex items-start gap-2">
@@ -1335,15 +1336,10 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
                 <span className="font-medium">
                   {(pendingExt as Record<string, unknown> & { profiles?: { display_name?: string } }).profiles?.display_name ?? 'Someone'}
                 </span>{' '}
-                requested{' '}
-                <span className="font-medium">
-                  {pendingExt.extra_hours >= 24
-                    ? `${Math.round(pendingExt.extra_hours / 24)} more day${Math.round(pendingExt.extra_hours / 24) !== 1 ? 's' : ''}`
-                    : `${pendingExt.extra_hours} more hour${pendingExt.extra_hours !== 1 ? 's' : ''}`}
-                </span>
+                requested an extension
               </p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                {new Date(task.deadline + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} → {new Date(pendingExt.new_deadline + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                {new Date(task.deadline + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} → {new Date(pendingExt.requested_deadline + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
               </p>
             </div>
           </div>

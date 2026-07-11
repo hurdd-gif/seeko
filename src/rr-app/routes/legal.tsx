@@ -166,6 +166,64 @@ export function LegalRoute() {
     scrubGlideRef.current?.stop();
     railShiftReturn.current?.stop();
   }, []);
+  // The document also rubber-bands at its scroll ends by itself — during
+  // normal wheel/trackpad scrolling, not only via the dial (user ask;
+  // apple-design: a boundary should resist progressively, and the give
+  // belongs to the scroll itself, not just one control). Outward wheel
+  // deltas past the pinned edge feed the SAME displacement system as the
+  // dial (railShift → page at −PAGE_STRETCH), so both surfaces stretch,
+  // hit the same frame-lock, and spring home together. The listener is
+  // passive — native scroll already can't pass the edge, so there's
+  // nothing to prevent; we only paint the give. A wheel stream has no
+  // pointerup: the "let go" is a beat with no outward push (trailing
+  // momentum events keep feeding it, so a trackpad fling bounces out and
+  // back like iOS). Scrolling back inward releases instantly.
+  const wheelOvershoot = useRef(0);
+  const wheelSettleTimer = useRef<number | undefined>(undefined);
+  useEffect(() => {
+    const scroller = scrollerRef.current;
+    if (!scroller || reduceMotion) return;
+    const WHEEL_SETTLE = 140;
+    const onWheel = (e: WheelEvent) => {
+      if (dragRef.current?.dragging) return; // the hand on the dial owns the surfaces
+      const endTop = scroller.scrollHeight - scroller.clientHeight;
+      const pushingOut =
+        (e.deltaY < 0 && scroller.scrollTop <= 0) ||
+        (e.deltaY > 0 && scroller.scrollTop >= endTop - 1);
+      if (pushingOut) {
+        const dim = railRef.current?.getBoundingClientRect().height ?? 168;
+        // Taking over from an in-flight return (or a dial release): seed the
+        // accumulator by inverting the curve at the LIVE value, so the wheel
+        // continues from what's on screen instead of snapping back to zero.
+        if (wheelOvershoot.current === 0 && railShift.get() !== 0) {
+          railShiftReturn.current?.stop();
+          const s = railShift.get();
+          wheelOvershoot.current = (s * dim) / (RAIL_GIVE * (dim - Math.abs(s)));
+        }
+        wheelOvershoot.current += e.deltaY;
+        railShift.set(rubberband(wheelOvershoot.current, dim));
+        window.clearTimeout(wheelSettleTimer.current);
+        wheelSettleTimer.current = window.setTimeout(() => {
+          wheelOvershoot.current = 0;
+          if (!dragRef.current?.dragging) releaseRailShift();
+        }, WHEEL_SETTLE);
+      } else if (wheelOvershoot.current !== 0) {
+        // Direction reversed while stretched: the boundary gives way the
+        // moment the push does — no settle wait.
+        wheelOvershoot.current = 0;
+        window.clearTimeout(wheelSettleTimer.current);
+        releaseRailShift();
+      }
+    };
+    scroller.addEventListener('wheel', onWheel, { passive: true });
+    return () => {
+      scroller.removeEventListener('wheel', onWheel);
+      window.clearTimeout(wheelSettleTimer.current);
+    };
+    // Refs and the motion value are stable; releaseRailShift only touches
+    // those, so the first-render closure stays correct.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reduceMotion]);
   // Keyboard focus and an in-flight drag engage the rail the same way the
   // pointer does (the drag can wander off the strip while captured).
   const railEngaged = railHovered || peekedSection !== null || railDragging || railIntro;
@@ -355,6 +413,10 @@ export function LegalRoute() {
     }
   };
 
+  // Ends a rail scrub. Bound to pointerup / pointercancel AND lostpointercapture,
+  // so a release the pointer events miss (mouse let go outside the window, capture
+  // yanked away) still tears the drag down. Idempotent: once dragRef is cleared the
+  // guard below early-returns, so the duplicate lostpointercapture fire is a no-op.
   const endRailDrag = (e: React.PointerEvent<HTMLDivElement>) => {
     const drag = dragRef.current;
     if (!drag || e.pointerId !== drag.pointerId) return;
@@ -519,6 +581,7 @@ export function LegalRoute() {
           }}
           onPointerUp={endRailDrag}
           onPointerCancel={endRailDrag}
+          onLostPointerCapture={endRailDrag}
         >
         {doc.sections.map((section, i) => (
           <button

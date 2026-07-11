@@ -140,11 +140,11 @@ export type Database = {
           decided_at: string | null
           decided_by: string | null
           denial_reason: string | null
-          extra_hours: number
           id: string
-          new_deadline: string
           original_deadline: string
+          reason: string | null
           requested_by: string
+          requested_deadline: string
           status: string
           task_id: string
         }
@@ -153,11 +153,11 @@ export type Database = {
           decided_at?: string | null
           decided_by?: string | null
           denial_reason?: string | null
-          extra_hours: number
           id?: string
-          new_deadline: string
           original_deadline: string
+          reason?: string | null
           requested_by: string
+          requested_deadline: string
           status?: string
           task_id: string
         }
@@ -166,11 +166,11 @@ export type Database = {
           decided_at?: string | null
           decided_by?: string | null
           denial_reason?: string | null
-          extra_hours?: number
           id?: string
-          new_deadline?: string
           original_deadline?: string
+          reason?: string | null
           requested_by?: string
+          requested_deadline?: string
           status?: string
           task_id?: string
         }
@@ -1015,6 +1015,44 @@ export type Database = {
           },
         ]
       }
+      task_steps: {
+        Row: {
+          created_at: string
+          deadline: string | null
+          id: string
+          name: string
+          sort_order: number
+          state: Database["public"]["Enums"]["task_step_state"]
+          task_id: string
+        }
+        Insert: {
+          created_at?: string
+          deadline?: string | null
+          id?: string
+          name: string
+          sort_order?: number
+          state?: Database["public"]["Enums"]["task_step_state"]
+          task_id: string
+        }
+        Update: {
+          created_at?: string
+          deadline?: string | null
+          id?: string
+          name?: string
+          sort_order?: number
+          state?: Database["public"]["Enums"]["task_step_state"]
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_steps_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_events: {
         Row: {
           created_at: string
@@ -1133,6 +1171,7 @@ export type Database = {
       payment_status: "pending" | "paid" | "cancelled"
       priority: "Urgent" | "High" | "Medium" | "Low"
       task_status: "Complete" | "In Progress" | "In Review" | "Blocked"
+      task_step_state: "pending" | "in_review" | "done"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1292,6 +1331,7 @@ export const Constants = {
       payment_status: ["pending", "paid", "cancelled"],
       priority: ["Urgent", "High", "Medium", "Low"],
       task_status: ["Complete", "In Progress", "In Review", "Blocked"],
+      task_step_state: ["pending", "in_review", "done"],
     },
   },
 } as const

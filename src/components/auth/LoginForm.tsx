@@ -68,6 +68,7 @@ import {
 import { InviteCodeForm } from '@/components/auth/InviteCodeForm';
 import { useHaptics } from '@/components/HapticsProvider';
 import { springs } from '@/lib/motion';
+import { resolvePostLoginDestination, type MinimalSupabase } from '@/lib/post-login-destination';
 import { cn } from '@/lib/utils';
 import { LIGHT_INPUT, BTN_PRIMARY, LIGHT_FOCUS_RING } from '@/components/dashboard/lightKit';
 
@@ -421,7 +422,8 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
 
     rememberAuthMethod('email');
     trigger('success');
-    router.push('/tasks'); // Issues is the landing page (Overview removed)
+    const dest = await resolvePostLoginDestination(supabase as unknown as MinimalSupabase);
+    router.push(dest);
     router.refresh();
   }
 
@@ -510,7 +512,9 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
 
       rememberAuthMethod('passkey');
       trigger('success');
-      router.push('/tasks');
+      const supabase = createClient();
+      const dest = await resolvePostLoginDestination(supabase as unknown as MinimalSupabase);
+      router.push(dest);
       router.refresh();
     } catch (err) {
       // User closed the browser's passkey sheet — a quiet reset, not an error.

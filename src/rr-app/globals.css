@@ -132,6 +132,51 @@
     0 6px 16px -4px rgba(0, 0, 0, 0.08),
     0 16px 32px -12px rgba(0, 0, 0, 0.12);
 
+  /* ─────────────────────────────────────────────────────────────────────
+   * SEEKO Portal Light — token baseline extracted from Paper file SK_DB,
+   * frame 27P-0 (the Phantom-style sign-in reference). This is the canonical
+   * white-canvas family: /login, /contractor, the external-signing ceremony,
+   * and payments-access — everything that sits on pure white (NOT the
+   * `.overview-light` #eeeeee editor ground, which keeps its own `--ov-*`).
+   * Full spec + provenance: docs/design-references.md → "Portal Light".
+   *
+   * Two reconciliations from source, both deliberate:
+   *   • WEIGHT — the app resolves every font-weight to 500 (see lines 61-66),
+   *     so hierarchy here is size + color, never weight (the reference's 400/600
+   *     contrast does not survive into the app).
+   *   • CONTRAST — the reference's muted grays fail WCAG AA for body copy
+   *     (#b4b4b4 ≈ 2:1, #969696 ≈ 2.7:1). They are tokenised for decorative /
+   *     large / non-essential text ONLY; real instructional copy uses
+   *     `--color-ink-muted-strong` (#686868, 4.9:1) or darker. ────────────── */
+
+  /* Ink ramp — text on white, dark → light (contrast on #fff in comments). */
+  --color-ink-strong:       #2a2a2a; /* 13.6:1 — strongest body (row titles)   */
+  --color-ink:              #3a3a3a; /* 10.5:1 — control labels (ref button)   */
+  --color-ink-heading:      #454545; /*  8.1:1 — page H1 (supersedes ref #515151
+                                        for AA; reference card-heading was lighter) */
+  --color-ink-mark:         #525252; /* brand-mark circle GROUND only (ref avatar) */
+  --color-ink-muted-strong: #686868; /*  4.9:1 — AA floor; top-bar + real muted copy */
+  --color-ink-muted:        #808080; /*  3.5:1 — meta/status (AA-large / UI only)   */
+  --color-ink-faint:        #969696; /*  2.7:1 — footer, sublines (decorative/large) */
+  --color-ink-faintest:     #b3b3b3; /*  2.0:1 — "No deadline", hints (decorative)  */
+  --color-ink-ghost:        #c4c4c4; /* graphic only — counts, chevrons, dots       */
+
+  /* Surfaces + line. Canvas/card = white (also `--color-surface-1`). */
+  --color-control-fill:     #f1f1f1;              /* button/segment fill (ref 28C) */
+  --color-hairline:         rgba(232, 232, 232, 0.75); /* card border (ref 282, #E8E8E8BF) */
+
+  /* Radii. The reference's compact 420px card is 8px with 16px controls; at
+   * SEEKO's list scale a sheet SCALES UP with its surface (large groups use
+   * 16px) while every interactive fill stays 16px. Inner chips step down. */
+  --radius-sheet:   8px;  /* compact cards / small grouped surfaces (ref card 282) */
+  --radius-control: 16px; /* buttons / interactive fills (ref button 28C)          */
+
+  /* Elevation — the reference lifts its hero card with a soft ambient drop
+   * that PAIRS WITH the hairline border (not shadow-instead-of-border). Reserve
+   * for genuine hero / auth / modal cards; dense stacked lists keep the flatter
+   * `--shadow-seeko`. Tailwind v4 exposes this as `shadow-float`. */
+  --shadow-float: 0 10px 20px rgba(209, 209, 209, 0.15); /* ref #D1D1D126 0 10 20 */
+
   /* Elevated surface — dark-mode-correct depth.
      Hairline ring defines silhouette; inner top highlight catches ambient light;
      negative-spread drop pools beneath rather than around the card. */
@@ -522,6 +567,19 @@ body.tour-cmd-k-active #command-palette-container * {
 @keyframes seeko-undo-drain {
   from { width: 100%; }
   to   { width: 0%; }
+}
+
+/* Contractor timeline: rows revealed by "Show N earlier" fade + rise into place.
+   Staggered per-row via inline animation-delay in CompletedTimeline.tsx. */
+@keyframes timeline-enter {
+  from { opacity: 0; transform: translateY(8px); filter: blur(4px); }
+  to   { opacity: 1; transform: translateY(0);   filter: blur(0);   }
+}
+.animate-timeline-enter {
+  animation: timeline-enter 400ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-timeline-enter { animation: none; }
 }
 
 /* Confetti burst: see TourConfetti.tsx CONFETTI/BURST storyboard.

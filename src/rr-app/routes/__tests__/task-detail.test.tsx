@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { TaskDetailRouteContent } from '../task-detail';
 import type { TaskDetailFullData } from '@/lib/tasks-board';
-import type { Area, Profile, TaskActivity, TaskWithAssignee } from '@/lib/types';
+import type { Area, PendingExtension, Profile, TaskActivity, TaskWithAssignee } from '@/lib/types';
 
 const task: TaskWithAssignee = {
   id: 'task-1',
@@ -46,7 +46,21 @@ const detail: TaskDetailFullData = {
   milestones: [],
   activity,
   isAdmin: true,
+  pendingExtension: null,
 };
+
+const PENDING_EXTENSION: PendingExtension = {
+  id: 'ext-1',
+  requesterName: 'Riley Example',
+  originalDeadline: '2026-06-25',
+  requestedDeadline: '2026-07-02',
+  reason: 'Scope grew',
+};
+
+/** Reuses the full fixture, flipping only `isAdmin` / `pendingExtension`. */
+function withPendingExtension(overrides: Pick<TaskDetailFullData, 'isAdmin' | 'pendingExtension'>): TaskDetailFullData {
+  return { ...detail, ...overrides };
+}
 
 function renderDetail(data: Parameters<typeof TaskDetailRouteContent>[0]['data']) {
   return render(
@@ -71,5 +85,25 @@ describe('TaskDetailRouteContent', () => {
     renderDetail({ status: 'unauthorized' });
 
     expect(screen.getByRole('heading', { name: 'Sign in required' })).toBeInTheDocument();
+  });
+
+  it('never shows the deadline-extension banner to a non-admin, even with a pending extension', () => {
+    renderDetail({
+      status: 'ready',
+      detail: withPendingExtension({ isAdmin: false, pendingExtension: PENDING_EXTENSION }),
+    });
+
+    expect(screen.queryByText(/requested a deadline extension/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /approve/i })).not.toBeInTheDocument();
+  });
+
+  it('shows the deadline-extension banner to an admin with a pending extension', () => {
+    renderDetail({
+      status: 'ready',
+      detail: withPendingExtension({ isAdmin: true, pendingExtension: PENDING_EXTENSION }),
+    });
+
+    expect(screen.getByText(/requested a deadline extension/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /approve/i })).toBeInTheDocument();
   });
 });

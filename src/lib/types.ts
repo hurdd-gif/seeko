@@ -264,14 +264,23 @@ export type DeadlineExtension = {
   id: string;
   task_id: string;
   requested_by: string;
-  extra_hours: number;
   original_deadline: string;
-  new_deadline: string;
+  requested_deadline: string;
+  reason?: string | null;
   status: 'pending' | 'approved' | 'denied';
   decided_by?: string | null;
   decided_at?: string | null;
   denial_reason?: string | null;
   created_at: string;
+};
+
+/** The one pending extension surfaced on the admin task-detail screen. */
+export type PendingExtension = {
+  id: string;
+  requesterName: string;
+  originalDeadline: string;
+  requestedDeadline: string;
+  reason: string | null;
 };
 
 export type ExternalAgreementSection = {

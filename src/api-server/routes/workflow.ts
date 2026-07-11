@@ -163,13 +163,13 @@ export function createWorkflowRoutes(options: WorkflowRoutesOptions = {}) {
       return c.json(data);
     })
     .post('/deadline-extensions', async (c) => {
-      const guard = await requireUser(c);
+      const guard = await userGuard(c);
       if (!guard.ok) return c.json({ error: guard.error }, guard.status);
-      const body = await c.req.json().catch(() => null) as { taskId?: string; extraHours?: number } | null;
+      const body = await c.req.json().catch(() => null) as { taskId?: string; requestedDeadline?: string; reason?: string } | null;
       if (!body) return c.json({ error: 'Invalid JSON' }, 400);
       if (!body.taskId) return c.json({ error: 'taskId is required' }, 400);
-      if (!Number.isFinite(body.extraHours) || !body.extraHours || body.extraHours < 1 || body.extraHours > 720) {
-        return c.json({ error: 'extraHours must be between 1 and 720' }, 400);
+      if (typeof body.requestedDeadline !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(body.requestedDeadline)) {
+        return c.json({ error: 'requestedDeadline must be a YYYY-MM-DD date' }, 400);
       }
 
       const service = getServiceClient();
@@ -177,31 +177,31 @@ export function createWorkflowRoutes(options: WorkflowRoutesOptions = {}) {
       if (!task) return c.json({ error: 'Task not found' }, 404);
       if (task.assignee_id !== guard.user.id) return c.json({ error: 'Only the assignee can request an extension' }, 403);
       if (!task.deadline) return c.json({ error: 'Task has no deadline' }, 400);
+      if (body.requestedDeadline <= task.deadline) return c.json({ error: 'Requested date must be after the current deadline' }, 400);
       const { data: existing } = await service.from('deadline_extensions').select('id').eq('task_id', body.taskId).eq('status', 'pending').limit(1).maybeSingle();
       if (existing) return c.json({ error: 'A pending extension request already exists for this task' }, 409);
 
-      const newDeadlineDate = new Date(`${task.deadline}T00:00:00`);
-      newDeadlineDate.setTime(newDeadlineDate.getTime() + body.extraHours * 3600000);
-      const newDeadline = newDeadlineDate.toISOString().split('T')[0]!;
+      const reason = typeof body.reason === 'string' ? body.reason.trim().slice(0, 500) : '';
       const { data: extension, error } = await service
         .from('deadline_extensions')
         .insert({
           task_id: body.taskId,
           requested_by: guard.user.id,
-          extra_hours: body.extraHours,
           original_deadline: task.deadline,
-          new_deadline: newDeadline,
+          requested_deadline: body.requestedDeadline,
+          reason: reason || null,
           status: 'pending',
         } as never)
-        .select('id, extra_hours, new_deadline, status')
+        .select('id, requested_deadline, reason, status')
         .single();
       if (error) return c.json({ error: 'Failed to create extension request' }, 500);
       await service.from('activity_log').insert({ user_id: guard.user.id, action: 'Requested extension', target: `task: ${task.name}`, task_id: body.taskId } as never);
-      await notifyAdminsDirect('deadline_extension_requested', `Extension requested on "${task.name}"`, null, `/tasks?task=${body.taskId}`);
+      const reasonSnippet = reason ? ` — ${reason.slice(0, 80)}` : '';
+      await notifyAdminsDirect('deadline_extension_requested', `Extension requested on "${task.name}"`, `Until ${body.requestedDeadline}${reasonSnippet}`, `/tasks/${body.taskId}`);
       return c.json({ success: true, extension });
     })
     .patch('/deadline-extensions/:id', async (c) => {
-      const admin = await requireAdmin(c);
+      const admin = await adminGuard(c);
       if (!admin.ok) return c.json({ error: admin.error === 'Forbidden' ? 'Admin access required' : admin.error }, admin.status);
       const body = await c.req.json().catch(() => null) as { action?: 'approve' | 'deny'; reason?: string } | null;
       if (!body) return c.json({ error: 'Invalid JSON' }, 400);
@@ -210,28 +210,35 @@ export function createWorkflowRoutes(options: WorkflowRoutesOptions = {}) {
       const service = getServiceClient();
       const { data: ext } = await service
         .from('deadline_extensions')
-        .select('id, task_id, requested_by, extra_hours, new_deadline, status, tasks(name)')
+        .select('id, task_id, requested_by, requested_deadline, status, tasks(name)')
         .eq('id', c.req.param('id'))
         .single();
       if (!ext) return c.json({ error: 'Extension request not found' }, 404);
       if (ext.status !== 'pending') return c.json({ error: 'Extension request is no longer pending' }, 409);
       const taskName = (ext.tasks as unknown as { name?: string })?.name ?? 'Unknown task';
       const newStatus = body.action === 'approve' ? 'approved' : 'denied';
+      const denialReason = body.action === 'deny' ? (typeof body.reason === 'string' ? body.reason.trim().slice(0, 500) : '') : '';
       const { error } = await service
         .from('deadline_extensions')
-        .update({ status: newStatus, decided_by: admin.user.id, decided_at: new Date().toISOString(), ...(body.action === 'deny' && body.reason ? { denial_reason: body.reason } : {}) } as never)
+        .update({ status: newStatus, decided_by: admin.user.id, decided_at: new Date().toISOString(), ...(body.action === 'deny' ? { denial_reason: denialReason || null } : {}) } as never)
         .eq('id', c.req.param('id'))
         .eq('status', 'pending');
       if (error) return c.json({ error: 'Failed to update extension request' }, 500);
       if (body.action === 'approve') {
-        const { error: taskError } = await service.from('tasks').update({ deadline: ext.new_deadline } as never).eq('id', ext.task_id);
+        const { error: taskError } = await service.from('tasks').update({ deadline: ext.requested_deadline } as never).eq('id', ext.task_id);
         if (taskError) {
           await service.from('deadline_extensions').update({ status: 'pending', decided_by: null, decided_at: null } as never).eq('id', c.req.param('id'));
           return c.json({ error: 'Failed to update task deadline' }, 500);
         }
       }
       await service.from('activity_log').insert({ user_id: admin.user.id, action: body.action === 'approve' ? 'Approved extension' : 'Denied extension', target: `task: ${taskName}`, task_id: ext.task_id } as never);
-      await notifyUserDirect(ext.requested_by, body.action === 'approve' ? 'deadline_extension_approved' : 'deadline_extension_denied', body.action === 'approve' ? `Extension approved on "${taskName}"` : `Extension denied on "${taskName}"`, body.reason ?? null, `/tasks?task=${ext.task_id}`);
+      await notifyUserDirect(
+        ext.requested_by,
+        body.action === 'approve' ? 'deadline_extension_approved' : 'deadline_extension_denied',
+        body.action === 'approve' ? `Extension approved on "${taskName}"` : `Extension denied on "${taskName}"`,
+        body.action === 'deny' ? (denialReason || null) : `New deadline: ${ext.requested_deadline}`,
+        `/tasks/${ext.task_id}`,
+      );
       return c.json({ success: true, status: newStatus });
     })
     .get('/investor/export-summary', async (c) => {
