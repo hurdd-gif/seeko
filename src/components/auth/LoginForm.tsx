@@ -5,12 +5,21 @@
  *
  * Read top-to-bottom. Each value is ms after page mount.
  *
- *    0ms   page mounts — card hidden (opacity 0, y +20)
- *  150ms   card fades in, slides up to rest
- *  300ms   badge + heading fade in from y +8
- *  420ms   subtitle fades in
- *  540ms   provider pills (Google / passkey / email) fade in
- *  660ms   invite link fades in
+ *    0ms   page mounts — card starts rising immediately (opacity 0, y +20)
+ *   50ms   badge + heading fade in from y +8
+ *   90ms   subtitle fades in
+ *  130ms   provider pills (Google / passkey / email) fade in
+ *  170ms   invite link fades in
+ *
+ * The whole stagger clears in <200ms: login is the most transactional
+ * screen in the app, so the entrance is flavor, never a gate (Apple:
+ * anything on the input path that isn't essential is a regression).
+ * Return visitors within a session skip the storyboard entirely
+ * (sessionStorage), same as prefers-reduced-motion.
+ *
+ * METHOD MEMORY — the pill that signed you in last time (Linear pattern)
+ * floats to the top with a quiet "last time" caption (auth-method-memory.ts),
+ * so a returning user re-scans one pill, not three.
  *
  * SURFACE MORPH — "Continue with email" (transitions.dev pattern)
  *
@@ -44,26 +53,38 @@
  * reference's own call — fidelity beats the concentric rule here.)
  * ────────────────────────────────────────────────────────── */
 
-import { useState, useEffect, useLayoutEffect, useRef } from 'react';
+import { Fragment, useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { useRouter } from '@/lib/react-router-adapters';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { startAuthentication } from '@simplewebauthn/browser';
-import { Fingerprint, Loader2, Mail, X } from 'lucide-react';
+import { Eye, EyeOff, Fingerprint, Loader2, Mail, X } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import {
+  orderAuthMethods,
+  recallAuthMethod,
+  rememberAuthMethod,
+  type AuthMethod,
+} from '@/lib/auth-method-memory';
 import { InviteCodeForm } from '@/components/auth/InviteCodeForm';
 import { useHaptics } from '@/components/HapticsProvider';
 import { springs } from '@/lib/motion';
 import { cn } from '@/lib/utils';
 import { LIGHT_INPUT, BTN_PRIMARY, LIGHT_FOCUS_RING } from '@/components/dashboard/lightKit';
 
-/* ─── Timing (ms after mount) ───────────────────────────── */
+/* ─── Timing (ms after mount) ─────────────────────────────
+ * Compressed stagger: everything interactive inside 200ms. The 40-50ms
+ * steps keep the cascade legible without ever gating the pills. */
 const TIMING = {
-  card:      150,   // outer card slides up
-  identity:  300,   // badge + heading fade in
-  subtitle:  420,   // tagline fades in
-  providers: 540,   // Google / passkey / email pills
-  footer:    660,   // invite link
+  card:      0,     // outer card starts rising immediately
+  identity:  50,    // badge + heading fade in
+  subtitle:  90,    // tagline fades in
+  providers: 130,   // Google / passkey / email pills
+  footer:    170,   // invite link
 };
+
+/* One storyboard per browser session: replaying the entrance on every
+ * bounce back to /login makes the page feel slower than it is. */
+const ENTRANCE_PLAYED_KEY = 'seeko-login-entrance-played';
 
 /* ─── View swap (transitions.dev page side-by-side) ───────
  * Sign-in is page 1 (rests/exits left), invite is page 2 (right).
@@ -151,8 +172,10 @@ const PILL = cn(
   LIGHT_FOCUS_RING,
 );
 
+/* #767676 is the AA floor on white (4.54:1) — the old #9a9a9a read as
+ * decorative but carried real actions. contrast-more darkens further. */
 const SUBTLE_LINK =
-  'text-[13px] text-[#9a9a9a] transition-colors hover:text-[#3a3a3a] active:text-[#111]';
+  'text-[13px] text-[#767676] transition-colors hover:text-[#3a3a3a] active:text-[#111] contrast-more:text-[#3a3a3a]';
 
 /* Busy-state content crossfade (never hard-swap a label/icon): tiny
  * opacity + scale + blur bridge, 150ms ease-out. */
@@ -187,10 +210,19 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(initialError);
+  // Neutral confirmation (e.g. "reset link sent") — same slot grammar as the
+  // error, gray instead of red. Error and notice are mutually exclusive.
+  const [notice, setNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [googleBusy, setGoogleBusy] = useState(false);
   const [passkeyBusy, setPasskeyBusy] = useState(false);
+  const [resetBusy, setResetBusy] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [stage, setStage] = useState(0);
+  // The method that last signed in on this browser — read once at mount.
+  const [lastMethod] = useState<AuthMethod | null>(() =>
+    typeof window === 'undefined' ? null : recallAuthMethod(),
+  );
   const [emailOpen, setEmailOpen] = useState(false);
   // Surface clips only while open/closing: at rest the hidden form face is
   // opacity-0 + inert, and an unclipped surface lets the pill face travel
@@ -236,6 +268,7 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
     if (emailOpen) setEmailClosing(true);
     setEmailOpen(false); // leaving the page collapses the email panel
     setError(null);
+    setNotice(null);
     setView(next);
   }
 
@@ -310,11 +343,32 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
   const passkeySupported =
     typeof window !== 'undefined' && typeof window.PublicKeyCredential !== 'undefined';
 
-  // Reduced motion: skip the storyboard — everything rests immediately.
+  // Pill order: the remembered method floats to the top (Linear pattern).
+  const methodOrder = orderAuthMethods(lastMethod, { passkeySupported });
+  const promotedMethod = methodOrder[0] === lastMethod ? lastMethod : null;
+  const METHOD_LABEL: Record<AuthMethod, string> = {
+    google: 'Google',
+    passkey: 'a passkey',
+    email: 'email',
+  };
+
+  // Reduced motion and same-session return visits skip the storyboard —
+  // everything rests immediately. First play flags the session.
   useEffect(() => {
-    if (reduceMotion) {
+    let alreadyPlayed = false;
+    try {
+      alreadyPlayed = sessionStorage.getItem(ENTRANCE_PLAYED_KEY) !== null;
+    } catch {
+      // Storage blocked: play the entrance, it just won't be remembered.
+    }
+    if (reduceMotion || alreadyPlayed) {
       setStage(5);
       return;
+    }
+    try {
+      sessionStorage.setItem(ENTRANCE_PLAYED_KEY, '1');
+    } catch {
+      // Non-fatal.
     }
     const timers: ReturnType<typeof setTimeout>[] = [];
     timers.push(setTimeout(() => setStage(1), TIMING.card));
@@ -331,6 +385,7 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    setNotice(null);
 
     // In-design validation (form is noValidate): the native browser bubble
     // clashed with the card. Errors use the shared slot + red field + shake.
@@ -364,14 +419,51 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
       return;
     }
 
+    rememberAuthMethod('email');
     trigger('success');
     router.push('/tasks'); // Issues is the landing page (Overview removed)
     router.refresh();
   }
 
+  /* Forgot password — real recovery, not a mailto: Supabase emails a link
+   * whose code the existing /api/auth/callback exchanges for a session before
+   * landing on /set-password (the same page invites already use). Needs the
+   * email field filled first, and says so with the same shake grammar. */
+  async function handleForgotPassword() {
+    const trimmed = email.trim();
+    if (!trimmed || !/^\S+@\S+\.\S+$/.test(trimmed)) {
+      setFieldInvalid('email');
+      setNotice(null);
+      setError('Enter your email above first — the reset link goes there.');
+      emailInputRef.current?.focus();
+      shakeEl(emailInputRef.current, reduceMotion);
+      trigger('error');
+      return;
+    }
+
+    setResetBusy(true);
+    setError(null);
+    setNotice(null);
+
+    const supabase = createClient();
+    const { error } = await supabase.auth.resetPasswordForEmail(trimmed, {
+      redirectTo: `${window.location.origin}/api/auth/callback?next=/set-password`,
+    });
+
+    setResetBusy(false);
+    if (error) {
+      setError(error.message);
+      trigger('error');
+      return;
+    }
+    setNotice(`Reset link sent to ${trimmed} — check your email.`);
+    trigger('success');
+  }
+
   async function handleGoogle() {
     setGoogleBusy(true);
     setError(null);
+    setNotice(null);
 
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithOAuth({
@@ -384,12 +476,16 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
       setError(error.message);
       setGoogleBusy(false);
       trigger('error');
+      return;
     }
+    // The redirect is in flight — record the method before the page unloads.
+    rememberAuthMethod('google');
   }
 
   async function handlePasskey() {
     setPasskeyBusy(true);
     setError(null);
+    setNotice(null);
 
     try {
       const optsRes = await fetch('/api/auth/passkey/options', { method: 'POST' });
@@ -412,6 +508,7 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
         );
       }
 
+      rememberAuthMethod('passkey');
       trigger('success');
       router.push('/tasks');
       router.refresh();
@@ -434,8 +531,10 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
     <div className="relative w-full max-w-[420px]">
 
       {/* Card */}
+      {/* Layered elevation (contact + soft + ambient) so the card reads as a
+          real surface above the white canvas, not paint on it. Still quiet. */}
       <motion.div
-        className="relative rounded-[20px] border border-[#E8E8E8]/75 bg-white px-6 py-10 shadow-[0_10px_20px_#D1D1D126]"
+        className="relative rounded-[20px] border border-[#E8E8E8]/75 bg-white px-6 py-10 shadow-[0_1px_2px_rgba(17,17,17,0.02),0_8px_16px_rgba(17,17,17,0.035),0_24px_48px_-16px_rgba(17,17,17,0.05)] contrast-more:border-black/30"
         initial={{ opacity: 0, y: CARD.offsetY }}
         animate={{ opacity: stage >= 1 ? 1 : 0, y: stage >= 1 ? 0 : CARD.offsetY }}
         transition={t(CARD.spring)}
@@ -467,7 +566,9 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
             occupy the same cell and crossfade SIMULTANEOUSLY on the page-swap
             curve (mode="wait" made the swap feel sequential). */}
         <motion.div
-          className="mb-10 grid justify-items-center text-balance text-center text-base leading-snug text-[#b4b4b4]"
+          // #767676 = AA floor on white; the old #b4b4b4 (2.1:1) treated the
+          // page's one line of real copy as decoration.
+          className="mb-10 grid justify-items-center text-balance text-center text-base leading-snug text-[#767676] contrast-more:text-[#3a3a3a]"
           initial={{ opacity: 0 }}
           animate={{ opacity: stage >= 3 ? 1 : 0 }}
           transition={t(FADE.spring)}
@@ -497,13 +598,19 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
           </AnimatePresence>
         </motion.div>
 
-        {/* Shared error slot — covers all three methods. Height animates both
-            directions so the card reflows smoothly instead of snapping. */}
+        {/* Shared error slot — covers all methods. Height animates both
+            directions so the card reflows smoothly instead of snapping.
+            Keyed by the MESSAGE, not a constant: when one error replaces
+            another (Sign in empty → Forgot password empty), the old slot
+            rolls closed while the new one rolls open on the same curve, so
+            the summed height glides. A constant key skipped exit/enter and
+            the card jumped a whole frame when the new text wrapped
+            differently. */}
         <div aria-live="polite">
           <AnimatePresence initial={false}>
             {error && (
               <motion.div
-                key="error"
+                key={error}
                 className="overflow-hidden"
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
@@ -512,6 +619,28 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
               >
                 <p className="mb-4 rounded-lg bg-[#d4503e]/10 px-3 py-2 text-sm text-[#d4503e]">
                   {error}
+                </p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* Neutral notice slot (reset-link confirmations) — same reflow
+            grammar as the error, gray instead of red, including the
+            message-as-key roll for text swaps. */}
+        <div aria-live="polite">
+          <AnimatePresence initial={false}>
+            {notice && (
+              <motion.div
+                key={notice}
+                className="overflow-hidden"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={t({ duration: 0.2, ease: 'easeOut' })}
+              >
+                <p className="mb-4 rounded-lg bg-black/[0.05] px-3 py-2 text-sm text-[#3a3a3a]">
+                  {notice}
                 </p>
               </motion.div>
             )}
@@ -534,13 +663,24 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
               animate={{ opacity: 1, x: 0, filter: 'blur(0px)', transition: t(PAGE.t) }}
               exit={{ opacity: 0, x: -PAGE.slide, filter: `blur(${PAGE.blur}px)`, transition: t(PAGE.out) }}
             >
-              {/* Provider pills */}
+              {/* Provider pills — rendered in method-memory order: the pill
+                  that signed you in last time sits on top with a caption. */}
               <motion.div
                 className="space-y-2"
                 initial={{ opacity: 0, y: FIELD.offsetY }}
                 animate={{ opacity: stage >= 4 ? 1 : 0, y: stage >= 4 ? 0 : FIELD.offsetY }}
                 transition={t(FIELD.spring)}
               >
+                {/* Linear-pattern recall: name the remembered method so the
+                    promoted pill reads as deliberate, not reshuffled. */}
+                {promotedMethod && (
+                  <p className="pb-0.5 pl-1 text-[12px] text-[#767676] contrast-more:text-[#3a3a3a]">
+                    You used {METHOD_LABEL[promotedMethod]} to sign in last time
+                  </p>
+                )}
+                {methodOrder.map(method => (
+                <Fragment key={method}>
+                {method === 'google' && (
                 <button
                   type="button"
                   onClick={handleGoogle}
@@ -559,7 +699,8 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
                     </motion.span>
                   </AnimatePresence>
                 </button>
-                {passkeySupported && (
+                )}
+                {method === 'passkey' && passkeySupported && (
                   <button
                     type="button"
                     onClick={handlePasskey}
@@ -585,6 +726,7 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
                 {/* Email surface morph — the pill IS the form's closed state.
                     The surface animates height/radius/tint; the two faces
                     cross-fade with slide + scale + blur (transitions.dev). */}
+                {method === 'email' && (
                 <motion.div
                   className={cn('relative', (emailOpen || emailClosing) && 'overflow-hidden')}
                   initial={false}
@@ -697,14 +839,14 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
                         />
                       </div>
 
-                      <div>
+                      <div className="relative">
                         <label htmlFor="password" className="sr-only">
                           Password
                         </label>
                         <input
                           ref={passwordInputRef}
                           id="password"
-                          type="password"
+                          type={showPassword ? 'text' : 'password'}
                           autoComplete="current-password"
                           value={password}
                           onChange={e => {
@@ -716,9 +858,71 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
                           }}
                           required
                           aria-invalid={fieldInvalid === 'password' || undefined}
-                          className={cn(FIELD_INPUT, fieldInvalid === 'password' && FIELD_INPUT_INVALID)}
+                          className={cn(
+                            FIELD_INPUT,
+                            'pr-11',
+                            fieldInvalid === 'password' && FIELD_INPUT_INVALID,
+                          )}
                           placeholder="Password"
                         />
+                        {/* Reveal toggle — expected affordance on every
+                            password field. Icons cross-fade (never hard-swap). */}
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(v => !v)}
+                          aria-label={showPassword ? 'Hide password' : 'Show password'}
+                          aria-pressed={showPassword}
+                          className={cn(
+                            'absolute right-0.5 top-1/2 grid size-10 -translate-y-1/2 place-items-center rounded-md text-[#767676]',
+                            'transition-[background-color,color,transform] duration-150 ease-out',
+                            'hover:bg-black/[0.05] hover:text-[#3a3a3a] active:scale-95',
+                            LIGHT_FOCUS_RING,
+                          )}
+                        >
+                          {/* Both icons stay mounted, stacked in one cell, and
+                              cross-fade simultaneously — one object changing
+                              state, not two swapping (and re-taps retarget the
+                              spring mid-flight instead of restarting). */}
+                          <span className="grid place-items-center">
+                            <motion.span
+                              className="col-start-1 row-start-1 grid place-items-center"
+                              initial={false}
+                              animate={
+                                showPassword
+                                  ? { opacity: 0, scale: 0.5, filter: 'blur(2px)' }
+                                  : { opacity: 1, scale: 1, filter: 'blur(0px)' }
+                              }
+                              transition={t({ type: 'spring', duration: 0.25, bounce: 0 })}
+                            >
+                              <Eye className="size-4" strokeWidth={1.75} />
+                            </motion.span>
+                            <motion.span
+                              className="col-start-1 row-start-1 grid place-items-center"
+                              initial={false}
+                              animate={
+                                showPassword
+                                  ? { opacity: 1, scale: 1, filter: 'blur(0px)' }
+                                  : { opacity: 0, scale: 0.5, filter: 'blur(2px)' }
+                              }
+                              transition={t({ type: 'spring', duration: 0.25, bounce: 0 })}
+                            >
+                              <EyeOff className="size-4" strokeWidth={1.75} />
+                            </motion.span>
+                          </span>
+                        </button>
+                      </div>
+
+                      {/* Recovery wayfinding — every password form must answer
+                          "how do I get out?" (ElevenLabs-pattern placement). */}
+                      <div className="flex justify-end px-1">
+                        <button
+                          type="button"
+                          onClick={handleForgotPassword}
+                          disabled={resetBusy || loading}
+                          className={cn(SUBTLE_LINK, 'py-0.5 disabled:cursor-default disabled:opacity-60')}
+                        >
+                          {resetBusy ? 'Sending reset link…' : 'Forgot password?'}
+                        </button>
                       </div>
 
                       <motion.button
@@ -746,6 +950,9 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
                     </form>
                   </motion.div>
                 </motion.div>
+                )}
+                </Fragment>
+                ))}
               </motion.div>
             </motion.div>
           ) : (

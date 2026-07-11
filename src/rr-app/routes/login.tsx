@@ -2,6 +2,7 @@ import { CircleHelp } from 'lucide-react';
 import { Link } from 'react-router';
 import { useSearchParams } from '@/lib/react-router-adapters';
 import { LoginForm } from '@/components/auth/LoginForm';
+import { HalftoneVeil } from '@/components/auth/HalftoneVeil';
 
 /**
  * Login shell per the Paper reference (SK_DB frame 27P-0): centered card on the
@@ -17,6 +18,18 @@ const CALLBACK_ERROR_MESSAGES: Record<string, string> = {
   auth_callback_failed: "Google sign-in didn't complete. Please try again.",
 };
 
+/** Progressive frost halo over the halftone veil, centered on the card:
+ *  three stacked backdrop layers with tightening radial masks, each pairing
+ *  blur with a white tint — blur alone softens the dots but keeps their
+ *  luminance, so the field still competed with the card; the tint is what
+ *  actually clears it. Both fall off with distance, and the bloom's dense
+ *  core at the bottom edge stays fully crisp. */
+const BLUR_HALO = [
+  { blur: 3, tint: 0.1, mask: 'radial-gradient(ellipse 50% 50% at center, black 30%, transparent 96%)' },
+  { blur: 8, tint: 0.18, mask: 'radial-gradient(ellipse 50% 50% at center, black 25%, transparent 84%)' },
+  { blur: 16, tint: 0.3, mask: 'radial-gradient(ellipse 50% 50% at center, black 20%, transparent 68%)' },
+];
+
 export function LoginRoute() {
   return <LoginRouteContent />;
 }
@@ -31,7 +44,39 @@ export function LoginRouteContent() {
     // reserved on BOTH edges: when the email form expands past the viewport,
     // the document scrollbar used to pop in and nudge the whole page ~7px
     // left. Symmetric gutters keep the card centered in either state.
-    <div className="overview-light relative flex h-dvh flex-col overflow-y-auto bg-white px-4 antialiased pb-[env(safe-area-inset-bottom)] [scrollbar-gutter:stable_both-edges]">
+    // color-scheme: the app body declares dark — override on this white
+    // canvas or the scrollbar (visible whenever the email form expands past
+    // the viewport) renders as a dark track on the light page.
+    <div className="overview-light relative flex h-dvh flex-col overflow-y-auto bg-white px-4 antialiased pb-[env(safe-area-inset-bottom)] [scrollbar-gutter:stable_both-edges] [color-scheme:light]">
+      {/* Fixed (not absolute) so the field holds the bottom edge of the
+          viewport even when the expanded email view scrolls; fixed elements
+          paint above static siblings, hence the z-[1] on main. */}
+      <HalftoneVeil />
+
+      {/* Frost halo between the veil and the content: sized (not just masked)
+          so the backdrop-filter cost stays bounded to the card's neighborhood.
+          Height capped at 60vh so the bottom edge (≤74vh down) clears the
+          lowered dot field (top ≈76vh) — if the layers overlapped the canvas,
+          every lens repaint would force three backdrop re-filters. */}
+      <div
+        aria-hidden
+        className="pointer-events-none fixed left-1/2 top-[44%] h-[min(820px,60vh)] w-[min(1120px,96vw)] -translate-x-1/2 -translate-y-1/2 print:hidden contrast-more:hidden"
+      >
+        {BLUR_HALO.map(({ blur, tint, mask }) => (
+          <div
+            key={blur}
+            className="absolute inset-0"
+            style={{
+              backgroundColor: `rgba(255,255,255,${tint})`,
+              backdropFilter: `blur(${blur}px)`,
+              WebkitBackdropFilter: `blur(${blur}px)`,
+              maskImage: mask,
+              WebkitMaskImage: mask,
+            }}
+          />
+        ))}
+      </div>
+
       {/* Top bar — reference geometry: 32px mark + 16px #686868 labels, 32/40 padding */}
       <header className="absolute inset-x-0 top-0 flex items-center justify-between px-6 py-6 pt-[max(1.5rem,env(safe-area-inset-top))] sm:px-10 sm:py-8">
         <div className="flex items-center gap-2.5">
@@ -61,25 +106,31 @@ export function LoginRouteContent() {
           tall screens and compresses toward 24px as the window shrinks, so
           the email view fits without scrolling down to ~800px-tall windows;
           below that, scrolling is genuine (content taller than viewport). */}
-      <main className="mx-auto my-auto flex w-full max-w-[420px] flex-col items-center py-[clamp(1.5rem,calc((100dvh-780px)/2),6rem)]">
+      <main className="relative z-[1] mx-auto my-auto flex w-full max-w-[420px] flex-col items-center py-[clamp(1.5rem,calc((100dvh-780px)/2),6rem)]">
         <LoginForm initialError={callbackError} />
 
-        {/* Legal footnote — reference: 14px #969696, max 300px, 32px below card.
-            Document names sit a step darker and link to /legal/:slug. */}
-        <p className="mt-8 max-w-[300px] text-pretty text-center text-sm leading-snug text-[#969696]">
+        {/* Legal footnote — reference geometry (14px, max 300px, 32px below
+            card) but lifted off the reference's #969696: 14px body text needs
+            ≥4.5:1 on white, so the body sits at #767676 (4.5:1) and the
+            document links a step darker. prefers-contrast pushes both further.
+            No scrim behind it (user call): the text sits directly on the dot
+            field — the dots here are mid-density pastels, not the dense core. */}
+        <div className="relative mt-8">
+          <p className="relative max-w-[300px] text-pretty text-center text-sm leading-snug text-[#767676] contrast-more:text-[#3a3a3a]">
           By creating an account, you agree to our{' '}
-          <Link to="/legal/terms" className="font-medium text-[#6e6e6e] transition-colors duration-150 hover:text-[#111]">
+          <Link to="/legal/terms" className="font-medium text-[#5c5c5c] transition-colors duration-150 hover:text-[#111] contrast-more:text-[#111] contrast-more:underline">
             Terms of Use
           </Link>
           ,{' '}
-          <Link to="/legal/developer-terms" className="font-medium text-[#6e6e6e] transition-colors duration-150 hover:text-[#111]">
+          <Link to="/legal/developer-terms" className="font-medium text-[#5c5c5c] transition-colors duration-150 hover:text-[#111] contrast-more:text-[#111] contrast-more:underline">
             Developer Portal Terms of Service
           </Link>{' '}
           and{' '}
-          <Link to="/legal/privacy" className="font-medium text-[#6e6e6e] transition-colors duration-150 hover:text-[#111]">
+          <Link to="/legal/privacy" className="font-medium text-[#5c5c5c] transition-colors duration-150 hover:text-[#111] contrast-more:text-[#111] contrast-more:underline">
             Privacy Policy
           </Link>
-        </p>
+          </p>
+        </div>
       </main>
     </div>
   );

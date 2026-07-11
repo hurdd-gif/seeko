@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router';
 import { CircleHelp } from 'lucide-react';
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { AnimatePresence, animate, motion, useMotionValue, useReducedMotion, useTransform } from 'motion/react';
 import { springs } from '@/lib/motion';
+import { startScrollGlide, type ScrollGlide } from '@/lib/scroll-glide';
 import { termsOfUse } from '@/lib/legal/terms';
 import { developerTerms } from '@/lib/legal/developer-terms';
 import { privacyPolicy } from '@/lib/legal/privacy';
@@ -20,6 +21,8 @@ import { cn } from '@/lib/utils';
 
 const DOCS: LegalDoc[] = [termsOfUse, developerTerms, privacyPolicy];
 
+const RAIL_INTRO_KEY = 'seeko-legal-rail-introduced';
+
 /* Entrance — small staggered rises, everything interruptible-safe (opacity/
  * transform only). Skipped wholesale under reduced motion. */
 const RISE = {
@@ -27,6 +30,22 @@ const RISE = {
   y: 10,
   stagger: 0.07,
 };
+
+/* Rubberband give at the dial's ends: dragging past the first/last row keeps
+ * pulling the rail, but with asymptotic resistance (Apple's curve from the
+ * Designing Fluid Interfaces sample code) — and a hard frame-lock at one tick
+ * row of travel (user call: the unclamped curve let a long pull drag the rail
+ * ~50px). The curve gives progressively up to ~7 rows of overshoot, then the
+ * stretch pins at RAIL_MAX_STRETCH however far the hand keeps going. The
+ * document shares the gesture: it overscrolls PAGE_STRETCH × the rail's
+ * travel in the scroll direction, so both surfaces lock on the same frame. */
+const RAIL_GIVE = 0.15;
+const RAIL_MAX_STRETCH = 12;
+const PAGE_STRETCH = 2.5;
+function rubberband(overshoot: number, dimension: number) {
+  const pull = (overshoot * dimension * RAIL_GIVE) / (dimension + RAIL_GIVE * Math.abs(overshoot));
+  return Math.max(-RAIL_MAX_STRETCH, Math.min(RAIL_MAX_STRETCH, pull));
+}
 
 function sectionId(index: number, heading: string) {
   return `${index + 1}-${heading.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`;
@@ -79,6 +98,15 @@ export function LegalRoute() {
   // Which tick's label is revealed (hover/focus) — one at a time, never a column.
   const [peekedSection, setPeekedSection] = useState<number | null>(null);
   const [railHovered, setRailHovered] = useState(false);
+  // One-time discoverability flash (macOS-scrollbar pattern): the rail is a
+  // column of 14px slivers — pure chrome until you already know it's a
+  // navigator. On first arrival it engages itself and names the current
+  // section for a beat, then settles. Once per session, wide screens only.
+  const [railIntro, setRailIntro] = useState(false);
+  // Mirror for the intro timer: it fires once (empty deps) but must name
+  // whatever section a deep link landed on, not a stale closure's 0.
+  const activeSectionRef = useRef(activeSection);
+  activeSectionRef.current = activeSection;
   // Drag-to-scrub bookkeeping: where the press landed, whether it has crossed
   // into a real drag, and the last row scrubbed to (for the one hash write on
   // release). A ref, not state — pointermove must read/write it without
@@ -94,18 +122,84 @@ export function LegalRoute() {
     // the hot path.
     tops: number[] | null;
   } | null>(null);
-  // The scrub's glide loop: scrollTop chases `target` a fraction per frame
+  // The scrub's glide loop: scrollTop chases the target a fraction per frame
   // (critically damped — no overshoot), which is what makes the drag feel
   // smooth instead of teleporting per detent. Outlives dragRef so the last
-  // glide can settle after release.
-  const scrubAnimRef = useRef<{ target: number; factor: number; raf: number } | null>(null);
+  // glide can settle after release. Lives in src/lib/scroll-glide.ts, where
+  // its exit conditions (settled / quantization stall / usurped by the
+  // user's own scroll) are unit-tested — a stall used to keep the loop
+  // alive forever, pinning scrollTop and locking the page against wheel
+  // scroll after a drag.
+  const scrubGlideRef = useRef<ScrollGlide | null>(null);
   const [railDragging, setRailDragging] = useState(false);
+  // Rubberband displacement of the whole rail (px). A motion value, not
+  // state: written per pointermove (1:1 while held, through the resistance
+  // curve) and sprung home on release. The return animation is kept so a
+  // re-grab mid-flight can stop it and take over from the live value.
+  const railShift = useMotionValue(0);
+  // The document's share of the overshoot, derived so the two surfaces are
+  // one gesture: it stretches, frame-locks, and springs home exactly when
+  // the rail does (the release animation on railShift drives both). Negated
+  // because the page continues in the SCROLL direction — dial pulled down
+  // past the last section keeps carrying the content up, iOS-overscroll
+  // style — while the rail follows the hand.
+  const pageShift = useTransform(railShift, v => -v * PAGE_STRETCH);
+  const railShiftReturn = useRef<{ stop: () => void } | null>(null);
+  const releaseRailShift = () => {
+    if (railShift.get() === 0) return;
+    // springs.snappy is slightly underdamped — the snap home carries a hair
+    // of bounce, earned here because the hand's gesture had momentum.
+    railShiftReturn.current = animate(railShift, 0, springs.snappy);
+  };
+  // Scroll-edge signal for the fixed top bar: material appears only once
+  // content has actually scrolled beneath the chrome.
+  const [scrolledUnder, setScrolledUnder] = useState(false);
+  useEffect(() => {
+    const scroller = scrollerRef.current;
+    if (!scroller) return;
+    const onScroll = () => setScrolledUnder(scroller.scrollTop > 8);
+    onScroll();
+    scroller.addEventListener('scroll', onScroll, { passive: true });
+    return () => scroller.removeEventListener('scroll', onScroll);
+  }, []);
   useEffect(() => () => {
-    if (scrubAnimRef.current) cancelAnimationFrame(scrubAnimRef.current.raf);
+    scrubGlideRef.current?.stop();
+    railShiftReturn.current?.stop();
   }, []);
   // Keyboard focus and an in-flight drag engage the rail the same way the
   // pointer does (the drag can wander off the strip while captured).
-  const railEngaged = railHovered || peekedSection !== null || railDragging;
+  const railEngaged = railHovered || peekedSection !== null || railDragging || railIntro;
+
+  // Intro flash schedule: wait out the entrance stagger, engage + peek the
+  // active section, release after a beat. Skipped on repeat visits this
+  // session and on screens where the rail is hidden (< xl).
+  useEffect(() => {
+    if (!doc) return;
+    try {
+      if (sessionStorage.getItem(RAIL_INTRO_KEY)) return;
+    } catch {
+      // Storage blocked: still introduce — it just repeats next visit.
+    }
+    if (!window.matchMedia('(min-width: 80rem)').matches) return;
+    const engage = setTimeout(() => {
+      try {
+        sessionStorage.setItem(RAIL_INTRO_KEY, '1');
+      } catch {
+        // Non-fatal.
+      }
+      setRailIntro(true);
+      setPeekedSection(activeSectionRef.current);
+    }, 900);
+    const release = setTimeout(() => {
+      setRailIntro(false);
+      setPeekedSection(current => (current === activeSectionRef.current ? null : current));
+    }, 2700);
+    return () => {
+      clearTimeout(engage);
+      clearTimeout(release);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (doc) document.title = `${doc.title} · SEEKO Studio`;
@@ -178,13 +272,18 @@ export function LegalRoute() {
 
   // Drag-to-scrub: which rail row sits under the pointer. Rect math (height /
   // row count, every row is the same 12px band) rather than per-row hit
-  // testing, so the rail's 1.25× engaged scale is accounted for free.
+  // testing, so the rail's 1.25× engaged scale is accounted for free. The
+  // rect rides the rubberband translate — subtract our own shift so the rows
+  // are addressed where the rail rests, not where it's stretched to.
   const railIndexAt = (clientY: number) => {
     const rail = railRef.current;
     if (!rail) return 0;
     const rect = rail.getBoundingClientRect();
     const row = rect.height / doc.sections.length;
-    return Math.min(doc.sections.length - 1, Math.max(0, Math.floor((clientY - rect.top) / row)));
+    return Math.min(
+      doc.sections.length - 1,
+      Math.max(0, Math.floor((clientY - (rect.top - railShift.get())) / row)),
+    );
   };
 
   // Where scrollIntoView would land each section (scroll-mt-28 = 112px below
@@ -194,41 +293,28 @@ export function LegalRoute() {
     if (!scroller) return null;
     const max = scroller.scrollHeight - scroller.clientHeight;
     const scrollerTop = scroller.getBoundingClientRect().top;
+    // A re-grab mid-return measures while the document still carries the
+    // overscroll translate — subtract it so tops describe the content at rest.
+    const shift = pageShift.get();
     return doc.sections.map((section, i) => {
       const el = document.getElementById(sectionId(i, section.heading));
       if (!el) return 0;
-      const top = scroller.scrollTop + el.getBoundingClientRect().top - scrollerTop - 112;
+      const top = scroller.scrollTop + el.getBoundingClientRect().top - shift - scrollerTop - 112;
       return Math.min(max, Math.max(0, top));
     });
   };
 
   const startScrubGlide = () => {
-    const scroller = scrollerRef.current;
-    if (!scroller) return;
-    if (scrubAnimRef.current) cancelAnimationFrame(scrubAnimRef.current.raf);
+    if (!scrollerRef.current) return;
+    scrubGlideRef.current?.stop();
     // 0.22/frame ≈ 65ms time constant at 60fps: tight enough to feel wired to
     // the hand, soft enough to swallow the high gearing where one 12px rail
     // row spans a long section. Reduced motion tracks 1:1 instead of gliding.
-    const anim = { target: scroller.scrollTop, factor: reduceMotion ? 1 : 0.22, raf: 0 };
-    scrubAnimRef.current = anim;
-    const tick = () => {
-      const el = scrollerRef.current;
-      if (!el || scrubAnimRef.current !== anim) return;
-      const delta = anim.target - el.scrollTop;
-      if (Math.abs(delta) < 0.5) {
-        el.scrollTop = anim.target;
-        // Keep idling while the pointer is still down — the next move only
-        // updates `target`; once released and settled, stop for real.
-        if (!dragRef.current?.dragging) {
-          scrubAnimRef.current = null;
-          return;
-        }
-      } else {
-        el.scrollTop += delta * anim.factor;
-      }
-      anim.raf = requestAnimationFrame(tick);
-    };
-    anim.raf = requestAnimationFrame(tick);
+    scrubGlideRef.current = startScrollGlide({
+      getEl: () => scrollerRef.current,
+      isHeld: () => !!dragRef.current?.dragging,
+      factor: reduceMotion ? 1 : 0.22,
+    });
   };
 
   // Continuous scrub: the pointer's position along the rail (row centers =
@@ -239,14 +325,29 @@ export function LegalRoute() {
   const scrubMove = (clientY: number) => {
     const drag = dragRef.current;
     const rail = railRef.current;
-    const anim = scrubAnimRef.current;
-    if (!drag?.tops || !rail || !anim) return;
+    const glide = scrubGlideRef.current;
+    if (!drag?.tops || !rail || !glide) return;
     const rect = rail.getBoundingClientRect();
+    // Unwind our own rubberband translate so the overshoot can't feed back
+    // into itself (the stretch would otherwise chase the moving rail).
+    const top = rect.top - railShift.get();
     const rowH = rect.height / doc.sections.length;
-    const p = Math.min(doc.sections.length - 1, Math.max(0, (clientY - rect.top) / rowH - 0.5));
+    const max = doc.sections.length - 1;
+    const raw = (clientY - top) / rowH - 0.5;
+    const p = Math.min(max, Math.max(0, raw));
     const i = Math.max(0, Math.min(doc.sections.length - 2, Math.floor(p)));
-    anim.target =
-      doc.sections.length < 2 ? drag.tops[0] : drag.tops[i] + (drag.tops[i + 1] - drag.tops[i]) * (p - i);
+    glide.retarget(
+      doc.sections.length < 2 ? drag.tops[0] : drag.tops[i] + (drag.tops[i + 1] - drag.tops[i]) * (p - i),
+    );
+    // Past either end the pointer stops moving the document (p is clamped
+    // above) and starts stretching the rail instead — the dial's physical
+    // "you're at the stop". Tracks the hand 1:1 through the resistance curve
+    // while held; endRailDrag springs it home. Skipped under reduced motion
+    // (the pin at the first/last section already communicates the boundary).
+    if (!reduceMotion) {
+      const overshootPx = (raw < 0 ? raw : raw > max ? raw - max : 0) * rowH;
+      railShift.set(rubberband(overshootPx, rect.height));
+    }
     const nearest = Math.round(p);
     if (nearest !== drag.lastIndex) {
       drag.lastIndex = nearest;
@@ -260,6 +361,7 @@ export function LegalRoute() {
     dragRef.current = null;
     if (!drag.dragging) return; // stationary press — the button's onClick owns it
     setRailDragging(false);
+    releaseRailShift();
     const landed = drag.lastIndex >= 0 ? drag.lastIndex : drag.startIndex;
     history.replaceState(null, '', `#${sectionId(landed, doc.sections[landed].heading)}`);
     // If the drag let go off the strip, tidy the hover states ourselves —
@@ -283,12 +385,26 @@ export function LegalRoute() {
         };
 
   return (
-    <div
-      ref={scrollerRef}
-      className="overview-light relative flex h-dvh flex-col overflow-y-auto bg-white px-4 antialiased pb-[env(safe-area-inset-bottom)] [scrollbar-gutter:stable_both-edges]"
-    >
-      {/* Top bar — same geometry as /login so the two pages read as one place */}
-      <header className="absolute inset-x-0 top-0 flex items-center justify-between px-6 py-6 pt-[max(1.5rem,env(safe-area-inset-top))] sm:px-10 sm:py-8">
+    // The document scrolls in its own container below (not the root) so the
+    // fixed chrome (header, tick rail) can layer over it cleanly.
+    // color-scheme: the app body declares dark (dark scrollbars/controls for
+    // the dashboard shell) — override on this white canvas or the browser
+    // paints a dark scrollbar track down the light page.
+    <div className="overview-light relative h-dvh overflow-hidden bg-white antialiased [color-scheme:light]">
+      {/* Top bar — same geometry as /login so the two pages read as one place.
+          Fixed (not scrolled away) with a scroll-edge material: transparent at
+          rest, a translucent blur layer + canonical hairline once document
+          content actually passes beneath it — chrome only materializes when
+          there's something to separate from. */}
+      <header
+        className={cn(
+          'fixed inset-x-0 top-0 z-20 flex items-center justify-between px-6 py-6 pt-[max(1.5rem,env(safe-area-inset-top))] sm:px-10 sm:py-8',
+          'transition-[background-color,box-shadow] duration-200 ease-out',
+          scrolledUnder
+            ? 'bg-white/80 backdrop-blur-[20px] backdrop-saturate-150 shadow-seeko contrast-more:bg-white'
+            : 'bg-transparent',
+        )}
+      >
         <Link
           to="/login"
           className="flex items-center gap-2.5 transition-opacity duration-150 hover:opacity-70"
@@ -320,7 +436,9 @@ export function LegalRoute() {
           It also scrubs like a dial: press and drag along the ticks and the
           document glides with the pointer (continuous position → interpolated
           section offsets → damped chase), the label detenting to the nearest
-          row. The press only becomes a drag once it crosses into another row,
+          row. Dragging past either end rubberbands the whole rail (damped
+          1:1 stretch, spring home on release) — the physical stop that says
+          you're at the first/last section. The press only becomes a drag once it crosses into another row,
           so a stationary press still falls through to the button's onClick
           (and its smooth scroll). Pointer capture starts at the same moment,
           which also swallows the synthetic click that would otherwise
@@ -353,6 +471,9 @@ export function LegalRoute() {
             'relative flex origin-left touch-none select-none flex-col',
             railDragging && 'cursor-grabbing **:cursor-grabbing',
           )}
+          // Rubberband displacement rides alongside the engaged scale (motion
+          // composes the style motion value with the animated transform).
+          style={{ y: railShift }}
           animate={{ scale: railEngaged ? 1.25 : 1 }}
           transition={reduceMotion ? { duration: 0 } : springs.snappy}
           initial={false}
@@ -369,6 +490,20 @@ export function LegalRoute() {
           onPointerMove={e => {
             const drag = dragRef.current;
             if (!drag || e.pointerId !== drag.pointerId) return;
+            // A move with no primary button/contact down means the release
+            // happened where we couldn't see it (pointerup landed off-element
+            // before capture began, or capture was lost). Abandon the press —
+            // otherwise a later buttonless hover across the rail would start
+            // a phantom drag that no pointerup ever ends, scrubbing the page
+            // on mouse movement and locking scroll until a stray click.
+            if (!(e.buttons & 1)) {
+              dragRef.current = null;
+              if (drag.dragging) {
+                setRailDragging(false);
+                releaseRailShift();
+              }
+              return;
+            }
             if (!drag.dragging) {
               if (railIndexAt(e.clientY) === drag.startIndex) return;
               drag.dragging = true;
@@ -376,6 +511,9 @@ export function LegalRoute() {
               setRailDragging(true);
               e.currentTarget.setPointerCapture(e.pointerId);
               startScrubGlide();
+              // Re-grabbed mid-return: the hand takes over from wherever the
+              // spring left the rail — scrubMove writes the value from here.
+              railShiftReturn.current?.stop();
             }
             scrubMove(e.clientY);
           }}
@@ -446,7 +584,15 @@ export function LegalRoute() {
         </motion.div>
       </motion.nav>
 
-      <main className="mx-auto w-full max-w-[680px] pb-24 pt-32 sm:pt-36">
+      {/* The document itself — header (z-20) and rail (z-10) stay above it. */}
+      <div
+        ref={scrollerRef}
+        className="relative z-[1] h-full overflow-y-auto px-4 pb-[env(safe-area-inset-bottom)] [scrollbar-gutter:stable_both-edges]"
+      >
+      {/* Overscroll translate rides the whole document (transform-only, so
+          scrollTop and the glide loop are untouched) — the dial's overshoot
+          carries the page a little further past its end, then frame-locks. */}
+      <motion.main className="mx-auto w-full max-w-[680px] pb-24 pt-32 sm:pt-36" style={{ y: pageShift }}>
         {/* Document switcher — pill per document, current one filled */}
         <motion.nav aria-label="Legal documents" className="flex flex-wrap gap-1.5" {...rise(0)}>
           {DOCS.map(d => (
@@ -470,7 +616,7 @@ export function LegalRoute() {
           <h1 className="text-balance text-[28px] font-semibold tracking-[-0.02em] text-[#1c1c1c]">
             {doc.title}
           </h1>
-          <p className="mt-2 text-[13px] font-medium tabular-nums text-[#969696]">
+          <p className="mt-2 text-[13px] font-medium tabular-nums text-[#767676] contrast-more:text-[#3a3a3a]">
             Effective {doc.effectiveDate}
           </p>
           <p className="mt-5 text-pretty text-base leading-relaxed text-[#6e6e6e]">{doc.intro}</p>
@@ -483,9 +629,7 @@ export function LegalRoute() {
           className="mt-9 rounded-2xl bg-[#fafafa] px-5 py-4 xl:hidden"
           {...rise(2)}
         >
-          <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#a0a0a0]">
-            Contents
-          </p>
+          <p className="text-[13px] font-semibold text-[#3a3a3a]">Contents</p>
           <ol className="mt-2.5 columns-1 gap-8 sm:columns-2">
             {doc.sections.map((section, i) => (
               <li key={i} className="break-inside-avoid">
@@ -508,6 +652,14 @@ export function LegalRoute() {
                 <span className="tabular-nums text-[#c0c0c0]">{i + 1}</span>
                 {section.heading}
               </h2>
+              {/* Plain-language gist — the one sentence to read if you read
+                  nothing else. Styled as an aside (hairline, not a card) so it
+                  can't be mistaken for the operative text below it. */}
+              {section.summary && (
+                <p className="ml-[30px] mt-2.5 border-l-2 border-[#e4e4e4] pl-3 text-[14px] leading-relaxed text-[#767676] contrast-more:text-[#3a3a3a]">
+                  <span className="font-medium text-[#3a3a3a]">In short</span> — {section.summary}
+                </p>
+              )}
               <div className="mt-3 space-y-3 pl-[30px]">
                 {section.body.map((block, j) => (
                   <Block key={j} block={block} />
@@ -521,7 +673,7 @@ export function LegalRoute() {
           className="mt-16 flex flex-wrap items-center justify-between gap-4 border-t border-[#f0f0f0] pt-6"
           {...rise(4)}
         >
-          <p className="text-[13px] text-[#a0a0a0]">SEEKO Studio</p>
+          <p className="text-[13px] text-[#767676] contrast-more:text-[#3a3a3a]">SEEKO Studio</p>
           <Link
             to="/login"
             className="text-[13px] font-medium text-[#6e6e6e] transition-colors duration-150 hover:text-[#111]"
@@ -529,7 +681,8 @@ export function LegalRoute() {
             Back to sign in
           </Link>
         </motion.footer>
-      </main>
+      </motion.main>
+      </div>
     </div>
   );
 }

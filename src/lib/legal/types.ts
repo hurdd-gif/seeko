@@ -12,6 +12,9 @@ export type LegalBlock =
 
 export type LegalSection = {
   heading: string;
+  /** One-sentence plain-language gist rendered as an "In short" line above
+   * the section body. Optional — purely procedural sections (Contact) skip it. */
+  summary?: string;
   body: LegalBlock[];
 };
 

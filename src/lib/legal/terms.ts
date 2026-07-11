@@ -10,6 +10,8 @@ export const termsOfUse: LegalDoc = {
   sections: [
     {
       heading: 'Acceptance of these terms',
+      summary:
+        'Signing in with an invitation means you agree to these terms; a signed contract with the studio wins where they conflict.',
       body: [
         {
           kind: 'p',
@@ -23,6 +25,8 @@ export const termsOfUse: LegalDoc = {
     },
     {
       heading: 'Eligibility and invitations',
+      summary:
+        'Access is invite-only and personal to you — you must be 18+, and you can’t hand your invitation or account to anyone else.',
       body: [
         {
           kind: 'p',
@@ -36,6 +40,8 @@ export const termsOfUse: LegalDoc = {
     },
     {
       heading: 'Accounts and credentials',
+      summary:
+        'Keep your password and passkeys to yourself, and tell us quickly if your account may be compromised.',
       body: [
         {
           kind: 'p',
@@ -49,6 +55,8 @@ export const termsOfUse: LegalDoc = {
     },
     {
       heading: 'Acceptable use',
+      summary:
+        'Use the workspace for studio work only — no sharing access, probing security, scraping, or uploading anything unlawful or malicious.',
       body: [
         {
           kind: 'p',
@@ -69,6 +77,8 @@ export const termsOfUse: LegalDoc = {
     },
     {
       heading: 'Confidentiality',
+      summary:
+        'Everything in the workspace is confidential; keep it inside the studio, NDA or not, even after your access ends.',
       body: [
         {
           kind: 'p',
@@ -82,6 +92,8 @@ export const termsOfUse: LegalDoc = {
     },
     {
       heading: 'Intellectual property',
+      summary:
+        'The studio owns the workspace and its materials; you get permission to use them for studio work, and your own prior work stays yours.',
       body: [
         {
           kind: 'p',
@@ -95,6 +107,8 @@ export const termsOfUse: LegalDoc = {
     },
     {
       heading: 'NDA signing and electronic records',
+      summary:
+        'The in-app NDA signing is legally binding, and we record your name, address, IP, and browser as evidence of the signature.',
       body: [
         {
           kind: 'p',
@@ -108,6 +122,8 @@ export const termsOfUse: LegalDoc = {
     },
     {
       heading: 'Payments ledger — records only',
+      summary:
+        'The payments area is a record book, not a payment system — no money moves through the app, and entries can be corrected if wrong.',
       body: [
         {
           kind: 'p',
@@ -121,6 +137,8 @@ export const termsOfUse: LegalDoc = {
     },
     {
       heading: 'Termination and revocation of access',
+      summary:
+        'The studio can suspend or revoke access at any time; confidentiality and a few other obligations survive after it ends.',
       body: [
         {
           kind: 'p',
@@ -134,6 +152,8 @@ export const termsOfUse: LegalDoc = {
     },
     {
       heading: 'Disclaimers',
+      summary:
+        'The workspace is provided as-is — we don’t guarantee it will always be up, error-free, or perfectly current.',
       body: [
         {
           kind: 'p',
@@ -143,6 +163,8 @@ export const termsOfUse: LegalDoc = {
     },
     {
       heading: 'Limitation of liability',
+      summary:
+        'Our liability for anything relating to the workspace is capped at US $100, except where the law doesn’t allow a cap.',
       body: [
         {
           kind: 'p',
@@ -152,6 +174,8 @@ export const termsOfUse: LegalDoc = {
     },
     {
       heading: 'Changes to these terms',
+      summary:
+        'We may update these terms; material changes update the date above and come with notice, and continued use means acceptance.',
       body: [
         {
           kind: 'p',
@@ -161,6 +185,8 @@ export const termsOfUse: LegalDoc = {
     },
     {
       heading: 'Governing law and disputes',
+      summary:
+        'Delaware law governs, and any dispute goes to Delaware courts.',
       body: [
         {
           kind: 'p',

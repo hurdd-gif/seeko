@@ -10,6 +10,8 @@ export const developerTerms: LegalDoc = {
   sections: [
     {
       heading: 'Relationship to the Terms of Use',
+      summary:
+        'These terms add to the Terms of Use for developer work; a signed contractor agreement or NDA still wins over both.',
       body: [
         {
           kind: 'p',
@@ -23,6 +25,8 @@ export const developerTerms: LegalDoc = {
     },
     {
       heading: 'Portal access and scope',
+      summary:
+        'What you can see in the portal is a permission set by the admin, and it can change with your engagement.',
       body: [
         {
           kind: 'p',
@@ -32,6 +36,8 @@ export const developerTerms: LegalDoc = {
     },
     {
       heading: 'Tasks, claims, and bounties',
+      summary:
+        'Claiming a task signals intent, not a contract; a bounty becomes payable only when the studio accepts the finished work.',
       body: [
         {
           kind: 'p',
@@ -45,6 +51,8 @@ export const developerTerms: LegalDoc = {
     },
     {
       heading: 'Review and acceptance of work',
+      summary:
+        'Submitted work is reviewed and may be accepted, sent back, or rejected — statuses in the portal track where it stands.',
       body: [
         {
           kind: 'p',
@@ -54,6 +62,8 @@ export const developerTerms: LegalDoc = {
     },
     {
       heading: 'Payment, taxes, and the ledger',
+      summary:
+        'The ledger records what you’re owed and paid; money moves outside the app, and your taxes are your responsibility.',
       body: [
         {
           kind: 'p',
@@ -67,6 +77,8 @@ export const developerTerms: LegalDoc = {
     },
     {
       heading: 'Independent-contractor status',
+      summary:
+        'Using the portal doesn’t make you an employee — you work as an independent contractor unless a signed agreement says otherwise.',
       body: [
         {
           kind: 'p',
@@ -76,6 +88,8 @@ export const developerTerms: LegalDoc = {
     },
     {
       heading: 'Work submissions and intellectual property',
+      summary:
+        'Who owns your work is decided by your contractor agreement, not these terms; you promise what you submit is yours and clean.',
       body: [
         {
           kind: 'p',
@@ -89,6 +103,8 @@ export const developerTerms: LegalDoc = {
     },
     {
       heading: 'Restricted documentation and granted access',
+      summary:
+        'Access grants to restricted docs are personal — read them for your work, don’t forward or keep them.',
       body: [
         {
           kind: 'p',
@@ -102,6 +118,8 @@ export const developerTerms: LegalDoc = {
     },
     {
       heading: 'Security obligations',
+      summary:
+        'Keep your credentials and devices to yourself, don’t scrape or probe the portal, and report anything you shouldn’t have seen.',
       body: [
         {
           kind: 'p',
@@ -121,6 +139,8 @@ export const developerTerms: LegalDoc = {
     },
     {
       heading: 'Suspension and revocation',
+      summary:
+        'Access can be revoked at any time, but money genuinely owed for accepted work stays owed.',
       body: [
         {
           kind: 'p',
@@ -130,6 +150,8 @@ export const developerTerms: LegalDoc = {
     },
     {
       heading: 'Disclaimers',
+      summary:
+        'Portal records are working documents kept by a small team — as-is, with genuine mistakes corrected when flagged.',
       body: [
         {
           kind: 'p',
