@@ -39,13 +39,13 @@ export function RailSection({
   const shouldReduce = useReducedMotion();
 
   return (
-    <section className="overflow-hidden rounded-xl bg-white shadow-seeko">
+    <section className="overflow-hidden rounded-xl bg-surface-1 shadow-seeko">
       <div className="flex items-center gap-2 px-4 pt-3.5 pb-2">
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
-          className="-ml-1 flex items-center gap-1.5 rounded-md px-1 py-0.5 text-left transition-colors hover:bg-black/[0.03]"
+          className="-ml-1 flex items-center gap-1.5 rounded-md px-1 py-0.5 text-left transition-colors hover:bg-wash-3"
         >
           <motion.span
             animate={{ rotate: open ? 0 : -90 }}
@@ -55,7 +55,7 @@ export function RailSection({
           >
             <ChevronDown className="size-3.5" strokeWidth={2.25} />
           </motion.span>
-          <span className="text-[14px] font-medium tracking-[-0.01em] text-[#1a1a1a]">
+          <span className="text-[14px] font-medium tracking-[-0.01em] text-ink-title">
             {title}
           </span>
         </button>

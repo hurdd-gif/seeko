@@ -66,7 +66,7 @@ function RowContent({ milestone }: { milestone: Milestone }) {
       {milestone.health ? (
         <MilestoneHealthBadge level={milestone.health} />
       ) : (
-        <Flag className="size-3.5 shrink-0 text-[#9a9a9a]" />
+        <Flag className="size-3.5 shrink-0 text-ink-faint" />
       )}
       <span className="min-w-0 flex-1 truncate">{milestone.name}</span>
       {due && (
@@ -101,7 +101,7 @@ export function MilestonesSection({
 }) {
   if (milestones.length === 0) {
     return (
-      <p className="text-[13px] leading-[1.5] text-[#7a7a7a]">
+      <p className="text-[13px] leading-[1.5] text-ink-muted">
         Add milestones to organize work into checkpoints.
       </p>
     );
@@ -128,7 +128,7 @@ export function MilestonesSection({
         ) : (
           <li
             key={m.id}
-            className="flex items-center gap-2 rounded-md px-2 py-1.5 text-[13px] text-[#2a2a2a] hover:bg-black/[0.02]"
+            className="flex items-center gap-2 rounded-md px-2 py-1.5 text-[13px] text-ink-strong hover:bg-wash-2"
           >
             <RowContent milestone={m} />
           </li>

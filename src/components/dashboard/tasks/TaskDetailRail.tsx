@@ -72,7 +72,7 @@ function SeeAllAction({
     <button
       type="button"
       onClick={onToggle}
-      className="text-[12px] font-medium text-[#9a9a9a] transition-colors hover:text-[#3a3a3a]"
+      className="text-[12px] font-medium text-ink-faint transition-colors hover:text-ink"
     >
       {expanded ? 'Show less' : `See all${count > 0 ? ` ${count}` : ''}`}
     </button>
@@ -233,11 +233,11 @@ export function TaskDetailRail({
               <header className="flex items-start gap-3 pb-3">
                 <div className="min-w-0 flex-1">
                   {idLabel && (
-                    <div className="text-[12px] font-medium tracking-[0.01em] text-[#9a9a9a]">
+                    <div className="text-[12px] font-medium tracking-[0.01em] text-ink-faint">
                       {idLabel}
                     </div>
                   )}
-                  <h2 className="mt-1 text-[18px] font-medium leading-[1.3] tracking-[-0.01em] text-[#1a1a1a]">
+                  <h2 className="mt-1 text-[18px] font-medium leading-[1.3] tracking-[-0.01em] text-ink-title">
                     {task.name}
                   </h2>
                 </div>
@@ -252,14 +252,14 @@ export function TaskDetailRail({
                   type="button"
                   onClick={onClose}
                   aria-label="Close task detail"
-                  className="flex size-7 shrink-0 items-center justify-center rounded-full text-[#9a9a9a] transition-colors hover:bg-black/[0.04] hover:text-[#3a3a3a]"
+                  className="flex size-7 shrink-0 items-center justify-center rounded-full text-ink-faint transition-colors hover:bg-wash-4 hover:text-ink"
                 >
                   <X className="size-4" />
                 </button>
               </header>
 
               {task.description && (
-                <p className="pb-3 text-[13.5px] leading-[1.55] text-[#5a5a5a]">
+                <p className="pb-3 text-[13.5px] leading-[1.55] text-[#5a5a5a] dark:text-ink-body">
                   {task.description}
                 </p>
               )}
@@ -322,7 +322,7 @@ export function TaskDetailRail({
                   }
                 >
                   {loadingDetail && taskActivity.length === 0 ? (
-                    <div className="text-[12.5px] text-[#9a9a9a]">Loading…</div>
+                    <div className="text-[12.5px] text-ink-faint">Loading…</div>
                   ) : (
                     <ActivitySection activity={taskActivity} limit={taskActivityLimit} team={team} />
                   )}

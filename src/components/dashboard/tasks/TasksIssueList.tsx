@@ -123,8 +123,8 @@ export const TasksIssueList = memo(function TasksIssueList({
 
   if (tasks.length === 0) {
     return (
-      <div className="mx-auto mt-6 max-w-7xl rounded-2xl bg-white p-10 text-center shadow-seeko">
-        <p className="text-[14px] text-[#9a9a9a]">No issues match your filters.</p>
+      <div className="mx-auto mt-6 max-w-7xl rounded-2xl bg-surface-1 p-10 text-center shadow-seeko">
+        <p className="text-[14px] text-ink-faint">No issues match your filters.</p>
       </div>
     );
   }
@@ -137,7 +137,7 @@ export const TasksIssueList = memo(function TasksIssueList({
       initial={reduce ? false : { opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       transition={reduce ? { duration: 0 } : { ...springs.smooth, delay: 0.04 }}
-      className="mx-auto max-w-7xl overflow-hidden rounded-2xl bg-white shadow-seeko"
+      className="mx-auto max-w-7xl overflow-hidden rounded-2xl bg-surface-1 shadow-seeko"
       role="list"
       aria-label="Issues"
     >
@@ -147,12 +147,12 @@ export const TasksIssueList = memo(function TasksIssueList({
           <header
             className={cn(
               'flex items-center gap-2.5 px-5 py-3.5',
-              gi > 0 && 'border-t border-black/[0.05]',
+              gi > 0 && 'border-t border-wash-5',
             )}
           >
             <StatusDot status={g.status} size="sm" className="shrink-0" />
-            <span className="text-[13px] font-medium text-[#1a1a1a]">{g.status}</span>
-            <span className="text-[12px] tabular-nums text-[#9a9a9a]">{g.rows.length}</span>
+            <span className="text-[13px] font-medium text-ink-title">{g.status}</span>
+            <span className="text-[12px] tabular-nums text-ink-faint">{g.rows.length}</span>
           </header>
 
           {/* Rows */}
@@ -292,15 +292,15 @@ function IssueRow({
             width: CONTEXT_MENU_WIDTH,
             transformOrigin: 'top left',
           }}
-          className="z-[220] overflow-hidden rounded-[14px] bg-white p-1 shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_2px_4px_-1px_rgba(0,0,0,0.08),0_10px_24px_-12px_rgba(0,0,0,0.22),0_24px_44px_-28px_rgba(0,0,0,0.18)]"
+          className="z-[220] overflow-hidden rounded-[14px] bg-surface-1 p-1 shadow-seeko-pop"
         >
           <button
             type="button"
             role="menuitem"
             onClick={handleEditFromContext}
-            className="flex h-8 w-full items-center gap-2 rounded-[10px] px-2 text-left text-[12.5px] text-[#242424] transition-colors hover:bg-black/[0.045]"
+            className="flex h-8 w-full items-center gap-2 rounded-[10px] px-2.5 text-left text-[13px] text-ink-body transition-colors hover:bg-wash-4 hover:text-ink-title"
           >
-            <Pencil className="size-3.5 text-[#777777]" />
+            <Pencil className="size-3.5 text-[#777777] dark:text-ink-muted" />
             <span className="flex-1 truncate">Edit issue</span>
           </button>
           {canContextDelete && (
@@ -308,7 +308,7 @@ function IssueRow({
               type="button"
               role="menuitem"
               onClick={handleDeleteFromContext}
-              className="flex h-8 w-full items-center gap-2 rounded-[10px] px-2 text-left text-[12.5px] text-[#dc2626] transition-colors hover:bg-[#fef2f2]"
+              className="flex h-8 w-full items-center gap-2 rounded-[10px] px-2.5 text-left text-[13px] text-[#dc2626] transition-colors hover:bg-[#fef2f2] dark:hover:bg-danger/15"
             >
               <Trash2 className="size-3.5" />
               <span className="flex-1 truncate">Delete issue</span>
@@ -320,15 +320,15 @@ function IssueRow({
   );
 
   const avatarVisual = assignee ? (
-    <Avatar className="size-6 shrink-0 ring-1 ring-black/[0.04]">
+    <Avatar className="size-6 shrink-0 ring-1 ring-wash-4">
       <AvatarImage src={assignee.avatar_url ?? undefined} alt={assignee.display_name ?? ''} />
-      <AvatarFallback className="bg-[#e5e5e5] text-[10px] font-medium text-[#505050]">
+      <AvatarFallback className="bg-[#e5e5e5] dark:bg-surface-6 text-[10px] font-medium text-ink-body">
         {initials(assignee.display_name)}
       </AvatarFallback>
     </Avatar>
   ) : (
     <span
-      className="flex size-6 shrink-0 items-center justify-center rounded-full border border-dashed border-[#cfcfcf] text-[#9a9a9a]"
+      className="flex size-6 shrink-0 items-center justify-center rounded-full border border-dashed border-[#cfcfcf] text-ink-faint"
       aria-hidden
     >
       <UserPlus className="size-3.5" strokeWidth={1.75} />
@@ -365,10 +365,10 @@ function IssueRow({
         }
         className={cn(
           'group/row flex cursor-pointer items-center gap-4 px-5 py-2.5 outline-none transition-colors',
-          'focus-visible:bg-[#0000000d]',
-          isSelected || contextOpen ? 'bg-[#0000000d]' : 'hover:bg-[#0000000a]',
+          'focus-visible:bg-wash-5',
+          isSelected || contextOpen ? 'bg-wash-5' : 'hover:bg-wash-4',
           !isLastInGroup &&
-            'relative after:absolute after:bottom-0 after:left-5 after:right-5 after:h-px after:bg-[#0000000d]',
+            'relative after:absolute after:bottom-0 after:left-5 after:right-5 after:h-px after:bg-wash-5',
         )}
       >
         {/* Status */}
@@ -376,7 +376,7 @@ function IssueRow({
 
       {/* ID — fixed width so titles align across rows */}
       {idLabel ? (
-        <span className="w-[68px] shrink-0 font-mono text-[12px] tabular-nums text-[#7a7a7a]">
+        <span className="w-[68px] shrink-0 font-mono text-[12px] tabular-nums text-ink-muted">
           {idLabel}
         </span>
       ) : (
@@ -384,7 +384,7 @@ function IssueRow({
       )}
 
       {/* Title */}
-      <span className="min-w-0 flex-1 truncate text-[14px] leading-snug text-[#1a1a1a]">
+      <span className="min-w-0 flex-1 truncate text-[14px] leading-snug text-ink-title">
         {task.name}
       </span>
 
@@ -399,7 +399,7 @@ function IssueRow({
 
       {/* Department chip — hide on small viewports */}
       {dept && (
-        <span className="hidden shrink-0 rounded-full bg-[#f4f4f4] px-2 py-0.5 text-[11px] font-medium text-[#626262] sm:inline-flex">
+        <span className="hidden shrink-0 rounded-full bg-surface-4 px-2 py-0.5 text-[11px] font-medium text-[#626262] dark:text-ink-muted-strong sm:inline-flex">
           {dept}
         </span>
       )}
@@ -417,7 +417,7 @@ function IssueRow({
 
       {/* Date */}
       {date ? (
-        <span className="hidden w-[64px] shrink-0 text-right text-[12px] tabular-nums text-[#9a9a9a] sm:inline-block">
+        <span className="hidden w-[64px] shrink-0 text-right text-[12px] tabular-nums text-ink-faint sm:inline-block">
           {date}
         </span>
       ) : (

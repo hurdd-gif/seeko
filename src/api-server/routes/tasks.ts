@@ -47,6 +47,7 @@ type TasksRoutesOptions = {
 };
 
 const attachmentHits = new Map<string, { count: number; resetAt: number }>();
+const commentHits = new Map<string, { count: number; resetAt: number }>();
 const deliverableHits = new Map<string, { count: number; resetAt: number }>();
 const ALLOWED_MIME_PREFIXES = ['image/', 'video/', 'audio/', 'application/pdf', 'application/zip', 'application/x-zip', 'text/plain', 'application/octet-stream'];
 const BLOCKED_EXTENSIONS = ['.html', '.htm', '.svg', '.js', '.exe', '.bat', '.sh', '.cmd', '.msi', '.php'];
@@ -241,6 +242,156 @@ export function createTasksRoutes(options: TasksRoutesOptions = {}) {
         .single();
       if (insertError) return c.json({ error: 'Failed to save attachment record' }, 500);
       return c.json(inserted, 201);
+    })
+    // Comment writes ride the same seam as task writes: browser → API →
+    // service client. The legacy sheet's direct browser-Supabase inserts
+    // silently no-op in dev (no browser session), so the full-page thread
+    // posts here instead.
+    .post('/tasks/:id/comments', async (c) => {
+      const user = await authResolver(c);
+      if (!user) return c.json({ error: 'Unauthorized' }, 401);
+      if (isRateLimited(commentHits, user.id, { max: 60, windowMs: 60 * 60 * 1000 })) {
+        return c.json({ error: 'Too many comments. Try again later.' }, 429);
+      }
+
+      const taskId = c.req.param('id');
+      const access = await canAccessTask(user.id, taskId);
+      if (!access.found) return c.json({ error: 'Task not found' }, 404);
+      if (!access.allowed) return c.json({ error: 'You do not have access to this task' }, 403);
+
+      const body = await c.req.json().catch(() => null);
+      const content = typeof body?.content === 'string' ? body.content.trim() : '';
+      const replyToId =
+        typeof body?.reply_to_id === 'string' && body.reply_to_id ? body.reply_to_id : null;
+      if (!content) return c.json({ error: 'Comment cannot be empty' }, 400);
+      if (content.length > 10_000) return c.json({ error: 'Comment too long' }, 400);
+
+      const service = getServiceClient();
+      const { data: inserted, error } = await service
+        .from('task_comments')
+        .insert({
+          task_id: taskId,
+          user_id: user.id,
+          content,
+          reply_to_id: replyToId,
+        } as never)
+        .select('*, profiles(id, display_name, avatar_url)')
+        .single();
+      if (error || !inserted) return c.json({ error: 'Failed to post comment' }, 500);
+
+      // Notifications are best-effort — a failed insert must not fail the comment.
+      await notifyCommentTargets({
+        senderId: user.id,
+        senderName: access.profile?.display_name ?? 'Someone',
+        taskId,
+        taskName: access.task?.name ?? 'Task',
+        commentId: (inserted as { id: string }).id,
+        content,
+      }).catch(() => {});
+
+      return c.json({ comment: inserted }, 201);
+    })
+    .patch('/tasks/:id/comments/:commentId', async (c) => {
+      const user = await authResolver(c);
+      if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+      const taskId = c.req.param('id');
+      const commentId = c.req.param('commentId');
+      const body = await c.req.json().catch(() => null);
+      const content = typeof body?.content === 'string' ? body.content.trim() : '';
+      if (!content) return c.json({ error: 'Comment cannot be empty' }, 400);
+      if (content.length > 10_000) return c.json({ error: 'Comment too long' }, 400);
+
+      const service = getServiceClient();
+      const { data: existing } = await service
+        .from('task_comments')
+        .select('id, user_id')
+        .eq('id', commentId)
+        .eq('task_id', taskId)
+        .maybeSingle();
+      if (!existing) return c.json({ error: 'Comment not found' }, 404);
+      if ((existing as { user_id: string }).user_id !== user.id) {
+        return c.json({ error: 'You can only edit your own comments' }, 403);
+      }
+
+      const { error } = await service
+        .from('task_comments')
+        .update({ content, updated_at: new Date().toISOString() } as never)
+        .eq('id', commentId);
+      if (error) return c.json({ error: 'Failed to update comment' }, 500);
+      return c.json({ ok: true });
+    })
+    .delete('/tasks/:id/comments/:commentId', async (c) => {
+      const user = await authResolver(c);
+      if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+      const taskId = c.req.param('id');
+      const commentId = c.req.param('commentId');
+      const service = getServiceClient();
+      const { data: existing } = await service
+        .from('task_comments')
+        .select('id, user_id')
+        .eq('id', commentId)
+        .eq('task_id', taskId)
+        .maybeSingle();
+      if (!existing) return c.json({ error: 'Comment not found' }, 404);
+
+      const own = (existing as { user_id: string }).user_id === user.id;
+      if (!own && !(await isAdminSafe(user.id))) {
+        return c.json({ error: 'You can only delete your own comments' }, 403);
+      }
+
+      const { error } = await service.from('task_comments').delete().eq('id', commentId);
+      if (error) return c.json({ error: 'Failed to delete comment' }, 500);
+      return c.json({ ok: true });
+    })
+    .post('/tasks/:id/comments/:commentId/reactions', async (c) => {
+      const user = await authResolver(c);
+      if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+      const taskId = c.req.param('id');
+      const commentId = c.req.param('commentId');
+      const access = await canAccessTask(user.id, taskId);
+      if (!access.found) return c.json({ error: 'Task not found' }, 404);
+      if (!access.allowed) return c.json({ error: 'You do not have access to this task' }, 403);
+
+      const body = await c.req.json().catch(() => null);
+      const emoji = typeof body?.emoji === 'string' ? body.emoji : '';
+      // Reactions come from the fixed picker; the length cap just keeps
+      // arbitrary payloads out of the table.
+      if (!emoji || emoji.length > 8) return c.json({ error: 'Invalid emoji' }, 400);
+
+      const service = getServiceClient();
+      const { data: comment } = await service
+        .from('task_comments')
+        .select('id')
+        .eq('id', commentId)
+        .eq('task_id', taskId)
+        .maybeSingle();
+      if (!comment) return c.json({ error: 'Comment not found' }, 404);
+
+      const { data: existing } = await service
+        .from('task_comment_reactions')
+        .select('id')
+        .eq('comment_id', commentId)
+        .eq('user_id', user.id)
+        .eq('emoji', emoji)
+        .maybeSingle();
+
+      if (existing) {
+        const { error } = await service
+          .from('task_comment_reactions')
+          .delete()
+          .eq('id', (existing as { id: string }).id);
+        if (error) return c.json({ error: 'Failed to remove reaction' }, 500);
+        return c.json({ ok: true, toggled: 'off' });
+      }
+
+      const { error } = await service
+        .from('task_comment_reactions')
+        .insert({ comment_id: commentId, user_id: user.id, emoji } as never);
+      if (error) return c.json({ error: 'Failed to add reaction' }, 500);
+      return c.json({ ok: true, toggled: 'on' });
     })
     .get('/tasks/:id/deliverables', async (c) => {
       const user = await authResolver(c);
@@ -486,6 +637,71 @@ async function canAccessTask(userId: string, taskId: string) {
   if (!task) return { found: false, allowed: false, isAdmin: false, task: null, profile };
   const isAdmin = !!profile?.is_admin;
   return { found: true, allowed: isAdmin || task.assignee_id === userId, isAdmin, task, profile };
+}
+
+/**
+ * Same fan-out the legacy sheet did client-side: @mentioned teammates get a
+ * 'mentioned' notification, every other prior commenter gets 'comment_reply'.
+ * Links go to the full-page detail (/tasks/:id), not the retired sheet URL.
+ */
+async function notifyCommentTargets({
+  senderId,
+  senderName,
+  taskId,
+  taskName,
+  commentId,
+  content,
+}: {
+  senderId: string;
+  senderName: string;
+  taskId: string;
+  taskName: string;
+  commentId: string;
+  content: string;
+}) {
+  const service = getServiceClient();
+  const [{ data: team }, { data: priorComments }] = await Promise.all([
+    service.from('profiles').select('id, display_name'),
+    service.from('task_comments').select('user_id').eq('task_id', taskId).neq('id', commentId),
+  ]);
+
+  const lower = content.toLowerCase();
+  const notifs: { user_id: string; kind: string; title: string; body: string; link: string; read: boolean }[] = [];
+
+  for (const member of (team ?? []) as { id: string; display_name?: string | null }[]) {
+    const dn = member.display_name;
+    if (!dn || member.id === senderId) continue;
+    if (!lower.includes(`@${dn.toLowerCase()}`)) continue;
+    notifs.push({
+      user_id: member.id,
+      kind: 'mentioned',
+      title: 'You were mentioned',
+      body: `${senderName} mentioned you in "${taskName}"`,
+      link: `/tasks/${taskId}`,
+      read: false,
+    });
+  }
+
+  const mentionedIds = new Set(notifs.map((n) => n.user_id));
+  const otherCommenters = new Set(
+    ((priorComments ?? []) as { user_id: string }[])
+      .map((row) => row.user_id)
+      .filter((uid) => uid && uid !== senderId && !mentionedIds.has(uid)),
+  );
+  for (const uid of otherCommenters) {
+    notifs.push({
+      user_id: uid,
+      kind: 'comment_reply',
+      title: 'New reply',
+      body: `${senderName} replied in "${taskName}"`,
+      link: `/tasks/${taskId}`,
+      read: false,
+    });
+  }
+
+  if (notifs.length > 0) {
+    await service.from('notifications').insert(notifs as never[]);
+  }
 }
 
 async function notifyAdminsOfDeliverable(userId: string, taskId: string) {

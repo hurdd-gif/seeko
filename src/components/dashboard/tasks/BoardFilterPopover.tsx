@@ -9,7 +9,7 @@
  *
  * ANIMATION STORYBOARD
  *
- *    0ms   trigger button highlights (bg-white shadow-seeko if active)
+ *    0ms   trigger button highlights (bg-surface-1 shadow-seeko if active)
  *    0ms   panel opens with opacity + 4px slide
  *  exit    fade + 4px slide back
  * ───────────────────────────────────────────────────────── */
@@ -82,8 +82,8 @@ export function BoardFilterPopover({
   }, [open]);
 
   const triggerClass = (count > 0 || open)
-    ? 'flex size-9 items-center justify-center rounded-full bg-black/[0.05] text-[#3a3a3a] transition-[background-color,color,transform] duration-[250ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-safe:active:scale-[0.97]'
-    : 'flex size-9 items-center justify-center rounded-full text-[#6e6e6e] transition-[background-color,color,transform] duration-[250ms] ease-[cubic-bezier(0.22,1,0.36,1)] hover:bg-black/[0.04] hover:text-[#3a3a3a] motion-safe:active:scale-[0.97]';
+    ? 'flex size-9 items-center justify-center rounded-full bg-wash-5 text-ink transition-[background-color,color,transform] duration-[250ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-safe:active:scale-[0.97]'
+    : 'flex size-9 items-center justify-center rounded-full text-ink-muted-strong transition-[background-color,color,transform] duration-[250ms] ease-[cubic-bezier(0.22,1,0.36,1)] hover:bg-wash-4 hover:text-ink motion-safe:active:scale-[0.97]';
 
   return (
     <div ref={wrapperRef} className="relative">
@@ -96,7 +96,7 @@ export function BoardFilterPopover({
       >
         <Filter className="size-4" />
         {count > 0 && (
-          <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#0d7aff] px-1 text-[10px] font-medium leading-none text-white tabular-nums ring-2 ring-[#eeeeee]">
+          <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-seeko-accent px-1 text-[10px] font-medium leading-none text-white tabular-nums ring-2 ring-[#eeeeee]">
             {count}
           </span>
         )}
@@ -110,26 +110,26 @@ export function BoardFilterPopover({
             animate={{ opacity: 1, y: 0 }}
             exit={reduce ? { opacity: 0 } : { opacity: 0, y: -4 }}
             transition={reduce ? { duration: 0 } : SPRING}
-            className="group/menu absolute right-0 top-[calc(100%+4px)] z-[100] w-56 origin-top-right overflow-hidden rounded-2xl bg-white p-1 shadow-seeko"
+            className="group/menu absolute right-0 top-[calc(100%+4px)] z-[100] w-56 origin-top-right overflow-hidden rounded-[14px] bg-surface-1 p-1 shadow-seeko-pop"
             role="menu"
             aria-label="Filter tasks"
           >
             <div className="flex items-center justify-between px-3 pt-2 pb-1">
-              <span className="text-[12px] font-medium text-[#7a7a7a]">Filter</span>
+              <span className="text-[12px] font-medium text-ink-muted">Filter</span>
               {count > 0 && (
                 <button
                   type="button"
                   onClick={() => onChange(EMPTY_FILTER)}
-                  className="text-[12px] text-[#7a7a7a] transition-colors hover:text-[#0d0d0d]"
+                  className="text-[12px] text-ink-muted transition-colors hover:text-ink-title"
                 >
                   Clear
                 </button>
               )}
             </div>
 
-            <div className="mx-3 h-px bg-[#0000000d]" />
+            <div className="mx-3 h-px bg-wash-5" />
 
-            <div className="max-h-[420px] overflow-y-auto [color-scheme:light] [scrollbar-width:thin] [scrollbar-color:rgba(0,0,0,0.18)_transparent]">
+            <div className="max-h-[420px] overflow-y-auto [color-scheme:light] [scrollbar-width:thin] [scrollbar-color:rgba(0,0,0,0.18)_transparent] dark:[color-scheme:dark] dark:[scrollbar-color:rgba(255,255,255,0.22)_transparent]">
               <FilterGroup title="Status">
                 {TASK_STATUSES.map((s) => (
                   <FilterRow
@@ -193,8 +193,8 @@ export function BoardFilterPopover({
 
 function FilterGroup({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="relative py-1 [&:not(:last-child)]:after:absolute [&:not(:last-child)]:after:bottom-0 [&:not(:last-child)]:after:left-3 [&:not(:last-child)]:after:right-3 [&:not(:last-child)]:after:h-px [&:not(:last-child)]:after:bg-[#0000000d]">
-      <div className="px-3 pt-1.5 pb-1 text-[11.5px] font-medium text-[#9a9a9a]">{title}</div>
+    <div className="relative py-1 [&:not(:last-child)]:after:absolute [&:not(:last-child)]:after:bottom-0 [&:not(:last-child)]:after:left-3 [&:not(:last-child)]:after:right-3 [&:not(:last-child)]:after:h-px [&:not(:last-child)]:after:bg-wash-5">
+      <div className="px-3 pt-1.5 pb-1 text-[11.5px] font-medium text-ink-faint">{title}</div>
       <div>{children}</div>
     </div>
   );
@@ -217,14 +217,14 @@ function FilterRow({
       role="menuitemcheckbox"
       aria-checked={checked}
       onClick={onToggle}
-      className="flex w-full items-center gap-2 rounded-xl px-3 py-1.5 text-left opacity-100 transition-[color,background-color,opacity] group-hover/menu:opacity-20 hover:bg-[#0000000a] hover:opacity-100!"
+      className="flex w-full items-center gap-2 rounded-[10px] px-3 py-1.5 text-left text-ink-body opacity-100 transition-[color,background-color,opacity] group-hover/menu:opacity-20 hover:bg-wash-4 hover:text-ink-title hover:opacity-100!"
     >
       {leading && <span className="flex size-3.5 shrink-0 items-center justify-center">{leading}</span>}
-      <span className="flex-1 truncate text-[12.5px] text-[#1a1a1a]">{label}</span>
+      <span className="flex-1 truncate text-[13px]">{label}</span>
       <span
         className={
           checked
-            ? 'flex size-3.5 shrink-0 items-center justify-center rounded-[4px] bg-[#0d7aff] text-white'
+            ? 'flex size-3.5 shrink-0 items-center justify-center rounded-[4px] bg-seeko-accent text-white'
             : 'size-3.5 shrink-0 rounded-[4px] border border-black/[0.18]'
         }
       >

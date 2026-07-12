@@ -8,6 +8,7 @@ import type {
   PendingExtension,
   Profile,
   TaskActivity,
+  TaskComment,
   TaskWithAssignee,
 } from '@/lib/types';
 
@@ -178,12 +179,18 @@ export type TaskDetailFullData = {
   team: Profile[];
   milestones: Milestone[];
   activity: TaskActivity[];
+  comments: TaskComment[];
+  currentUserId: string;
   isAdmin: boolean;
   pendingExtension: PendingExtension | null;
 };
 
 const TASK_ACTIVITY_SELECT =
   'id, user_id, action, target, task_id, doc_id, kind, before_value, after_value, source, created_at, profiles(display_name, avatar_url)' as const;
+// Same joins the legacy TaskDetail sheet used client-side; loaded server-side
+// here so the thread renders (and is dev-testable) without a browser session.
+const TASK_COMMENT_SELECT =
+  '*, profiles(id, display_name, avatar_url), task_comment_reactions(id, emoji, user_id), task_comment_attachments(id, file_url, file_name, file_type, file_size)' as const;
 const PENDING_EXT_SELECT =
   'id, requested_by, original_deadline, requested_deadline, reason, status, profiles!requested_by(display_name)' as const;
 
@@ -224,7 +231,7 @@ export async function loadTaskDetailFull(
     throw new AccessError('forbidden');
   }
 
-  const [teamResult, areasResult, milestonesResult, activityResult, extResult] = await Promise.all([
+  const [teamResult, areasResult, milestonesResult, activityResult, commentsResult, extResult] = await Promise.all([
     service.from('profiles').select(TEAM_SELECT).order('display_name', { ascending: true }),
     service
       .from('areas')
@@ -239,6 +246,11 @@ export async function loadTaskDetailFull(
       .eq('task_id', taskId)
       .order('created_at', { ascending: false })
       .limit(50),
+    service
+      .from('task_comments')
+      .select(TASK_COMMENT_SELECT)
+      .eq('task_id', taskId)
+      .order('created_at', { ascending: true }),
     service
       .from('deadline_extensions')
       .select(PENDING_EXT_SELECT)
@@ -255,6 +267,13 @@ export async function loadTaskDetailFull(
     .map((row) => row.milestone)
     .filter((m): m is Milestone => Boolean(m));
   const activity = (activityResult.data ?? []) as unknown as TaskActivity[];
+  const comments = ((commentsResult.data ?? []) as unknown as Record<string, unknown>[]).map(
+    (c) => ({
+      ...c,
+      reactions: c.task_comment_reactions ?? [],
+      attachments: c.task_comment_attachments ?? [],
+    }),
+  ) as unknown as TaskComment[];
 
   const extRow = (extResult.data ?? null) as unknown as {
     id: string;
@@ -273,5 +292,15 @@ export async function loadTaskDetailFull(
       }
     : null;
 
-  return { task, areas, team, milestones, activity, isAdmin, pendingExtension };
+  return {
+    task,
+    areas,
+    team,
+    milestones,
+    activity,
+    comments,
+    currentUserId: currentUser.id,
+    isAdmin,
+    pendingExtension,
+  };
 }

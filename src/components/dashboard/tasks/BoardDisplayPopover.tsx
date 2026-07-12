@@ -52,8 +52,8 @@ export function BoardDisplayPopover({
   }, [open]);
 
   const triggerClass = (hasPinned || open)
-    ? 'flex size-9 items-center justify-center rounded-full bg-black/[0.05] text-[#3a3a3a] transition-[background-color,color,transform] duration-150 ease-out motion-safe:active:scale-[0.97]'
-    : 'flex size-9 items-center justify-center rounded-full text-[#6e6e6e] transition-[background-color,color,transform] duration-150 ease-out hover:bg-black/[0.04] hover:text-[#3a3a3a] motion-safe:active:scale-[0.97]';
+    ? 'flex size-9 items-center justify-center rounded-full bg-wash-5 text-ink transition-[background-color,color,transform] duration-150 ease-out motion-safe:active:scale-[0.97]'
+    : 'flex size-9 items-center justify-center rounded-full text-ink-muted-strong transition-[background-color,color,transform] duration-150 ease-out hover:bg-wash-4 hover:text-ink motion-safe:active:scale-[0.97]';
 
   return (
     <div ref={wrapperRef} className="relative">
@@ -75,18 +75,18 @@ export function BoardDisplayPopover({
             animate={{ opacity: 1, y: 0 }}
             exit={reduce ? { opacity: 0 } : { opacity: 0, y: -4 }}
             transition={reduce ? { duration: 0 } : SPRING}
-            className="group/menu absolute right-0 top-[calc(100%+4px)] z-[100] w-56 origin-top-right overflow-hidden rounded-2xl bg-white p-1 shadow-seeko"
+            className="group/menu absolute right-0 top-[calc(100%+4px)] z-[100] w-56 origin-top-right overflow-hidden rounded-[14px] bg-surface-1 p-1 shadow-seeko-pop"
             role="menu"
             aria-label="Display options"
           >
             <div className="flex items-center justify-between px-3 pt-2 pb-1">
-              <span className="text-[12px] font-medium text-[#7a7a7a]">Display</span>
+              <span className="text-[12px] font-medium text-ink-muted">Display</span>
             </div>
 
-            <div className="mx-3 h-px bg-[#0000000d]" />
+            <div className="mx-3 h-px bg-wash-5" />
 
             <div className="py-1">
-              <div className="px-3 pt-1.5 pb-1 text-[11.5px] font-medium text-[#9a9a9a]">
+              <div className="px-3 pt-1.5 pb-1 text-[11.5px] font-medium text-ink-faint">
                 Show columns
               </div>
               <p className="px-3 pb-1.5 text-[11.5px] leading-[1.4] text-[#a8a8a8]">
@@ -105,23 +105,23 @@ export function BoardDisplayPopover({
                     onClick={() => onTogglePinned(s)}
                     disabled={auto}
                     title={auto ? 'Always visible while tasks exist' : undefined}
-                    className={`flex w-full items-center gap-2 rounded-xl px-3 py-1.5 text-left transition-[color,background-color,opacity] ${
+                    className={`flex w-full items-center gap-2 rounded-[10px] px-3 py-1.5 text-left text-ink-body transition-[color,background-color,opacity] ${
                       auto
                         ? 'cursor-default opacity-60'
-                        : 'opacity-100 group-hover/menu:opacity-20 hover:bg-[#0000000a] hover:opacity-100!'
+                        : 'opacity-100 group-hover/menu:opacity-20 hover:bg-wash-4 hover:text-ink-title hover:opacity-100!'
                     }`}
                   >
                     <span className="flex size-3.5 shrink-0 items-center justify-center">
                       <StatusDot status={s} size="sm" />
                     </span>
-                    <span className="flex-1 truncate text-[12.5px] text-[#1a1a1a]">{s}</span>
+                    <span className="flex-1 truncate text-[13px]">{s}</span>
                     <span className="text-[11px] tabular-nums text-[#a8a8a8]">
                       {countsByStatus[s] ?? 0}
                     </span>
                     <span
                       className={
                         checked
-                          ? 'flex size-3.5 shrink-0 items-center justify-center rounded-[4px] bg-[#0d7aff] text-white'
+                          ? 'flex size-3.5 shrink-0 items-center justify-center rounded-[4px] bg-seeko-accent text-white'
                           : 'size-3.5 shrink-0 rounded-[4px] border border-black/[0.18]'
                       }
                     >

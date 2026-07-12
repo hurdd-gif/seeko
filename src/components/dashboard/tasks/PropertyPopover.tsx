@@ -166,7 +166,7 @@ export function PropertyPopover<V extends string>({
           style={{ position: 'fixed', left: coords.left, top: coords.top, width: panelWidth }}
           className={
             panelClassName ??
-            'z-[200] origin-top-left overflow-hidden rounded-lg bg-white p-1 shadow-seeko-pop'
+            'z-[200] origin-top-left overflow-hidden rounded-[14px] bg-surface-1 p-1 shadow-seeko-pop'
           }
         >
           <div className="max-h-[360px] overflow-y-auto [scrollbar-width:thin]">
@@ -184,7 +184,7 @@ export function PropertyPopover<V extends string>({
                   }}
                   className={
                     optionClassName ??
-                    'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-black/[0.04]'
+                    `flex w-full items-center gap-2 rounded-[10px] px-2.5 py-1.5 text-left transition-colors hover:bg-wash-4 hover:text-ink-title ${selected ? 'text-ink-title' : 'text-ink-body'}`
                   }
                 >
                   {opt.leading && (
@@ -198,12 +198,12 @@ export function PropertyPopover<V extends string>({
                   )}
                   <span
                     className={
-                      labelClassName ?? 'flex-1 truncate text-[12.5px] text-[#1a1a1a]'
+                      labelClassName ?? 'flex-1 truncate text-[13px]'
                     }
                   >
                     {opt.label}
                   </span>
-                  {selected && <Check className="size-3 text-[#0d7aff]" strokeWidth={3} />}
+                  {selected && <Check className="size-3 text-seeko-accent" strokeWidth={3} />}
                 </button>
               );
             })}
@@ -224,7 +224,7 @@ export function PropertyPopover<V extends string>({
         onClick={() => setOpen((v) => !v)}
         className={
           triggerClassName ??
-          '-mx-1.5 -my-0.5 flex w-[calc(100%+12px)] min-w-0 items-center gap-1.5 rounded-md px-1.5 py-0.5 text-left transition-colors hover:bg-black/[0.035]'
+          '-mx-1.5 -my-0.5 flex w-[calc(100%+12px)] min-w-0 items-center gap-1.5 rounded-md px-1.5 py-0.5 text-left transition-colors hover:bg-wash-4'
         }
       >
         {children}

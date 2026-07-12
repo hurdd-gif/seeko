@@ -158,7 +158,7 @@ export function DatePopover({
           exit={reduce ? { opacity: 0 } : { opacity: 0, y: -4 }}
           transition={reduce ? { duration: 0 } : SPRING}
           style={{ position: 'fixed', left: coords.left, top: coords.top, width: PANEL_WIDTH }}
-          className="z-[200] origin-top-left overflow-hidden rounded-lg bg-white p-2.5 shadow-seeko-pop"
+          className="z-[200] origin-top-left overflow-hidden rounded-[14px] bg-surface-1 p-2.5 shadow-seeko-pop"
         >
           {/* Month nav */}
           <div className="flex items-center justify-between px-1 pb-2">
@@ -166,18 +166,18 @@ export function DatePopover({
               type="button"
               onClick={() => setViewMonth(new Date(year, month - 1, 1))}
               aria-label="Previous month"
-              className="flex size-6 items-center justify-center rounded-md text-[#808080] transition-colors hover:bg-black/[0.04] hover:text-[#0d0d0d]"
+              className="flex size-6 items-center justify-center rounded-md text-ink-muted transition-colors hover:bg-wash-4 hover:text-ink-title"
             >
               <ChevronLeft className="size-3.5" />
             </button>
-            <span className="text-[12px] font-medium tabular-nums text-[#0d0d0d]">
+            <span className="text-[12px] font-medium tabular-nums text-ink-title">
               {MONTHS[month]} {year}
             </span>
             <button
               type="button"
               onClick={() => setViewMonth(new Date(year, month + 1, 1))}
               aria-label="Next month"
-              className="flex size-6 items-center justify-center rounded-md text-[#808080] transition-colors hover:bg-black/[0.04] hover:text-[#0d0d0d]"
+              className="flex size-6 items-center justify-center rounded-md text-ink-muted transition-colors hover:bg-wash-4 hover:text-ink-title"
             >
               <ChevronRight className="size-3.5" />
             </button>
@@ -188,7 +188,7 @@ export function DatePopover({
             {WEEKDAYS.map((d, i) => (
               <span
                 key={i}
-                className="flex h-6 items-center justify-center text-[10px] font-medium text-[#b3b3b3]"
+                className="flex h-6 items-center justify-center text-[10px] font-medium text-ink-faintest"
               >
                 {d}
               </span>
@@ -212,10 +212,10 @@ export function DatePopover({
                   }}
                   className={
                     isSelected
-                      ? 'flex h-7 items-center justify-center rounded-md bg-[#0d7aff] text-[12px] font-medium tabular-nums text-white transition-colors'
+                      ? 'flex h-7 items-center justify-center rounded-md bg-seeko-accent text-[12px] font-medium tabular-nums text-white transition-colors'
                       : isToday
-                      ? 'flex h-7 items-center justify-center rounded-md text-[12px] font-medium tabular-nums text-[#0d7aff] transition-colors hover:bg-[#0d7aff]/[0.08]'
-                      : 'flex h-7 items-center justify-center rounded-md text-[12px] tabular-nums text-[#505050] transition-colors hover:bg-black/[0.04] hover:text-[#0d0d0d]'
+                      ? 'flex h-7 items-center justify-center rounded-md text-[12px] font-medium tabular-nums text-seeko-accent transition-colors hover:bg-seeko-accent/[0.08]'
+                      : 'flex h-7 items-center justify-center rounded-md text-[12px] tabular-nums text-ink-body transition-colors hover:bg-wash-4 hover:text-ink-title'
                   }
                 >
                   {d.getDate()}
@@ -225,14 +225,14 @@ export function DatePopover({
           </div>
 
           {/* Footer actions */}
-          <div className="mt-2 flex items-center justify-between border-t border-black/[0.05] pt-2">
+          <div className="mt-2 flex items-center justify-between border-t border-wash-5 pt-2">
             <button
               type="button"
               onClick={() => {
                 onChange(null);
                 setOpen(false);
               }}
-              className="rounded-md px-2 py-1 text-[11.5px] text-[#808080] transition-colors hover:bg-black/[0.04] hover:text-[#0d0d0d]"
+              className="rounded-md px-2 py-1 text-[11.5px] text-ink-muted transition-colors hover:bg-wash-4 hover:text-ink-title"
             >
               Clear
             </button>
@@ -242,7 +242,7 @@ export function DatePopover({
                 onChange(toISO(today));
                 setOpen(false);
               }}
-              className="rounded-md px-2 py-1 text-[11.5px] text-[#0d0d0d] transition-colors hover:bg-black/[0.04]"
+              className="rounded-md px-2 py-1 text-[11.5px] text-ink-title transition-colors hover:bg-wash-4"
             >
               Today
             </button>
@@ -263,7 +263,7 @@ export function DatePopover({
         onClick={() => setOpen((v) => !v)}
         className={
           triggerClassName ??
-          '-mx-1.5 -my-0.5 flex w-[calc(100%+12px)] min-w-0 items-center gap-1.5 rounded-md px-1.5 py-0.5 text-left transition-colors hover:bg-black/[0.035]'
+          '-mx-1.5 -my-0.5 flex w-[calc(100%+12px)] min-w-0 items-center gap-1.5 rounded-md px-1.5 py-0.5 text-left transition-colors hover:bg-wash-4'
         }
       >
         {children}

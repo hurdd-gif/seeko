@@ -35,6 +35,7 @@ import type {
   PendingExtension,
   Profile,
   TaskActivity,
+  TaskComment,
   TaskWithAssignee,
 } from '@/lib/types';
 import { FadeRise } from '@/components/motion';
@@ -42,7 +43,9 @@ import { RailSection } from './RailSection';
 import { PropertiesSection } from './PropertiesSection';
 import { MilestonesSection } from './MilestonesSection';
 import { ProgressSection } from './ProgressSection';
-import { ActivitySection } from './ActivitySection';
+import { TaskActivityThread } from './TaskActivityThread';
+import { TaskSyncBanner, TaskClosedBanner } from './TaskSyncBanner';
+import { ekoCreatedEvent } from './task-feed';
 import { TaskActionsMenu } from './TaskActionsMenu';
 import { deleteTask } from '@/lib/task-store';
 import { DeadlineExtensionBanner } from './DeadlineExtensionBanner';
@@ -53,6 +56,8 @@ export function TaskDetailPage({
   team,
   milestones: initialMilestones,
   activity,
+  comments = [],
+  currentUserId = '',
   isAdmin = false,
   pendingExtension = null,
 }: {
@@ -61,6 +66,8 @@ export function TaskDetailPage({
   team: Profile[];
   milestones: Milestone[];
   activity: TaskActivity[];
+  comments?: TaskComment[];
+  currentUserId?: string;
   isAdmin?: boolean;
   pendingExtension?: PendingExtension | null;
 }) {
@@ -93,20 +100,20 @@ export function TaskDetailPage({
           Breadcrumb stays bespoke (back-link, not the Issues·Docs tabs) per
           the chrome-redesign decision, but rides the same inset/baseline as
           every other light page so the top bar is consistent. */}
-      <header className="shrink-0 border-b border-black/[0.06] bg-[var(--ov-bg)]">
+      <header className="shrink-0 border-b border-wash-6 bg-[var(--ov-bg)]">
         <div className="flex w-full items-center justify-between gap-3 px-[52px] pt-11 pb-3">
           <FadeRise y={6} delay={0.04}>
             <div className="flex h-8 items-center gap-2">
               <Link
                 href="/tasks"
-                className="flex items-center gap-1 text-[13.5px] leading-[18px] tracking-[-0.27px] text-[#9a9a9a] transition-colors hover:text-[#3a3a3a]"
+                className="flex items-center gap-1 text-[13.5px] leading-[18px] tracking-[-0.27px] text-ink-faint transition-colors hover:text-ink"
               >
                 <ChevronLeft className="size-3.5" />
                 <span>Issues</span>
               </Link>
               <ChevronRight className="size-3 text-[#c5c5c5]" />
               {idLabel && (
-                <span className="font-mono text-[12px] tabular-nums text-[#7a7a7a]">
+                <span className="font-mono text-[12px] tabular-nums text-ink-muted">
                   {idLabel}
                 </span>
               )}
@@ -132,6 +139,13 @@ export function TaskDetailPage({
         {/* Main content (scrollable) */}
         <main className="min-h-0 flex-1 overflow-y-auto">
           <div className="mx-auto max-w-3xl px-8 py-8">
+            {/* Closed-state pill reads the LIVE task mirror, so switching the
+                status in the Properties rail surfaces/retires it in place.
+                Both pills carry their own entrance (no FadeRise wrapper). */}
+            <TaskClosedBanner taskId={task.id} status={task.status} />
+
+            {ekoCreatedEvent(activity) && <TaskSyncBanner taskId={task.id} />}
+
             {isAdmin && pendingExtension && (
               <FadeRise y={6} delay={0.08}>
                 <DeadlineExtensionBanner extension={pendingExtension} />
@@ -139,17 +153,17 @@ export function TaskDetailPage({
             )}
 
             <FadeRise y={6} delay={0.1}>
-              <section className="overflow-hidden rounded-2xl bg-white shadow-seeko">
+              <section className="overflow-hidden rounded-2xl bg-surface-1 shadow-seeko">
                 <div className="px-8 pt-8 pb-6">
-                  <h1 className="text-[28px] font-medium leading-[1.2] tracking-[-0.02em] text-[#1a1a1a]">
+                  <h1 className="text-[28px] font-medium leading-[1.2] tracking-[-0.02em] text-ink-title">
                     {task.name}
                   </h1>
                   {task.description ? (
-                    <p className="mt-5 whitespace-pre-wrap text-[15px] leading-[1.6] text-[#3a3a3a]">
+                    <p className="mt-5 whitespace-pre-wrap text-[15px] leading-[1.6] text-ink">
                       {task.description}
                     </p>
                   ) : (
-                    <p className="mt-5 text-[14px] leading-[1.6] text-[#b8b8b8]">
+                    <p className="mt-5 text-[14px] leading-[1.6] text-ink-faintest">
                       No description.
                     </p>
                   )}
@@ -158,10 +172,17 @@ export function TaskDetailPage({
             </FadeRise>
 
             <FadeRise y={6} delay={0.18}>
-              <div className="mt-4">
-                <RailSection title="Activity" defaultOpen>
-                  <ActivitySection activity={activity} />
-                </RailSection>
+              {/* mt-3 groups the composer with the title card above it;
+                  the thread pushes its own Activity heading down (mt-8). */}
+              <div className="mt-3">
+                <TaskActivityThread
+                  taskId={task.id}
+                  activity={activity}
+                  comments={comments}
+                  team={team}
+                  currentUserId={currentUserId}
+                  isAdmin={isAdmin}
+                />
               </div>
             </FadeRise>
           </div>
@@ -170,7 +191,7 @@ export function TaskDetailPage({
         {/* Right sidebar — Properties / Milestones / Progress */}
         <aside
           aria-label="Task properties"
-          className="hidden w-[380px] shrink-0 border-l border-black/[0.06] lg:flex lg:flex-col"
+          className="hidden w-[380px] shrink-0 border-l border-wash-6 lg:flex lg:flex-col"
         >
           <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 py-6">
             <FadeRise y={6} delay={0.12}>

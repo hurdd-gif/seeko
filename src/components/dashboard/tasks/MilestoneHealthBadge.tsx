@@ -111,7 +111,7 @@ export function MilestoneHealthBadge({
   return (
     <span className="inline-flex items-center gap-1.5">
       <Glyph level={level} light={light} className="size-3.5 shrink-0" />
-      <span className="text-[12px] text-[#2a2a2a]">{LABEL[level]}</span>
+      <span className="text-[12px] text-ink-strong">{LABEL[level]}</span>
     </span>
   );
 }

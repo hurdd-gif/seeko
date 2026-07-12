@@ -13,12 +13,12 @@ export function ProgressSection({ task }: { task: TaskWithAssignee }) {
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-baseline justify-between">
-        <span className="text-[13px] text-[#2a2a2a]">{pct}%</span>
-        <span className="text-[12px] text-[#9a9a9a]">
+        <span className="text-[13px] text-ink-strong">{pct}%</span>
+        <span className="text-[12px] text-ink-faint">
           {pct === 100 ? 'Complete' : pct === 0 ? 'Not started' : 'In progress'}
         </span>
       </div>
-      <div className="h-1.5 w-full overflow-hidden rounded-full bg-black/[0.06]">
+      <div className="h-1.5 w-full overflow-hidden rounded-full bg-wash-6">
         <motion.div
           initial={shouldReduce ? false : { width: 0 }}
           animate={{ width: `${pct}%` }}

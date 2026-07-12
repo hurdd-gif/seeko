@@ -62,21 +62,21 @@ export function DeadlineExtensionBanner({ extension, onDecide }: DeadlineExtensi
 
   return (
     <section
-      className={`mb-4 rounded-2xl bg-[#fffaf0] p-4 ring-1 ring-[#f0d9a8] shadow-seeko transition-[opacity,transform] duration-150 ease-out motion-reduce:transition-none ${
+      className={`mb-4 rounded-2xl bg-[#fffaf0] dark:bg-dept-wash-animation/[0.08] p-4 ring-1 ring-[#f0d9a8] dark:ring-dept-wash-animation/25 shadow-seeko transition-[opacity,transform] duration-150 ease-out motion-reduce:transition-none ${
         leaving ? 'pointer-events-none scale-[0.98] opacity-0' : 'scale-100 opacity-100'
       }`}
     >
       <div className="flex items-start gap-2.5">
         <CalendarClock className="mt-0.5 size-4 shrink-0" style={{ color: PENDING_AMBER }} strokeWidth={2} aria-hidden />
         <div className="min-w-0 flex-1">
-          <p className="text-[13.5px] leading-[1.4] text-[#1a1a1a]">
+          <p className="text-[13.5px] leading-[1.4] text-ink-title">
             <span className="font-medium">{extension.requesterName}</span> requested a deadline extension
           </p>
-          <p className="mt-0.5 text-[12px] tabular-nums text-[#7a7a7a]">
+          <p className="mt-0.5 text-[12px] tabular-nums text-ink-muted">
             {fmt(extension.originalDeadline)} → {fmt(extension.requestedDeadline)}
           </p>
           {extension.reason && (
-            <p className="mt-1 text-[13px] leading-[1.5] text-[#3a3a3a]">“{extension.reason}”</p>
+            <p className="mt-1 text-[13px] leading-[1.5] text-ink">“{extension.reason}”</p>
           )}
         </div>
       </div>
@@ -89,7 +89,7 @@ export function DeadlineExtensionBanner({ extension, onDecide }: DeadlineExtensi
             placeholder="Reason (optional)"
             rows={2}
             maxLength={500}
-            className="w-full resize-none rounded-lg bg-white px-2.5 py-1.5 text-[13px] text-[#1a1a1a] ring-1 ring-black/[0.08] transition-[box-shadow] duration-150 ease-out placeholder:text-[#b8b8b8] focus:outline-none focus:ring-2 focus:ring-[#111]/15 motion-reduce:transition-none"
+            className="w-full resize-none rounded-lg bg-surface-1 px-2.5 py-1.5 text-[13px] text-ink-title ring-1 ring-wash-8 transition-[box-shadow] duration-150 ease-out placeholder:text-ink-faintest focus:outline-none focus:ring-2 focus:ring-ink-title/15 motion-reduce:transition-none"
           />
           <div className="flex items-center gap-2">
             <button
@@ -103,7 +103,7 @@ export function DeadlineExtensionBanner({ extension, onDecide }: DeadlineExtensi
             <button
               type="button"
               onClick={() => { setDenyMode(false); setReason(''); }}
-              className="text-[12px] text-[#7a7a7a] transition-colors duration-150 ease-out hover:text-[#1a1a1a] motion-reduce:transition-none"
+              className="text-[12px] text-ink-muted transition-colors duration-150 ease-out hover:text-ink-title motion-reduce:transition-none"
             >
               Cancel
             </button>
@@ -115,7 +115,7 @@ export function DeadlineExtensionBanner({ extension, onDecide }: DeadlineExtensi
             type="button"
             onClick={() => decide('approve')}
             disabled={deciding}
-            className="rounded-full bg-[#111] px-3.5 py-1.5 text-[12px] font-medium text-white transition-[transform,background-color] duration-150 ease-out hover:bg-[#000] active:scale-[0.97] disabled:opacity-50 motion-reduce:transition-none motion-reduce:active:scale-100"
+            className="rounded-full bg-ink-title px-3.5 py-1.5 text-[12px] font-medium text-surface-1 transition-[transform,background-color] duration-150 ease-out hover:bg-[#000] active:scale-[0.97] disabled:opacity-50 motion-reduce:transition-none motion-reduce:active:scale-100"
           >
             {deciding ? 'Approving…' : 'Approve'}
           </button>
@@ -123,7 +123,7 @@ export function DeadlineExtensionBanner({ extension, onDecide }: DeadlineExtensi
             type="button"
             onClick={() => setDenyMode(true)}
             disabled={deciding}
-            className="rounded-full px-3.5 py-1.5 text-[12px] font-medium text-[#3a3a3a] ring-1 ring-black/[0.1] transition-[background-color,transform] duration-150 ease-out hover:bg-black/[0.03] active:scale-[0.97] disabled:opacity-50 motion-reduce:transition-none motion-reduce:active:scale-100"
+            className="rounded-full px-3.5 py-1.5 text-[12px] font-medium text-ink ring-1 ring-wash-10 transition-[background-color,transform] duration-150 ease-out hover:bg-wash-3 active:scale-[0.97] disabled:opacity-50 motion-reduce:transition-none motion-reduce:active:scale-100"
           >
             Deny
           </button>

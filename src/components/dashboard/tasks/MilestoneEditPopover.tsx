@@ -333,7 +333,7 @@ export function MilestoneEditPopover({
           exit={reduce ? { opacity: 0 } : { opacity: 0, y: -4 }}
           transition={reduce ? { duration: 0 } : SPRING}
           style={{ position: 'fixed', left: coords.left, top: coords.top, width: PANEL_WIDTH }}
-          className="z-[200] origin-top-right overflow-hidden rounded-lg bg-white p-3 shadow-seeko-pop"
+          className="z-[200] origin-top-right overflow-hidden rounded-[14px] bg-surface-1 p-3 shadow-seeko-pop"
         >
           {/* Name */}
           <input
@@ -344,7 +344,7 @@ export function MilestoneEditPopover({
               if (error) setError(null);
             }}
             placeholder="Milestone name"
-            className="block w-full rounded-md border border-black/[0.06] bg-white px-2.5 py-1.5 text-[13px] text-[#1a1a1a] placeholder:text-[#b8b8b8] transition-colors focus:border-[#0d7aff] focus:outline-none"
+            className="block w-full rounded-md border border-wash-6 bg-surface-1 px-2.5 py-1.5 text-[13px] text-ink-title placeholder:text-ink-faintest transition-colors focus:border-seeko-accent focus:outline-none"
             maxLength={120}
           />
 
@@ -353,12 +353,12 @@ export function MilestoneEditPopover({
             type="date"
             value={targetDate}
             onChange={(e) => setTargetDate(e.target.value)}
-            className="mt-1.5 block w-full rounded-md border border-black/[0.06] bg-white px-2.5 py-1.5 text-[12.5px] tabular-nums text-[#1a1a1a] transition-colors focus:border-[#0d7aff] focus:outline-none"
+            className="mt-1.5 block w-full rounded-md border border-wash-6 bg-surface-1 px-2.5 py-1.5 text-[12.5px] tabular-nums text-ink-title transition-colors focus:border-seeko-accent focus:outline-none"
           />
 
           {/* Health */}
           <div className="mt-3">
-            <div className="px-0.5 pb-1 text-[11px] font-medium text-[#9a9a9a]">
+            <div className="px-0.5 pb-1 text-[11px] font-medium text-ink-faint">
               Health
             </div>
             <div className="flex flex-wrap gap-1">
@@ -368,8 +368,8 @@ export function MilestoneEditPopover({
                 className={
                   'rounded-md border px-2 py-1 text-[11.5px] transition-colors ' +
                   (health == null
-                    ? 'border-[#1a1a1a]/15 bg-[#f5f5f5] text-[#1a1a1a]'
-                    : 'border-transparent text-[#9a9a9a] hover:bg-black/[0.03]')
+                    ? 'border-ink-title/15 bg-[#f5f5f5] dark:bg-wash-5 text-ink-title'
+                    : 'border-transparent text-ink-faint hover:bg-wash-3')
                 }
               >
                 None
@@ -384,8 +384,8 @@ export function MilestoneEditPopover({
                     className={
                       'inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-[11.5px] transition-colors ' +
                       (active
-                        ? 'border-[#1a1a1a]/15 bg-[#f5f5f5] text-[#1a1a1a]'
-                        : 'border-transparent text-[#6a6a6a] hover:bg-black/[0.03]')
+                        ? 'border-ink-title/15 bg-[#f5f5f5] dark:bg-wash-5 text-ink-title'
+                        : 'border-transparent text-[#6a6a6a] dark:text-ink-muted-strong hover:bg-wash-3')
                     }
                   >
                     <MilestoneHealthBadge level={h} className="size-3" />
@@ -398,28 +398,28 @@ export function MilestoneEditPopover({
 
           {/* Linked tasks */}
           <div className="mt-3">
-            <div className="px-0.5 pb-1 text-[11px] font-medium text-[#9a9a9a]">
+            <div className="px-0.5 pb-1 text-[11px] font-medium text-ink-faint">
               Linked tasks
             </div>
             {loadingLinks ? (
-              <div className="px-2 py-2 text-[12px] text-[#9a9a9a]">Loading…</div>
+              <div className="px-2 py-2 text-[12px] text-ink-faint">Loading…</div>
             ) : allTasks.length === 0 ? (
-              <div className="px-2 py-2 text-[12px] text-[#9a9a9a]">No tasks in this project.</div>
+              <div className="px-2 py-2 text-[12px] text-ink-faint">No tasks in this project.</div>
             ) : (
               <>
                 <div className="relative mb-1">
-                  <Search className="pointer-events-none absolute left-2 top-1/2 size-3 -translate-y-1/2 text-[#9a9a9a]" />
+                  <Search className="pointer-events-none absolute left-2 top-1/2 size-3 -translate-y-1/2 text-ink-faint" />
                   <input
                     type="text"
                     value={taskQuery}
                     onChange={(e) => setTaskQuery(e.target.value)}
                     placeholder="Search tasks"
                     aria-label="Search tasks"
-                    className="block w-full rounded-md border border-black/[0.06] bg-white py-1.5 pl-7 pr-2.5 text-[12.5px] text-[#1a1a1a] placeholder:text-[#b8b8b8] transition-colors focus:border-[#0d7aff] focus:outline-none"
+                    className="block w-full rounded-md border border-wash-6 bg-surface-1 py-1.5 pl-7 pr-2.5 text-[12.5px] text-ink-title placeholder:text-ink-faintest transition-colors focus:border-seeko-accent focus:outline-none"
                   />
                 </div>
                 {visibleTasks.length === 0 ? (
-                  <div className="px-2 py-2 text-[12px] text-[#9a9a9a]">
+                  <div className="px-2 py-2 text-[12px] text-ink-faint">
                     No tasks match &ldquo;{taskQuery.trim()}&rdquo;
                   </div>
                 ) : (
@@ -429,14 +429,14 @@ export function MilestoneEditPopover({
                   return (
                     <label
                       key={t.id}
-                      className="flex cursor-pointer items-center gap-2 rounded-md px-1.5 py-1.5 transition-colors hover:bg-black/[0.03]"
+                      className="flex cursor-pointer items-center gap-2 rounded-md px-1.5 py-1.5 transition-colors hover:bg-wash-3"
                     >
                       <span
                         className={
                           'flex size-3.5 shrink-0 items-center justify-center rounded-[3.5px] border transition-colors ' +
                           (checked
-                            ? 'border-[#0d7aff] bg-[#0d7aff]'
-                            : 'border-black/15 bg-white')
+                            ? 'border-seeko-accent bg-seeko-accent'
+                            : 'border-black/15 bg-surface-1')
                         }
                       >
                         {checked && <Check className="size-2.5 text-white" strokeWidth={3} />}
@@ -448,11 +448,11 @@ export function MilestoneEditPopover({
                         className="sr-only"
                       />
                       {t.task_number != null && (
-                        <span className="shrink-0 font-mono text-[10.5px] tabular-nums text-[#9a9a9a]">
+                        <span className="shrink-0 font-mono text-[10.5px] tabular-nums text-ink-faint">
                           {t.task_number}
                         </span>
                       )}
-                      <span className="min-w-0 flex-1 truncate text-[12.5px] text-[#1a1a1a]">
+                      <span className="min-w-0 flex-1 truncate text-[12.5px] text-ink-title">
                         {t.name}
                       </span>
                     </label>
@@ -482,7 +482,7 @@ export function MilestoneEditPopover({
               <button
                 type="button"
                 onClick={() => setConfirmDelete(true)}
-                className="flex items-center gap-1.5 rounded-md px-2 py-1 text-[11.5px] text-[#9a9a9a] transition-colors hover:bg-black/[0.04] hover:text-[#f87171]"
+                className="flex items-center gap-1.5 rounded-md px-2 py-1 text-[11.5px] text-ink-faint transition-colors hover:bg-wash-4 hover:text-[#f87171]"
               >
                 <Trash2 className="size-3" />
                 Delete
@@ -492,7 +492,7 @@ export function MilestoneEditPopover({
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="rounded-md px-2 py-1 text-[11.5px] text-[#808080] transition-colors hover:bg-black/[0.04] hover:text-[#0d0d0d]"
+                className="rounded-md px-2 py-1 text-[11.5px] text-ink-muted transition-colors hover:bg-wash-4 hover:text-ink-title"
               >
                 Cancel
               </button>
@@ -500,7 +500,7 @@ export function MilestoneEditPopover({
                 type="button"
                 disabled={saving || !dirty || !name.trim()}
                 onClick={save}
-                className="rounded-md bg-[#0d7aff] px-2.5 py-1 text-[11.5px] font-medium text-white transition-colors hover:bg-[#0964d6] active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-[#e6e6e6] disabled:text-[#9a9a9a]"
+                className="rounded-md bg-seeko-accent px-2.5 py-1 text-[11.5px] font-medium text-white transition-colors hover:bg-[#0964d6] active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-[#e6e6e6] dark:disabled:bg-surface-4 disabled:text-ink-faint"
               >
                 {saving ? 'Saving…' : 'Save'}
               </button>
@@ -525,7 +525,7 @@ export function MilestoneEditPopover({
         }}
         className={
           triggerClassName ??
-          'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] text-[#2a2a2a] transition-colors hover:bg-black/[0.04]'
+          'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] text-ink-strong transition-colors hover:bg-wash-4'
         }
       >
         {children}

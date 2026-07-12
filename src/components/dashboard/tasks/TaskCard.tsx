@@ -2,7 +2,7 @@
  * TaskCard — a single card on the issue board.
  *
  * Spec (light-mode adaptation of Paper TA-0; see plan 2026-05-19):
- *   • bg-white, rounded-xl, shadow-seeko, p-3
+ *   • bg-surface-1, rounded-xl, shadow-seeko, p-3
  *   • Header row:  [{n}]      [assignee avatar / +icon]
  *   • Title row:   [StatusDot] [name (truncate)]
  *   • Footer:      Created {date}
@@ -184,9 +184,9 @@ export function TaskCard({
 
   // The visible avatar/initials block — same in both editable and read-only modes.
   const avatarVisual = assignee ? (
-    <Avatar className="size-5 shrink-0 ring-1 ring-black/[0.04]">
+    <Avatar className="size-5 shrink-0 ring-1 ring-wash-4">
       <AvatarImage src={assignee.avatar_url ?? undefined} alt={assignee.display_name ?? ''} />
-      <AvatarFallback hash={assignee.id} className="text-[8px] font-medium text-[#505050]">
+      <AvatarFallback hash={assignee.id} className="text-[8px] font-medium text-ink-body">
         {initials(assignee.display_name)}
       </AvatarFallback>
     </Avatar>
@@ -196,7 +196,7 @@ export function TaskCard({
   // a dashed circle with a + icon, matching the popover's "No assignee" row.
   const emptyTrigger = (
     <span
-      className="flex size-5 shrink-0 items-center justify-center rounded-full border border-dashed border-[#cfcfcf] text-[#9a9a9a] transition-colors hover:border-[#9a9a9a] hover:text-[#505050]"
+      className="flex size-5 shrink-0 items-center justify-center rounded-full border border-dashed border-[#cfcfcf] text-ink-faint transition-colors hover:border-ink-faint hover:text-ink-body"
       aria-hidden
     >
       <UserPlus className="size-3" strokeWidth={1.75} />
@@ -262,16 +262,16 @@ export function TaskCard({
             width: CONTEXT_MENU_WIDTH,
             transformOrigin: 'top left',
           }}
-          className="z-[220] overflow-hidden rounded-[14px] bg-white p-1 shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_2px_4px_-1px_rgba(0,0,0,0.08),0_10px_24px_-12px_rgba(0,0,0,0.22),0_24px_44px_-28px_rgba(0,0,0,0.18)]"
+          className="z-[220] overflow-hidden rounded-[14px] bg-surface-1 p-1 shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_2px_4px_-1px_rgba(0,0,0,0.08),0_10px_24px_-12px_rgba(0,0,0,0.22),0_24px_44px_-28px_rgba(0,0,0,0.18)]"
         >
           {canContextEdit && (
             <button
               type="button"
               role="menuitem"
               onClick={handleEditFromContext}
-              className="flex h-8 w-full items-center gap-2 rounded-[10px] px-2 text-left text-[12.5px] text-[#242424] transition-colors hover:bg-black/[0.045]"
+              className="flex h-8 w-full items-center gap-2 rounded-[10px] px-2 text-left text-[12.5px] text-[#242424] dark:text-ink-strong transition-colors hover:bg-wash-5"
             >
-              <Pencil className="size-3.5 text-[#777777]" />
+              <Pencil className="size-3.5 text-[#777777] dark:text-ink-muted" />
               <span className="flex-1 truncate">Edit issue</span>
             </button>
           )}
@@ -280,7 +280,7 @@ export function TaskCard({
               type="button"
               role="menuitem"
               onClick={handleDeleteFromContext}
-              className="flex h-8 w-full items-center gap-2 rounded-[10px] px-2 text-left text-[12.5px] text-[#dc2626] transition-colors hover:bg-[#fef2f2]"
+              className="flex h-8 w-full items-center gap-2 rounded-[10px] px-2 text-left text-[12.5px] text-[#dc2626] transition-colors hover:bg-[#fef2f2] dark:hover:bg-danger/15"
             >
               <Trash2 className="size-3.5" />
               <span className="flex-1 truncate">Delete issue</span>
@@ -311,21 +311,21 @@ export function TaskCard({
         whileTap={reduce ? undefined : { scale: 0.985 }}
         style={{ transformOrigin: 'center' }}
         className={cn(
-          'group block w-full min-h-[124px] rounded-xl px-4 py-5 text-left',
+          'group block w-full min-h-[124px] rounded-xl px-4 py-5 text-left select-none',
           muted
-            ? 'bg-white/65 shadow-none ring-1 ring-black/[0.06]'
-            : 'bg-white shadow-seeko',
+            ? 'bg-white/65 shadow-none ring-1 ring-wash-6 dark:bg-surface-1/65'
+            : 'bg-surface-1 shadow-seeko',
           'cursor-pointer outline-none',
-          contextOpen && 'ring-2 ring-[#0d7aff]/25',
+          contextOpen && 'ring-2 ring-seeko-accent/25',
           spotlit && 'eko-spotlight',
-          'focus-visible:ring-2 focus-visible:ring-[#0d7aff]/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[#eeeeee]',
+          'focus-visible:ring-2 focus-visible:ring-seeko-accent/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[#eeeeee] dark:focus-visible:ring-offset-[oklch(0.240_0_0)]',
           className,
         )}
       >
         {/* Header row — id label · assignee trigger */}
         <div className="flex items-start justify-between gap-2">
           {idLabel ? (
-            <span className="font-mono text-[11px] leading-none tabular-nums text-[#808080]">
+            <span className="font-mono text-[11px] leading-none tabular-nums text-ink-muted">
               {idLabel}
             </span>
           ) : (
@@ -347,7 +347,7 @@ export function TaskCard({
           ) : (
             <StatusDot status={task.status} size="sm" className="shrink-0" />
           )}
-          <span className="min-w-0 flex-1 line-clamp-2 text-[13.5px] font-medium leading-snug text-[#222222]">
+          <span className="min-w-0 flex-1 line-clamp-2 text-[13.5px] font-medium leading-snug text-[#222222] dark:text-ink-strong">
             {task.name}
           </span>
         </div>
@@ -355,7 +355,7 @@ export function TaskCard({
         {/* Footer — compact metadata chips keep priority and deadline contained. */}
         <div className="mt-3.5 flex min-w-0 items-center gap-1.5 overflow-hidden">
           <span
-            className="inline-flex h-6 shrink-0 items-center gap-1.5 rounded-full bg-black/[0.035] px-2 text-[11px] font-medium leading-none text-[#6f6f6f]"
+            className="inline-flex h-6 shrink-0 items-center gap-1.5 rounded-full bg-wash-4 px-2 text-[11px] font-medium leading-none text-[#6f6f6f] dark:text-ink-muted"
             aria-label={`Priority ${task.priority}`}
           >
             <PriorityIcon
@@ -371,14 +371,14 @@ export function TaskCard({
                 'inline-flex h-6 min-w-0 items-center gap-1.5 rounded-full px-2 text-[11px] font-medium leading-none tabular-nums',
                 deadline.overdue
                   ? 'bg-[#f04438]/10 text-[#d92d20]'
-                  : 'bg-black/[0.035] text-[#777777]',
+                  : 'bg-wash-4 text-[#777777] dark:text-ink-muted',
               )}
             >
               <CalendarClock className="size-3 shrink-0" strokeWidth={1.75} />
               <span className="truncate">{deadline.overdue ? `Overdue ${deadline.label}` : deadline.label}</span>
             </span>
           ) : created ? (
-            <span className="inline-flex h-6 min-w-0 items-center gap-1.5 rounded-full bg-black/[0.035] px-2 text-[11px] font-medium leading-none tabular-nums text-[#8a8a8a]">
+            <span className="inline-flex h-6 min-w-0 items-center gap-1.5 rounded-full bg-wash-4 px-2 text-[11px] font-medium leading-none tabular-nums text-ink-muted">
               <Calendar className="size-3 shrink-0" strokeWidth={1.75} />
               <span className="truncate">{created}</span>
             </span>

@@ -264,7 +264,7 @@ export function MilestonePopover({
           exit={reduce ? { opacity: 0 } : { opacity: 0, y: -4 }}
           transition={reduce ? { duration: 0 } : SPRING}
           style={{ position: 'fixed', left: coords.left, top: coords.top, width: PANEL_WIDTH }}
-          className="z-[200] origin-top-right overflow-hidden rounded-lg bg-white p-1 shadow-seeko-pop"
+          className="z-[200] origin-top-right overflow-hidden rounded-[14px] bg-surface-1 p-1 shadow-seeko-pop"
         >
           {showLinkList && (
             <>
@@ -284,23 +284,23 @@ export function MilestonePopover({
                       aria-checked={linked}
                       disabled={pending}
                       onClick={() => toggleLink(m.id)}
-                      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-black/[0.04] disabled:opacity-50"
+                      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-wash-4 disabled:opacity-50"
                     >
                       <span className="flex size-5 shrink-0 items-center justify-center">
-                        <Flag className="size-3.5 text-[#9a9a9a]" />
+                        <Flag className="size-3.5 text-ink-faint" />
                       </span>
-                      <span className="flex-1 truncate text-[12.5px] text-[#1a1a1a]">{m.name}</span>
+                      <span className="flex-1 truncate text-[12.5px] text-ink-title">{m.name}</span>
                       {date && (
-                        <span className="shrink-0 text-[11px] tabular-nums text-[#9a9a9a]">
+                        <span className="shrink-0 text-[11px] tabular-nums text-ink-faint">
                           {date}
                         </span>
                       )}
-                      {linked && <Check className="size-3 text-[#0d7aff]" strokeWidth={3} />}
+                      {linked && <Check className="size-3 text-seeko-accent" strokeWidth={3} />}
                     </button>
                   );
                 })}
               </div>
-              <div className="my-1 border-t border-black/[0.05]" />
+              <div className="my-1 border-t border-wash-5" />
             </>
           )}
 
@@ -309,12 +309,12 @@ export function MilestonePopover({
             <button
               type="button"
               onClick={() => setComposerOpen(true)}
-              className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-black/[0.04]"
+              className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-wash-4"
             >
-              <span className="flex size-5 shrink-0 items-center justify-center text-[#505050]">
+              <span className="flex size-5 shrink-0 items-center justify-center text-ink-body">
                 <Plus className="size-3.5" strokeWidth={2.25} />
               </span>
-              <span className="flex-1 truncate text-[12.5px] text-[#1a1a1a]">New milestone</span>
+              <span className="flex-1 truncate text-[12.5px] text-ink-title">New milestone</span>
             </button>
           ) : (
             <form onSubmit={submitNew} className="p-1.5">
@@ -327,14 +327,14 @@ export function MilestonePopover({
                   if (error) setError(null);
                 }}
                 placeholder="Milestone name"
-                className="block w-full rounded-md border border-black/[0.08] bg-white px-2 py-1.5 text-[12.5px] text-[#1a1a1a] placeholder:text-[#b8b8b8] focus:border-[#0d7aff] focus:outline-none"
+                className="block w-full rounded-md border border-wash-8 bg-surface-1 px-2 py-1.5 text-[12.5px] text-ink-title placeholder:text-ink-faintest focus:border-seeko-accent focus:outline-none"
                 maxLength={120}
               />
               <input
                 type="date"
                 value={targetDate}
                 onChange={(e) => setTargetDate(e.target.value)}
-                className="mt-1.5 block w-full rounded-md border border-black/[0.08] bg-white px-2 py-1.5 text-[12.5px] tabular-nums text-[#1a1a1a] focus:border-[#0d7aff] focus:outline-none"
+                className="mt-1.5 block w-full rounded-md border border-wash-8 bg-surface-1 px-2 py-1.5 text-[12.5px] tabular-nums text-ink-title focus:border-seeko-accent focus:outline-none"
               />
               {error && (
                 <p className="mt-1.5 text-[11.5px] text-[#f87171]">{error}</p>
@@ -348,14 +348,14 @@ export function MilestonePopover({
                     setTargetDate('');
                     setError(null);
                   }}
-                  className="rounded-md px-2 py-1 text-[11.5px] text-[#808080] transition-colors hover:bg-black/[0.04] hover:text-[#0d0d0d]"
+                  className="rounded-md px-2 py-1 text-[11.5px] text-ink-muted transition-colors hover:bg-wash-4 hover:text-ink-title"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submitting || !name.trim()}
-                  className="rounded-md bg-[#0d7aff] px-2.5 py-1 text-[11.5px] font-medium text-white transition-colors hover:bg-[#0964d6] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-md bg-seeko-accent px-2.5 py-1 text-[11.5px] font-medium text-white transition-colors hover:bg-[#0964d6] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {submitting ? 'Creating…' : taskId ? 'Create & link' : 'Create'}
                 </button>
@@ -376,7 +376,7 @@ export function MilestonePopover({
         aria-expanded={open}
         aria-label={ariaLabel}
         onClick={() => setOpen((v) => !v)}
-        className="flex size-6 items-center justify-center rounded-md text-[#9a9a9a] transition-colors hover:bg-black/[0.04] hover:text-[#3a3a3a]"
+        className="flex size-6 items-center justify-center rounded-md text-ink-faint transition-colors hover:bg-wash-4 hover:text-ink"
       >
         {children}
       </button>

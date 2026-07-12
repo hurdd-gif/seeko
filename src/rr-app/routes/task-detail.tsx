@@ -43,7 +43,7 @@ export function TaskDetailRouteContent({ data }: { data: TaskDetailLoaderData })
     );
   }
 
-  const { task, areas, team, milestones, activity, isAdmin, pendingExtension } = data.data;
+  const { task, areas, team, milestones, activity, comments, currentUserId, isAdmin, pendingExtension } = data.data;
   return (
     <TaskDetailPage
       task={task}
@@ -51,6 +51,8 @@ export function TaskDetailRouteContent({ data }: { data: TaskDetailLoaderData })
       team={team}
       milestones={milestones}
       activity={activity}
+      comments={comments}
+      currentUserId={currentUserId}
       isAdmin={isAdmin}
       pendingExtension={pendingExtension}
     />
@@ -65,9 +67,9 @@ export function TaskDetailRouteContent({ data }: { data: TaskDetailLoaderData })
 function TaskDetailState({ title, description }: { title: string; description: string }) {
   return (
     <div className="overview-light fixed inset-0 z-40 flex items-center justify-center bg-[var(--ov-bg)] px-6 antialiased">
-      <div className="w-full max-w-sm rounded-2xl bg-white px-8 py-10 text-center shadow-seeko">
-        <h1 className="text-[20px] font-medium tracking-[-0.01em] text-[#1a1a1a]">{title}</h1>
-        <p className="mt-2 text-[14px] leading-[1.6] text-[#6a6a6a]">{description}</p>
+      <div className="w-full max-w-sm rounded-2xl bg-surface-1 px-8 py-10 text-center shadow-seeko">
+        <h1 className="text-[20px] font-medium tracking-[-0.01em] text-ink-title">{title}</h1>
+        <p className="mt-2 text-[14px] leading-[1.6] text-[#6a6a6a] dark:text-ink-muted-strong">{description}</p>
       </div>
     </div>
   );

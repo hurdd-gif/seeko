@@ -170,7 +170,7 @@ export function TaskActionsMenu({
           exit={reduce ? { opacity: 0 } : { opacity: 0, y: -4 }}
           transition={reduce ? { duration: 0 } : SPRING}
           style={{ position: 'fixed', left: coords.left, top: coords.top, width: PANEL_WIDTH }}
-          className="z-[200] origin-top-right overflow-hidden rounded-lg bg-white p-1 shadow-seeko-pop"
+          className="z-[200] origin-top-right overflow-hidden rounded-[14px] bg-surface-1 p-1 shadow-seeko-pop"
         >
           {confirmDelete ? (
             <button
@@ -190,7 +190,7 @@ export function TaskActionsMenu({
                 if (e.key === 'Enter' || e.key === ' ') cancelHold();
               }}
               aria-label={`Hold to delete ${taskName}`}
-              className="relative flex w-full select-none items-center gap-2 overflow-hidden rounded-md bg-[#fef2f2] px-2 py-1.5 text-left text-[12.5px] font-medium text-[#dc2626] transition-colors hover:bg-[#fee2e2]"
+              className="relative flex w-full select-none items-center gap-2 overflow-hidden rounded-[10px] bg-[#fef2f2] dark:bg-danger/10 px-2.5 py-1.5 text-left text-[13px] font-medium text-[#dc2626] transition-colors hover:bg-[#fee2e2] dark:hover:bg-danger/[0.18]"
             >
               {/* Hold-fill — animates 0 → 100% over HOLD_MS, snaps back on release. */}
               <span
@@ -213,7 +213,7 @@ export function TaskActionsMenu({
               type="button"
               role="menuitem"
               onClick={() => setConfirmDelete(true)}
-              className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[12.5px] text-[#5a5a5a] transition-colors hover:bg-black/[0.04] hover:text-[#dc2626]"
+              className="flex w-full items-center gap-2 rounded-[10px] px-2.5 py-1.5 text-left text-[13px] text-ink-body transition-colors hover:bg-wash-4 hover:text-[#dc2626]"
             >
               <Trash2 className="size-3.5" />
               Delete task
@@ -233,7 +233,7 @@ export function TaskActionsMenu({
         aria-expanded={open}
         aria-label="Task actions"
         onClick={() => setOpen((v) => !v)}
-        className="flex size-7 shrink-0 items-center justify-center rounded-full text-[#9a9a9a] transition-colors hover:bg-black/[0.04] hover:text-[#3a3a3a]"
+        className="flex size-7 shrink-0 items-center justify-center rounded-full text-ink-faint transition-colors hover:bg-wash-4 hover:text-ink"
       >
         <MoreHorizontal className="size-4" />
       </button>

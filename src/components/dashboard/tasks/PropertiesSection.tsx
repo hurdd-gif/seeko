@@ -45,8 +45,8 @@ function Row({
 }) {
   return (
     <div className="flex min-h-[28px] items-center gap-3">
-      <span className="w-[88px] shrink-0 text-[12.5px] text-[#9a9a9a]">{label}</span>
-      <span className="flex min-w-0 flex-1 items-center gap-1.5 text-[13px] text-[#2a2a2a]">
+      <span className="w-[88px] shrink-0 text-[12.5px] text-ink-faint">{label}</span>
+      <span className="flex min-w-0 flex-1 items-center gap-1.5 text-[13px] text-ink-strong">
         {children}
       </span>
     </div>
@@ -54,7 +54,7 @@ function Row({
 }
 
 function Empty() {
-  return <span className="text-[#b8b8b8]">—</span>;
+  return <span className="text-ink-faintest">—</span>;
 }
 
 function formatDate(iso?: string) {
@@ -145,7 +145,7 @@ export function PropertiesSection({
         leading: (
           <Avatar className="size-3.5">
             <AvatarImage src={p.avatar_url ?? undefined} alt={p.display_name ?? ''} />
-            <AvatarFallback className="bg-[#e5e5e5] text-[7px] font-medium text-[#505050]">
+            <AvatarFallback className="bg-[#e5e5e5] dark:bg-surface-6 text-[7px] font-medium text-ink-body">
               {initial(p.display_name)}
             </AvatarFallback>
           </Avatar>
@@ -214,12 +214,12 @@ export function PropertiesSection({
 
   const assigneeContent = task.assignee ? (
     <>
-      <Avatar className="size-5 ring-1 ring-black/[0.04]">
+      <Avatar className="size-5 ring-1 ring-wash-4">
         <AvatarImage
           src={task.assignee.avatar_url ?? undefined}
           alt={task.assignee.display_name ?? ''}
         />
-        <AvatarFallback className="bg-[#e5e5e5] text-[9px] font-medium text-[#505050]">
+        <AvatarFallback className="bg-[#e5e5e5] dark:bg-surface-6 text-[9px] font-medium text-ink-body">
           {initial(task.assignee.display_name)}
         </AvatarFallback>
       </Avatar>
@@ -231,7 +231,7 @@ export function PropertiesSection({
 
   const deadlineContent = deadline ? (
     <>
-      <CalendarIcon className="size-3.5 text-[#9a9a9a]" />
+      <CalendarIcon className="size-3.5 text-ink-faint" />
       <span>{deadline}</span>
     </>
   ) : (

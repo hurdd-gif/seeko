@@ -56,8 +56,8 @@ function TasksState({ title, description }: { title: string; description: string
   return (
     <div className="overview-light fixed inset-0 z-40 flex items-center justify-center bg-[var(--ov-bg)] px-6 antialiased">
       <div className="rr-panel w-full max-w-md">
-        <h1 className="m-0 text-xl font-semibold text-[#111]">{title}</h1>
-        <p className="mt-2 text-sm leading-relaxed text-[#505050]">{description}</p>
+        <h1 className="m-0 text-xl font-semibold text-ink-title">{title}</h1>
+        <p className="mt-2 text-sm leading-relaxed text-ink-body">{description}</p>
       </div>
     </div>
   );

@@ -129,7 +129,7 @@ export function StatusPopover({
           exit={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.97, y: -4 }}
           transition={reduce ? { duration: 0 } : SPRING}
           style={{ position: 'fixed', left: coords.left, top: coords.top, width: PANEL_WIDTH }}
-          className="z-[200] origin-top-left overflow-hidden rounded-lg bg-white p-1 shadow-seeko-pop"
+          className="z-[200] origin-top-left overflow-hidden rounded-[14px] bg-surface-1 p-1 shadow-seeko-pop"
         >
           <div className="max-h-[320px] overflow-y-auto [scrollbar-width:thin]">
             {TASK_STATUSES.map((s) => {
@@ -145,13 +145,13 @@ export function StatusPopover({
                     if (s !== value) onSelect(s);
                     setOpen(false);
                   }}
-                  className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-black/[0.04]"
+                  className={`flex w-full items-center gap-2 rounded-[10px] px-2.5 py-1.5 text-left transition-colors hover:bg-wash-4 hover:text-ink-title ${selected ? 'text-ink-title' : 'text-ink-body'}`}
                 >
                   <span className="flex size-3.5 shrink-0 items-center justify-center">
                     <StatusDot status={s} size="sm" />
                   </span>
-                  <span className="flex-1 truncate text-[12.5px] text-[#1a1a1a]">{s}</span>
-                  {selected && <Check className="size-3 text-[#0d7aff]" strokeWidth={3} />}
+                  <span className="flex-1 truncate text-[13px]">{s}</span>
+                  {selected && <Check className="size-3 text-seeko-accent" strokeWidth={3} />}
                 </button>
               );
             })}
@@ -179,7 +179,7 @@ export function StatusPopover({
           e.stopPropagation();
           setOpen((v) => !v);
         }}
-        className="-m-1 flex items-center justify-center rounded-full p-1 transition-[background-color,transform] duration-150 ease-out hover:bg-black/[0.05] motion-safe:active:scale-[0.95]"
+        className="-m-1 flex items-center justify-center rounded-full p-1 transition-[background-color,transform] duration-150 ease-out hover:bg-wash-5 motion-safe:active:scale-[0.95]"
       >
         {children}
       </button>

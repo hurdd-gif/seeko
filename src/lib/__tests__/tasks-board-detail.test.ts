@@ -47,6 +47,18 @@ const TEAM = [
 const AREAS: unknown[] = [];
 const MILESTONE_ROWS: unknown[] = [];
 const ACTIVITY_ROWS: unknown[] = [];
+const COMMENT_ROWS: Record<string, unknown>[] = [
+  {
+    id: 'comment-1',
+    task_id: 'task-1',
+    user_id: 'user-1',
+    content: 'Looks good',
+    created_at: '2026-07-02T00:00:00.000Z',
+    profiles: { id: 'user-1', display_name: 'Riley', avatar_url: null },
+    task_comment_reactions: [{ id: 'r-1', emoji: '👍', user_id: 'admin-1' }],
+    task_comment_attachments: [],
+  },
+];
 
 /** Mirrors the `vi.hoisted` + `vi.mock('@/lib/supabase/service')` service-mock
  * idiom already used by `contractor-index-steps.test.ts` — one literal chain
@@ -109,6 +121,18 @@ function serviceMock(extRow: Record<string, unknown> | null) {
           }),
         };
       }
+      if (table === 'task_comments') {
+        return {
+          select: () => ({
+            eq: () => ({
+              order: () => ({
+                then: (resolve: (v: unknown) => unknown) =>
+                  Promise.resolve({ data: COMMENT_ROWS, error: null }).then(resolve),
+              }),
+            }),
+          }),
+        };
+      }
       if (table === 'deadline_extensions') {
         return {
           select: () => ({
@@ -160,5 +184,20 @@ describe('loadTaskDetailFull pendingExtension', () => {
     const data = await loadTaskDetailFull({ id: 'admin-1' }, 'task-1');
 
     expect(data.pendingExtension).toBeNull();
+  });
+
+  it('loads comments (reactions/attachments normalized) and echoes currentUserId', async () => {
+    mocks.getServiceClient.mockReturnValue(serviceMock(null));
+
+    const data = await loadTaskDetailFull({ id: 'admin-1' }, 'task-1');
+
+    expect(data.currentUserId).toBe('admin-1');
+    expect(data.comments).toHaveLength(1);
+    expect(data.comments[0]).toMatchObject({
+      id: 'comment-1',
+      content: 'Looks good',
+      reactions: [{ id: 'r-1', emoji: '👍', user_id: 'admin-1' }],
+      attachments: [],
+    });
   });
 });

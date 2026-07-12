@@ -102,8 +102,8 @@ function formatDeadline(iso?: string | null) {
 function pillClass(active: boolean) {
   return [
     'inline-flex h-[26px] min-w-[28px] cursor-pointer select-none items-center gap-1.5 rounded-full pl-2 pr-2.5 text-[12px] leading-4 transition-colors',
-    'ring-1 ring-inset ring-black/[0.07] hover:bg-black/[0.03]',
-    active ? 'bg-white text-[#2a2a2a]' : 'bg-white text-[#7a7a7a]',
+    'ring-1 ring-inset ring-black/[0.07] hover:bg-wash-3',
+    active ? 'bg-surface-1 text-ink-strong' : 'bg-surface-1 text-ink-muted',
   ].join(' ');
 }
 
@@ -245,7 +245,7 @@ export function CreateTaskComposer({
         leading: (
           <Avatar className="size-3.5">
             <AvatarImage src={p.avatar_url ?? undefined} alt={p.display_name ?? ''} />
-            <AvatarFallback className="bg-[#e5e5e5] text-[7px] font-medium text-[#505050]">
+            <AvatarFallback className="bg-[#e5e5e5] dark:bg-surface-6 text-[7px] font-medium text-ink-body">
               {initial(p.display_name)}
             </AvatarFallback>
           </Avatar>
@@ -313,16 +313,16 @@ export function CreateTaskComposer({
             aria-label="New issue"
             {...modalCardEntrance(reduce ?? null)}
             style={{ width: 'min(720px, calc(100vw - 32px))' }}
-            className="flex flex-col overflow-hidden rounded-[18px] bg-white shadow-seeko-pop ring-1 ring-black/[0.06]"
+            className="flex flex-col overflow-hidden rounded-[18px] bg-surface-1 shadow-seeko-pop ring-1 ring-wash-6"
           >
             {/* ── Header ───────────────────────────────────── */}
             <div className="flex items-center gap-2 px-3 py-2.5">
-              <span className="inline-flex h-6 items-center gap-1.5 rounded-full bg-[#f1f1f0] pl-1.5 pr-2 text-[11.5px] font-medium text-[#3a3a3a]">
-                <span className="inline-block size-2 rounded-sm bg-[#0d7aff]" />
+              <span className="inline-flex h-6 items-center gap-1.5 rounded-full bg-[#f1f1f0] dark:bg-wash-4 pl-1.5 pr-2 text-[11.5px] font-medium text-ink">
+                <span className="inline-block size-2 rounded-sm bg-seeko-accent" />
                 SEEKO
               </span>
-              <span className="text-[12.5px] text-[#9a9a9a]">›</span>
-              <span className="text-[12.5px] font-medium text-[#2a2a2a]">New issue</span>
+              <span className="text-[12.5px] text-ink-faint">›</span>
+              <span className="text-[12.5px] font-medium text-ink-strong">New issue</span>
               <span className="ml-auto flex items-center gap-0.5">
                 <button
                   type="button"
@@ -336,7 +336,7 @@ export function CreateTaskComposer({
                   type="button"
                   aria-label="Close"
                   onClick={() => !isPending && onClose()}
-                  className="flex size-7 items-center justify-center rounded-full text-[#9a9a9a] transition-colors hover:bg-black/[0.04] hover:text-[#3a3a3a]"
+                  className="flex size-7 items-center justify-center rounded-full text-ink-faint transition-colors hover:bg-wash-4 hover:text-ink"
                 >
                   <X className="size-3.5" />
                 </button>
@@ -355,7 +355,7 @@ export function CreateTaskComposer({
                 }}
                 placeholder="Issue title"
                 aria-label="Issue title"
-                className="w-full resize-none border-0 bg-transparent text-[18px] font-semibold leading-6 tracking-[-0.012em] text-[#1a1a1a] placeholder:text-[#b8b8b8] focus:outline-none"
+                className="w-full resize-none border-0 bg-transparent text-[18px] font-semibold leading-6 tracking-[-0.012em] text-ink-title placeholder:text-ink-faintest focus:outline-none"
                 style={{ height: 'auto' }}
               />
               <textarea
@@ -364,7 +364,7 @@ export function CreateTaskComposer({
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Add description…"
                 aria-label="Description"
-                className="min-h-[80px] w-full resize-none border-0 bg-transparent text-[14px] leading-[22px] tracking-[-0.006em] text-[#3a3a3a] placeholder:text-[#b8b8b8] focus:outline-none"
+                className="min-h-[80px] w-full resize-none border-0 bg-transparent text-[14px] leading-[22px] tracking-[-0.006em] text-ink placeholder:text-ink-faintest focus:outline-none"
               />
             </div>
 
@@ -411,7 +411,7 @@ export function CreateTaskComposer({
                         src={assignee.avatar_url ?? undefined}
                         alt={assignee.display_name ?? ''}
                       />
-                      <AvatarFallback className="bg-[#e5e5e5] text-[7px] font-medium text-[#505050]">
+                      <AvatarFallback className="bg-[#e5e5e5] dark:bg-surface-6 text-[7px] font-medium text-ink-body">
                         {initial(assignee.display_name)}
                       </AvatarFallback>
                     </Avatar>
@@ -421,7 +421,7 @@ export function CreateTaskComposer({
                   </>
                 ) : (
                   <>
-                    <span className="inline-block size-3.5 rounded-full bg-[#e5e5e5]" />
+                    <span className="inline-block size-3.5 rounded-full bg-[#e5e5e5] dark:bg-surface-6" />
                     Assignee
                   </>
                 )}
@@ -465,7 +465,7 @@ export function CreateTaskComposer({
             </div>
 
             {/* Separator above footer */}
-            <div className="h-px bg-black/[0.06]" />
+            <div className="h-px bg-wash-6" />
 
             {/* ── Footer: create-more toggle + submit ───────── */}
             <div className="flex items-center justify-between gap-3 px-4 py-3">
@@ -477,7 +477,7 @@ export function CreateTaskComposer({
                 )}
               </div>
               <div className="flex items-center gap-3">
-                <label className="flex cursor-pointer items-center gap-2 text-[12px] text-[#7a7a7a] select-none">
+                <label className="flex cursor-pointer items-center gap-2 text-[12px] text-ink-muted select-none">
                   <span
                     role="switch"
                     aria-checked={createMore}
@@ -491,7 +491,7 @@ export function CreateTaskComposer({
                     }}
                     className={[
                       'relative inline-flex h-[14px] w-[24px] shrink-0 items-center rounded-full transition-colors',
-                      createMore ? 'bg-[#0d7aff]' : 'bg-[#d4d4d4]',
+                      createMore ? 'bg-seeko-accent' : 'bg-[#d4d4d4]',
                     ].join(' ')}
                   >
                     <span
@@ -510,8 +510,8 @@ export function CreateTaskComposer({
                   className={[
                     'inline-flex h-7 items-center rounded-full px-3 text-[12.5px] font-medium transition-colors',
                     canSubmit
-                      ? 'bg-[#0d7aff] text-white hover:bg-[#0a6cdf] active:bg-[#0860c8]'
-                      : 'cursor-not-allowed bg-[#e6e6e6] text-[#9a9a9a]',
+                      ? 'bg-seeko-accent text-white hover:bg-[#0a6cdf] active:bg-[#0860c8]'
+                      : 'cursor-not-allowed bg-[#e6e6e6] dark:bg-surface-4 text-ink-faint',
                   ].join(' ')}
                 >
                   {isPending ? 'Creating…' : 'Create issue'}

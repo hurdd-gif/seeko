@@ -132,7 +132,7 @@ export function AssigneePopover({
           exit={reduce ? { opacity: 0 } : { opacity: 0, y: -4 }}
           transition={reduce ? { duration: 0 } : SPRING}
           style={{ position: 'fixed', left: coords.left, top: coords.top, width: PANEL_WIDTH }}
-          className="z-[200] origin-top-right overflow-hidden rounded-lg bg-white p-1 shadow-seeko-pop"
+          className="z-[200] origin-top-right overflow-hidden rounded-[14px] bg-surface-1 p-1 shadow-seeko-pop"
         >
           <div className="max-h-[320px] overflow-y-auto [scrollbar-width:thin]">
             {/* No assignee */}
@@ -145,13 +145,13 @@ export function AssigneePopover({
                 onSelect(null);
                 setOpen(false);
               }}
-              className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-black/[0.04]"
+              className={`flex w-full items-center gap-2 rounded-[10px] px-2.5 py-1.5 text-left transition-colors hover:bg-wash-4 hover:text-ink-title ${!value ? 'text-ink-title' : 'text-ink-body'}`}
             >
-              <span className="flex size-5 shrink-0 items-center justify-center text-[#b8b8b8]">
+              <span className="flex size-5 shrink-0 items-center justify-center text-ink-faintest">
                 <CircleDashed className="size-4" strokeWidth={1.5} />
               </span>
-              <span className="flex-1 truncate text-[12.5px] text-[#1a1a1a]">No assignee</span>
-              {!value && <Check className="size-3 text-[#0d7aff]" strokeWidth={3} />}
+              <span className="flex-1 truncate text-[13px]">No assignee</span>
+              {!value && <Check className="size-3 text-seeko-accent" strokeWidth={3} />}
             </button>
 
             {/* Team members */}
@@ -168,46 +168,46 @@ export function AssigneePopover({
                     onSelect(p.id);
                     setOpen(false);
                   }}
-                  className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-black/[0.04]"
+                  className={`flex w-full items-center gap-2 rounded-[10px] px-2.5 py-1.5 text-left transition-colors hover:bg-wash-4 hover:text-ink-title ${selected ? 'text-ink-title' : 'text-ink-body'}`}
                 >
-                  <Avatar className="size-5 shrink-0 ring-1 ring-black/[0.04]">
+                  <Avatar className="size-5 shrink-0 ring-1 ring-wash-4">
                     <AvatarImage src={p.avatar_url ?? undefined} alt={p.display_name ?? ''} />
-                    <AvatarFallback className="bg-[#e5e5e5] text-[8px] font-medium text-[#505050]">
+                    <AvatarFallback className="bg-[#e5e5e5] dark:bg-surface-6 text-[8px] font-medium text-ink-body">
                       {initials(p.display_name)}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="flex-1 truncate text-[12.5px] text-[#1a1a1a]">
+                  <span className="flex-1 truncate text-[13px]">
                     {p.display_name ?? 'Unnamed'}
                   </span>
-                  {selected && <Check className="size-3 text-[#0d7aff]" strokeWidth={3} />}
+                  {selected && <Check className="size-3 text-seeko-accent" strokeWidth={3} />}
                 </button>
               );
             })}
           </div>
 
           {/* Stub actions — disabled for now */}
-          <div className="mt-1 border-t border-black/[0.05] pt-1">
+          <div className="mt-1 border-t border-wash-5 pt-1">
             <button
               type="button"
               disabled
               title="Coming soon"
-              className="flex w-full cursor-not-allowed items-center gap-2 rounded-md px-2 py-1.5 text-left opacity-50"
+              className="flex w-full cursor-not-allowed items-center gap-2 rounded-[10px] px-2.5 py-1.5 text-left opacity-50"
             >
-              <span className="flex size-5 shrink-0 items-center justify-center text-[#9a9a9a]">
+              <span className="flex size-5 shrink-0 items-center justify-center text-ink-faint">
                 <UserPlus className="size-3.5" strokeWidth={1.75} />
               </span>
-              <span className="flex-1 truncate text-[12.5px] text-[#9a9a9a]">New user</span>
+              <span className="flex-1 truncate text-[13px] text-ink-faint">New user</span>
             </button>
             <button
               type="button"
               disabled
               title="Coming soon"
-              className="flex w-full cursor-not-allowed items-center gap-2 rounded-md px-2 py-1.5 text-left opacity-50"
+              className="flex w-full cursor-not-allowed items-center gap-2 rounded-[10px] px-2.5 py-1.5 text-left opacity-50"
             >
-              <span className="flex size-5 shrink-0 items-center justify-center text-[#9a9a9a]">
+              <span className="flex size-5 shrink-0 items-center justify-center text-ink-faint">
                 <Send className="size-3.5" strokeWidth={1.75} />
               </span>
-              <span className="flex-1 truncate text-[12.5px] text-[#9a9a9a]">Invite and assign…</span>
+              <span className="flex-1 truncate text-[13px] text-ink-faint">Invite and assign…</span>
             </button>
           </div>
         </motion.div>
@@ -228,7 +228,7 @@ export function AssigneePopover({
           e.stopPropagation();
           setOpen((v) => !v);
         }}
-        className="-m-0.5 inline-flex items-center justify-center rounded-full p-0.5 transition-colors hover:bg-black/[0.04]"
+        className="-m-0.5 inline-flex items-center justify-center rounded-full p-0.5 transition-colors hover:bg-wash-4"
       >
         {children}
       </button>

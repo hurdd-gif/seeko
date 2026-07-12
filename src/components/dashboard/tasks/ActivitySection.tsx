@@ -20,7 +20,7 @@ import {
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import type { TaskActivity, TaskActivityKind, Profile } from '@/lib/types';
 
-function initials(name?: string | null): string {
+export function initials(name?: string | null): string {
   if (!name) return '?';
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return '?';
@@ -37,7 +37,7 @@ const KIND_ICON: Record<TaskActivityKind, React.ComponentType<{ className?: stri
   progress_changed: TrendingUp,
 };
 
-function formatTimeAgo(iso: string) {
+export function formatTimeAgo(iso: string) {
   const diff = Date.now() - new Date(iso).getTime();
   const min = Math.floor(diff / 60_000);
   if (min < 1) return 'just now';
@@ -109,7 +109,7 @@ export function ActivitySection({
 
   if (activity.length === 0) {
     return (
-      <div className="flex items-center gap-2 text-[12.5px] text-[#9a9a9a]">
+      <div className="flex items-center gap-2 text-[12.5px] text-ink-faint">
         <ActivityIcon className="size-3.5" />
         <span>No activity yet.</span>
       </div>
@@ -120,56 +120,83 @@ export function ActivitySection({
 
   return (
     <ol className="flex flex-col gap-2.5">
-      {visible.map((a) => {
-        // EKO's own writes carry source='eko'; they get EKO's mark + name
-        // instead of impersonating the admin whose id is on the row.
-        const isEko = a.source === 'eko';
-        const Icon = a.kind ? KIND_ICON[a.kind] : ActivityIcon;
-        // Lead with the actor when the profile join resolved; the kind is
-        // already spelled out in the copy, so the icon only carries rows
-        // without an actor (system writes, deleted profiles).
-        const actorName =
-          a.profiles?.display_name || (a.user_id ? resolveName(a.user_id) : undefined);
-        const hasActor = Boolean(a.profiles || (a.user_id && actorName));
-        return (
-          <li key={a.id} className="flex items-start gap-2.5 text-[12.5px]">
-            {isEko ? (
-              <span
-                aria-label="EKO"
-                className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-[#0d7aff]/[0.12] text-[#0d7aff] ring-1 ring-inset ring-[#0d7aff]/25"
-              >
-                <Sparkles className="size-3" />
-              </span>
-            ) : hasActor ? (
-              <Avatar
-                className="mt-0.5 size-5 ring-1 ring-black/[0.04]"
-                title={actorName}
-              >
-                <AvatarImage src={a.profiles?.avatar_url ?? undefined} alt={actorName ?? 'Teammate'} />
-                <AvatarFallback
-                  hash={a.user_id ?? a.id}
-                  className="text-[8px] font-medium text-[#505050]"
-                >
-                  {initials(actorName)}
-                </AvatarFallback>
-              </Avatar>
-            ) : (
-              <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-black/[0.04] text-[#7a7a7a]">
-                <Icon className="size-3" />
-              </span>
-            )}
-            <div className="min-w-0 flex-1 leading-[1.4]">
-              <span className="text-[#3a3a3a]">
-                {isEko && <span className="font-medium text-[#0d7aff]">EKO</span>}
-                {isEko ? ' ' : null}
-                {renderCopy(a, resolveName)}
-              </span>
-              <span className="ml-1.5 text-[#a8a8a8]">·</span>
-              <span className="ml-1.5 text-[#a8a8a8]">{formatTimeAgo(a.created_at)}</span>
-            </div>
-          </li>
-        );
-      })}
+      {visible.map((a) => (
+        <ActivityEventRow key={a.id} activity={a} resolveName={resolveName} />
+      ))}
     </ol>
+  );
+}
+
+/**
+ * One activity event row (avatar/EKO mark/icon + copy + time). Shared by the
+ * rail's ActivitySection and the full-page merged thread (TaskActivityThread),
+ * so event rows read identically wherever they appear. Leads with the actor's
+ * name when known — the merged feed sits next to authored comment cards, so
+ * "d created this task" beats a nameless "created this task".
+ */
+export function ActivityEventRow({
+  activity: a,
+  resolveName = () => undefined,
+  showActorName = false,
+}: {
+  activity: TaskActivity;
+  resolveName?: NameResolver;
+  /** Prefix the copy with the actor's display name (merged-feed style). */
+  showActorName?: boolean;
+}) {
+  // EKO's own writes carry source='eko'; they get EKO's mark + name
+  // instead of impersonating the admin whose id is on the row.
+  const isEko = a.source === 'eko';
+  const Icon = a.kind ? KIND_ICON[a.kind] : ActivityIcon;
+  // Lead with the actor when the profile join resolved; the kind is
+  // already spelled out in the copy, so the icon only carries rows
+  // without an actor (system writes, deleted profiles).
+  const actorName =
+    a.profiles?.display_name || (a.user_id ? resolveName(a.user_id) : undefined);
+  const hasActor = Boolean(a.profiles || (a.user_id && actorName));
+  return (
+    <li className="flex items-start gap-2.5 text-[12.5px]">
+      {isEko ? (
+        <span
+          aria-label="EKO"
+          className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-seeko-accent/[0.12] text-seeko-accent ring-1 ring-inset ring-seeko-accent/25"
+        >
+          <Sparkles className="size-3" />
+        </span>
+      ) : hasActor ? (
+        <Avatar
+          className="mt-0.5 size-5 ring-1 ring-wash-4"
+          title={actorName}
+        >
+          <AvatarImage src={a.profiles?.avatar_url ?? undefined} alt={actorName ?? 'Teammate'} />
+          <AvatarFallback
+            hash={a.user_id ?? a.id}
+            className="text-[8px] font-medium text-ink-body"
+          >
+            {initials(actorName)}
+          </AvatarFallback>
+        </Avatar>
+      ) : (
+        <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-wash-4 text-ink-muted">
+          <Icon className="size-3" />
+        </span>
+      )}
+      <div className="min-w-0 flex-1 leading-[1.4]">
+        <span className="text-ink">
+          {isEko ? (
+            <>
+              <span className="font-medium text-seeko-accent">EKO</span>{' '}
+            </>
+          ) : showActorName && actorName ? (
+            <>
+              <span className="font-medium text-ink-title">{actorName}</span>{' '}
+            </>
+          ) : null}
+          {renderCopy(a, resolveName)}
+        </span>
+        <span className="ml-1.5 text-[#a8a8a8]">·</span>
+        <span className="ml-1.5 text-[#a8a8a8]">{formatTimeAgo(a.created_at)}</span>
+      </div>
+    </li>
   );
 }

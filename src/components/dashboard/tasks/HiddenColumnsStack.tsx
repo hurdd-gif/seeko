@@ -109,7 +109,7 @@ export function HiddenColumnsStack({
         type="button"
         data-testid="Hidden columns toggle"
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-1.5 rounded-lg px-1.5 pt-0.5 pb-1 text-left transition-colors hover:bg-black/[0.03] active:bg-black/[0.05]"
+        className="flex items-center gap-1.5 rounded-lg px-1.5 pt-0.5 pb-1 text-left transition-colors hover:bg-wash-3 active:bg-wash-5"
         aria-expanded={open}
       >
         <motion.span
@@ -117,12 +117,12 @@ export function HiddenColumnsStack({
           transition={reduce ? { duration: 0 } : springs.snappy}
           className="inline-flex"
         >
-          <ChevronDown className="size-3.5 text-[#9a9a9a]" />
+          <ChevronDown className="size-3.5 text-ink-faint" />
         </motion.span>
-        <span className="whitespace-nowrap text-[13px] font-semibold text-[#505050]">
+        <span className="whitespace-nowrap text-[13px] font-semibold text-ink-body">
           Hidden columns
         </span>
-        <span className="ml-1 rounded-full bg-black/[0.05] px-1.5 text-[11px] font-medium tabular-nums leading-[18px] text-[#808080]">
+        <span className="ml-1 rounded-full bg-wash-5 px-1.5 text-[11px] font-medium tabular-nums leading-[18px] text-ink-muted">
           {hiddenStatuses.length}
         </span>
       </button>
@@ -144,14 +144,14 @@ export function HiddenColumnsStack({
                   data-testid={`${status} column`}
                   onClick={onExpandColumn ? () => onExpandColumn(status) : undefined}
                   className={cn(
-                    'flex w-full items-center gap-2 rounded-lg bg-white px-3 py-2.5 shadow-seeko',
+                    'flex w-full items-center gap-2 rounded-lg bg-surface-1 px-3 py-2.5 shadow-seeko',
                     'transition-[background-color,transform] duration-150 ease-out',
-                    'hover:bg-[#fafafa] motion-safe:active:scale-[0.98]',
+                    'hover:bg-[#fafafa] dark:hover:bg-surface-3 motion-safe:active:scale-[0.98]',
                   )}
                 >
                   <StatusDot status={status} size="md" className="shrink-0" />
-                  <span className="text-[13px] font-medium text-[#222222]">{status}</span>
-                  <span className="ml-auto text-[12px] tabular-nums text-[#9a9a9a]">
+                  <span className="text-[13px] font-medium text-[#222222] dark:text-ink-strong">{status}</span>
+                  <span className="ml-auto text-[12px] tabular-nums text-ink-faint">
                     {countsByStatus[status] ?? 0}
                   </span>
                 </button>

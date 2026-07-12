@@ -116,30 +116,30 @@ export function CreateTaskModal({ open, onClose, team, areas }: CreateTaskModalP
           <motion.div
             {...modalBackdropEntrance(reduce)}
             onClick={() => !isPending && onClose()}
-            className="fixed inset-0 z-[60] bg-[#1a1a1a]/25 backdrop-blur-sm"
+            className="fixed inset-0 z-[60] bg-[#1a1a1a]/25 dark:bg-black/40 backdrop-blur-sm"
           />
           <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 md:p-10 pointer-events-none">
             <motion.div
               {...modalCardEntrance(reduce)}
               style={{ transformOrigin: MODAL.card.transformOrigin }}
-              className="pointer-events-auto w-full max-w-md rounded-2xl bg-white shadow-seeko"
+              className="pointer-events-auto w-full max-w-md rounded-2xl bg-surface-1 shadow-seeko"
               role="dialog"
               aria-modal="true"
               aria-labelledby="create-task-title"
             >
               <div className="flex items-center justify-between px-5 py-4">
-                <h2 id="create-task-title" className="text-sm font-medium text-[#0d0d0d]">New task</h2>
+                <h2 id="create-task-title" className="text-sm font-medium text-ink-title">New task</h2>
                 <button
                   type="button"
                   onClick={() => !isPending && onClose()}
-                  className="flex size-7 items-center justify-center rounded-lg text-[#808080] hover:text-[#0d0d0d] hover:bg-[#0000000a] transition-colors"
+                  className="flex size-7 items-center justify-center rounded-lg text-ink-muted hover:text-ink-title hover:bg-wash-4 transition-colors"
                   aria-label="Close"
                 >
                   <X className="size-4" />
                 </button>
               </div>
 
-              <div className="mx-5 h-px bg-[#0000000d]" />
+              <div className="mx-5 h-px bg-wash-5" />
 
               <form onSubmit={handleSubmit} className="px-5 pb-5 pt-4 space-y-4">
                 <Field label="Name">
@@ -149,7 +149,7 @@ export function CreateTaskModal({ open, onClose, team, areas }: CreateTaskModalP
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="What needs to get done?"
-                    className="w-full rounded-lg bg-[#0000000a] px-3 py-2.5 text-sm text-[#0d0d0d] placeholder:text-[#b3b3b3] focus:outline-none focus:bg-[#00000012] transition-colors"
+                    className="w-full rounded-lg bg-wash-4 px-3 py-2.5 text-sm text-ink-title placeholder:text-ink-faintest focus:outline-none focus:bg-[#00000012] transition-colors"
                     style={{ boxShadow: 'inset 0 0 0 0.5px rgba(0,0,0,0.08)' }}
                   />
                 </Field>
@@ -200,7 +200,7 @@ export function CreateTaskModal({ open, onClose, team, areas }: CreateTaskModalP
                     onChange={(e) => setDescription(e.target.value)}
                     placeholder="Optional context, links, acceptance criteria…"
                     rows={3}
-                    className="w-full rounded-lg bg-[#0000000a] px-3 py-2.5 text-sm text-[#0d0d0d] placeholder:text-[#b3b3b3] focus:outline-none focus:bg-[#00000012] transition-colors resize-none"
+                    className="w-full rounded-lg bg-wash-4 px-3 py-2.5 text-sm text-ink-title placeholder:text-ink-faintest focus:outline-none focus:bg-[#00000012] transition-colors resize-none"
                     style={{ boxShadow: 'inset 0 0 0 0.5px rgba(0,0,0,0.08)' }}
                   />
                 </Field>
@@ -213,7 +213,7 @@ export function CreateTaskModal({ open, onClose, team, areas }: CreateTaskModalP
                   <button
                     type="button"
                     onClick={() => !isPending && onClose()}
-                    className="rounded-lg px-3 py-2 text-sm text-[#808080] hover:text-[#0d0d0d] hover:bg-[#0000000a] transition-colors"
+                    className="rounded-lg px-3 py-2 text-sm text-ink-muted hover:text-ink-title hover:bg-wash-4 transition-colors"
                   >
                     Cancel
                   </button>
@@ -237,7 +237,7 @@ export function CreateTaskModal({ open, onClose, team, areas }: CreateTaskModalP
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-xs font-medium text-[#808080]">{label}</span>
+      <span className="mb-1.5 block text-xs font-medium text-ink-muted">{label}</span>
       {children}
     </label>
   );
@@ -291,13 +291,13 @@ function ThemedSelect({
         onClick={() => setOpen((p) => !p)}
         aria-haspopup="listbox"
         aria-expanded={open}
-        className="flex w-full items-center justify-between rounded-lg bg-[#0000000a] px-3 py-2.5 text-sm text-[#0d0d0d] focus:outline-none hover:bg-[#00000012] transition-colors"
+        className="flex w-full items-center justify-between rounded-lg bg-wash-4 px-3 py-2.5 text-sm text-ink-title focus:outline-none hover:bg-[#00000012] transition-colors"
         style={{ boxShadow: 'inset 0 0 0 0.5px rgba(0,0,0,0.08)' }}
       >
-        <span className={selected?.label ? '' : 'text-[#b3b3b3]'}>
+        <span className={selected?.label ? '' : 'text-ink-faintest'}>
           {selected?.label || placeholder || 'Select'}
         </span>
-        <ChevronDown className={`size-4 text-[#808080] transition-transform ${open ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`size-4 text-ink-muted transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
       <AnimatePresence>
         {open && (
@@ -306,7 +306,7 @@ function ThemedSelect({
             role="listbox"
             {...shellEntrance(reduce)}
             style={{ transformOrigin: 'top center' }}
-            className="absolute inset-x-0 top-full z-[80] mt-1.5 max-h-60 overflow-y-auto rounded-xl bg-white p-1 shadow-seeko"
+            className="absolute inset-x-0 top-full z-[80] mt-1.5 max-h-60 overflow-y-auto rounded-[14px] bg-surface-1 p-1 shadow-seeko-pop"
           >
             {options.map((opt) => {
               const isSelected = opt.value === value;
@@ -317,10 +317,10 @@ function ThemedSelect({
                   role="option"
                   aria-selected={isSelected}
                   onClick={() => { onChange(opt.value); setOpen(false); }}
-                  className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition-colors ${
+                  className={`flex w-full items-center justify-between rounded-[10px] px-3 py-2 text-left text-[13px] transition-colors ${
                     isSelected
-                      ? 'bg-[#0d7aff]/[0.08] text-[#0d7aff]'
-                      : 'text-[#505050] hover:bg-[#0000000a] hover:text-[#0d0d0d]'
+                      ? 'bg-seeko-accent/[0.08] text-seeko-accent'
+                      : 'text-ink-body hover:bg-wash-4 hover:text-ink-title'
                   }`}
                 >
                   <span>{opt.label}</span>
@@ -401,13 +401,13 @@ function ThemedDatePicker({ value, onChange }: { value: string; onChange: (v: st
         ref={triggerRef}
         type="button"
         onClick={() => setOpen((p) => !p)}
-        className="flex w-full items-center justify-between rounded-lg bg-[#0000000a] px-3 py-2.5 text-sm text-[#0d0d0d] focus:outline-none hover:bg-[#00000012] transition-colors"
+        className="flex w-full items-center justify-between rounded-lg bg-wash-4 px-3 py-2.5 text-sm text-ink-title focus:outline-none hover:bg-[#00000012] transition-colors"
         style={{ boxShadow: 'inset 0 0 0 0.5px rgba(0,0,0,0.08)' }}
       >
-        <span className={selected ? '' : 'text-[#b3b3b3]'}>
+        <span className={selected ? '' : 'text-ink-faintest'}>
           {selected ? formatDisplay(selected) : 'No deadline'}
         </span>
-        <Calendar className="size-4 text-[#808080]" />
+        <Calendar className="size-4 text-ink-muted" />
       </button>
       <AnimatePresence>
         {open && (
@@ -415,24 +415,24 @@ function ThemedDatePicker({ value, onChange }: { value: string; onChange: (v: st
             ref={popRef}
             {...shellEntrance(reduce)}
             style={{ transformOrigin: 'top center' }}
-            className="absolute inset-x-0 top-full z-[80] mt-1.5 rounded-xl bg-white p-2.5 shadow-seeko"
+            className="absolute inset-x-0 top-full z-[80] mt-1.5 rounded-[14px] bg-surface-1 p-2.5 shadow-seeko-pop"
           >
             <div className="flex items-center justify-between px-1 pb-2">
               <button
                 type="button"
                 onClick={() => setViewMonth(new Date(year, month - 1, 1))}
-                className="flex size-6 items-center justify-center rounded-md text-[#808080] hover:text-[#0d0d0d] hover:bg-[#0000000a] transition-colors"
+                className="flex size-6 items-center justify-center rounded-md text-ink-muted hover:text-ink-title hover:bg-wash-4 transition-colors"
                 aria-label="Previous month"
               >
                 <ChevronLeft className="size-3.5" />
               </button>
-              <span className="text-xs font-medium text-[#0d0d0d] tabular-nums">
+              <span className="text-xs font-medium text-ink-title tabular-nums">
                 {MONTHS[month]} {year}
               </span>
               <button
                 type="button"
                 onClick={() => setViewMonth(new Date(year, month + 1, 1))}
-                className="flex size-6 items-center justify-center rounded-md text-[#808080] hover:text-[#0d0d0d] hover:bg-[#0000000a] transition-colors"
+                className="flex size-6 items-center justify-center rounded-md text-ink-muted hover:text-ink-title hover:bg-wash-4 transition-colors"
                 aria-label="Next month"
               >
                 <ChevronRight className="size-3.5" />
@@ -440,7 +440,7 @@ function ThemedDatePicker({ value, onChange }: { value: string; onChange: (v: st
             </div>
             <div className="grid grid-cols-7 gap-0.5 px-0.5 pb-1">
               {WEEKDAYS.map((d, i) => (
-                <span key={i} className="flex h-6 items-center justify-center text-[10px] font-medium text-[#b3b3b3]">{d}</span>
+                <span key={i} className="flex h-6 items-center justify-center text-[10px] font-medium text-ink-faintest">{d}</span>
               ))}
             </div>
             <div className="grid grid-cols-7 gap-0.5 px-0.5">
@@ -456,10 +456,10 @@ function ThemedDatePicker({ value, onChange }: { value: string; onChange: (v: st
                     onClick={() => { onChange(iso); setOpen(false); }}
                     className={`flex h-7 items-center justify-center rounded-md text-xs tabular-nums transition-colors ${
                       isSelected
-                        ? 'bg-[#0d7aff] text-white font-medium'
+                        ? 'bg-seeko-accent text-white font-medium'
                         : isToday
-                        ? 'text-[#0d7aff] font-medium hover:bg-[#0d7aff]/[0.08]'
-                        : 'text-[#505050] hover:bg-[#0000000a] hover:text-[#0d0d0d]'
+                        ? 'text-seeko-accent font-medium hover:bg-seeko-accent/[0.08]'
+                        : 'text-ink-body hover:bg-wash-4 hover:text-ink-title'
                     }`}
                   >
                     {d.getDate()}
@@ -467,18 +467,18 @@ function ThemedDatePicker({ value, onChange }: { value: string; onChange: (v: st
                 );
               })}
             </div>
-            <div className="mt-2 flex items-center justify-between border-t border-[#0000000d] pt-2">
+            <div className="mt-2 flex items-center justify-between border-t border-wash-5 pt-2">
               <button
                 type="button"
                 onClick={() => { onChange(''); setOpen(false); }}
-                className="rounded-md px-2 py-1 text-xs text-[#808080] hover:text-[#0d0d0d] hover:bg-[#0000000a] transition-colors"
+                className="rounded-md px-2 py-1 text-xs text-ink-muted hover:text-ink-title hover:bg-wash-4 transition-colors"
               >
                 Clear
               </button>
               <button
                 type="button"
                 onClick={() => { onChange(formatISO(today)); setViewMonth(new Date(today.getFullYear(), today.getMonth(), 1)); setOpen(false); }}
-                className="rounded-md px-2 py-1 text-xs text-[#0d0d0d] hover:bg-[#0000000a] transition-colors"
+                className="rounded-md px-2 py-1 text-xs text-ink-title hover:bg-wash-4 transition-colors"
               >
                 Today
               </button>

@@ -43,6 +43,7 @@ import { BoardDisplayPopover } from './BoardDisplayPopover';
 import { TaskDeleteUndoToastSlot, UNDO_WINDOW_MS } from './TaskDeleteUndoToast';
 import { CreateTaskComposer } from './CreateTaskComposer';
 import { TasksIssueList } from './TasksIssueList';
+import { BoardScrollbar } from './BoardScrollbar';
 import { LightShell, type AccountPillProps } from '@/components/dashboard/LightShell';
 import { updateTask, deleteTask } from '@/lib/task-store';
 import { requestEkoSpotlight } from '@/lib/eko-bus';
@@ -304,6 +305,7 @@ export function TasksBoard({
 
   /** Right rail visibility (toggle via PanelRight icon). */
   const [railOpen, setRailOpen] = useState(true);
+  const boardScrollerRef = useRef<HTMLElement>(null);
 
   /** Filter state (status / priority / department / assignee). */
   const [filter, setFilter] = useState<BoardFilterState>(EMPTY_FILTER);
@@ -407,8 +409,8 @@ export function TasksBoard({
         onClick={() => setViewMode((v) => (v === 'board' ? 'list' : 'board'))}
         className={
           viewMode === 'list'
-            ? 'flex size-9 items-center justify-center rounded-full bg-black/[0.05] text-[#3a3a3a] transition-[background-color,color,transform] duration-150 ease-out motion-safe:active:scale-[0.97]'
-            : 'flex size-9 items-center justify-center rounded-full text-[#6e6e6e] transition-[background-color,color,transform] duration-150 ease-out hover:bg-black/[0.04] hover:text-[#3a3a3a] motion-safe:active:scale-[0.97]'
+            ? 'flex size-9 items-center justify-center rounded-full bg-wash-5 text-ink transition-[background-color,color,transform] duration-150 ease-out motion-safe:active:scale-[0.97]'
+            : 'flex size-9 items-center justify-center rounded-full text-ink-muted-strong transition-[background-color,color,transform] duration-150 ease-out hover:bg-wash-4 hover:text-ink motion-safe:active:scale-[0.97]'
         }
       >
         {viewMode === 'board' ? <Rows3 className="size-4" /> : <LayoutGrid className="size-4" />}
@@ -420,8 +422,8 @@ export function TasksBoard({
         onClick={() => setRailOpen((v) => !v)}
         className={
           railOpen
-            ? 'flex size-9 items-center justify-center rounded-full bg-black/[0.05] text-[#3a3a3a] transition-[background-color,color,transform] duration-150 ease-out motion-safe:active:scale-[0.97]'
-            : 'flex size-9 items-center justify-center rounded-full text-[#6e6e6e] transition-[background-color,color,transform] duration-150 ease-out hover:bg-black/[0.04] hover:text-[#3a3a3a] motion-safe:active:scale-[0.97]'
+            ? 'flex size-9 items-center justify-center rounded-full bg-wash-5 text-ink transition-[background-color,color,transform] duration-150 ease-out motion-safe:active:scale-[0.97]'
+            : 'flex size-9 items-center justify-center rounded-full text-ink-muted-strong transition-[background-color,color,transform] duration-150 ease-out hover:bg-wash-4 hover:text-ink motion-safe:active:scale-[0.97]'
         }
       >
         <PanelRight className="size-4" />
@@ -440,9 +442,16 @@ export function TasksBoard({
     >
       {/* ── Board area + right rail ────────────────────────────── */}
       <div className="flex min-h-0 flex-1">
-        <main className="scroll-mask-x min-h-0 flex-1 overflow-x-auto overflow-y-hidden">
+        {/* Relative wrapper so BoardScrollbar can overlay the scroller's
+            bottom edge without riding along with the scrolled content. */}
+        <div className="relative min-h-0 min-w-0 flex-1">
+        <main
+          ref={boardScrollerRef}
+          id="board-scroller"
+          className="scroll-mask-x scrollbar-none h-full w-full overflow-x-auto overflow-y-auto"
+        >
           {viewMode === 'board' ? (
-            <div className="flex h-full items-start gap-4 px-6 pb-8 pt-2">
+            <div className="flex min-h-full w-max min-w-full items-start gap-4 px-6 pb-8 pt-2">
               {visibleStatuses.map((status, i) => (
                 <TasksBoardColumn
                   key={status}
@@ -484,6 +493,8 @@ export function TasksBoard({
             </div>
           )}
         </main>
+        <BoardScrollbar scrollerRef={boardScrollerRef} />
+        </div>
 
         {/* Rail slot — outer width creates/closes layout space, inner
             content translates X. Same spring, same React state flip → the
