@@ -90,7 +90,7 @@ function LargeProgressRing({ pct }: { pct: number }) {
           className="transition-all duration-500"
         />
       </svg>
-      <span className="absolute inset-0 flex items-center justify-center text-2xl font-semibold text-[#111]">
+      <span className="absolute inset-0 flex items-center justify-center text-2xl font-semibold text-ink-title">
         {pct}%
       </span>
     </div>
@@ -167,24 +167,24 @@ export function InvestorKPIStrip({
                 <button type="button" onClick={handleCompletionClick} className="w-full text-left">
                   <div className={kpiSurface} style={kpiShadow}>
                     <div className="flex flex-row items-center justify-between p-6 pb-2">
-                      <p className="text-sm font-medium text-[#808080]">Completion</p>
+                      <p className="text-sm font-medium text-ink-muted">Completion</p>
                       <ProgressRing pct={liveOverallPct} />
                     </div>
                     <div className="p-6 pt-0">
-                      <span className="text-2xl font-semibold tracking-tight tabular-nums text-[#111]">{liveOverallPct}%</span>
-                      <p className="text-xs text-[#808080] mt-0.5">overall progress</p>
+                      <span className="text-2xl font-semibold tracking-tight tabular-nums text-ink-title">{liveOverallPct}%</span>
+                      <p className="text-xs text-ink-muted mt-0.5">overall progress</p>
                     </div>
                   </div>
                 </button>
               ) : (
                 <div className={kpiSurface} style={kpiShadow}>
                   <div className="flex flex-row items-center justify-between p-6 pb-2">
-                    <p className="text-sm font-medium text-[#808080]">Completion</p>
+                    <p className="text-sm font-medium text-ink-muted">Completion</p>
                     <ProgressRing pct={liveOverallPct} />
                   </div>
                   <div className="p-6 pt-0">
-                    <span className="text-2xl font-semibold tracking-tight tabular-nums text-[#111]">{liveOverallPct}%</span>
-                    <p className="text-xs text-[#808080] mt-0.5">overall progress</p>
+                    <span className="text-2xl font-semibold tracking-tight tabular-nums text-ink-title">{liveOverallPct}%</span>
+                    <p className="text-xs text-ink-muted mt-0.5">overall progress</p>
                   </div>
                 </div>
               )}
@@ -196,14 +196,14 @@ export function InvestorKPIStrip({
             <HoverCard>
               <div className={kpiSurface} style={kpiShadow}>
                 <div className="flex flex-row items-center justify-between p-6 pb-2">
-                  <p className="text-sm font-medium text-[#808080]">This Week</p>
+                  <p className="text-sm font-medium text-ink-muted">This Week</p>
                   <div className="flex size-8 items-center justify-center rounded-lg bg-[var(--ov-chip-bg)]">
-                    <TrendingUp className="size-4 text-[#808080]" />
+                    <TrendingUp className="size-4 text-ink-muted" />
                   </div>
                 </div>
                 <div className="p-6 pt-0">
-                  <span className="text-2xl font-semibold tracking-tight tabular-nums text-[#111]">{completedThisWeek}</span>
-                  <p className="text-xs text-[#808080] mt-0.5">tasks completed</p>
+                  <span className="text-2xl font-semibold tracking-tight tabular-nums text-ink-title">{completedThisWeek}</span>
+                  <p className="text-xs text-ink-muted mt-0.5">tasks completed</p>
                 </div>
               </div>
             </HoverCard>
@@ -222,28 +222,28 @@ export function InvestorKPIStrip({
                 }}
               >
                 <div className="flex flex-row items-center justify-between p-6 pb-2">
-                  <p className="text-sm font-medium text-[#808080]">Issues</p>
-                  <div className={`flex size-8 items-center justify-center rounded-lg ${hasIssues ? 'bg-[#d4503e]/10' : 'bg-[var(--ov-chip-bg)]'}`}>
-                    <AlertCircle className={`size-4 ${hasIssues ? 'text-[#d4503e]' : 'text-[#808080]'}`} />
+                  <p className="text-sm font-medium text-ink-muted">Issues</p>
+                  <div className={`flex size-8 items-center justify-center rounded-lg ${hasIssues ? 'bg-danger/10' : 'bg-[var(--ov-chip-bg)]'}`}>
+                    <AlertCircle className={`size-4 ${hasIssues ? 'text-danger' : 'text-ink-muted'}`} />
                   </div>
                 </div>
                 <div className="p-6 pt-0">
                   {hasIssues ? (
                     <div className="flex items-baseline gap-2">
                       {blocked > 0 && (
-                        <span className="text-2xl font-semibold tracking-tight tabular-nums text-[#d4503e]">{blocked}</span>
+                        <span className="text-2xl font-semibold tracking-tight tabular-nums text-danger">{blocked}</span>
                       )}
                       {blocked > 0 && overdue > 0 && (
-                        <span className="text-[#808080]">/</span>
+                        <span className="text-ink-muted">/</span>
                       )}
                       {overdue > 0 && (
-                        <span className="text-2xl font-semibold tracking-tight tabular-nums text-[#c77800]">{overdue}</span>
+                        <span className="text-2xl font-semibold tracking-tight tabular-nums text-[#c77800] dark:text-dept-ink-animation">{overdue}</span>
                       )}
                     </div>
                   ) : (
-                    <span className="text-2xl font-semibold tracking-tight tabular-nums text-[#111]">0</span>
+                    <span className="text-2xl font-semibold tracking-tight tabular-nums text-ink-title">0</span>
                   )}
-                  <p className="text-xs text-[#808080] mt-0.5">
+                  <p className="text-xs text-ink-muted mt-0.5">
                     {blocked > 0 && overdue > 0
                       ? `${blocked} blocked · ${overdue} overdue`
                       : blocked > 0
@@ -262,14 +262,14 @@ export function InvestorKPIStrip({
             <HoverCard>
               <div className={kpiSurface} style={kpiShadow}>
                 <div className="flex flex-row items-center justify-between p-6 pb-2">
-                  <p className="text-sm font-medium text-[#808080]">Active Areas</p>
+                  <p className="text-sm font-medium text-ink-muted">Active Areas</p>
                   <div className="flex size-8 items-center justify-center rounded-lg bg-[var(--ov-chip-bg)]">
-                    <Map className="size-4 text-[#808080]" />
+                    <Map className="size-4 text-ink-muted" />
                   </div>
                 </div>
                 <div className="p-6 pt-0">
-                  <span className="text-2xl font-semibold tracking-tight tabular-nums text-[#111]">{activeAreas}</span>
-                  <p className="text-xs text-[#808080] mt-0.5">in development</p>
+                  <span className="text-2xl font-semibold tracking-tight tabular-nums text-ink-title">{activeAreas}</span>
+                  <p className="text-xs text-ink-muted mt-0.5">in development</p>
                 </div>
               </div>
             </HoverCard>
@@ -282,7 +282,7 @@ export function InvestorKPIStrip({
         <DialogClose onClose={() => setDialogOpen(false)} />
         <DialogHeader>
           <DialogTitle>Update Completion</DialogTitle>
-          <p className="text-sm text-[#808080]">Adjust progress per area. Changes save individually.</p>
+          <p className="text-sm text-ink-muted">Adjust progress per area. Changes save individually.</p>
         </DialogHeader>
 
         <div className="flex flex-col items-center gap-6">
@@ -295,7 +295,7 @@ export function InvestorKPIStrip({
               return (
                 <div key={area.id} className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-[#111]">{area.name}</span>
+                    <span className="text-sm font-medium text-ink-title">{area.name}</span>
                     <div className="flex items-center gap-0.5">
                       <input
                         type="number"
@@ -306,9 +306,9 @@ export function InvestorKPIStrip({
                           const n = Math.min(100, Math.max(0, Number(e.target.value) || 0));
                           setAreaValues(prev => ({ ...prev, [area.id]: n }));
                         }}
-                        className="w-10 text-right text-sm font-mono text-[#505050] bg-transparent border-b border-transparent focus:border-[#0d7aff] focus:outline-none transition-colors [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                        className="w-10 text-right text-sm font-mono text-ink-body bg-transparent border-b border-transparent focus:border-seeko-accent focus:outline-none transition-colors [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                       />
-                      <span className="text-sm text-[#808080]">%</span>
+                      <span className="text-sm text-ink-muted">%</span>
                     </div>
                   </div>
                   <input
@@ -317,10 +317,10 @@ export function InvestorKPIStrip({
                     max={100}
                     value={value}
                     onChange={e => setAreaValues(prev => ({ ...prev, [area.id]: Number(e.target.value) }))}
-                    className="w-full h-2 rounded-full appearance-none bg-black/[0.08] cursor-pointer accent-[#0d7aff] [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#0d7aff] [&::-webkit-slider-thumb]:shadow-md"
+                    className="w-full h-2 rounded-full appearance-none bg-wash-8 cursor-pointer accent-seeko-accent [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-seeko-accent [&::-webkit-slider-thumb]:shadow-md"
                   />
                   <div className="flex items-center justify-between">
-                    <div className="w-full h-1.5 rounded-full bg-black/[0.08] overflow-hidden">
+                    <div className="w-full h-1.5 rounded-full bg-wash-8 overflow-hidden">
                       <div
                         className="h-full rounded-full transition-all duration-200"
                         style={{ width: `${value}%`, backgroundColor: 'var(--color-seeko-accent)' }}
@@ -331,7 +331,7 @@ export function InvestorKPIStrip({
                         type="button"
                         onClick={() => handleSave(area.id)}
                         disabled={saving === area.id}
-                        className="ml-3 shrink-0 px-3 py-1 text-xs font-medium rounded-lg bg-[#0d7aff] text-white hover:bg-[#0a63cc] disabled:opacity-50 transition-colors"
+                        className="ml-3 shrink-0 px-3 py-1 text-xs font-medium rounded-lg bg-seeko-accent text-white hover:bg-seeko-accent-ink disabled:opacity-50 transition-colors"
                       >
                         {saving === area.id ? 'Saving…' : 'Save'}
                       </button>

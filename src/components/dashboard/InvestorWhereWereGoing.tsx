@@ -32,10 +32,10 @@ export function InvestorWhereWereGoing({ areas }: Props) {
   const noShipDates = datedAreas.length === 0;
 
   return (
-    <section className="flex h-full flex-col overflow-hidden rounded-[14px] border border-black/[0.05] bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_24px_rgba(0,0,0,0.06)]">
+    <section className="flex h-full flex-col overflow-hidden rounded-[14px] border border-wash-5 bg-surface-1 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_24px_rgba(0,0,0,0.06)]">
       <div className="px-6 pb-4 pt-5">
-        <p className="text-[13px] font-medium leading-[18px] text-[#8a8a8a]">Where we&apos;re going</p>
-        <h2 className="mt-1 text-[20px] font-semibold leading-[24px] text-[#111]">
+        <p className="text-[13px] font-medium leading-[18px] text-ink-muted">Where we&apos;re going</p>
+        <h2 className="mt-1 text-[20px] font-semibold leading-[24px] text-ink-title">
           Ship forecast
         </h2>
 
@@ -43,7 +43,7 @@ export function InvestorWhereWereGoing({ areas }: Props) {
           <p className="mt-2 text-[13px] leading-[18px] text-[var(--ov-muted)]">No ship dates set.</p>
         )}
       </div>
-      <div className="h-px bg-black/[0.05]" aria-hidden />
+      <div className="h-px bg-wash-5" aria-hidden />
 
       <div className="relative grid flex-1 grid-cols-1 gap-3 px-6 py-4 md:grid-cols-3">
           {/* Connector stroke across the three phase headers (desktop only).
@@ -73,7 +73,7 @@ export function InvestorWhereWereGoing({ areas }: Props) {
                 </div>
                 {phaseAreas.length === 0 ? (
                   <div
-                    className="flex min-h-[88px] items-center justify-center rounded-xl bg-black/[0.035] px-3 py-2.5"
+                    className="flex min-h-[88px] items-center justify-center rounded-xl bg-wash-4 px-3 py-2.5"
                     aria-label="No areas in this phase"
                   >
                     <span className="text-[12px] text-[var(--ov-muted)]">

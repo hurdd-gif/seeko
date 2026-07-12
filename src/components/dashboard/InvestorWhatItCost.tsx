@@ -51,17 +51,17 @@ export function InvestorWhatItCost({ paidTotal, thisMonth, recent }: Props) {
   const hasAnyRecipient = recent.some((p) => !!p.recipient?.display_name);
 
   return (
-    <section className="overflow-hidden rounded-2xl bg-white p-6 shadow-seeko">
+    <section className="overflow-hidden rounded-2xl bg-surface-1 p-6 shadow-seeko">
       <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
         <div>
           <p className="text-[13px] font-medium leading-[18px] text-[var(--ov-muted)]">What it cost</p>
-          <h2 className="mt-1 text-[20px] font-semibold leading-[24px] text-[#111]">
+          <h2 className="mt-1 text-[20px] font-semibold leading-[24px] text-ink-title">
             Spend snapshot
           </h2>
         </div>
         <Link
           href="/investor/payments"
-          className="group inline-flex h-9 w-fit items-center gap-1.5 rounded-full bg-[#0000000a] py-2 pl-3.5 pr-3 text-[14px] leading-[18px] text-[#545454] transition-[background-color,transform] duration-150 ease-out hover:bg-[#00000012] active:scale-[0.97]"
+          className="group inline-flex h-9 w-fit items-center gap-1.5 rounded-full bg-wash-4 py-2 pl-3.5 pr-3 text-[14px] leading-[18px] text-[#545454] transition-[background-color,transform] duration-150 ease-out hover:bg-[#00000012] active:scale-[0.97] dark:text-ink-muted dark:hover:bg-white/[0.09]"
         >
           View payments
           <ArrowRight className="size-3.5 transition-transform duration-150 ease-out group-hover:translate-x-0.5" />
@@ -78,11 +78,11 @@ export function InvestorWhatItCost({ paidTotal, thisMonth, recent }: Props) {
           Recent payments
         </p>
       {recent.length === 0 ? (
-          <p className="rounded-xl bg-[#f7f7f7] px-4 py-6 text-center text-[13px] text-[var(--ov-muted)]">
+          <p className="rounded-xl bg-surface-3 px-4 py-6 text-center text-[13px] text-[var(--ov-muted)]">
             No recent payments
           </p>
       ) : (
-          <div className="flex flex-col divide-y divide-[var(--ov-hairline)] rounded-xl bg-[#f7f7f7] px-4 shadow-[0_0_0_1px_rgba(0,0,0,0.035)]">
+          <div className="flex flex-col divide-y divide-[var(--ov-hairline)] rounded-xl bg-surface-3 px-4 shadow-[0_0_0_1px_rgba(0,0,0,0.035)]">
             {recent.slice(0, 3).map((p) => (
               <div key={p.id} className="grid grid-cols-[auto_68px_minmax(0,1fr)_auto] items-center gap-3 py-3 md:grid-cols-[auto_68px_minmax(0,1fr)_minmax(80px,120px)_auto]">
                 <span
@@ -95,13 +95,13 @@ export function InvestorWhatItCost({ paidTotal, thisMonth, recent }: Props) {
                 <span className="text-[12px] tabular-nums text-[var(--ov-muted)]">
                   {formatShortDate(p.created_at)}
                 </span>
-                <span className="min-w-0 truncate text-[14px] leading-[18px] text-[#111]">{cleanDescription(p.description)}</span>
+                <span className="min-w-0 truncate text-[14px] leading-[18px] text-ink-title">{cleanDescription(p.description)}</span>
                 {hasAnyRecipient && (
                   <span className="hidden min-w-0 truncate text-[12px] text-[var(--ov-muted)] md:block" title={p.recipient?.display_name ?? undefined}>
                     {p.recipient?.display_name ?? ''}
                   </span>
                 )}
-                <span className="text-right text-[14px] tabular-nums text-[#111]">{fmt(p.amount)}</span>
+                <span className="text-right text-[14px] tabular-nums text-ink-title">{fmt(p.amount)}</span>
               </div>
             ))}
           </div>
@@ -113,9 +113,9 @@ export function InvestorWhatItCost({ paidTotal, thisMonth, recent }: Props) {
 
 function SpendStat({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-xl bg-[#f7f7f7] px-4 py-3.5 shadow-[0_0_0_1px_rgba(0,0,0,0.035)]">
+    <div className="rounded-xl bg-surface-3 px-4 py-3.5 shadow-[0_0_0_1px_rgba(0,0,0,0.035)]">
       <p className="text-[12px] leading-[16px] text-[var(--ov-muted)]">{label}</p>
-      <p className="mt-1 text-[24px] font-semibold leading-[28px] tabular-nums text-[#111]">
+      <p className="mt-1 text-[24px] font-semibold leading-[28px] tabular-nums text-ink-title">
         {fmt(value)}
       </p>
     </div>

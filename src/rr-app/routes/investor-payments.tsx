@@ -168,8 +168,8 @@ function InvestorPaymentsIndex({ index }: { index: InvestorPaymentsData }) {
     <div className="flex flex-col gap-6">
       {/* ── Heading + summary ─────────────────────────────── */}
       <FadeRise delay={0}>
-        <h1 className="text-2xl font-semibold tracking-tight text-[#111]">Payments</h1>
-        <p className="mt-1 text-sm text-[#808080]">{summaryLine}</p>
+        <h1 className="text-2xl font-semibold tracking-tight text-ink-title">Payments</h1>
+        <p className="mt-1 text-sm text-ink-muted">{summaryLine}</p>
       </FadeRise>
 
       {/* ── Stat cards ────────────────────────────────────── */}
@@ -180,17 +180,17 @@ function InvestorPaymentsIndex({ index }: { index: InvestorPaymentsData }) {
               <HoverCard>
                 <div className="h-full rounded-2xl border-0 bg-[var(--ov-panel)]" style={{ boxShadow: 'var(--ov-shadow-panel)' }}>
                   <div className="flex flex-row items-center justify-between p-6 pb-2">
-                    <p className="text-sm font-medium text-[#808080]">{stat.label}</p>
+                    <p className="text-sm font-medium text-ink-muted">{stat.label}</p>
                     <div className="flex size-8 items-center justify-center rounded-lg bg-[var(--ov-chip-bg)]">
-                      <stat.icon className="size-4 text-[#808080]" />
+                      <stat.icon className="size-4 text-ink-muted" />
                     </div>
                   </div>
                   <div className="p-6 pt-0">
-                    <span className="text-2xl font-semibold tracking-tight tabular-nums text-[#111]">
+                    <span className="text-2xl font-semibold tracking-tight tabular-nums text-ink-title">
                       {stat.format ? formatCurrency(stat.value) : stat.value}
                     </span>
                     {stat.delta != null && (
-                      <p className="mt-0.5 flex items-center gap-1 text-xs font-medium text-[#808080]">
+                      <p className="mt-0.5 flex items-center gap-1 text-xs font-medium text-ink-muted">
                         {stat.delta >= 0 ? <ArrowUp className="size-3" /> : <ArrowDown className="size-3" />}
                         {Math.abs(stat.delta)}% vs last month
                       </p>
@@ -211,19 +211,19 @@ function InvestorPaymentsIndex({ index }: { index: InvestorPaymentsData }) {
           ) : (
             <div className="flex flex-col gap-0">
               {months.map((month) => (
-                <div key={month.key} className="border-b border-black/[0.06] py-3 last:border-0">
+                <div key={month.key} className="border-b border-wash-6 py-3 last:border-0">
                   <div className="mb-1.5 flex items-center justify-between">
-                    <span className="text-sm text-[#111]">{month.label}</span>
+                    <span className="text-sm text-ink-title">{month.label}</span>
                     <div className="flex items-center gap-3">
-                      <span className="text-sm font-medium tabular-nums text-[#111]">{formatCurrency(month.total)}</span>
-                      <span className="w-20 text-right text-xs tabular-nums text-[#808080]">
+                      <span className="text-sm font-medium tabular-nums text-ink-title">{formatCurrency(month.total)}</span>
+                      <span className="w-20 text-right text-xs tabular-nums text-ink-muted">
                         {month.count} payment{month.count !== 1 ? 's' : ''}
                       </span>
                     </div>
                   </div>
-                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-black/[0.08]">
+                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-wash-8">
                     <div
-                      className="h-full rounded-full bg-[#0d7aff] transition-all duration-500"
+                      className="h-full rounded-full bg-seeko-accent transition-all duration-500"
                       style={{ width: `${(month.total / maxMonthTotal) * 100}%` }}
                     />
                   </div>
@@ -242,7 +242,7 @@ function InvestorPaymentsIndex({ index }: { index: InvestorPaymentsData }) {
               <CardEmpty text="Department breakdown will appear here." />
             ) : (
               <div className="flex flex-col gap-4">
-                <div className="flex h-4 w-full overflow-hidden rounded-full bg-black/[0.06]">
+                <div className="flex h-4 w-full overflow-hidden rounded-full bg-wash-6">
                   {deptEntries.map(([dept, total]) => (
                     <div
                       key={dept}
@@ -258,11 +258,11 @@ function InvestorPaymentsIndex({ index }: { index: InvestorPaymentsData }) {
                       <div key={dept} className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <span className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: deptColor(dept) }} />
-                          <span className="text-sm text-[#111]">{dept}</span>
+                          <span className="text-sm text-ink-title">{dept}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className="font-mono text-xs tabular-nums text-[#9a9a9a]">{pct}%</span>
-                          <span className="w-20 text-right text-sm tabular-nums text-[#808080]">{formatCompact(total)}</span>
+                          <span className="font-mono text-xs tabular-nums text-ink-faint">{pct}%</span>
+                          <span className="w-20 text-right text-sm tabular-nums text-ink-muted">{formatCompact(total)}</span>
                         </div>
                       </div>
                     );
@@ -278,21 +278,21 @@ function InvestorPaymentsIndex({ index }: { index: InvestorPaymentsData }) {
             ) : (
               <div className="flex flex-col gap-0">
                 {topRecipients.map(([id, person], idx) => (
-                  <div key={id} className="flex items-center gap-3 border-b border-black/[0.06] py-2.5 last:border-0">
+                  <div key={id} className="flex items-center gap-3 border-b border-wash-6 py-2.5 last:border-0">
                     <span className="w-4 shrink-0 font-mono text-xs tabular-nums text-[#b0b0b0]">{idx + 1}</span>
                     <Avatar className="size-7 shrink-0">
                       <AvatarImage src={person.avatar_url ?? undefined} />
-                      <AvatarFallback className="bg-[var(--ov-chip-bg)] text-[10px] text-[#505050]">
+                      <AvatarFallback className="bg-[var(--ov-chip-bg)] text-[10px] text-ink-body">
                         {getInitials(person.name)}
                       </AvatarFallback>
                     </Avatar>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-[#111]">{person.name}</p>
-                      <p className="text-xs text-[#808080]">
+                      <p className="truncate text-sm font-medium text-ink-title">{person.name}</p>
+                      <p className="text-xs text-ink-muted">
                         {person.count} payment{person.count !== 1 ? 's' : ''}
                       </p>
                     </div>
-                    <span className="shrink-0 text-sm font-medium tabular-nums text-[#111]">{formatCurrency(person.total)}</span>
+                    <span className="shrink-0 text-sm font-medium tabular-nums text-ink-title">{formatCurrency(person.total)}</span>
                   </div>
                 ))}
               </div>
@@ -323,7 +323,7 @@ function InvestorPaymentsIndex({ index }: { index: InvestorPaymentsData }) {
                 <button
                   type="button"
                   onClick={() => setShowAll((prev) => !prev)}
-                  className="w-full py-3 text-sm font-medium text-[#0d7aff] transition-colors hover:text-[#0a63cc]"
+                  className="w-full py-3 text-sm font-medium text-seeko-accent transition-colors hover:text-seeko-accent-ink"
                 >
                   {showAll ? 'Show less' : `Show all ${payments.length} payments`}
                 </button>
@@ -350,29 +350,29 @@ function RecentPaymentRow({
   const name = payment.recipientName ?? 'Unknown';
 
   return (
-    <div className="border-b border-black/[0.06] last:border-0">
+    <div className="border-b border-wash-6 last:border-0">
       <button
         type="button"
         onClick={() => isClickable && onToggle()}
-        className={`w-full py-3 text-left ${isClickable ? 'cursor-pointer transition-colors hover:bg-black/[0.02]' : 'cursor-default'}`}
+        className={`w-full py-3 text-left ${isClickable ? 'cursor-pointer transition-colors hover:bg-wash-2' : 'cursor-default'}`}
       >
         <div className="flex items-center justify-between">
           <div className="flex min-w-0 items-center gap-3">
             <Avatar className="size-8 shrink-0">
               <AvatarImage src={payment.recipientAvatarUrl ?? undefined} />
-              <AvatarFallback className="bg-[var(--ov-chip-bg)] text-[10px] text-[#505050]">
+              <AvatarFallback className="bg-[var(--ov-chip-bg)] text-[10px] text-ink-body">
                 {getInitials(name)}
               </AvatarFallback>
             </Avatar>
             <div className="min-w-0">
-              <p className="truncate text-sm font-medium text-[#111]">{name}</p>
-              {hasDesc && <p className="mt-0.5 truncate text-xs text-[#808080]">{payment.description}</p>}
+              <p className="truncate text-sm font-medium text-ink-title">{name}</p>
+              {hasDesc && <p className="mt-0.5 truncate text-xs text-ink-muted">{payment.description}</p>}
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2">
             <div className="text-right">
-              <span className="text-sm font-medium tabular-nums text-[#111]">{formatCurrency(Number(payment.amount))}</span>
-              <p className="text-xs tabular-nums text-[#808080]">
+              <span className="text-sm font-medium tabular-nums text-ink-title">{formatCurrency(Number(payment.amount))}</span>
+              <p className="text-xs tabular-nums text-ink-muted">
                 {payment.paidAt
                   ? new Date(payment.paidAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
                   : '—'}
@@ -380,9 +380,9 @@ function RecentPaymentRow({
             </div>
             {isClickable &&
               (expanded ? (
-                <ChevronUp className="size-3.5 text-[#808080]" />
+                <ChevronUp className="size-3.5 text-ink-muted" />
               ) : (
-                <ChevronDown className="size-3.5 text-[#808080]" />
+                <ChevronDown className="size-3.5 text-ink-muted" />
               ))}
           </div>
         </div>
@@ -398,11 +398,11 @@ function RecentPaymentRow({
             className="overflow-hidden"
           >
             <div className="pb-3 pl-11 pr-2">
-              <div className="flex flex-col gap-1.5 rounded-lg border border-black/[0.06] bg-black/[0.02] p-3">
-                {payment.description && <p className="text-xs text-[#808080]">{payment.description}</p>}
+              <div className="flex flex-col gap-1.5 rounded-lg border border-wash-6 bg-wash-2 p-3">
+                {payment.description && <p className="text-xs text-ink-muted">{payment.description}</p>}
                 {payment.recipientDepartment && (
-                  <div className="mt-1.5 border-t border-black/[0.06] pt-1.5">
-                    <span className="inline-flex items-center rounded-full border border-black/[0.08] px-1.5 py-0 text-[10px] font-normal text-[#808080]">
+                  <div className="mt-1.5 border-t border-wash-6 pt-1.5">
+                    <span className="inline-flex items-center rounded-full border border-wash-8 px-1.5 py-0 text-[10px] font-normal text-ink-muted">
                       {payment.recipientDepartment}
                     </span>
                   </div>
@@ -420,8 +420,8 @@ function Panel({ title, description, children }: { title: string; description: s
   return (
     <section className="rounded-2xl bg-[var(--ov-panel)] p-6" style={{ boxShadow: 'var(--ov-shadow-panel)' }}>
       <div className="mb-4">
-        <h2 className="text-xl font-semibold text-[#111]">{title}</h2>
-        <p className="mt-1 text-[13px] text-[#808080]">{description}</p>
+        <h2 className="text-xl font-semibold text-ink-title">{title}</h2>
+        <p className="mt-1 text-[13px] text-ink-muted">{description}</p>
       </div>
       {children}
     </section>
@@ -429,7 +429,7 @@ function Panel({ title, description, children }: { title: string; description: s
 }
 
 function CardEmpty({ text }: { text: string }) {
-  return <p className="py-8 text-center text-[13px] text-[#808080]">{text}</p>;
+  return <p className="py-8 text-center text-[13px] text-ink-muted">{text}</p>;
 }
 
 function State({ title, description }: { title: string; description: string }) {
@@ -437,7 +437,7 @@ function State({ title, description }: { title: string; description: string }) {
     <section className="rr-page">
       <div className="rr-panel">
         <h1>{title}</h1>
-        <p className="mt-2 text-sm text-[#505050]">{description}</p>
+        <p className="mt-2 text-sm text-ink-body">{description}</p>
       </div>
     </section>
   );

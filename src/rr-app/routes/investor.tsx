@@ -1,35 +1,36 @@
 /* ─────────────────────────────────────────────────────────
  * ANIMATION STORYBOARD — Investor Dashboard
  *
- *    0ms   page title + binary status fade up
- *   70ms   KPI cards fade up (0.04s inter-card stagger)
- *  140ms   capital-deployed chart card fades up (area reveal runs inside)
- *  220ms   area progress (rings stagger) + ship forecast fade up together
- *  300ms   quick access fades up
+ *    0ms   quick-nav pills + stat row fade up
+ *   70ms   capital-deployed chart card fades up (area reveal runs inside)
+ *  150ms   milestones stacked bars fade up (bar grow-stagger runs inside)
+ *  230ms   progress + shipping ledgers fade up together
+ *  310ms   latest-updates ledger fades up
  *
- * Visual language: Paper login reference — white canvas, quiet bordered
- * cards on a two-tier elevation (KPI tiles near-flat, panels lift),
- * monochrome type ladder. The single azure accent (#0d7aff) stays on the
- * area progress rings so the SEEKO accent still means "progress" here; the
- * capital chart is ink (#1f1f1f), because spend is not progress.
+ * Visual language: stripped paper. ONE elevated surface — the capital
+ * chart card; every other section is frameless type + hairline ledger
+ * rows directly on the canvas (Mercury-style: the chart is the hero,
+ * everything else is quiet). Monochrome ink throughout; the single
+ * azure accent (#0d7aff) survives only on the area-progress fills,
+ * where it already means "progress". Spend stays ink — spend is not
+ * progress.
  * ───────────────────────────────────────────────────────── */
 
 import { useMemo, type ReactNode } from 'react';
 import { useLoaderData, type LoaderFunctionArgs } from 'react-router';
-import { motion, useReducedMotion, type Variants } from 'motion/react';
-import { DollarSign, FileText } from 'lucide-react';
+import { motion, useReducedMotion } from 'motion/react';
 import { Link } from '@/lib/react-router-adapters';
 import { FadeRise } from '@/components/motion';
-import { springs } from '@/lib/motion';
-import { clampPercent, ringDashOffset } from '@/components/dashboard/ringGeometry';
 import { AreaChart } from '@/components/charts/area-chart';
 import { Area } from '@/components/charts/area';
+import { Gauge } from '@/components/charts/gauge';
 import { Grid } from '@/components/charts/grid';
 import { XAxis } from '@/components/charts/x-axis';
 import { ChartTooltip, TooltipContent } from '@/components/charts/tooltip';
 import { useChartStable, useYScale } from '@/components/charts/chart-context';
-import { InvestorWhereWereGoing } from '@/components/dashboard/InvestorWhereWereGoing';
-import type { Area as AreaType } from '@/lib/types';
+import { BarChart } from '@/components/charts/bar-chart';
+import { Bar } from '@/components/charts/bar';
+import { BarXAxis } from '@/components/charts/bar-x-axis';
 import type { InvestorOverviewData, InvestorPaymentsData } from '@/lib/investor-index';
 import type { ViewState } from '../load-view';
 
@@ -38,35 +39,21 @@ type InvestorReadyData = { index: InvestorOverviewData; payments: InvestorPaymen
 type InvestorLoaderData = ViewState<InvestorReadyData>;
 
 const TIMING = {
-  hero: 0,
-  metrics: 70,
-  chart: 140,
-  progress: 220,
-  access: 300,
+  stats: 0,
+  chart: 70,
+  milestones: 150,
+  ledgers: 230,
+  latest: 310,
 };
 
 const delay = (ms: number) => ms / 1000;
 
-/** Paper card anatomy — two-tier elevation.
- *  CARD    → big panels (Capital, Area-progress, Ship-forecast, Quick-access):
- *            a real lift so they read as surfaces above the canvas.
- *  CARD_KPI → the four metric tiles: near-flat, so the panels stay dominant. */
+/** The page's only elevated surface — the capital chart card. */
 const CARD =
-  'rounded-[14px] border border-black/[0.05] bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_24px_rgba(0,0,0,0.06)]';
-const CARD_KPI =
-  'rounded-[14px] border border-black/[0.05] bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04)]';
+  'rounded-[14px] border border-wash-5 bg-surface-1 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_24px_rgba(0,0,0,0.06)]';
 
-/** KPI-card entrance stagger — the section still rides FadeRise; the four
- *  tiles cascade within it (transforms, so no destructive opacity compounding
- *  with the parent fade). Guarded at the call site for prefers-reduced-motion. */
-const KPI_STAGGER: Variants = {
-  hidden: {},
-  visible: { transition: { staggerChildren: 0.04, delayChildren: 0.04 } },
-};
-const KPI_CARD_VARIANTS: Variants = {
-  hidden: { opacity: 0, y: 6, scale: 0.98 },
-  visible: { opacity: 1, y: 0, scale: 1, transition: springs.snappy },
-};
+/** Frameless section header — type carries the structure cards used to. */
+const SECTION_H = 'text-[15px] font-semibold leading-[20px] text-ink-title';
 
 export async function investorLoader(_args: LoaderFunctionArgs): Promise<InvestorLoaderData> {
   const [response, paymentsResponse] = await Promise.all([
@@ -118,273 +105,130 @@ function InvestorOverview({
   index: InvestorOverviewData;
   payments: InvestorPaymentsData | null;
 }) {
-  const { profile, stats, areas } = index;
-  const firstName = profile.displayName?.split(' ')[0];
-  const riskCount = stats.blockedTasks + stats.overdueTasks;
-  const dashboardAreas = areas.map(toDashboardArea);
-  const tasksPerArea = Object.fromEntries(
-    areas.map((area) => [
-      area.id,
-      { complete: area.completedTaskCount, total: area.taskCount },
-    ]),
-  );
+  const { stats, areas } = index;
+  const latest = investorLatestRows(index.recentActivity);
+  // Only milestones with linked work earn a bar; an all-empty set hides the
+  // section entirely (live data is sparse — the chart must never render bare).
+  const milestones = (index.milestones ?? []).filter((milestone) => milestone.taskCount > 0);
 
   return (
-    <div className="flex flex-col gap-6">
-      <FadeRise delay={delay(TIMING.hero)}>
-        <div className="flex items-center gap-2.5">
-          <p className="text-[13px] font-medium leading-[18px] text-[#8a8a8a]">Investor Dashboard</p>
-          {/* Binary status only — the quantitative read (blocked/overdue counts)
-              is owned by the At-risk KPI card, so this stays count-free. */}
-          <span className="inline-flex items-center gap-1.5 text-[12px] font-medium leading-[16px] text-[#6b6b6b]">
-            <span
-              aria-hidden
-              className="size-1.5 rounded-full"
-              style={{ backgroundColor: riskCount > 0 ? '#d4503e' : '#34a853' }}
-            />
-            {riskCount > 0 ? 'Needs attention' : 'On track'}
-          </span>
-        </div>
-        <h1 className="mt-2 text-balance text-[30px] font-semibold leading-[36px] text-[#111]">
-          Current state of SEEKO
-        </h1>
-        <p className="mt-1.5 text-[14px] leading-[20px] text-[#8a8a8a]">
-          {firstName ? `Welcome back, ${firstName}. ` : ''}{index.healthSummary}
-        </p>
+    <div className="mx-auto flex w-full max-w-[880px] flex-col">
+      {/* No visual hero (user call 2026-07-11): the nav names the place and
+          the stat row opens the read. The h1 survives for screen readers. */}
+      <h1 className="sr-only">Investor dashboard</h1>
+
+      <FadeRise delay={delay(TIMING.stats)} y={6}>
+        <InvestorQuickNav />
+        <InvestorStatRow stats={stats} payments={payments} />
       </FadeRise>
 
-      <FadeRise delay={delay(TIMING.metrics)} y={6}>
-        <InvestorKpiStrip stats={stats} payments={payments} riskCount={riskCount} />
-      </FadeRise>
-
-      <FadeRise delay={delay(TIMING.chart)} y={6}>
+      <FadeRise delay={delay(TIMING.chart)} y={6} className="mt-10">
         <CapitalDeployedCard payments={payments} />
       </FadeRise>
 
-      <FadeRise delay={delay(TIMING.progress)} y={6}>
-        <div className="grid items-stretch gap-4 lg:grid-cols-[minmax(0,1.04fr)_minmax(0,0.96fr)]">
-          <InvestorProgressPanel areas={areas} tasksPerArea={tasksPerArea} />
-          <InvestorWhereWereGoing areas={dashboardAreas} />
+      {milestones.length > 0 && (
+        <FadeRise delay={delay(TIMING.milestones)} y={6} className="mt-10">
+          {/* Barrier: the capital card and the milestone bars are both data-
+              dense reads — a hairline (the page's ledger rule) fences them so
+              they scan as two sections, not one tall chart stack. */}
+          <div aria-hidden className="h-px bg-wash-5" />
+          <div className="pt-10">
+            <InvestorMilestoneChart milestones={milestones} />
+          </div>
+        </FadeRise>
+      )}
+
+      <FadeRise delay={delay(TIMING.ledgers)} y={6} className="mt-10">
+        {/* Same fence as above the milestones — the bars end and the ledgers
+            begin, so the rule keeps each read its own section. */}
+        <div aria-hidden className="h-px bg-wash-5" />
+        <div className="grid gap-x-14 gap-y-10 pt-10 md:grid-cols-2">
+          <InvestorProgressLedger areas={areas} />
+          <InvestorShippingLedger areas={areas} />
         </div>
       </FadeRise>
 
-      <FadeRise delay={delay(TIMING.access)} y={6}>
-        <InvestorQuickAccess />
-      </FadeRise>
-
+      {latest.length > 0 && (
+        <FadeRise delay={delay(TIMING.latest)} y={6} className="mt-12">
+          <InvestorLatestLedger rows={latest} />
+        </FadeRise>
+      )}
     </div>
   );
 }
 
-/** Signed-change pill. `tone` drives color, `dir` the arrow. Burn uses
- *  tone="neutral" on purpose — more spend isn't semantically "good", so it
- *  must not read green. */
-function DeltaChip({
-  tone,
-  dir,
-  children,
-}: {
-  tone: 'pos' | 'neg' | 'neutral';
-  dir?: 'up' | 'down';
-  children: ReactNode;
-}) {
-  const palette =
-    tone === 'pos'
-      ? 'bg-[#16a34a]/[0.10] text-[#15803d]'
-      : tone === 'neg'
-        ? 'bg-[#dc2626]/[0.10] text-[#b91c1c]'
-        : 'bg-black/[0.045] text-[#6b7280]';
+/* ── Quick navigation — two quiet pills open the page ─────────────────── */
+
+function InvestorQuickNav() {
   return (
-    <span
-      className={`inline-flex shrink-0 items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[11px] font-medium leading-[14px] tabular-nums ${palette}`}
+    <div className="flex flex-wrap gap-2">
+      <QuickNavPill href="/investor/docs" label="Documents & decks" />
+      <QuickNavPill href="/investor/payments" label="Payment history" />
+    </div>
+  );
+}
+
+function QuickNavPill({ href, label }: { href: string; label: string }) {
+  return (
+    <Link
+      href={href}
+      className="group relative inline-flex h-8 items-center gap-1.5 rounded-full bg-wash-4 pl-3.5 pr-2.5 text-[13px] font-medium leading-none text-ink transition-[background-color,transform] duration-150 ease-out after:absolute after:-inset-y-2 after:inset-x-0 after:content-[''] hover:bg-black/[0.07] active:scale-[0.97]"
     >
-      {dir && (
-        <svg
-          width="9"
-          height="9"
-          viewBox="0 0 12 12"
-          fill="none"
-          aria-hidden
-          className={dir === 'down' ? 'rotate-180' : ''}
-        >
-          <path
-            d="M6 2.75v6.5M6 2.75 3.25 5.5M6 2.75 8.75 5.5"
-            stroke="currentColor"
-            strokeWidth="1.6"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      )}
-      {children}
-    </span>
+      {label}
+      <ArrowIcon />
+    </Link>
   );
 }
 
-/** Continuous meter for a 0–100 percentage. */
-function GaugeBar({ pct, color = '#0d7aff' }: { pct: number; color?: string }) {
-  return (
-    <div className="h-1.5 w-full overflow-hidden rounded-full bg-black/[0.06]">
-      <div
-        className="h-full rounded-full transition-[width] duration-500 ease-out motion-reduce:transition-none"
-        style={{ width: `${Math.max(2, Math.min(100, pct))}%`, backgroundColor: color }}
-      />
-    </div>
-  );
-}
+/* ── Stat row — frameless, hairline-separated, numbers first ──────────── */
 
-/** Discrete "k of n" ratio — one tick per unit. Falls back to a continuous
- *  bar past 16 units, where ticks would be too thin to read. */
-function SegmentMeter({ filled, total }: { filled: number; total: number }) {
-  if (total <= 0) return <GaugeBar pct={0} />;
-  if (total > 16) return <GaugeBar pct={(filled / total) * 100} />;
-  return (
-    <div className="flex w-full items-center gap-[3px]">
-      {Array.from({ length: total }).map((_, i) => (
-        <span
-          key={i}
-          className="h-1.5 flex-1 rounded-full"
-          style={{ backgroundColor: i < filled ? '#0d7aff' : 'rgba(0,0,0,0.08)' }}
-        />
-      ))}
-    </div>
-  );
-}
-
-/** Blocked / overdue split as labeled status dots. */
-function RiskBreakdown({ blocked, overdue }: { blocked: number; overdue: number }) {
-  if (blocked === 0 && overdue === 0) {
-    return (
-      <span className="inline-flex items-center gap-1.5 text-[12px] leading-[16px] text-[#4a4a4a]">
-        <span className="size-1.5 rounded-full bg-[#34a853]" aria-hidden /> On track
-      </span>
-    );
-  }
-  return (
-    <div className="flex items-center gap-3 text-[12px] leading-[16px] tabular-nums text-[#6b6b6b]">
-      {blocked > 0 && (
-        <span className="inline-flex items-center gap-1.5">
-          <span className="size-1.5 rounded-full bg-[#e0a52e]" aria-hidden /> {blocked} blocked
-        </span>
-      )}
-      {overdue > 0 && (
-        <span className="inline-flex items-center gap-1.5">
-          <span className="size-1.5 rounded-full bg-[#d4503e]" aria-hidden /> {overdue} overdue
-        </span>
-      )}
-    </div>
-  );
-}
-
-function InvestorKpiStrip({
+function InvestorStatRow({
   stats,
   payments,
-  riskCount,
 }: {
   stats: InvestorOverviewData['stats'];
   payments: InvestorPaymentsData | null;
-  riskCount: number;
 }) {
-  const burn = payments?.stats ?? null;
-  const burnDelta =
-    burn && burn.lastMonth > 0
-      ? Math.round(((burn.thisMonth - burn.lastMonth) / burn.lastMonth) * 100)
-      : null;
-  const reduce = useReducedMotion();
+  const spend = payments?.stats ?? null;
 
-  // Footer fallback copy for when there's no prior month to compare against.
-  const burnSub = !burn
-    ? 'payments unavailable'
-    : burnDelta === null
-      ? 'no spend last month'
-      : 'this month';
-
-  // Each card shares one anatomy — label + secondary (right), big value,
-  // then a fixed-height footer band. The footer is chosen per metric so it
-  // stays honest: a gauge / ratio ticks / status dots / a quiet current-state
-  // line, never a faked trend.
-  const cards: {
-    label: string;
-    value: string;
-    valueClass?: string;
-    right?: ReactNode;
-    footer: ReactNode;
-  }[] = [
+  const cells: { value: string; label: string; sub: ReactNode }[] = [
     {
-      label: 'Overall progress',
       value: `${stats.overallProgress}%`,
-      right: (
-        <span className="shrink-0 text-[11.5px] leading-[15px] tabular-nums text-[#9a9a9a]">
-          {stats.activeAreas} active {stats.activeAreas === 1 ? 'area' : 'areas'}
-        </span>
-      ),
-      footer: <GaugeBar pct={stats.overallProgress} />,
+      label: 'Overall progress',
+      sub: `${stats.activeAreas} active ${stats.activeAreas === 1 ? 'area' : 'areas'}`,
     },
     {
-      label: 'Tasks shipped',
       value: `${stats.completedTasks} of ${stats.totalTasks}`,
-      right:
-        stats.completedThisWeek > 0 ? (
-          <DeltaChip tone="pos" dir="up">
-            {stats.completedThisWeek} this week
-          </DeltaChip>
-        ) : undefined,
-      footer: <SegmentMeter filled={stats.completedTasks} total={stats.totalTasks} />,
+      label: 'Tasks shipped',
+      sub: stats.completedThisWeek > 0 ? `+${stats.completedThisWeek} this week` : 'none this week',
     },
     {
-      label: 'Burn this month',
-      value: burn ? formatMoney(burn.thisMonth) : '—',
-      right:
-        burnDelta !== null && burnDelta !== 0 ? (
-          <DeltaChip tone="neutral" dir={burnDelta > 0 ? 'up' : 'down'}>
-            {Math.abs(burnDelta)}%
-          </DeltaChip>
-        ) : undefined,
-      footer:
-        burn && burn.lastMonth > 0 ? (
-          <span className="text-[12px] leading-[16px] tabular-nums text-[#9a9a9a]">
-            {formatMoney(burn.lastMonth)} last month
-          </span>
-        ) : (
-          <span className="text-[12px] leading-[16px] text-[#9a9a9a]">{burnSub}</span>
-        ),
-    },
-    {
-      label: 'At risk',
-      value: String(riskCount),
-      valueClass: riskCount > 0 ? 'text-[#b23b2c]' : 'text-[#111]',
-      footer: <RiskBreakdown blocked={stats.blockedTasks} overdue={stats.overdueTasks} />,
+      // "Deployed", not "burn" — same vocabulary as the capital card below,
+      // and it reads as investing in work rather than losing money.
+      value: spend ? formatMoney(spend.thisMonth) : '—',
+      label: 'Deployed this month',
+      sub:
+        spend && spend.lastMonth > 0 ? `vs ${formatMoney(spend.lastMonth)} last month` : 'no spend last month',
     },
   ];
 
   return (
-    <motion.div
-      className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
-      variants={reduce ? undefined : KPI_STAGGER}
-      initial={reduce ? false : 'hidden'}
-      animate={reduce ? false : 'visible'}
-    >
-      {cards.map((card) => (
-        <motion.div
-          key={card.label}
-          variants={reduce ? undefined : KPI_CARD_VARIANTS}
-          className={`${CARD_KPI} flex flex-col px-6 py-5`}
+    <div className="mt-9 grid grid-cols-2 gap-y-7 sm:grid-cols-3">
+      {cells.map((cell, i) => (
+        <div
+          key={cell.label}
+          className={`flex flex-col ${
+            i > 0 ? 'sm:border-l sm:border-wash-6 sm:pl-7' : ''
+          } ${i % 2 === 1 ? 'border-l border-wash-6 pl-7 sm:border-l sm:pl-7' : ''}`}
         >
-          <div className="flex items-start justify-between gap-2">
-            <p className="text-[12.5px] leading-[17px] text-[#8a8a8a]">{card.label}</p>
-            {card.right}
-          </div>
-          <p
-            className={`mt-1.5 text-[28px] font-semibold leading-[32px] tabular-nums ${
-              card.valueClass ?? 'text-[#111]'
-            }`}
-          >
-            {card.value}
+          <p className="text-[24px] font-semibold leading-[28px] tracking-[-0.02em] tabular-nums text-ink-title">
+            {cell.value}
           </p>
-          <div className="mt-3 flex h-8 items-center">{card.footer}</div>
-        </motion.div>
+          <p className="mt-1.5 text-[13px] font-medium leading-[17px] text-ink-muted-strong">{cell.label}</p>
+          <p className="mt-0.5 text-[12.5px] leading-[17px] tabular-nums text-ink-faint">{cell.sub}</p>
+        </div>
       ))}
-    </motion.div>
+    </div>
   );
 }
 
@@ -474,8 +318,8 @@ function CapitalEndpointDot() {
       }
     >
       {/* White halo lifts the ink dot off the area fill (shadow-over-border). */}
-      <circle cx={cx} cy={cy} fill="#fff" r={5} />
-      <circle cx={cx} cy={cy} fill="#1f1f1f" r={3.5} />
+      <circle cx={cx} cy={cy} fill="var(--chart-capital-halo)" r={5} />
+      <circle cx={cx} cy={cy} fill="var(--chart-capital-ink)" r={3.5} />
     </motion.g>
   );
 }
@@ -492,15 +336,15 @@ function CapitalDeployedCard({ payments }: { payments: InvestorPaymentsData | nu
 
   return (
     <section className={`${CARD} overflow-hidden`}>
-      <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2 px-6 pb-1 pt-5">
+      <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2 px-6 pb-1 pt-6">
         <div>
-          <p className="text-[13px] font-medium leading-[18px] text-[#8a8a8a]">Capital deployed</p>
-          <h2 className="mt-1 text-[30px] font-semibold leading-[34px] tabular-nums text-[#111]">
+          <p className="text-[13px] font-medium leading-[18px] text-ink-muted">Capital deployed</p>
+          <h2 className="mt-1 text-[34px] font-semibold leading-[38px] tracking-[-0.02em] tabular-nums text-ink-title">
             {stats ? formatMoney(stats.allTime) : '—'}
           </h2>
         </div>
         {stats && stats.monthCount > 0 && (
-          <div className="pb-0.5 text-right text-[12.5px] leading-[17px] tabular-nums text-[#8a8a8a]">
+          <div className="pb-0.5 text-right text-[12.5px] leading-[17px] tabular-nums text-ink-muted">
             <p>{formatMoney(avgMonthly)}/mo average</p>
             <p>
               across {stats.monthCount} {stats.monthCount === 1 ? 'month' : 'months'}
@@ -511,33 +355,33 @@ function CapitalDeployedCard({ payments }: { payments: InvestorPaymentsData | nu
 
       {series.length === 0 ? (
         <div className="px-6 pb-5 pt-3">
-          <div className="flex h-[120px] items-center justify-center rounded-xl bg-black/[0.02]">
-            <p className="text-[13px] text-[#9a9a9a]">
+          <div className="flex h-[120px] items-center justify-center rounded-xl bg-wash-2">
+            <p className="text-[13px] text-ink-faint">
               Deployment history lands here once the first payment is made.
             </p>
           </div>
         </div>
       ) : (
-        <div className="px-4 [--capital-ar:2.2/1] sm:[--capital-ar:3.4/1]">
+        <div className="px-4 [--capital-ar:2/1] sm:[--capital-ar:2.7/1]">
           <AreaChart
             data={series as unknown as Record<string, unknown>[]}
             xDataKey="date"
             status="ready"
-            aspectRatio="var(--capital-ar, 3.4 / 1)"
+            aspectRatio="var(--capital-ar, 2.7 / 1)"
             animationDuration={reduce ? 0 : 900}
-            margin={{ top: 16, right: 12, bottom: 32, left: 12 }}
+            margin={{ top: 20, right: 12, bottom: 32, left: 12 }}
           >
             {/* Ghosted horizontal gridlines only — no vertical lines / axis
                 border (Grid vertical defaults off). Faint ink so the area, not
                 the grid, carries the read. */}
-            <Grid horizontal numTicksRows={3} stroke="rgba(17,17,17,0.05)" />
+            <Grid horizontal numTicksRows={3} stroke="var(--wash-5)" />
             {/* Native vertical fill gradient: ink ~12% at the top → 0% at the
                 baseline (gradientToOpacity). No scoped def needed — the Area
                 primitive builds this from its own props. */}
             <Area
               dataKey="deployed"
-              fill="#1f1f1f"
-              stroke="#1f1f1f"
+              fill="var(--chart-capital-ink)"
+              stroke="var(--chart-capital-ink)"
               strokeWidth={1.5}
               fillOpacity={0.12}
               gradientToOpacity={0}
@@ -551,7 +395,7 @@ function CapitalDeployedCard({ payments }: { payments: InvestorPaymentsData | nu
                 return (
                   <TooltipContent
                     title={p.label}
-                    rows={[{ color: '#1f1f1f', label: 'Deployed', value: formatMoney(p.deployed) }]}
+                    rows={[{ color: 'var(--chart-capital-ink)', label: 'Deployed', value: formatMoney(p.deployed) }]}
                   />
                 );
               }}
@@ -562,13 +406,13 @@ function CapitalDeployedCard({ payments }: { payments: InvestorPaymentsData | nu
 
       {recent.length > 0 && (
         <>
-          <div className="mx-6 h-px bg-black/[0.05]" aria-hidden />
+          <div className="mx-6 h-px bg-wash-5" aria-hidden />
           <div className="px-6 pb-4 pt-3">
             <div className="flex items-center justify-between">
-              <p className="text-[12.5px] font-medium leading-[17px] text-[#8a8a8a]">Recent payments</p>
+              <p className="text-[12.5px] font-medium leading-[17px] text-ink-muted">Recent payments</p>
               <Link
                 href="/investor/payments"
-                className="group inline-flex items-center gap-1 text-[12.5px] font-medium leading-[17px] text-[#545454] transition-colors duration-150 ease-out hover:text-[#111]"
+                className="group relative inline-flex items-center gap-1 text-[12.5px] font-medium leading-[17px] text-ink-mark transition-[color,opacity] duration-150 ease-out after:absolute after:-inset-y-2.5 after:-inset-x-2 after:content-[''] hover:text-ink-title active:opacity-60"
               >
                 View all
                 <ArrowIcon />
@@ -578,15 +422,15 @@ function CapitalDeployedCard({ payments }: { payments: InvestorPaymentsData | nu
               {recent.map((payment) => (
                 <div
                   key={payment.id}
-                  className="grid grid-cols-[56px_minmax(0,1fr)_auto] items-center gap-3 border-b border-black/[0.05] py-2.5 last:border-0 last:pb-0"
+                  className="grid grid-cols-[56px_minmax(0,1fr)_auto] items-center gap-3 border-b border-wash-5 py-2.5 last:border-0 last:pb-0"
                 >
-                  <span className="text-[12px] tabular-nums text-[#8a8a8a]">
+                  <span className="text-[12px] tabular-nums text-ink-muted">
                     {formatShortDate(payment.paidAt!)}
                   </span>
-                  <span className="min-w-0 truncate text-[13.5px] leading-[18px] text-[#111]">
+                  <span className="min-w-0 truncate text-[13.5px] leading-[18px] text-ink-title">
                     {cleanDescription(payment.description ?? 'Payment')}
                   </span>
-                  <span className="text-right text-[13.5px] tabular-nums text-[#111]">
+                  <span className="text-right text-[13.5px] tabular-nums text-ink-title">
                     {formatMoney(payment.amount)}
                   </span>
                 </div>
@@ -599,56 +443,108 @@ function CapitalDeployedCard({ payments }: { payments: InvestorPaymentsData | nu
   );
 }
 
-/* ── Where we are — completion rings per area ──────────────────────────
- * Redesign of the old two-thin-bars list. The neighboring "Ship forecast"
- * card already boards areas by phase + target date, so this panel owns the
- * *completion magnitude* story instead: a radial ring per area (azure arc,
- * top-start clockwise, spring draw-in) sized to fill the card, the big % in
- * the center and the honest task tally beneath. Reuses the Overview ring's
- * percent→arc geometry (ringGeometry) so the math stays consistent. */
+/* ── Progress — frameless one-line ledger per area ─────────────────────
+ * The same two numbers read fast as a segmented notch track (bklit Gauge,
+ * linear mode) + tabular percent on a quiet row. Azure stays because on
+ * this canvas it already means "progress" (spend is ink). 16 notches
+ * quantize the fill, so 0% shows a bare track — no sliver. */
 
-const AREA_RING_SIZE = 132;
-const AREA_RING_STROKE = 10;
-const AREA_RING_RADIUS = (AREA_RING_SIZE - AREA_RING_STROKE) / 2;
-const AREA_RING_CENTER = AREA_RING_SIZE / 2;
-const AREA_RING_CIRCUMFERENCE = 2 * Math.PI * AREA_RING_RADIUS;
-const AREA_RING_ARC = '#0d7aff';
-const AREA_RING_TRACK = 'rgba(0,0,0,0.07)';
-// Arc sweep lands just after the card fades up (progress stagger = 220ms).
-const AREA_RING_SWEEP_DELAY_S = 0.32;
+const PROGRESS_TRACK = {
+  width: 96,          // px — the old bar was 80; ticks need slot room
+  height: 12,         // px — tick length
+  notches: 16,        // fill quantum = 6.25%
+  notchWidth: 64,     // % of each slot → ~2.9px ticks
+  active: '#0d7aff',
+  inactive: 'rgba(0,0,0,0.07)',
+  // Critically damped pop-in per tick; ×0.6 tightens the stagger tail
+  // so the reveal settles ~150ms after the ledger's FadeRise.
+  enter: { type: 'spring', stiffness: 550, damping: 46 } as const,
+  staggerScale: 0.6,
+};
 
-function InvestorProgressPanel({
-  areas,
-  tasksPerArea,
-}: {
-  areas: InvestorOverviewData['areas'];
-  tasksPerArea: Record<string, { complete: number; total: number }>;
-}) {
+function InvestorProgressLedger({ areas }: { areas: InvestorOverviewData['areas'] }) {
   return (
-    <section className={`${CARD} flex min-w-0 flex-col overflow-hidden`}>
-      <div className="px-6 pb-4 pt-5">
-        <p className="text-[13px] font-medium leading-[18px] text-[#8a8a8a]">Where we are</p>
-        <h2 className="mt-1 text-[20px] font-semibold leading-[24px] text-[#111]">
-          Area progress
-        </h2>
-      </div>
-      <div className="h-px bg-black/[0.05]" aria-hidden />
-
+    <section>
+      <h2 className={SECTION_H}>Progress</h2>
       {areas.length === 0 ? (
-        <div className="px-6 py-6">
-          <div className="flex min-h-[120px] items-center justify-center rounded-xl bg-black/[0.02]">
-            <p className="text-[13px] text-[#9a9a9a]">Progress data will appear here.</p>
-          </div>
-        </div>
+        <p className="mt-3 text-[13px] leading-[18px] text-ink-faint">
+          Progress data will appear here.
+        </p>
       ) : (
-        <div className="grid flex-1 justify-center place-items-center gap-x-4 gap-y-7 px-6 py-7 [grid-template-columns:repeat(auto-fit,minmax(132px,180px))]">
-          {areas.map((area, index) => (
-            <InvestorAreaRing
-              key={area.id}
-              area={area}
-              tasks={tasksPerArea[area.id]}
-              index={index}
-            />
+        <div className="mt-1.5 flex flex-col divide-y divide-wash-5">
+          {areas.map((area) => {
+            const pct = Math.max(0, Math.min(100, Math.round(area.progress)));
+            return (
+              <div key={area.id} className="flex items-center gap-4 py-3.5">
+                <p className="min-w-0 flex-1 truncate text-[14px] font-medium leading-[18px] text-ink-title">
+                  {area.name}
+                </p>
+                <p className="whitespace-nowrap text-[12.5px] leading-[17px] tabular-nums text-ink-faint">
+                  {area.completedTaskCount} of {area.taskCount} tasks
+                </p>
+                <div
+                  className="shrink-0"
+                  role="img"
+                  aria-label={`${area.name}: ${pct}% complete`}
+                >
+                  <Gauge
+                    orientation="linear"
+                    value={pct}
+                    width={PROGRESS_TRACK.width}
+                    height={PROGRESS_TRACK.height}
+                    totalNotches={PROGRESS_TRACK.notches}
+                    notchWidthPercent={PROGRESS_TRACK.notchWidth}
+                    notchCornerRadius={1}
+                    activeFill={PROGRESS_TRACK.active}
+                    activeFillOpacity={1}
+                    inactiveFill={PROGRESS_TRACK.inactive}
+                    inactiveFillOpacity={1}
+                    enterTransition={PROGRESS_TRACK.enter}
+                    enterStaggerScale={PROGRESS_TRACK.staggerScale}
+                  />
+                </div>
+                <p className="w-9 shrink-0 text-right text-[13.5px] font-medium leading-[18px] tabular-nums text-ink-title">
+                  {pct}%
+                </p>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
+
+/* ── What's shipping — dated ship list, soonest first ──────────────────
+ * Replaces the three-column phase board (and its "Nothing here yet"
+ * ghost cells): only real, dated work earns a row. */
+
+function InvestorShippingLedger({ areas }: { areas: InvestorOverviewData['areas'] }) {
+  const dated = areas
+    .filter((area) => area.targetDate)
+    .sort((a, b) => (a.targetDate! < b.targetDate! ? -1 : 1));
+
+  return (
+    <section>
+      <h2 className={SECTION_H}>What&apos;s shipping</h2>
+      {dated.length === 0 ? (
+        <p className="mt-3 text-[13px] leading-[18px] text-ink-faint">No ship dates set yet.</p>
+      ) : (
+        <div className="mt-1.5 flex flex-col divide-y divide-wash-5">
+          {dated.map((area) => (
+            <div key={area.id} className="flex items-center gap-4 py-3.5">
+              <p className="min-w-0 flex-1 truncate text-[14px] font-medium leading-[18px] text-ink-title">
+                {area.name}
+              </p>
+              {area.phase && (
+                <p className="whitespace-nowrap text-[12.5px] leading-[17px] text-ink-faint">
+                  {area.phase}
+                </p>
+              )}
+              <p className="w-14 shrink-0 whitespace-nowrap text-right text-[13.5px] leading-[18px] tabular-nums text-ink-title">
+                {formatShortDate(area.targetDate!)}
+              </p>
+            </div>
           ))}
         </div>
       )}
@@ -656,136 +552,187 @@ function InvestorProgressPanel({
   );
 }
 
-function InvestorAreaRing({
-  area,
-  tasks,
-  index,
-}: {
-  area: InvestorOverviewData['areas'][number];
-  tasks: { complete: number; total: number } | undefined;
-  index: number;
-}) {
-  const reduce = useReducedMotion();
-  const total = tasks?.total ?? area.taskCount;
-  const complete = tasks?.complete ?? area.completedTaskCount;
-  const pct = clampPercent(area.progress);
-  const target = ringDashOffset(pct, AREA_RING_CIRCUMFERENCE);
+/* ── Milestones — stacked scope bars (bklit bar kit) ────────────────────
+ * Each milestone is one column: bar height = linked tasks (scope), the
+ * blue-gradient floor = shipped, the faint ink cap = remaining. Blue is
+ * the page's one accent and it only ever means progress — shipped work
+ * IS progress, so the floor earns it; remaining stays no-color ink like
+ * every other quiet surface. Counts live in the tooltip, so no y-axis. */
 
+const MILESTONE_CHART = {
+  // 2px seams split the stack; 4px radius on every segment (stackGap > 0
+  // rounds all segments, not just the cap).
+  stackGap: 2,
+  cornerRadius: 4,
+  // Band padding — bars ~45% of their band, centered by the scale, so a
+  // 3-milestone chart reads as a skyline instead of slabs.
+  barGap: 0.55,
+  // Shipped wears a vertical blue gradient (user-supplied ramp): airy at the
+  // cap, anchored at the baseline. Spans each bar's own box, so every
+  // milestone reads the same ramp regardless of height.
+  shippedGradientId: 'ms-shipped-gradient',
+  // User-supplied 2-stop ramp (2026-07-11 final): #52ACFF 0% → #359FFF
+  // 100%, expressed as exact oklch() conversions.
+  shippedStops: [
+    { offset: '0%', color: 'oklch(0.7260 0.1487 248.98)' },
+    { offset: '100%', color: 'oklch(0.6891 0.1700 250.17)' },
+  ],
+  remainingFill: 'var(--chart-remaining-fill)',
+  // Solid stand-ins for the gradient/translucent fills wherever a dot or
+  // legend needs one opaque color.
+  shippedInk: 'oklch(0.6891 0.1700 250.17)',
+  remainingInk: 'var(--chart-remaining-ink)',
+  // No y-axis; bottom rows the BarXAxis labels + date pill.
+  margin: { top: 4, right: 0, bottom: 32, left: 0 },
+};
+
+type MilestoneRow = {
+  name: string;
+  tip: string;
+  shipped: number;
+  remaining: number;
+};
+
+/* Name must contain "Gradient" — BarChart hoists such children into the
+ * svg <defs>. objectBoundingBox units run the ramp over each bar's own
+ * height (top stop at the cap, bottom stop at the baseline). */
+function MilestoneShippedGradient() {
   return (
-    <motion.div
-      className="flex min-w-0 flex-col items-center text-center"
-      initial={reduce ? false : { opacity: 0, y: 6, scale: 0.98 }}
-      animate={reduce ? false : { opacity: 1, y: 0, scale: 1 }}
-      transition={reduce ? { duration: 0 } : { ...springs.gentle, delay: index * 0.04 }}
-    >
-      <div className="relative" style={{ width: AREA_RING_SIZE, height: AREA_RING_SIZE }}>
-        <svg
-          width={AREA_RING_SIZE}
-          height={AREA_RING_SIZE}
-          viewBox={`0 0 ${AREA_RING_SIZE} ${AREA_RING_SIZE}`}
-          className="block"
-          role="img"
-          aria-label={`${area.name}: ${pct}% complete, ${complete} of ${total} tasks`}
-        >
-          <circle
-            cx={AREA_RING_CENTER}
-            cy={AREA_RING_CENTER}
-            r={AREA_RING_RADIUS}
-            fill="none"
-            stroke={AREA_RING_TRACK}
-            strokeWidth={AREA_RING_STROKE}
-          />
-          {/* -90 rotate → arc starts at 12 o'clock and sweeps clockwise; motion
-              drives only the dash offset. Reduced motion lands at rest. */}
-          <g transform={`rotate(-90 ${AREA_RING_CENTER} ${AREA_RING_CENTER})`}>
-            <motion.circle
-              cx={AREA_RING_CENTER}
-              cy={AREA_RING_CENTER}
-              r={AREA_RING_RADIUS}
-              fill="none"
-              stroke={AREA_RING_ARC}
-              strokeWidth={AREA_RING_STROKE}
-              strokeLinecap="round"
-              strokeDasharray={AREA_RING_CIRCUMFERENCE}
-              initial={{ strokeDashoffset: reduce ? target : AREA_RING_CIRCUMFERENCE }}
-              animate={{ strokeDashoffset: target }}
-              transition={
-                reduce
-                  ? { duration: 0 }
-                  : { ...springs.gentle, delay: AREA_RING_SWEEP_DELAY_S + index * 0.08 }
-              }
-            />
-          </g>
-        </svg>
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <span className="text-[28px] font-semibold leading-none tracking-[-0.03em] tabular-nums text-[#111]">
-            {pct}
-            <span className="text-[16px] text-[#9a9a9a]">%</span>
-          </span>
-        </div>
-      </div>
-      <p className="mt-3 max-w-full truncate text-[14px] font-medium leading-[18px] text-[#111]">
-        {area.name}
-      </p>
-      <p className="mt-0.5 text-[12px] leading-[16px] tabular-nums text-[#8a8a8a]">
-        {complete} of {total} tasks
-      </p>
-    </motion.div>
+    <linearGradient id={MILESTONE_CHART.shippedGradientId} x1="0" y1="0" x2="0" y2="1">
+      {MILESTONE_CHART.shippedStops.map((stop) => (
+        <stop key={stop.offset} offset={stop.offset} stopColor={stop.color} />
+      ))}
+    </linearGradient>
   );
 }
 
-function InvestorQuickAccess() {
+function InvestorMilestoneChart({
+  milestones,
+}: {
+  milestones: InvestorOverviewData['milestones'];
+}) {
+  const reduce = useReducedMotion();
+  const rows: MilestoneRow[] = milestones.map((milestone) => ({
+    name: milestone.name,
+    tip: milestone.targetDate
+      ? `${milestone.name} — ships ${formatShortDate(milestone.targetDate)}`
+      : milestone.name,
+    shipped: milestone.doneCount,
+    remaining: milestone.taskCount - milestone.doneCount,
+  }));
+  const totalTasks = milestones.reduce((sum, milestone) => sum + milestone.taskCount, 0);
+  const totalDone = milestones.reduce((sum, milestone) => sum + milestone.doneCount, 0);
+
   return (
-    <section className={`${CARD} overflow-hidden`}>
-      <div className="px-6 pb-3 pt-5">
-        <p className="text-[13px] font-medium leading-[18px] text-[#8a8a8a]">Quick access</p>
+    <section>
+      <div className="flex items-baseline justify-between gap-4">
+        <h2 className={SECTION_H}>Milestones</h2>
+        <p className="whitespace-nowrap text-[12.5px] leading-[17px] tabular-nums text-ink-faint">
+          {totalDone} of {totalTasks} tasks shipped
+        </p>
       </div>
-      <div className="h-px bg-black/[0.05]" aria-hidden />
-      <div className="grid md:grid-cols-2">
-        <InvestorActionLink
-          href="/investor/docs"
-          icon={<FileText className="size-4" />}
-          label="Documents"
-          meta="Shared updates and decks"
-        />
-        <InvestorActionLink
-          href="/investor/payments"
-          icon={<DollarSign className="size-4" />}
-          label="Payments"
-          meta="Invoices and full history"
-        />
+      <p className="sr-only">
+        {milestones
+          .map((milestone) => `${milestone.name}: ${milestone.doneCount} of ${milestone.taskCount} tasks shipped`)
+          .join('. ')}
+      </p>
+      <div aria-hidden className="mt-4 [--ms-ar:2.6/1] sm:[--ms-ar:5/1]">
+        <BarChart
+          data={rows as unknown as Record<string, unknown>[]}
+          xDataKey="name"
+          status="ready"
+          stacked
+          stackGap={MILESTONE_CHART.stackGap}
+          barGap={MILESTONE_CHART.barGap}
+          aspectRatio="var(--ms-ar, 5 / 1)"
+          animationDuration={reduce ? 0 : 900}
+          margin={MILESTONE_CHART.margin}
+        >
+          <MilestoneShippedGradient />
+          <Bar
+            dataKey="shipped"
+            fill={`url(#${MILESTONE_CHART.shippedGradientId})`}
+            stroke={MILESTONE_CHART.shippedInk}
+            lineCap={MILESTONE_CHART.cornerRadius}
+            stackGap={MILESTONE_CHART.stackGap}
+            animate={!reduce}
+          />
+          <Bar
+            dataKey="remaining"
+            fill={MILESTONE_CHART.remainingFill}
+            stroke={MILESTONE_CHART.remainingInk}
+            lineCap={MILESTONE_CHART.cornerRadius}
+            stackGap={MILESTONE_CHART.stackGap}
+            animate={!reduce}
+          />
+          <BarXAxis showAllLabels />
+          <ChartTooltip
+            showDots={false}
+            content={({ point }) => {
+              const row = point as unknown as MilestoneRow;
+              const tasks = (count: number) => `${count} ${count === 1 ? 'task' : 'tasks'}`;
+              return (
+                <TooltipContent
+                  title={row.tip}
+                  rows={[
+                    { color: MILESTONE_CHART.shippedInk, label: 'Shipped', value: tasks(row.shipped) },
+                    { color: MILESTONE_CHART.remainingInk, label: 'Remaining', value: tasks(row.remaining) },
+                  ]}
+                />
+              );
+            }}
+          />
+        </BarChart>
       </div>
     </section>
   );
 }
 
-function InvestorActionLink({
-  href,
-  icon,
-  label,
-  meta,
+/* ── Latest — quiet dated ledger of studio movement ────────────────────
+ * The "updates" read, stripped to date + verb + task. No icons, no
+ * avatars, no day-grouping — those were the noise the old activity
+ * section died for. */
+
+/* activity_log is free-text and mixes human verbs with operational noise
+ * ('task.status_changed', 'Deleted task: …') and internal scratch targets
+ * ('__…__'). Only human verbs on real work reach investors. */
+const INVESTOR_ACTIONS = new Set(['Completed', 'Started']);
+
+function investorLatestRows(activity: InvestorOverviewData['recentActivity']) {
+  return activity
+    .filter(
+      (item) =>
+        item.createdAt &&
+        INVESTOR_ACTIONS.has(item.action) &&
+        !item.target?.startsWith('__')
+    )
+    .slice(0, 5);
+}
+
+function InvestorLatestLedger({
+  rows,
 }: {
-  href: string;
-  icon: ReactNode;
-  label: string;
-  meta: string;
+  rows: InvestorOverviewData['recentActivity'];
 }) {
   return (
-    <Link
-      href={href}
-      className="group flex min-h-[76px] items-center justify-between gap-4 border-t border-black/[0.05] px-6 py-4 transition-[background-color,transform] duration-150 ease-out first:border-t-0 hover:bg-black/[0.02] active:scale-[0.99] md:border-l md:border-t-0 md:first:border-l-0"
-    >
-      <div className="flex min-w-0 items-center gap-3">
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-black/[0.04] text-[#8a8a8a]">
-          {icon}
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-[14px] font-medium leading-[18px] text-[#111]">{label}</p>
-          <p className="mt-0.5 truncate text-[13px] leading-[18px] text-[#8a8a8a]">{meta}</p>
-        </div>
+    <section>
+      <h2 className={SECTION_H}>Latest</h2>
+      <div className="mt-1.5 flex flex-col divide-y divide-wash-5">
+        {rows.map((item) => (
+          <div
+            key={item.id}
+            className="grid grid-cols-[56px_minmax(0,1fr)] items-baseline gap-3 py-3"
+          >
+            <span className="text-[12px] leading-[17px] tabular-nums text-ink-muted">
+              {formatShortDate(item.createdAt!)}
+            </span>
+            <p className="min-w-0 truncate text-[13.5px] leading-[18px] text-ink-title">
+              <span className="text-ink-muted">{item.action}</span> {item.target}
+            </p>
+          </div>
+        ))}
       </div>
-      <ArrowIcon />
-    </Link>
+    </section>
   );
 }
 
@@ -794,7 +741,7 @@ function InvestorState({ title, description }: { title: string; description: str
     <section className="rr-page">
       <div className="rr-panel">
         <h1>{title}</h1>
-        <p className="mt-2 text-sm text-[#505050]">{description}</p>
+        <p className="mt-2 text-sm text-ink-body">{description}</p>
       </div>
     </section>
   );
@@ -807,29 +754,17 @@ function ArrowIcon() {
       height="16"
       viewBox="0 0 24 24"
       fill="none"
-      stroke="#848484"
+      stroke="currentColor"
       strokeWidth={2}
       strokeLinecap="round"
       strokeLinejoin="round"
-      className="shrink-0 transition-transform duration-150 ease-out group-hover:translate-x-0.5"
+      className="shrink-0 text-ink-muted transition-transform duration-150 ease-out group-hover:translate-x-0.5"
       aria-hidden
     >
       <line x1="5" y1="12" x2="19" y2="12" />
       <polyline points="12 5 19 12 12 19" />
     </svg>
   );
-}
-
-function toDashboardArea(area: InvestorOverviewData['areas'][number]): AreaType {
-  return {
-    id: area.id,
-    name: area.name,
-    status: area.status ?? 'Active',
-    progress: area.progress,
-    description: area.description ?? undefined,
-    phase: area.phase ?? undefined,
-    target_date: area.targetDate ?? undefined,
-  };
 }
 
 function formatMoney(value: number): string {
@@ -839,4 +774,3 @@ function formatMoney(value: number): string {
     maximumFractionDigits: 0,
   });
 }
-

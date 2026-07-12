@@ -50,10 +50,10 @@ export function InvestorDocsRouteContent({ data }: { data: InvestorDocsLoaderDat
     <div className="flex flex-col gap-6">
       <div>
         <FadeRise delay={delay(TIMING.heading)}>
-          <h1 className="text-3xl font-bold tracking-tight text-[#111] text-balance">Documents</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-ink-title text-balance">Documents</h1>
         </FadeRise>
         <FadeRise delay={delay(TIMING.subtitle)}>
-          <p className="mt-1 text-sm text-[#808080]">Documents, decks, and shared resources.</p>
+          <p className="mt-1 text-sm text-ink-muted">Documents, decks, and shared resources.</p>
         </FadeRise>
       </div>
 
@@ -76,7 +76,7 @@ function State({ title, description }: { title: string; description: string }) {
     <section className="rr-page">
       <div className="rr-panel">
         <h1>{title}</h1>
-        <p className="mt-2 text-sm text-[#505050]">{description}</p>
+        <p className="mt-2 text-sm text-ink-body">{description}</p>
       </div>
     </section>
   );

@@ -52,16 +52,16 @@ export function InvestorLayout() {
 
   if (data.status === 'forbidden') {
     return (
-      <div className="overview-light flex min-h-screen items-center justify-center bg-white px-6 antialiased">
+      <div className="overview-light flex min-h-screen items-center justify-center bg-surface-1 px-6 antialiased">
         <div className="rr-panel w-full max-w-md">
-          <h1 className="m-0 text-xl font-semibold text-[#111]">Investor access required</h1>
-          <p className="mt-2 text-sm leading-relaxed text-[#505050]">
+          <h1 className="m-0 text-xl font-semibold text-ink-title">Investor access required</h1>
+          <p className="mt-2 text-sm leading-relaxed text-ink-body">
             This panel is available to investors and admins. If you think this is a
             mistake, ask a SEEKO admin to enable investor access on your profile.
           </p>
           <a
             href="/login"
-            className="mt-4 inline-flex h-9 items-center rounded-full bg-[#111] px-4 text-sm font-medium text-white transition-colors hover:bg-[#000]"
+            className="mt-4 inline-flex h-9 items-center rounded-full bg-ink-title px-4 text-sm font-medium text-surface-1 transition-colors hover:bg-[#000]"
           >
             Back to sign in
           </a>
@@ -103,10 +103,10 @@ function InvestorMenuLink({
           to={to}
           role="menuitem"
           onClick={onClick}
-          className="flex items-center justify-between rounded-2xl px-4 py-3 text-[14px] font-medium tracking-[-0.28px] text-[#0d0d0d] opacity-100 transition-[color,background-color,opacity] group-hover/menu:opacity-20 hover:bg-[#0000000a] hover:opacity-100!"
+          className="flex items-center justify-between rounded-2xl px-4 py-3 text-[14px] font-medium tracking-[-0.28px] text-ink-title opacity-100 transition-[color,background-color,opacity] group-hover/menu:opacity-20 hover:bg-wash-4 hover:opacity-100!"
         >
           <span>{label}</span>
-          <Icon className="size-5 text-[#808080]" />
+          <Icon className="size-5 text-ink-muted" />
         </Link>
       </motion.div>
     </motion.div>
@@ -127,8 +127,8 @@ const NAV_ITEMS: NavItem[] = [
 
 const TAB_BASE =
   'flex h-[32px] items-center px-2 text-[13.5px] font-medium leading-[18px] transition-[color,transform] duration-150 ease-out motion-safe:active:scale-[0.97]';
-const TAB_ACTIVE = 'text-[#3a3a3a]';
-const TAB_INACTIVE = 'text-[#8a8a8a] hover:text-[#5a5a5a]';
+const TAB_ACTIVE = 'text-ink';
+const TAB_INACTIVE = 'text-ink-muted hover:text-[#5a5a5a] dark:hover:text-ink-body';
 
 /* ── Account menu motion — mirrors the studio header menu (StudioHeaderActions)
  * so the investor dropdown reads identically: a clip-path circle blooming from
@@ -230,18 +230,27 @@ export function InvestorShell({
   }
 
   return (
-    <div className="overview-light fixed inset-0 z-40 flex flex-col overflow-hidden bg-white text-[#111] antialiased">
-      <header className="shrink-0 border-b border-black/[0.06] bg-white">
+    <div className="overview-light fixed inset-0 z-40 flex flex-col overflow-hidden bg-surface-1 text-ink-title antialiased">
+      <header className="shrink-0 border-b border-wash-6 bg-surface-1">
         <div className="flex w-full items-center justify-between gap-3 px-6 pb-3 pt-6 md:px-[52px] md:pt-11">
-          <div className="flex min-w-0 items-center gap-6">
-            <Link to="/investor" aria-label="Investor dashboard" className="flex min-w-0 items-center gap-2.5">
-              <img src="/seeko-logo.png" alt="" width={24} height={24} className="size-6 shrink-0" />
-              <span className="hidden whitespace-nowrap text-[13.5px] font-semibold text-[#111] sm:inline">
+          <div className="flex min-w-0 items-center gap-3 sm:gap-6">
+            {/* The mark's ink fills only ~19.4/24 of its viewBox, so size-5
+                puts the glyph at ~16px — 1.6× the wordmark's cap height,
+                a balanced lockup (size-6 read double the type's size). */}
+            <Link to="/investor" aria-label="Investor dashboard" className="flex shrink-0 items-center gap-2">
+              <img src="/seeko-mark.svg" alt="" width={20} height={20} className="size-5 shrink-0" />
+              <span className="hidden whitespace-nowrap text-[13.5px] font-semibold text-ink-title sm:inline">
                 Investor
               </span>
             </Link>
 
-            <nav aria-label="Investor sections" className="-ml-2 flex items-center gap-1">
+            {/* min-w-0 + overflow-x lets the tabs scroll (native momentum +
+                rubber-band on touch) instead of ever colliding with the
+                actions cluster on narrow viewports. */}
+            <nav
+              aria-label="Investor sections"
+              className="-ml-2 flex min-w-0 items-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            >
               {NAV_ITEMS.map(({ to, label: navLabel, isActive }) => {
                 const active = isActive(pathname);
                 return (
@@ -265,11 +274,10 @@ export function InvestorShell({
               onClick={handleDownloadPdf}
               disabled={pdfLoading}
               aria-label="Download PDF"
-              className="inline-flex h-9 items-center gap-1.5 rounded-full bg-black/[0.04] pl-3 pr-3.5 text-[13px] font-medium text-[#545454] transition-[background-color,transform] duration-150 ease-out hover:bg-black/[0.07] active:scale-[0.97] disabled:opacity-50"
+              className="inline-flex size-9 items-center justify-center rounded-full bg-wash-4 text-[13px] font-medium text-[#545454] transition-[background-color,transform] duration-150 ease-out hover:bg-black/[0.07] active:scale-[0.97] disabled:opacity-50 dark:text-ink-muted dark:hover:bg-white/[0.09] sm:w-auto sm:gap-1.5 sm:pl-3 sm:pr-3.5"
             >
               <FileDown className="size-3.5" />
               <span className="hidden sm:inline">{pdfLoading ? 'Generating...' : 'Download PDF'}</span>
-              <span className="sm:hidden">{pdfLoading ? '...' : 'PDF'}</span>
             </button>
             <div ref={profileMenuRef} className="relative">
               <motion.button
@@ -297,7 +305,7 @@ export function InvestorShell({
                   <motion.div
                     {...panelMotion}
                     role="menu"
-                    className="group/menu absolute right-0 top-full z-[95] mt-2 flex w-[244px] flex-col overflow-hidden rounded-[20px] bg-white p-1 shadow-seeko-pop"
+                    className="group/menu absolute right-0 top-full z-[95] mt-2 flex w-[244px] flex-col overflow-hidden rounded-[20px] bg-surface-1 p-1 shadow-seeko-pop"
                   >
                     <motion.div
                       variants={reduce ? undefined : MENU_LIST}
@@ -308,14 +316,14 @@ export function InvestorShell({
                       {/* Identity — name + email (no avatar, matches studio menu) */}
                       <motion.div variants={reduce ? undefined : MENU_ROW} className="flex items-center px-3 py-2.5">
                         <div className="min-w-0">
-                          <p className="truncate text-[14px] font-medium tracking-[-0.28px] text-[#0d0d0d]">
+                          <p className="truncate text-[14px] font-medium tracking-[-0.28px] text-ink-title">
                             {profile.displayName ?? 'Investor'}
                           </p>
-                          <p className="mt-0.5 truncate text-[13px] text-[#808080]">{profile.email}</p>
+                          <p className="mt-0.5 truncate text-[13px] text-ink-muted">{profile.email}</p>
                         </div>
                       </motion.div>
 
-                      <div className="mx-4 h-px bg-[#0000000d]" />
+                      <div className="mx-4 h-px bg-wash-5" />
 
                       <div className="flex flex-col">
                         <InvestorMenuLink
@@ -336,7 +344,7 @@ export function InvestorShell({
                         )}
                       </div>
 
-                      <div className="mx-4 h-px bg-[#0000000d]" />
+                      <div className="mx-4 h-px bg-wash-5" />
 
                       {/* Sign out — destructive, confirm toggle (matches studio menu) */}
                       <motion.div variants={reduce ? undefined : MENU_ROW} className="flex flex-col overflow-hidden">
@@ -350,7 +358,7 @@ export function InvestorShell({
                               transition={{ ...SNAPPY, opacity: { duration: 0.12 } }}
                               className="flex items-center justify-between rounded-2xl px-4 py-3"
                             >
-                              <span className="text-[14px] font-medium tracking-[-0.28px] text-[#808080]">
+                              <span className="text-[14px] font-medium tracking-[-0.28px] text-ink-muted">
                                 Sign out?
                               </span>
                               <div className="flex items-center gap-3">
@@ -365,7 +373,7 @@ export function InvestorShell({
                                 <button
                                   type="button"
                                   onClick={() => setConfirmingSignOut(false)}
-                                  className="text-[14px] text-[#808080] transition-colors hover:text-[#0d0d0d]"
+                                  className="text-[14px] text-ink-muted transition-colors hover:text-ink-title"
                                 >
                                   Cancel
                                 </button>
@@ -380,7 +388,7 @@ export function InvestorShell({
                               exit={{ opacity: 0, y: 8 }}
                               transition={{ ...SNAPPY, opacity: { duration: 0.12 } }}
                               onClick={() => setConfirmingSignOut(true)}
-                              className="flex w-full items-center justify-between rounded-2xl px-4 py-3 text-[14px] font-medium tracking-[-0.28px] text-[#0d0d0d] transition-[color,background-color] hover:bg-[rgba(229,72,77,0.08)] hover:text-[#e5484d]"
+                              className="flex w-full items-center justify-between rounded-2xl px-4 py-3 text-[14px] font-medium tracking-[-0.28px] text-ink-title transition-[color,background-color] hover:bg-[rgba(229,72,77,0.08)] hover:text-[#e5484d]"
                             >
                               <span>Sign out</span>
                               <LogOut className="size-5" />

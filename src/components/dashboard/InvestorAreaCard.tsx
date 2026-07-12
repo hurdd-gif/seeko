@@ -267,7 +267,7 @@ export function InvestorAreaCard({ area, tasksInArea, isAdmin = false }: Investo
                 max={100}
                 value={editProgress}
                 onChange={e => setEditProgress(Number(e.target.value))}
-                className="w-full h-2 rounded-full appearance-none bg-secondary cursor-pointer accent-[#0d7aff] [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-seeko-accent [&::-webkit-slider-thumb]:shadow-md"
+                className="w-full h-2 rounded-full appearance-none bg-secondary cursor-pointer accent-seeko-accent [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-seeko-accent [&::-webkit-slider-thumb]:shadow-md"
               />
               <div className="w-full h-1.5 rounded-full bg-secondary overflow-hidden mt-1">
                 <div
@@ -292,7 +292,7 @@ export function InvestorAreaCard({ area, tasksInArea, isAdmin = false }: Investo
               type="button"
               onClick={handleSaveArea}
               disabled={saving}
-              className="px-4 py-1.5 text-sm font-medium rounded-lg bg-seeko-accent text-[#1a1a1a] hover:bg-seeko-accent/90 disabled:opacity-50 transition-colors"
+              className="px-4 py-1.5 text-sm font-medium rounded-lg bg-seeko-accent text-ink-title hover:bg-seeko-accent/90 disabled:opacity-50 transition-colors"
             >
               {saving ? 'Saving...' : 'Save changes'}
             </button>

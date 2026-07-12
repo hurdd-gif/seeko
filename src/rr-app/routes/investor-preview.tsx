@@ -69,6 +69,19 @@ const previewData: InvestorOverviewData = {
       taskId: 'task-2',
       docId: null,
     },
+    {
+      id: 'activity-3',
+      action: 'Completed',
+      target: 'HUD first pass',
+      createdAt: '2026-06-12T12:00:00.000Z',
+      taskId: 'task-3',
+      docId: null,
+    },
+  ],
+  milestones: [
+    { id: 'ms-alpha', name: 'ALPHA', targetDate: '2026-05-29', taskCount: 6, doneCount: 6 },
+    { id: 'ms-beta', name: 'BETA', targetDate: '2026-08-15', taskCount: 9, doneCount: 4 },
+    { id: 'ms-launch', name: 'LAUNCH', targetDate: '2026-12-01', taskCount: 5, doneCount: 1 },
   ],
   healthSummary: '2 tasks completed this week, all areas progressing, 1 blocked, 1 overdue.',
 };

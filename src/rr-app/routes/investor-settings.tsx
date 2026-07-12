@@ -62,7 +62,7 @@ function State({ title, description }: { title: string; description: string }) {
     <section className="rr-page">
       <div className="rr-panel">
         <h1>{title}</h1>
-        <p className="mt-2 text-sm text-[#9a9a9a]">{description}</p>
+        <p className="mt-2 text-sm text-ink-faint">{description}</p>
       </div>
     </section>
   );

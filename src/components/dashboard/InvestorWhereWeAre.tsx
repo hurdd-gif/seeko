@@ -11,7 +11,7 @@ interface InvestorWhereWeAreProps {
 export function InvestorWhereWeAre({ areas, tasksPerArea = {} }: InvestorWhereWeAreProps) {
   if (areas.length === 0) {
     return (
-      <section className="overflow-hidden rounded-2xl bg-white p-6 shadow-seeko">
+      <section className="overflow-hidden rounded-2xl bg-surface-1 p-6 shadow-seeko">
         <p className="text-[13px] font-medium leading-[18px] text-[var(--ov-muted)]">Where we are</p>
         <p className="mt-3 text-[14px] leading-[20px] text-[var(--ov-text)]">
           Progress areas will appear here once the team shares them.
@@ -21,11 +21,11 @@ export function InvestorWhereWeAre({ areas, tasksPerArea = {} }: InvestorWhereWe
   }
 
   return (
-    <section className="flex h-full flex-col overflow-hidden rounded-2xl bg-white p-6 shadow-seeko">
+    <section className="flex h-full flex-col overflow-hidden rounded-2xl bg-surface-1 p-6 shadow-seeko">
       <div className="mb-5 flex items-baseline justify-between gap-4">
         <div>
           <p className="text-[13px] font-medium leading-[18px] text-[var(--ov-muted)]">Where we are</p>
-          <h2 className="mt-1 text-[20px] font-semibold leading-[24px] text-[#111]">
+          <h2 className="mt-1 text-[20px] font-semibold leading-[24px] text-ink-title">
             Current build progress
           </h2>
         </div>
@@ -85,10 +85,10 @@ function AreaProgressRow({
   const hasContext = hasTasks || hasMonths;
 
   return (
-    <div className="rounded-xl bg-[#f7f7f7] px-4 py-3.5 shadow-[0_0_0_1px_rgba(0,0,0,0.035)]">
+    <div className="rounded-xl bg-surface-3 px-4 py-3.5 shadow-[0_0_0_1px_rgba(0,0,0,0.035)]">
       {/* Layer 1 — identity: name (left) · phase chip (right) */}
       <div className="flex items-baseline justify-between gap-3">
-        <span className="truncate text-[14px] font-medium leading-[18px] text-[#111]">{area.name}</span>
+        <span className="truncate text-[14px] font-medium leading-[18px] text-ink-title">{area.name}</span>
         {area.phase && (
           <span className="shrink-0 text-[12px] leading-[18px] text-[var(--ov-muted)]">
             {area.phase}
@@ -98,7 +98,7 @@ function AreaProgressRow({
 
       {/* Layer 2 — bar + percentage */}
       <div className="mt-3 flex items-center gap-3">
-        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-black/[0.08]">
+        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-wash-8">
           <div
             className="h-full rounded-full bg-[color:var(--color-seeko-accent)] transition-[width] duration-500 ease-out motion-reduce:transition-none"
             style={{ width: `${pct}%` }}

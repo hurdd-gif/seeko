@@ -90,6 +90,14 @@ export type InvestorOverviewData = {
     taskId: string | null;
     docId: string | null;
   }[];
+  /** Ordered by sort_order then target_date; counts exclude Canceled/Duplicate. */
+  milestones: {
+    id: string;
+    name: string;
+    targetDate: string | null;
+    taskCount: number;
+    doneCount: number;
+  }[];
   healthSummary: string;
 };
 
@@ -145,7 +153,7 @@ export type InvestorSettingsInput = {
 export async function loadInvestorOverview(currentUser: { id: string }): Promise<InvestorOverviewData> {
   const service = getServiceClient();
   const profile = await loadInvestorProfile(currentUser.id);
-  const [tasksResult, areasResult, activityResult] = await Promise.all([
+  const [tasksResult, areasResult, activityResult, milestonesResult, milestoneLinksResult] = await Promise.all([
     service
       .from('tasks')
       .select(TASKS_INDEX_SELECT)
@@ -160,11 +168,21 @@ export async function loadInvestorOverview(currentUser: { id: string }): Promise
       .select('id, action, target, created_at, task_id, doc_id')
       .order('created_at', { ascending: false })
       .limit(30),
+    // milestones/task_milestone aren't in the generated database types yet —
+    // same seam as tasks-board.ts.
+    (service as any)
+      .from('milestones')
+      .select('id, name, target_date, sort_order')
+      .order('sort_order', { ascending: true })
+      .order('target_date', { ascending: true }),
+    (service as any).from('task_milestone').select('task_id, milestone_id'),
   ]);
 
   if (tasksResult.error) throw tasksResult.error;
   if (areasResult.error) throw areasResult.error;
   if (activityResult.error) throw activityResult.error;
+  if (milestonesResult.error) throw milestonesResult.error;
+  if (milestoneLinksResult.error) throw milestoneLinksResult.error;
 
   const tasks = ((tasksResult.data ?? []) as unknown[]).map((row) => toTasksIndexItem(row as Parameters<typeof toTasksIndexItem>[0]));
   const areas = ((areasResult.data ?? []) as unknown as AreaRow[]).map((area) => {
@@ -190,6 +208,30 @@ export async function loadInvestorOverview(currentUser: { id: string }): Promise
     docId: item.doc_id,
   }));
 
+  // Milestone progress = linked-task completion. Canceled/Duplicate links are
+  // dropped entirely — they aren't work, so they shouldn't inflate "remaining".
+  const statusById = new Map<string, string>(tasks.map((task) => [task.id, task.status]));
+  const linksByMilestone = new Map<string, string[]>();
+  for (const link of (milestoneLinksResult.data ?? []) as { task_id: string; milestone_id: string }[]) {
+    const list = linksByMilestone.get(link.milestone_id) ?? [];
+    list.push(link.task_id);
+    linksByMilestone.set(link.milestone_id, list);
+  }
+  const milestones = (
+    (milestonesResult.data ?? []) as { id: string; name: string; target_date: string | null; sort_order: number | null }[]
+  ).map((milestone) => {
+    const statuses = (linksByMilestone.get(milestone.id) ?? [])
+      .map((taskId) => statusById.get(taskId))
+      .filter((status): status is string => Boolean(status) && status !== 'Canceled' && status !== 'Duplicate');
+    return {
+      id: milestone.id,
+      name: milestone.name,
+      targetDate: milestone.target_date,
+      taskCount: statuses.length,
+      doneCount: statuses.filter((status) => status === 'Done').length,
+    };
+  });
+
   const stats = buildOverviewStats(tasks, areas, recentActivity);
 
   return {
@@ -197,6 +239,7 @@ export async function loadInvestorOverview(currentUser: { id: string }): Promise
     stats,
     areas,
     recentActivity,
+    milestones,
     healthSummary: buildHealthSummary(stats, areas),
   };
 }
