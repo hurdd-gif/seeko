@@ -32,10 +32,10 @@ const TABS: { key: TabKey; label: string; href: string }[] = [
 // Only the Create control is framed (per design call) — nav reads flat on the bar.
 const TAB_BASE =
   'flex h-[32px] items-center px-2 text-[13.5px] font-medium leading-[18px] tracking-[-0.27px] transition-[color,transform] duration-150 ease-out motion-safe:active:scale-[0.97]';
-const TAB_ACTIVE = 'text-[#3a3a3a]';
+const TAB_ACTIVE = 'text-ink';
 // Inactive tab must stay clickable, not read as disabled: #8a8a8a ≈ 3.4:1 on
 // the near-white bar (clears the 3:1 floor), hover #5a5a5a ≈ 6.9:1 for a clear lift.
-const TAB_INACTIVE = 'text-[#8a8a8a] hover:text-[#5a5a5a]';
+const TAB_INACTIVE = 'text-ink-muted hover:text-[#5a5a5a] dark:hover:text-ink-body';
 
 export function LightShell({
   activeTab,
@@ -94,7 +94,7 @@ export function LightShell({
     >
       <header
         className={
-          bordered ? 'shrink-0 border-b border-black/[0.06] bg-[var(--ov-bg)]' : undefined
+          bordered ? 'shrink-0 border-b border-wash-6 bg-[var(--ov-bg)]' : undefined
         }
       >
         <div className={`flex w-full items-center justify-between gap-3 ${headerPadding}`}>

@@ -3,53 +3,339 @@
 @custom-variant dark (&:is(.dark *));
 @plugin "@tailwindcss/typography";
 
-@theme inline {
-  /* Surfaces — calibrated to #1a1a1a background */
-  --color-background:        #1a1a1a;
-  --color-foreground:        #f0f0f0;
-  --color-card:              #222222;
-  --color-card-foreground:   #f0f0f0;
-  --color-popover:             #262626;
-  --color-popover-foreground:  #f0f0f0;
-  --color-border:            #2e2e2e;
-  --color-input:             #2e2e2e;
-  --color-muted:             #262626;
-  --color-muted-foreground:  #808080;
-  --color-secondary:         #262626;
-  --color-secondary-foreground: #f0f0f0;
-  --color-accent:            #333333;
-  --color-accent-foreground: #f0f0f0;
-  --color-primary:           #f0f0f0;
-  --color-primary-foreground: #1a1a1a;
-  --color-destructive:       #ef4444;
-  --color-destructive-foreground: #f0f0f0;
-  --color-ring:              rgba(240, 240, 240, 0.18);
+/* ── Raw theme values (single source of truth) ──────────────────────────────
+ * Every themeable color/shadow lives here as a plain custom property. The
+ * `@theme inline` block below maps these into Tailwind utilities BY REFERENCE:
+ * utilities compile to `var(--x)` instead of baked literals, so a `.dark`
+ * block can re-declare any value at runtime and every utility follows.
+ * This block is a restructure of the former literal `@theme` values — same
+ * resolved colors, zero visual change. */
+:root {
+  /* Legacy dark base — calibrated to #1a1a1a background. Still the app-shell
+     fallback (body gradient, external /shared /invoice /sign viewers); the
+     light app paints over it per-element. Redesigned in the dark-mode pass. */
+  --background:        oklch(0.2178 0 0); /* #1a1a1a */
+  --foreground:        oklch(0.9551 0 0); /* #f0f0f0 */
+  --card:              oklch(0.2520 0 0); /* #222222 */
+  --card-foreground:   oklch(0.9551 0 0);
+  --popover:             oklch(0.2686 0 0); /* #262626 */
+  --popover-foreground:  oklch(0.9551 0 0);
+  --border:            oklch(0.3012 0 0); /* #2e2e2e */
+  --input:             oklch(0.3012 0 0);
+  --muted:             oklch(0.2686 0 0);
+  --muted-foreground:  oklch(0.5999 0 0); /* #808080 */
+  --secondary:         oklch(0.2686 0 0);
+  --secondary-foreground: oklch(0.9551 0 0);
+  --accent:            oklch(0.3211 0 0); /* #333333 */
+  --accent-foreground: oklch(0.9551 0 0);
+  --primary:           oklch(0.9551 0 0);
+  --primary-foreground: oklch(0.2178 0 0);
+  --destructive:       oklch(0.6368 0.2078 25.33); /* #ef4444 */
+  --destructive-foreground: oklch(0.9551 0 0);
+  --ring:              oklch(0.9551 0 0 / 0.18); /* rgba(240,240,240,.18) */
 
   /* Sidebar — darker than background for depth */
-  --color-sidebar:           #151515;
-  --color-sidebar-foreground: #f0f0f0;
-  --color-sidebar-accent:    #262626;
-  --color-sidebar-border:    #2a2a2a;
+  --sidebar:           oklch(0.1957 0 0); /* #151515 */
+  --sidebar-foreground: oklch(0.9551 0 0);
+  --sidebar-accent:    oklch(0.2686 0 0);
+  --sidebar-border:    oklch(0.2850 0 0); /* #2a2a2a */
 
-  /* Seeko accent */
-  --color-seeko-accent:      #0d7aff;
+  /* Seeko accent — exact conversion of #0d7aff */
+  --seeko-accent:      oklch(0.6037 0.2168 257.92);
+
+  /* Accent as TEXT on white — the AA-passing azure (#0a63cc, 5.3:1).
+     Flips to the lighter #52acff family in .dark. */
+  --seeko-accent-ink:  oklch(0.5165 0.1797 257.30);
+
+  /* Destructive/danger ink on light surfaces (#d4503e — invoice overdue,
+     LIGHT_INVOICE_STATUS, destructive dialog actions). */
+  --danger:            oklch(0.6051 0.1700 30.44);
+
+  /* Success green (#15803d — external-signing signed state, 5.0:1 on white).
+     Distinct from azure so azure keeps meaning "interactive", never success. */
+  --success:           oklch(0.5273 0.1371 150.07);
+
+  /* AA-on-white department INK ladder (LIGHT_DEPT_COLOR/BADGE family — dept
+     identity as text on light surfaces; the raw --dept-* pastels below stay
+     the graphic/dark-chrome family). Coding rides --seeko-accent-ink so both
+     flip together in .dark. */
+  --dept-ink-coding:         var(--seeko-accent-ink);
+  --dept-ink-visual-art:     oklch(0.5068 0.1411 266.15); /* #3f5fb5 */
+  --dept-ink-ui-ux:          oklch(0.5224 0.1745 291.38); /* #6e4fc4 */
+  --dept-ink-animation:      oklch(0.5529 0.1142 81.17);  /* #946a00 */
+  --dept-wash-animation:     oklch(0.6408 0.1272 75.99);  /* #b8801a — amber badge tint only */
+  --dept-ink-asset-creation: oklch(0.5635 0.1713 354.16); /* #bd3f7c */
 
   /* Paper redesign — glass surface + eyebrow gray */
-  --color-glass:             rgba(32, 32, 32, 0.9);
-  --color-eyebrow:           #ADA9A3;
+  --glass:             oklch(0.2435 0 0 / 0.9); /* rgba(32,32,32,.9) */
+  --eyebrow:           oklch(0.7364 0.0097 78.27); /* #ADA9A3 */
 
-  /* Status dots (used inline, not as badges) */
-  --color-status-complete:   #0d7aff;
-  --color-status-progress:   #fbbf24;
-  --color-status-review:     #93c5fd;
-  --color-status-blocked:    #f87171;
+  /* Status dots (used inline, not as badges) — exact conversions */
+  --status-complete:   oklch(0.6037 0.2168 257.92); /* #0d7aff */
+  --status-progress:   oklch(0.8369 0.1644 84.43);  /* #fbbf24 */
+  --status-review:     oklch(0.8091 0.0956 251.81); /* #93c5fd */
+  --status-blocked:    oklch(0.7106 0.1661 22.22);  /* #f87171 */
 
-  /* Department colors (UX persona — filters, tags, labels) */
-  --color-dept-coding:         #0d7aff;
-  --color-dept-visual-art:     #93c5fd;
-  --color-dept-ui-ux:          #c4b5fd;
-  --color-dept-animation:      #fbbf24;
-  --color-dept-asset-creation: #f9a8d4;
+  /* Department colors (UX persona — filters, tags, labels) — exact conversions */
+  --dept-coding:         oklch(0.6037 0.2168 257.92); /* #0d7aff */
+  --dept-visual-art:     oklch(0.8091 0.0956 251.81); /* #93c5fd */
+  --dept-ui-ux:          oklch(0.8112 0.1013 293.57); /* #c4b5fd */
+  --dept-animation:      oklch(0.8369 0.1644 84.43);  /* #fbbf24 */
+  --dept-asset-creation: oklch(0.8228 0.1095 346.02); /* #f9a8d4 */
+
+  /* Accent shadows */
+  --sh-accent-glow:  0 0 12px rgba(13, 122, 255, 0.04);
+  --sh-accent-inset: inset 0 0 0 1px rgba(13, 122, 255, 0.2);
+
+  /* Canonical SEEKO chrome shadows (docs at the @theme mapping below) */
+  --sh-seeko: 0 0 0 0.5px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --sh-seeko-pop:
+    0 0 0 0.5px rgba(0, 0, 0, 0.06),
+    0 6px 16px -4px rgba(0, 0, 0, 0.08),
+    0 16px 32px -12px rgba(0, 0, 0, 0.12);
+
+  /* Fluid Functionalism elevated surfaces — light canvas payments UI.
+     Exact conversions of the shipped hex ladder (pure neutrals, C=0). */
+  --surface-1: oklch(1.0000 0 0);  /* #ffffff */
+  --surface-2: oklch(0.9881 0 0);  /* #fbfbfb */
+  --surface-3: oklch(0.9761 0 0);  /* #f7f7f7 */
+  --surface-4: oklch(0.9612 0 0);  /* #f2f2f2 */
+  --surface-5: oklch(0.9461 0 0);  /* #ededed */
+  --surface-6: oklch(0.9310 0 0);  /* #e8e8e8 */
+  --surface-7: oklch(0.9128 0 0);  /* #e2e2e2 */
+  --surface-8: oklch(0.8945 0 0);  /* #dcdcdc */
+
+  --sh-surface-1:
+    0 0 0 0.5px rgba(0, 0, 0, 0.055),
+    0 1px 2px rgba(0, 0, 0, 0.035);
+  --sh-surface-2:
+    0 0 0 0.5px rgba(0, 0, 0, 0.06),
+    0 2px 6px -3px rgba(0, 0, 0, 0.14),
+    0 8px 18px -14px rgba(0, 0, 0, 0.16);
+  --sh-surface-3:
+    0 0 0 0.5px rgba(0, 0, 0, 0.07),
+    0 6px 16px -8px rgba(0, 0, 0, 0.18),
+    0 18px 36px -24px rgba(0, 0, 0, 0.2);
+  --sh-surface-4:
+    0 0 0 0.5px rgba(0, 0, 0, 0.075),
+    0 10px 24px -14px rgba(0, 0, 0, 0.2),
+    0 28px 52px -32px rgba(0, 0, 0, 0.22);
+  --sh-surface-5:
+    0 0 0 0.5px rgba(0, 0, 0, 0.08),
+    0 14px 30px -18px rgba(0, 0, 0, 0.22),
+    0 36px 64px -38px rgba(0, 0, 0, 0.24);
+
+  /* Ink ramp — text on white, dark → light (contrast on #fff in comments).
+     Part of the Portal Light family documented at the @theme mapping below.
+     Exact OKLCH conversions of the shipped hexes (pure neutrals, C=0). */
+  --ink-title:        oklch(0.1776 0 0); /* #111111 — 17.9:1 — page/card titles  */
+  --ink-strong:       oklch(0.2850 0 0); /* #2a2a2a — 13.6:1 — strongest body (row titles) */
+  --ink:              oklch(0.3485 0 0); /* #3a3a3a — 10.5:1 — control labels (ref button) */
+  --ink-heading:      oklch(0.3904 0 0); /* #454545 —  8.1:1 — page H1 (supersedes ref
+                                            #515151 for AA; ref card-heading was lighter) */
+  --ink-body:         oklch(0.4313 0 0); /* #505050 —  7.5:1 — long-form body copy */
+  --ink-mark:         oklch(0.4386 0 0); /* #525252 — brand-mark circle GROUND only */
+  --ink-muted-strong: oklch(0.5173 0 0); /* #686868 —  4.9:1 — AA floor; real muted copy */
+  --ink-muted:        oklch(0.5999 0 0); /* #808080 —  3.5:1 — meta/status (AA-large/UI) */
+  --ink-faint:        oklch(0.6731 0 0); /* #969696 —  2.7:1 — footer, sublines (decor.) */
+  --ink-faintest:     oklch(0.7668 0 0); /* #b3b3b3 —  2.0:1 — hints (decorative)  */
+  --ink-ghost:        oklch(0.8203 0 0); /* #c4c4c4 — graphic only — counts, chevrons */
+
+  /* Portal Light surfaces + line */
+  --control-fill:     oklch(0.9581 0 0);        /* #f1f1f1 — button/segment fill (ref 28C) */
+  --hairline:         oklch(0.9310 0 0 / 0.75); /* #E8E8E8BF — card border (ref 282) */
+
+  /* Wash ladder — the bg-black/[0.0N] + border-black/[0.0N] recipe family
+     (575 occurrences) as tokens. Black-alpha on light; flips to white-alpha
+     in .dark (slightly higher alpha — white washes read weaker on dark). */
+  --wash-2:  oklch(0 0 0 / 0.02);
+  --wash-3:  oklch(0 0 0 / 0.03);
+  --wash-4:  oklch(0 0 0 / 0.04);
+  --wash-5:  oklch(0 0 0 / 0.05);
+  --wash-6:  oklch(0 0 0 / 0.06);
+  --wash-8:  oklch(0 0 0 / 0.08);
+  --wash-10: oklch(0 0 0 / 0.10);
+
+  /* Elevation */
+  --sh-float: 0 10px 20px rgba(209, 209, 209, 0.15); /* ref #D1D1D126 0 10 20 */
+  --sh-elevated:
+    0 0 0 1px rgba(255, 255, 255, 0.07),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 8px 20px -12px rgba(0, 0, 0, 0.5);
+}
+
+/* ── Dark scheme overrides ──────────────────────────────────────────────────
+ * Freshly authored from the CURRENT light design language (not the legacy
+ * #1a1a1a theme above): hold chroma + hue, flip lightness, clamp to sRGB
+ * gamut. Neutrals are pure greys (C=0), so each is just an L choice —
+ * contrast documented against the dark canvas oklch(0.240 0 0) ≈ #1f1f1f.
+ * The ramp is deliberately LIFTED off the L-midpoint mirror: a pure flip
+ * converges on the legacy near-black theme, so canvas sits at 0.240 and
+ * cards at 0.290, with white-alpha rings carrying the elevation that
+ * shadows can't on a dark ground.
+ * A `.dark` class-override rather than light-dark() pairs because the body
+ * still declares `color-scheme: dark` for the legacy shell; collapse to
+ * light-dark() in the chrome-flip pass. Body/chrome do NOT flip yet — this
+ * block only themes tokens; the toggle ships in the final phase. */
+.dark {
+  color-scheme: dark;
+
+  /* Ink ramp — NOT a straight mirror of the light ramp. A dark UI's low tiers
+     have to sit higher than the light equivalent: light-muted (#808080, L .60)
+     reads fine on white but the same L on the 0.218 canvas is only a ~0.38 L
+     gap — the "light colour dropped on a black card" look. The bottom four
+     tiers are lifted (better-colors: on a dark bg, raise foreground L to open
+     the gap; hold C/H — these are neutrals) so secondary/tertiary text clears
+     the visibility bar while the ~0.05 step between tiers keeps the hierarchy.
+     Top five (title→mark) are already legible and unchanged. */
+  --ink-title:        oklch(0.955 0 0); /* #f0f0f0 — 14.4:1 */
+  --ink-strong:       oklch(0.920 0 0); /* #e4e4e4 — 13.0:1 */
+  --ink:              oklch(0.885 0 0); /* #d9d9d9 — 11.6:1 */
+  --ink-heading:      oklch(0.860 0 0); /* #d1d1d1 — 10.7:1 */
+  --ink-body:         oklch(0.820 0 0); /* #c4c4c4 —  9.4:1 */
+  --ink-mark:         oklch(0.800 0 0); /* #bebebe — ground only */
+  --ink-muted-strong: oklch(0.775 0 0); /* #b6b6b6 —  8.1:1 canvas / 6.9:1 card */
+  --ink-muted:        oklch(0.725 0 0); /* #a6a6a6 —  6.7:1 canvas / 5.7:1 card — secondary labels/nav/dates */
+  --ink-faint:        oklch(0.668 0 0); /* #949494 —  5.4:1 canvas / 4.6:1 card — tertiary */
+  --ink-faintest:     oklch(0.585 0 0); /* #7c7c7c —  4.0:1 (decorative/large) */
+  --ink-ghost:        oklch(0.520 0 0); /* #676767 — graphic only */
+
+  /* text-muted-foreground was inheriting the light :root value (#808080, L .60)
+     in dark — the same drop-on-black problem. Pin it to the lifted muted tier. */
+  --muted-foreground: oklch(0.705 0 0); /* #a0a0a0 */
+
+  /* Surface ladder — ascends from the canvas (elevation = lighter in dark).
+     Card base sits a full 0.05 L above the canvas — the same canvas↔card
+     delta the light theme carries (#eeeeee 0.949 ↔ white 1.0) — with
+     slightly widened steps so surface tiers stay legible on the lift */
+  --surface-1: oklch(0.290 0 0); /* #2b2b2b — card base */
+  --surface-2: oklch(0.303 0 0);
+  --surface-3: oklch(0.316 0 0);
+  --surface-4: oklch(0.332 0 0); /* secondary-button fill tier */
+  --surface-5: oklch(0.348 0 0); /* hover fill tier */
+  --surface-6: oklch(0.364 0 0);
+  --surface-7: oklch(0.382 0 0);
+  --surface-8: oklch(0.400 0 0);
+
+  --control-fill: oklch(0.338 0 0);
+  --hairline:     oklch(1 0 0 / 0.12);
+
+  /* Semantic surface family — these were NOT redeclared in .dark, so bg-card /
+     bg-popover / bg-muted / bg-secondary / bg-accent inherited the legacy
+     :root values (card 0.252, only ~0.03 L over the 0.218 canvas — the "black
+     card" that doesn't read as elevated). Re-anchor them onto the same surface
+     ladder the payments UI already uses (card = surface-1) so every dark card
+     lifts to a real, monotonic elevation over the canvas. */
+  --card:      oklch(0.290 0 0); /* = --surface-1, the documented card base */
+  --popover:   oklch(0.332 0 0); /* floats above cards (= surface-4 tier) */
+  --muted:     oklch(0.303 0 0); /* muted fill sits just over the card */
+  --secondary: oklch(0.303 0 0);
+  --accent:    oklch(0.348 0 0); /* hover/active fill, above muted */
+  --border:    oklch(0.335 0 0); /* ~0.045 over the lifted card so edges read */
+  --input:     oklch(0.335 0 0);
+
+  /* Chromatics — hold hue, lift L for dark-bg contrast (gamut-checked) */
+  --seeko-accent-ink: oklch(0.7260 0.1487 248.98); /* #52acff — 6.8:1 canvas / 5.8:1 card */
+  --danger:           oklch(0.6800 0.1700 30.44);  /* #ef6855 — 5.3:1 canvas / 4.5:1 card */
+  --success:          oklch(0.7200 0.1371 150.07); /* #5dbc75 — 7.0:1 canvas / 6.0:1 card */
+
+  /* Dept inks flip to the shipped dept pastels (the original dark-chrome
+     dept family — gamut-safe where a lifted-L purple would clip).
+     Coding follows --seeko-accent-ink automatically via var(). */
+  --dept-ink-visual-art:     oklch(0.8091 0.0956 251.81); /* #93c5fd */
+  --dept-ink-ui-ux:          oklch(0.8112 0.1013 293.57); /* #c4b5fd */
+  --dept-ink-animation:      oklch(0.8369 0.1644 84.43);  /* #fbbf24 */
+  --dept-wash-animation:     oklch(0.8369 0.1644 84.43);  /* tint follows the ink in dark */
+  --dept-ink-asset-creation: oklch(0.8228 0.1095 346.02); /* #f9a8d4 */
+
+  /* Wash ladder flips to white-alpha, one step stronger */
+  --wash-2:  oklch(1 0 0 / 0.04);
+  --wash-3:  oklch(1 0 0 / 0.05);
+  --wash-4:  oklch(1 0 0 / 0.06);
+  --wash-5:  oklch(1 0 0 / 0.07);
+  --wash-6:  oklch(1 0 0 / 0.08);
+  --wash-8:  oklch(1 0 0 / 0.11);
+  --wash-10: oklch(1 0 0 / 0.13);
+
+  /* Shadow language relit. Two moves, same anatomy: the hairline ring flips
+     to white-alpha (the ring draws the silhouette — a black ring vanishes on
+     a dark canvas), and the drop pools go deeper/stronger (less ambient
+     light to fill them). Ring alphas run hotter than a naive flip (0.13–0.17)
+     because on the lifted ramp the ring IS the elevation cue — dark drop
+     shadows barely register against a 0.24 canvas. --sh-elevated and
+     --sh-accent-inset are already dark-correct and inherit unchanged. */
+  --sh-accent-glow: 0 0 12px oklch(0.6037 0.2168 257.92 / 0.10);
+  --sh-seeko:
+    0 0 0 0.5px oklch(1 0 0 / 0.14),
+    0 1px 2px oklch(0 0 0 / 0.35);
+  --sh-seeko-pop:
+    0 0 0 0.5px oklch(1 0 0 / 0.16),
+    0 6px 16px -4px oklch(0 0 0 / 0.45),
+    0 16px 32px -12px oklch(0 0 0 / 0.55);
+  --sh-float: 0 10px 20px oklch(0 0 0 / 0.45);
+  --sh-surface-1:
+    0 0 0 0.5px oklch(1 0 0 / 0.13),
+    0 1px 2px oklch(0 0 0 / 0.30);
+  --sh-surface-2:
+    0 0 0 0.5px oklch(1 0 0 / 0.14),
+    0 2px 6px -3px oklch(0 0 0 / 0.45),
+    0 8px 18px -14px oklch(0 0 0 / 0.50);
+  --sh-surface-3:
+    0 0 0 0.5px oklch(1 0 0 / 0.15),
+    0 6px 16px -8px oklch(0 0 0 / 0.50),
+    0 18px 36px -24px oklch(0 0 0 / 0.55);
+  --sh-surface-4:
+    0 0 0 0.5px oklch(1 0 0 / 0.16),
+    0 10px 24px -14px oklch(0 0 0 / 0.55),
+    0 28px 52px -32px oklch(0 0 0 / 0.60);
+  --sh-surface-5:
+    0 0 0 0.5px oklch(1 0 0 / 0.17),
+    0 14px 30px -18px oklch(0 0 0 / 0.60),
+    0 36px 64px -38px oklch(0 0 0 / 0.65);
+}
+
+@theme inline {
+  /* Surfaces — see raw values in :root above */
+  --color-background:        var(--background);
+  --color-foreground:        var(--foreground);
+  --color-card:              var(--card);
+  --color-card-foreground:   var(--card-foreground);
+  --color-popover:             var(--popover);
+  --color-popover-foreground:  var(--popover-foreground);
+  --color-border:            var(--border);
+  --color-input:             var(--input);
+  --color-muted:             var(--muted);
+  --color-muted-foreground:  var(--muted-foreground);
+  --color-secondary:         var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-accent:            var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-primary:           var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-destructive:       var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-ring:              var(--ring);
+
+  --color-sidebar:           var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-accent:    var(--sidebar-accent);
+  --color-sidebar-border:    var(--sidebar-border);
+
+  --color-seeko-accent:      var(--seeko-accent);
+
+  --color-glass:             var(--glass);
+  --color-eyebrow:           var(--eyebrow);
+
+  --color-status-complete:   var(--status-complete);
+  --color-status-progress:   var(--status-progress);
+  --color-status-review:     var(--status-review);
+  --color-status-blocked:    var(--status-blocked);
+
+  --color-dept-coding:         var(--dept-coding);
+  --color-dept-visual-art:     var(--dept-visual-art);
+  --color-dept-ui-ux:          var(--dept-ui-ux);
+  --color-dept-animation:      var(--dept-animation);
+  --color-dept-asset-creation: var(--dept-asset-creation);
 
   /* Fonts */
   --font-sans: var(--font-inter);
@@ -77,49 +363,35 @@
   --opacity-border:   0.08;
   --opacity-visible:  0.15;
 
-  /* Accent shadows */
-  --shadow-accent-glow:  0 0 12px rgba(13, 122, 255, 0.04);
-  --shadow-accent-inset: inset 0 0 0 1px rgba(13, 122, 255, 0.2);
+  /* Accent shadows — raw values in the :root block above */
+  --shadow-accent-glow:  var(--sh-accent-glow);
+  --shadow-accent-inset: var(--sh-accent-inset);
 
   /* Canonical SEEKO drop shadow — the chrome elevation for light surfaces
      (overview top bar, nav tabs, cards, and dropdowns that hang from chrome).
      Hairline ring defines the silhouette on near-white; the 1px/2px drop
      keeps bar and popover reading as one connected material when they sit
      side-by-side on the canvas. Tailwind v4 exposes this as `shadow-seeko`. */
-  --shadow-seeko: 0 0 0 0.5px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-seeko: var(--sh-seeko);
 
   /* Fluid Functionalism elevated surfaces — light canvas payments UI. */
-  --color-surface-1: #ffffff;
-  --color-surface-2: #fbfbfb;
-  --color-surface-3: #f7f7f7;
-  --color-surface-4: #f2f2f2;
-  --color-surface-5: #ededed;
-  --color-surface-6: #e8e8e8;
-  --color-surface-7: #e2e2e2;
-  --color-surface-8: #dcdcdc;
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-surface-4: var(--surface-4);
+  --color-surface-5: var(--surface-5);
+  --color-surface-6: var(--surface-6);
+  --color-surface-7: var(--surface-7);
+  --color-surface-8: var(--surface-8);
 
-  --shadow-surface-1:
-    0 0 0 0.5px rgba(0, 0, 0, 0.055),
-    0 1px 2px rgba(0, 0, 0, 0.035);
-  --shadow-surface-2:
-    0 0 0 0.5px rgba(0, 0, 0, 0.06),
-    0 2px 6px -3px rgba(0, 0, 0, 0.14),
-    0 8px 18px -14px rgba(0, 0, 0, 0.16);
-  --shadow-surface-3:
-    0 0 0 0.5px rgba(0, 0, 0, 0.07),
-    0 6px 16px -8px rgba(0, 0, 0, 0.18),
-    0 18px 36px -24px rgba(0, 0, 0, 0.2);
-  --shadow-surface-4:
-    0 0 0 0.5px rgba(0, 0, 0, 0.075),
-    0 10px 24px -14px rgba(0, 0, 0, 0.2),
-    0 28px 52px -32px rgba(0, 0, 0, 0.22);
-  --shadow-surface-5:
-    0 0 0 0.5px rgba(0, 0, 0, 0.08),
-    0 14px 30px -18px rgba(0, 0, 0, 0.22),
-    0 36px 64px -38px rgba(0, 0, 0, 0.24);
-  --shadow-surface-6: var(--shadow-surface-5);
-  --shadow-surface-7: var(--shadow-surface-5);
-  --shadow-surface-8: var(--shadow-surface-5);
+  --shadow-surface-1: var(--sh-surface-1);
+  --shadow-surface-2: var(--sh-surface-2);
+  --shadow-surface-3: var(--sh-surface-3);
+  --shadow-surface-4: var(--sh-surface-4);
+  --shadow-surface-5: var(--sh-surface-5);
+  --shadow-surface-6: var(--sh-surface-5);
+  --shadow-surface-7: var(--sh-surface-5);
+  --shadow-surface-8: var(--sh-surface-5);
 
   /* Lifted popover shadow — used by menus that float OVER `shadow-seeko`
      surfaces (board cards, the column tray) rather than peeling off the
@@ -127,10 +399,7 @@
      property popover reads as floating, not flat against the card behind it.
      Layered: hairline ring → close crisp shadow → wide ambient pool.
      Tailwind v4 exposes this as `shadow-seeko-pop`. */
-  --shadow-seeko-pop:
-    0 0 0 0.5px rgba(0, 0, 0, 0.06),
-    0 6px 16px -4px rgba(0, 0, 0, 0.08),
-    0 16px 32px -12px rgba(0, 0, 0, 0.12);
+  --shadow-seeko-pop: var(--sh-seeko-pop);
 
   /* ─────────────────────────────────────────────────────────────────────
    * SEEKO Portal Light — token baseline extracted from Paper file SK_DB,
@@ -149,21 +418,45 @@
    *     large / non-essential text ONLY; real instructional copy uses
    *     `--color-ink-muted-strong` (#686868, 4.9:1) or darker. ────────────── */
 
-  /* Ink ramp — text on white, dark → light (contrast on #fff in comments). */
-  --color-ink-strong:       #2a2a2a; /* 13.6:1 — strongest body (row titles)   */
-  --color-ink:              #3a3a3a; /* 10.5:1 — control labels (ref button)   */
-  --color-ink-heading:      #454545; /*  8.1:1 — page H1 (supersedes ref #515151
-                                        for AA; reference card-heading was lighter) */
-  --color-ink-mark:         #525252; /* brand-mark circle GROUND only (ref avatar) */
-  --color-ink-muted-strong: #686868; /*  4.9:1 — AA floor; top-bar + real muted copy */
-  --color-ink-muted:        #808080; /*  3.5:1 — meta/status (AA-large / UI only)   */
-  --color-ink-faint:        #969696; /*  2.7:1 — footer, sublines (decorative/large) */
-  --color-ink-faintest:     #b3b3b3; /*  2.0:1 — "No deadline", hints (decorative)  */
-  --color-ink-ghost:        #c4c4c4; /* graphic only — counts, chevrons, dots       */
+  /* Ink ramp — raw values + full contrast documentation in :root above. */
+  --color-ink-title:        var(--ink-title);
+  --color-ink-strong:       var(--ink-strong);
+  --color-ink:              var(--ink);
+  --color-ink-heading:      var(--ink-heading);
+  --color-ink-body:         var(--ink-body);
+  --color-ink-mark:         var(--ink-mark);
+  --color-ink-muted-strong: var(--ink-muted-strong);
+  --color-ink-muted:        var(--ink-muted);
+  --color-ink-faint:        var(--ink-faint);
+  --color-ink-faintest:     var(--ink-faintest);
+  --color-ink-ghost:        var(--ink-ghost);
 
   /* Surfaces + line. Canvas/card = white (also `--color-surface-1`). */
-  --color-control-fill:     #f1f1f1;              /* button/segment fill (ref 28C) */
-  --color-hairline:         rgba(232, 232, 232, 0.75); /* card border (ref 282, #E8E8E8BF) */
+  --color-control-fill:     var(--control-fill);
+  --color-hairline:         var(--hairline);
+
+  /* Accent-as-text + danger/success inks — raw values in :root above */
+  --color-seeko-accent-ink: var(--seeko-accent-ink);
+  --color-danger:           var(--danger);
+  --color-success:          var(--success);
+
+  /* AA-on-white dept ink ladder (flips to the dept pastels in .dark) */
+  --color-dept-ink-coding:         var(--dept-ink-coding);
+  --color-dept-ink-visual-art:     var(--dept-ink-visual-art);
+  --color-dept-ink-ui-ux:          var(--dept-ink-ui-ux);
+  --color-dept-ink-animation:      var(--dept-ink-animation);
+  --color-dept-wash-animation:     var(--dept-wash-animation);
+  --color-dept-ink-asset-creation: var(--dept-ink-asset-creation);
+
+  /* Wash ladder — replaces the bg-black/[0.0N] / border-black/[0.0N] recipes
+     so washes flip with the scheme (black-alpha light, white-alpha dark) */
+  --color-wash-2:  var(--wash-2);
+  --color-wash-3:  var(--wash-3);
+  --color-wash-4:  var(--wash-4);
+  --color-wash-5:  var(--wash-5);
+  --color-wash-6:  var(--wash-6);
+  --color-wash-8:  var(--wash-8);
+  --color-wash-10: var(--wash-10);
 
   /* Radii. The reference's compact 420px card is 8px with 16px controls; at
    * SEEKO's list scale a sheet SCALES UP with its surface (large groups use
@@ -175,15 +468,10 @@
    * that PAIRS WITH the hairline border (not shadow-instead-of-border). Reserve
    * for genuine hero / auth / modal cards; dense stacked lists keep the flatter
    * `--shadow-seeko`. Tailwind v4 exposes this as `shadow-float`. */
-  --shadow-float: 0 10px 20px rgba(209, 209, 209, 0.15); /* ref #D1D1D126 0 10 20 */
+  --shadow-float: var(--sh-float);
 
-  /* Elevated surface — dark-mode-correct depth.
-     Hairline ring defines silhouette; inner top highlight catches ambient light;
-     negative-spread drop pools beneath rather than around the card. */
-  --shadow-elevated:
-    0 0 0 1px rgba(255, 255, 255, 0.07),
-    inset 0 1px 0 rgba(255, 255, 255, 0.04),
-    0 8px 20px -12px rgba(0, 0, 0, 0.5);
+  /* Elevated surface — dark-mode-correct depth (raw value in :root above). */
+  --shadow-elevated: var(--sh-elevated);
   --color-chart-scale-pattern-color:        var(--chart-scale-pattern-color);
   --color-chart-scale-05:        var(--chart-scale-05);
   --color-chart-scale-04:        var(--chart-scale-04);
@@ -217,6 +505,10 @@
  * stay dark; nothing here leaks to other routes. Hexes are the exact values
  * extracted from the Paper file (node 1WK-0) — pixel-faithful, no overrides. */
 .overview-light {
+  /* The app body declares `color-scheme: dark`, which paints native scrollbars
+   * and form controls dark. Every light canvas must flip it or its scrollers
+   * grow near-black scrollbar tracks. */
+  color-scheme: light;
   --ov-bg:          #eeeeee;
   --ov-row:         rgba(255, 255, 255, 0.90); /* 263×40 recent rows — #FFFFFFE6 */
   --ov-panel:       #fefefe;                   /* side-by-side panel surface */
@@ -249,6 +541,43 @@
     0 2px 6px -2px rgba(0, 0, 0, 0.12);
   color: var(--ov-text);
   -webkit-font-smoothing: antialiased;
+}
+
+/* ── Overview/editor chrome, dark scheme ────────────────────────────────────
+ * Same anatomy relit on the dark ramp (freshly authored, not the legacy
+ * #1a1a1a theme): canvas = ramp reference oklch(0.240), panels ride the dark
+ * surface-1 tier, inks mirror the dark ink ramp, the warm hairline goes
+ * neutral white-alpha (a warm cast reads as grime on dark), and the panel's
+ * white bloom becomes a deeper black pool. Priority high/medium + the azure
+ * dot keep their light values — already bright enough on the dark canvas. */
+.dark .overview-light {
+  color-scheme: dark;
+  --ov-bg:          oklch(0.240 0 0);
+  --ov-row:         oklch(0.290 0 0 / 0.92);   /* rows ride the surface-1 tier */
+  --ov-panel:       oklch(0.290 0 0);          /* = dark surface-1 */
+  --ov-heading:     oklch(0.955 0 0);          /* = dark ink-title */
+  --ov-title:       oklch(0.500 0 0);          /* = dark ink-faintest */
+  --ov-text:        oklch(0.820 0 0);          /* = dark ink-body */
+  --ov-muted:       oklch(0.670 0 0);          /* = dark ink-muted */
+  --ov-faint:       oklch(0.600 0 0);          /* = dark ink-faint */
+  --ov-eyebrow:     oklch(0.670 0 0);
+  --ov-hairline:    oklch(1 0 0 / 0.12);
+  --ov-pill-bg:     oklch(0.6037 0.2168 257.92 / 0.16);
+  --ov-pill-bg-hov: oklch(0.6037 0.2168 257.92 / 0.24);
+  --ov-pill-fg:     oklch(0.7260 0.1487 248.98); /* = dark seeko-accent-ink */
+  --ov-chip-bg:     oklch(1 0 0 / 0.06);
+  --ov-chip-bg-hov: oklch(1 0 0 / 0.10);
+  --ov-pri-low:     oklch(0.750 0 0);          /* ink chip flips light */
+  --ov-shadow-panel:
+    0 0 0 0.5px oklch(1 0 0 / 0.13),
+    0 2px 8px oklch(0 0 0 / 0.35),
+    0 8px 24px oklch(0 0 0 / 0.45);
+  --ov-shadow-row:
+    0 0 0 1px oklch(1 0 0 / 0.11),
+    0 1px 2px -1px oklch(0 0 0 / 0.35);
+  --ov-shadow-row-hov:
+    0 0 0 1px oklch(1 0 0 / 0.13),
+    0 2px 6px -2px oklch(0 0 0 / 0.50);
 }
 
 /* Hover-only mono beam for payments chrome actions. Kept scoped here instead
@@ -295,6 +624,25 @@
   inset: 1px;
   border-radius: 15px;
   box-shadow: inset 0 0 0 1px rgba(17, 17, 17, 0.16);
+}
+
+/* Dark variant: the beam's ink-toned trail + inset ring vanish against the
+ * 0.240 canvas — rebuild both from white alphas (highlight sweep unchanged). */
+.dark .payment-action-beam::before {
+  background:
+    conic-gradient(
+      from 0deg,
+      transparent 0deg,
+      transparent 96deg,
+      rgba(255, 255, 255, 0.9) 132deg,
+      rgba(255, 255, 255, 0.26) 166deg,
+      transparent 214deg,
+      transparent 360deg
+    );
+}
+
+.dark .payment-action-beam::after {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
 }
 
 .payment-action-beam:hover::before {
@@ -372,6 +720,23 @@
   --chart-scale-04:        oklch(0.68 0.02 106);
   --chart-scale-05:        oklch(0.55 0.025 106);
   --chart-scale-pattern-color:        oklch(0.96 0.005 106);
+  /* Investor capital/milestone chart one-offs — exact conversions of the
+     shipped literals so the SVG props can flip under .dark. */
+  --chart-capital-ink:      oklch(0.2393 0 0);          /* #1f1f1f */
+  --chart-capital-halo:     var(--surface-1);           /* dot halo = card surface */
+  --chart-remaining-fill:   oklch(0.1776 0 0 / 0.07);   /* rgba(17,17,17,0.07) */
+  --chart-remaining-ink:    oklch(0.9189 0 0);          /* #e4e4e4 */
+}
+
+/* Dark values must sit AFTER the :root block above — equal specificity means
+   source order decides (same reason the vendored bklit .dark block trails
+   its own :root at the end of this file). */
+.dark {
+  /* Hero line brightens, remaining-cap wash goes white-alpha; halo tracks
+     the card surface via var(--surface-1) and needs no re-declaration. */
+  --chart-capital-ink:      oklch(0.92 0 0);
+  --chart-remaining-fill:   oklch(1 0 0 / 0.08);
+  --chart-remaining-ink:    oklch(0.40 0 0); /* whisper above the lifted fill, mirroring light's near-tone */
 }
 
 .create-morph-anchor {
@@ -390,9 +755,9 @@
   height: var(--create-morph-closed-h);
   overflow: hidden;
   border-radius: var(--morph-r-closed);
-  background: #ffffff;
-  box-shadow: var(--shadow-seeko);
-  color: #111111;
+  background: var(--surface-1);
+  box-shadow: var(--sh-seeko);
+  color: var(--ink-title);
   transform-origin: top right;
   transition:
     width var(--morph-close-dur) var(--morph-close-ease),
@@ -405,7 +770,7 @@
   width: var(--create-morph-open-w);
   height: var(--create-morph-open-h);
   border-radius: var(--morph-r-open);
-  box-shadow: var(--shadow-seeko-pop);
+  box-shadow: var(--sh-seeko-pop);
   transition:
     width var(--morph-open-dur) var(--morph-ease),
     height var(--morph-open-dur) var(--morph-ease),
@@ -424,7 +789,7 @@
   gap: 6px;
   border: 0;
   background: transparent;
-  color: #0d0d0d;
+  color: var(--ink-title);
   cursor: pointer;
   font-size: 14px;
   line-height: 18px;
@@ -437,7 +802,7 @@
 }
 
 .create-morph-plus:hover {
-  background: #f7f7f7;
+  background: var(--surface-3);
 }
 
 .create-morph-plus:active {
@@ -513,6 +878,9 @@ body {
   font-family: var(--font-inter), Arial, sans-serif;
   font-weight: 500;
   font-synthesis: none;
+  /* At the root, not per-shell: portaled surfaces (menus, popovers, toasts)
+     mount on <body> and must render with the same smoothing as the page. */
+  -webkit-font-smoothing: antialiased;
   min-height: 100dvh;
   min-height: 100vh;
 }
@@ -777,7 +1145,7 @@ body.tour-cmd-k-active #command-palette-container * {
 .doc-read-body .doc-content,
 .doc-read-body .doc-content-body,
 .doc-read-body .doc-content article {
-  color: #2a2a2a;
+  color: var(--ink-strong);
 }
 .overview-light .doc-content strong,
 .overview-light .doc-content h1,
@@ -787,28 +1155,28 @@ body.tour-cmd-k-active #command-palette-container * {
 .doc-read-body .doc-content h1,
 .doc-read-body .doc-content h2,
 .doc-read-body .doc-content h3 {
-  color: #111111;
+  color: var(--ink-title);
 }
 .overview-light .doc-content p,
 .doc-read-body .doc-content p {
-  color: #3a3a3a;
+  color: var(--ink);
 }
 .overview-light .doc-content li::marker,
 .doc-read-body .doc-content li::marker {
-  color: #9a9a9a;
+  color: var(--ink-faint);
 }
 .overview-light .doc-content code,
 .doc-read-body .doc-content code {
-  background: rgba(0, 0, 0, 0.05);
-  color: #2a2a2a;
+  background: var(--wash-5);
+  color: var(--ink-strong);
 }
 .overview-light .doc-content a,
 .doc-read-body .doc-content a {
-  color: #0d7aff;
+  color: var(--seeko-accent);
 }
 .overview-light .doc-content hr,
 .doc-read-body .doc-content hr {
-  border-color: rgba(0, 0, 0, 0.08);
+  border-color: var(--wash-8);
 }
 .overview-light .doc-content table,
 .overview-light .doc-content th,
@@ -816,20 +1184,20 @@ body.tour-cmd-k-active #command-palette-container * {
 .doc-read-body .doc-content table,
 .doc-read-body .doc-content th,
 .doc-read-body .doc-content td {
-  border-color: rgba(0, 0, 0, 0.08);
+  border-color: var(--wash-8);
 }
 .overview-light .doc-content th,
 .doc-read-body .doc-content th {
-  background: #f4f4f4;
-  color: #111111;
+  background: var(--surface-4);
+  color: var(--ink-title);
 }
 .overview-light .doc-content td,
 .doc-read-body .doc-content td {
-  color: #3a3a3a;
+  color: var(--ink);
 }
-/* Editor table cell selection highlight (light) */
+/* Editor table cell selection highlight (scheme-aware via the accent token) */
 .overview-light .ProseMirror .selectedCell {
-  background: rgba(13, 122, 255, 0.08);
+  background: color-mix(in oklab, var(--seeko-accent) 8%, transparent);
 }
 .ProseMirror .selectedCell {
   background: var(--color-muted);
@@ -917,6 +1285,29 @@ body.tour-cmd-k-active #command-palette-container * {
 
 [data-sonner-toaster] [data-sonner-toast].seeko-toast[data-type="error"] [data-description] {
   color: rgb(220 62 66);
+}
+
+/* Dark scheme — the Delphi card relit: surface-1 tier with a white-alpha
+   hairline, ink-ramp text. Errors keep the one-red rule, but the red is the
+   app's dark danger token and the wash precomposites over the dark canvas. */
+.dark [data-sonner-toaster] [data-sonner-toast].seeko-toast {
+  --normal-bg: oklch(0.290 0 0);
+  --normal-border: oklch(1 0 0 / 0.12);
+  --normal-text: oklch(0.955 0 0);
+}
+
+.dark [data-sonner-toaster] [data-sonner-toast].seeko-toast [data-description] {
+  color: oklch(0.670 0 0);
+}
+
+.dark [data-sonner-toaster] [data-sonner-toast].seeko-toast[data-type="error"] {
+  --normal-bg: color-mix(in oklab, var(--danger) 14%, oklch(0.290 0 0));
+  --normal-border: color-mix(in oklab, var(--danger) 28%, transparent);
+  --normal-text: var(--danger);
+}
+
+.dark [data-sonner-toaster] [data-sonner-toast].seeko-toast[data-type="error"] [data-description] {
+  color: var(--danger);
 }
 
 /* Rich structured toast (src/components/ui/rich-toast.tsx) — the card owns its
@@ -1131,6 +1522,17 @@ body.tour-cmd-k-active #command-palette-container * {
   background-color: rgba(0, 0, 0, 0.28);
 }
 
+/* No native bars at all — for scrollers that draw their own indicator
+   (BoardScrollbar on /tasks). Both mechanisms agree here (hide everything),
+   so the standard-property/webkit conflict documented above doesn't apply. */
+.scrollbar-none {
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
 /* ── Scroll mask (scroll-driven edge fade) ──────────────────────────────────
  * Fades the leading/trailing edge of a horizontal scroller, but ONLY when
  * there is content scrolled past that edge — a pure-CSS "more this way" cue.
@@ -1250,6 +1652,39 @@ body.tour-cmd-k-active #command-palette-container * {
 
 @media (prefers-reduced-motion: reduce) {
   .scroll-mask-y {
+    animation: none;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+}
+
+/* Bottom-only sibling of .scroll-mask-y, for scrollers whose top-edge cue is
+ * carried by sticky chrome INSIDE the container (contractor portal header):
+ * a top mask there would fade the chrome itself once scrolled. Reuses the
+ * scroll-mask-y-b keyframes/property — same fade size, same release at
+ * scroll end, same inert-when-not-overflowing behavior. */
+@supports (animation-timeline: scroll()) {
+  .scroll-mask-b {
+    --scroll-mask-size: 56px;
+    -webkit-mask-image: linear-gradient(
+      to bottom,
+      #000,
+      #000 calc(100% - var(--scroll-mask-b-size)),
+      transparent
+    );
+    mask-image: linear-gradient(
+      to bottom,
+      #000,
+      #000 calc(100% - var(--scroll-mask-b-size)),
+      transparent
+    );
+    animation: scroll-mask-y-b linear;
+    animation-timeline: scroll(self block);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scroll-mask-b {
     animation: none;
     -webkit-mask-image: none;
     mask-image: none;

@@ -8,10 +8,17 @@ import { CookieNotice } from '@/components/CookieNotice';
 import { LiveToastProvider } from '@/components/dashboard/notifications/LiveToastContext';
 import { setAppNavigate } from '@/lib/app-navigate';
 import { initScrollEdgeBlurDamper } from '@/lib/scroll-blur';
+import { initTheme } from '@/lib/theme';
 import { router } from './routes';
 
 // Dims .scroll-edge-blur chrome while any container is scrolling (globals.css).
 initScrollEdgeBlurDamper();
+
+// Applies the persisted color scheme (`.dark` on <html>) now and on every
+// route transition — exempt public paths drop it, the rest keep it. The
+// pre-paint copy in index.html already ran; this keeps it true across SPA
+// navigation and owns the theme-color meta.
+initTheme(router);
 
 // Let code outside the Router context (e.g. rich toasts' "View issue" link)
 // perform SPA navigation without importing the router directly.

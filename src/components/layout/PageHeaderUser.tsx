@@ -155,17 +155,17 @@ export function PageHeaderUser({
               exit={{ opacity: 0, scale: 0.96, y: -4 }}
               transition={SMOOTH}
               style={{ transformOrigin: 'top center' }}
-              className="group/menu absolute inset-x-0 top-full z-50 mt-[9px] flex flex-col gap-1 overflow-hidden rounded-[20px] bg-white p-1 shadow-seeko"
+              className="group/menu absolute inset-x-0 top-full z-50 mt-[9px] flex flex-col gap-1 overflow-hidden rounded-[20px] bg-surface-1 p-1 shadow-seeko-pop"
             >
               {/* User info */}
               <div className="px-4 py-3">
                 {displayName && (
-                  <p className="truncate text-[14px] font-medium tracking-[-0.02em] text-[#0d0d0d]">{displayName}</p>
+                  <p className="truncate text-[14px] font-medium tracking-[-0.02em] text-ink-title">{displayName}</p>
                 )}
-                <p className="mt-0.5 truncate text-[13px] text-[#808080]">{email}</p>
+                <p className="mt-0.5 truncate text-[13px] text-ink-muted">{email}</p>
               </div>
 
-              <div className="mx-4 h-px bg-[#0000000d]" />
+              <div className="mx-4 h-px bg-wash-5" />
 
               {/* Links */}
               <div className="flex flex-col">
@@ -174,7 +174,7 @@ export function PageHeaderUser({
               </div>
               {isAdmin && (
                 <>
-                  <div className="mx-4 h-px bg-[#0000000d]" />
+                  <div className="mx-4 h-px bg-wash-5" />
                   <div className="flex flex-col">
                     <PopoverLink href="/payments" icon={CreditCard} label="Payments" onClick={() => setOpen(false)} />
                     <PopoverLink href="/admin/external-signing" icon={FileSignature} label="External Signing" onClick={() => setOpen(false)} />
@@ -183,7 +183,7 @@ export function PageHeaderUser({
                 </>
               )}
 
-              <div className="mx-4 h-px bg-[#0000000d]" />
+              <div className="mx-4 h-px bg-wash-5" />
 
               {/* Sign out */}
               <div className="flex flex-col overflow-hidden">
@@ -197,7 +197,7 @@ export function PageHeaderUser({
                       transition={{ ...SNAPPY, opacity: { duration: 0.12 } }}
                       className="flex items-center justify-between rounded-2xl px-4 py-3"
                     >
-                      <span className="text-[14px] font-medium tracking-[-0.02em] text-[#808080]">Sign out?</span>
+                      <span className="text-[14px] font-medium tracking-[-0.02em] text-ink-muted">Sign out?</span>
                       <div className="flex items-center gap-3">
                         <form action="/auth/signout" method="post">
                           <button type="submit" className="text-[14px] font-medium text-[#e5484d] transition-colors hover:text-[#d33b40]">
@@ -206,7 +206,7 @@ export function PageHeaderUser({
                         </form>
                         <button
                           onClick={() => setConfirmingSignOut(false)}
-                          className="text-[14px] text-[#808080] transition-colors hover:text-[#0d0d0d]"
+                          className="text-[14px] text-ink-muted transition-colors hover:text-ink-title"
                         >
                           Cancel
                         </button>
@@ -220,7 +220,7 @@ export function PageHeaderUser({
                       exit={{ opacity: 0, y: 8 }}
                       transition={{ ...SNAPPY, opacity: { duration: 0.12 } }}
                       onClick={() => setConfirmingSignOut(true)}
-                      className="flex w-full items-center justify-between rounded-2xl px-4 py-3 text-[14px] font-medium tracking-[-0.02em] text-[#0d0d0d] opacity-100 transition-[color,background-color,opacity] group-hover/menu:opacity-20 hover:bg-[#0000000a] hover:text-[#e5484d] hover:opacity-100!"
+                      className="flex w-full items-center justify-between rounded-2xl px-4 py-3 text-[14px] font-medium tracking-[-0.02em] text-ink-title opacity-100 transition-[color,background-color,opacity] group-hover/menu:opacity-20 hover:bg-wash-4 hover:text-[#e5484d] hover:opacity-100!"
                     >
                       <span>Sign out</span>
                       <LogOut className="size-5" />
@@ -244,10 +244,10 @@ function PopoverLink({ href, icon: Icon, label, onClick }: { href: string; icon:
       <Link
         href={href}
         onClick={onClick}
-        className="flex items-center justify-between rounded-2xl px-4 py-3 text-[14px] font-medium tracking-[-0.02em] text-[#0d0d0d] opacity-100 transition-[color,background-color,opacity] group-hover/menu:opacity-20 hover:bg-[#0000000a] hover:opacity-100!"
+        className="flex items-center justify-between rounded-2xl px-4 py-3 text-[14px] font-medium tracking-[-0.02em] text-ink-title opacity-100 transition-[color,background-color,opacity] group-hover/menu:opacity-20 hover:bg-wash-4 hover:opacity-100!"
       >
         <span>{label}</span>
-        <Icon className="size-5 text-[#808080]" />
+        <Icon className="size-5 text-ink-muted" />
       </Link>
     </motion.div>
   );

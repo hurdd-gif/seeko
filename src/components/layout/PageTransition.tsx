@@ -18,7 +18,7 @@ export function PageTransition({ children }: { children: ReactNode }) {
           the incoming one fades in. During that gap both overlays are transparent and
           the dark layout `bg-background` showed through (the dark flash). This floor sits
           below the z-40 overlay — invisible in steady state, light during the gap. */}
-      <div aria-hidden className="pointer-events-none fixed inset-0 bg-[#eeeeee]" />
+      <div aria-hidden className="pointer-events-none fixed inset-0 bg-[#eeeeee] dark:bg-[oklch(0.240_0_0)]" />
       <AnimatePresence mode="wait">
         <motion.div
           key={pathname}
