@@ -560,7 +560,7 @@ export function PaymentsAdmin({ team, viewerMode = false }: PaymentsAdminProps) 
                       ))}
                     </div>
                   </ScrollArea>
-                  <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-white/80 via-white/35 to-transparent" />
+                  <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-surface-1/80 via-surface-1/35 to-transparent" />
                 </div>
               ) : (
                 <div className="divide-y divide-wash-6">
@@ -735,7 +735,7 @@ export function PaymentsAdmin({ team, viewerMode = false }: PaymentsAdminProps) 
                   </div>
                 </ScrollArea>
                 {recentPaid.length > 5 && (
-                  <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-white via-white/70 to-transparent" />
+                  <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-surface-1 via-surface-1/70 to-transparent" />
                 )}
               </div>
             )}
