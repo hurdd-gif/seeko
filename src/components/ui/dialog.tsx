@@ -212,7 +212,7 @@ function Dialog({ open, onOpenChange, children, resizable = false, contentClassN
             className={cn(
               "relative z-50 flex flex-col rounded-t-2xl sm:rounded-xl border shadow-xl mx-0 sm:mx-4 pb-[env(safe-area-inset-bottom)] sm:pb-0",
               light
-                ? "border-black/[0.06] bg-white"
+                ? "border-wash-6 bg-surface-1"
                 : "border-white/[0.08] bg-popover backdrop-blur-xl backdrop-saturate-150",
               !resizable && "w-full max-w-[900px] max-h-[90vh] sm:max-h-[88vh]",
               !resizable && footer != null && "h-[90vh] sm:h-[88vh]",
@@ -247,7 +247,7 @@ function Dialog({ open, onOpenChange, children, resizable = false, contentClassN
                   title={maximized ? 'Restore size' : 'Expand'}
                   className={cn(
                     "flex size-8 items-center justify-center rounded-md opacity-60 transition-opacity hover:opacity-100 focus:outline-none",
-                    light ? "text-[#505050] hover:bg-black/[0.04]" : "hover:bg-white/[0.06]"
+                    light ? "text-ink-body hover:bg-wash-4" : "hover:bg-white/[0.06]"
                   )}
                 >
                   {maximized
@@ -262,7 +262,7 @@ function Dialog({ open, onOpenChange, children, resizable = false, contentClassN
                 onClick={() => onOpenChange(false)}
                 className={cn(
                   "flex size-8 items-center justify-center rounded-md opacity-60 transition-opacity hover:opacity-100 focus:outline-none",
-                  light ? "text-[#505050] hover:bg-black/[0.04]" : "hover:bg-white/[0.06]"
+                  light ? "text-ink-body hover:bg-wash-4" : "hover:bg-white/[0.06]"
                 )}
               >
                 <X className="size-3.5" />
@@ -284,7 +284,7 @@ function Dialog({ open, onOpenChange, children, resizable = false, contentClassN
                     {children}
                   </div>
                   {footer != null ? (
-                    <div className={cn("shrink-0 border-t px-6 py-4 flex flex-wrap items-center justify-end gap-3", light ? "border-black/[0.06]" : "border-white/[0.06]")}>
+                    <div className={cn("shrink-0 border-t px-6 py-4 flex flex-wrap items-center justify-end gap-3", light ? "border-wash-6" : "border-white/[0.06]")}>
                       {footer}
                     </div>
                   ) : null}
@@ -324,12 +324,12 @@ function Dialog({ open, onOpenChange, children, resizable = false, contentClassN
 
 function DialogHeader({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   const light = React.useContext(DialogLightContext)
-  return <div className={cn("flex flex-col gap-1.5 pb-4 mb-2 border-b", light ? "border-black/[0.06]" : "border-white/[0.06]", className)} {...props} />
+  return <div className={cn("flex flex-col gap-1.5 pb-4 mb-2 border-b", light ? "border-wash-6" : "border-white/[0.06]", className)} {...props} />
 }
 
 function DialogTitle({ className, ...props }: React.HTMLAttributes<HTMLHeadingElement>) {
   const light = React.useContext(DialogLightContext)
-  return <h2 className={cn("text-lg font-semibold", light ? "text-[#111]" : "text-foreground", className)} {...props} />
+  return <h2 className={cn("text-lg font-semibold", light ? "text-ink-title" : "text-foreground", className)} {...props} />
 }
 
 /** @deprecated Close button is now built into the Dialog toolbar. This is a no-op for backwards compat. */

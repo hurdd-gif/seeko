@@ -30,11 +30,11 @@ export type HeatmapDatum = { date: string; count: number };
 
 /** SEEKO accent-blue ramp on white (level 0 matches the light icon-circle grey). */
 export const HEATMAP_LEVEL_STYLES = [
-  'bg-black/[0.05]',
+  'bg-wash-5',
   'bg-[#cfe6ff]',
   'bg-[#8ec4ff]',
   'bg-[#3d95ff]',
-  'bg-[#0d7aff]',
+  'bg-seeko-accent',
 ];
 
 type Cell = {
@@ -244,7 +244,7 @@ export function HeatmapXAxis({
       {ctx.monthLabels.map(({ col, label }) => (
         <span
           key={`${col}-${label}`}
-          className={cn('whitespace-nowrap leading-none text-[#9a9a9a]', className)}
+          className={cn('whitespace-nowrap leading-none text-ink-faint', className)}
           style={{ gridColumnStart: col + 1, fontSize }}
         >
           {label}
@@ -278,7 +278,7 @@ export function HeatmapYAxis({
       {WEEKDAYS.map((day, row) => (
         <span
           key={day}
-          className={cn('flex items-center leading-none text-[#9a9a9a]', className)}
+          className={cn('flex items-center leading-none text-ink-faint', className)}
           style={{ fontSize }}
         >
           {(tickFilter === 'all' || row % 2 === 1) &&
@@ -306,7 +306,7 @@ export function HeatmapTooltip({
 
   return (
     <div
-      className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-md bg-[#111] px-2 py-1 text-[11px] leading-none text-white shadow-seeko"
+      className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-md bg-ink-title px-2 py-1 text-[11px] leading-none text-surface-1 shadow-seeko"
       style={{
         gridArea: 'cells',
         left: hovered.x,
@@ -355,7 +355,7 @@ export function HeatmapLegend({
 }) {
   const justify =
     align === 'start' ? 'justify-start' : align === 'center' ? 'justify-center' : 'justify-end';
-  const labelCls = cn('leading-none text-[#9a9a9a]', labelClassName);
+  const labelCls = cn('leading-none text-ink-faint', labelClassName);
 
   return (
     <div className={cn('flex items-center gap-1.5', justify, className)} style={{ fontSize }}>
@@ -372,7 +372,7 @@ export function HeatmapLegend({
         </span>
       ) : (
         <span
-          className="rounded-full bg-gradient-to-r from-black/[0.05] via-[#8ec4ff] to-[#0d7aff]"
+          className="rounded-full bg-gradient-to-r from-wash-5 via-[#8ec4ff] to-seeko-accent"
           style={{ width: swatchSize * 5 + gap * 4, height: swatchSize }}
         />
       )}

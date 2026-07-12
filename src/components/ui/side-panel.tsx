@@ -91,8 +91,8 @@ function SidePanel({ open, onOpenChange, children, header, actions, width = 620,
           role="complementary"
           className={
             inSlot
-              ? "relative min-h-0 shrink-0 overflow-hidden bg-[#e8e8e7]"
-              : "fixed inset-y-0 right-0 z-[60] overflow-hidden bg-[#e8e8e7] shadow-seeko-pop"
+              ? "relative min-h-0 shrink-0 overflow-hidden bg-[#e8e8e7] dark:bg-surface-2"
+              : "fixed inset-y-0 right-0 z-[60] overflow-hidden bg-[#e8e8e7] dark:bg-surface-2 shadow-seeko-pop"
           }
           style={inSlot && !reduce ? undefined : { width }}
           initial={reduce ? { opacity: 0 } : inSlot ? { width: 0 } : { x: "100%" }}
@@ -116,7 +116,7 @@ function SidePanel({ open, onOpenChange, children, header, actions, width = 620,
                 <button
                   type="button"
                   onClick={() => onOpenChange(false)}
-                  className="flex size-8 items-center justify-center rounded-lg text-[#6f6f6f] transition-[background-color,color] duration-150 ease-out hover:bg-black/[0.05] hover:text-[#111] active:bg-black/[0.08] focus:outline-none focus-visible:ring-2 focus-visible:ring-black/15"
+                  className="flex size-8 items-center justify-center rounded-lg text-[#6f6f6f] transition-[background-color,color] duration-150 ease-out hover:bg-wash-5 hover:text-ink-title active:bg-wash-8 focus:outline-none focus-visible:ring-2 focus-visible:ring-black/15 dark:text-ink-muted dark:focus-visible:ring-white/25"
                 >
                   <X className="size-4" />
                   <span className="sr-only">Close</span>

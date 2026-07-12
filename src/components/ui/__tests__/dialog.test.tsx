@@ -41,7 +41,7 @@ describe('Dialog light prop', () => {
       </Dialog>,
     );
     const panel = getPanel();
-    expect(panel.className).toContain('bg-white');
+    expect(panel.className).toContain('bg-surface-1');
     expect(panel.className).not.toContain('bg-popover');
   });
 
@@ -53,7 +53,7 @@ describe('Dialog light prop', () => {
     );
     const panel = getPanel();
     expect(panel.className).toContain('bg-popover');
-    expect(panel.className).not.toContain('bg-white');
+    expect(panel.className).not.toContain('bg-surface-1');
   });
 
   it('gives DialogTitle a dark-on-light color inside a light Dialog', () => {
@@ -65,7 +65,7 @@ describe('Dialog light prop', () => {
       </Dialog>,
     );
     const title = screen.getByText('Edit document');
-    expect(title.className).toContain('text-[#111]');
+    expect(title.className).toContain('text-ink-title');
     expect(title.className).not.toContain('text-foreground');
   });
 
@@ -79,6 +79,6 @@ describe('Dialog light prop', () => {
     );
     const title = screen.getByText('Edit document');
     expect(title.className).toContain('text-foreground');
-    expect(title.className).not.toContain('text-[#111]');
+    expect(title.className).not.toContain('text-ink-title');
   });
 });

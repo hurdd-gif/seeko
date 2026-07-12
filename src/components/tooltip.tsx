@@ -56,7 +56,7 @@ function Tooltip({
       <span
         role="tooltip"
         className={cn(
-          "pointer-events-none absolute left-1/2 z-50 -translate-x-1/2 rounded-md bg-[#111] px-2 py-1 text-[11px] font-medium text-white shadow-[0_4px_14px_rgba(0,0,0,0.14)] transition-[opacity,transform] duration-150",
+          "pointer-events-none absolute left-1/2 z-50 -translate-x-1/2 rounded-md bg-ink-title px-2 py-1 text-[11px] font-medium text-surface-1 shadow-[0_4px_14px_rgba(0,0,0,0.14)] transition-[opacity,transform] duration-150",
           visible ? "translate-y-0 opacity-100" : "translate-y-1 opacity-0"
         )}
         style={{ bottom: `calc(100% + ${sideOffset}px)` }}

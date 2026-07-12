@@ -140,7 +140,7 @@ const Select = React.forwardRef<
         className={cn(
           'flex h-9 w-full items-center justify-between rounded-lg px-3 py-1 text-sm transition-colors transition-[box-shadow_var(--focus-ring-duration)_ease-out] focus-visible:outline-none',
           light
-            ? 'border border-black/[0.08] bg-white text-[#2a2a2a] hover:bg-[#fafafa] focus-visible:ring-2 focus-visible:ring-[#0d7aff]/30'
+            ? 'border border-wash-8 bg-surface-1 text-ink-strong hover:bg-[#fafafa] dark:hover:bg-surface-3 focus-visible:ring-2 focus-visible:ring-seeko-accent/30'
             : 'border-0 bg-card text-foreground hover:bg-accent/50 focus-visible:ring-2 focus-visible:ring-ring',
           'disabled:cursor-not-allowed disabled:opacity-50',
           className
@@ -152,7 +152,7 @@ const Select = React.forwardRef<
           transition={springs.snappy}
           className="ml-2 flex shrink-0 items-center"
         >
-          <ChevronDown className={cn('size-3.5', light ? 'text-[#9a9a9a]' : 'text-muted-foreground')} />
+          <ChevronDown className={cn('size-3.5', light ? 'text-ink-faint' : 'text-muted-foreground')} />
         </motion.span>
       </button>
 
@@ -176,15 +176,15 @@ const Select = React.forwardRef<
                   ['--select-dropdown-width' as string]: `${position.width}px`,
                 }}
                 className={cn(
-                  'rounded-xl shadow-xl overflow-hidden min-w-[var(--select-dropdown-width)] w-max max-w-[calc(100vw-16px)]',
+                  'overflow-hidden min-w-[var(--select-dropdown-width)] w-max max-w-[calc(100vw-16px)]',
                   light
-                    ? 'border border-black/[0.08] bg-white'
-                    : 'border border-white/[0.08] bg-popover/80 backdrop-blur-xl backdrop-saturate-150'
+                    ? 'rounded-[14px] bg-surface-1 shadow-seeko-pop'
+                    : 'rounded-xl border border-white/[0.08] bg-popover/80 shadow-xl backdrop-blur-xl backdrop-saturate-150'
                 )}
               >
                 {searchable && (
-                  <div className={cn('flex items-center gap-2 px-3 py-2', light ? 'border-b border-black/[0.06]' : 'border-b border-white/[0.06]')}>
-                    <Search className={cn('size-3.5 shrink-0', light ? 'text-[#9a9a9a]' : 'text-muted-foreground')} />
+                  <div className={cn('flex items-center gap-2 px-3 py-2', light ? 'border-b border-wash-6' : 'border-b border-white/[0.06]')}>
+                    <Search className={cn('size-3.5 shrink-0', light ? 'text-ink-faint' : 'text-muted-foreground')} />
                     <input
                       ref={searchRef}
                       type="text"
@@ -193,17 +193,20 @@ const Select = React.forwardRef<
                       placeholder="Search..."
                       className={cn(
                         'w-full bg-transparent text-sm focus:outline-none min-w-0',
-                        light ? 'text-[#2a2a2a] placeholder:text-[#b3b3b3]' : 'text-foreground placeholder:text-muted-foreground'
+                        light ? 'text-ink-strong placeholder:text-ink-faintest' : 'text-foreground placeholder:text-muted-foreground'
                       )}
                     />
                   </div>
                 )}
                 <div
                   ref={listRef}
-                  className="max-h-56 overflow-y-auto p-1.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                  className={cn(
+                    'max-h-56 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+                    light ? 'p-1' : 'p-1.5'
+                  )}
                 >
                   {filtered.length === 0 ? (
-                    <p className={cn('px-2 py-3 text-xs text-center', light ? 'text-[#9a9a9a]' : 'text-muted-foreground')}>No results</p>
+                    <p className={cn('px-2 py-3 text-xs text-center', light ? 'text-ink-faint' : 'text-muted-foreground')}>No results</p>
                   ) : (
                     filtered.map(opt => {
                       const isSelected = opt.value === String(value ?? '');
@@ -215,11 +218,11 @@ const Select = React.forwardRef<
                           data-active={isSelected}
                           onClick={() => handleSelect(opt.value)}
                           className={cn(
-                            'flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm transition-colors text-left',
+                            'flex w-full items-center gap-2 px-2.5 py-1.5 transition-colors text-left',
                             light
-                              ? 'text-[#2a2a2a] hover:bg-black/[0.05]'
-                              : 'hover:bg-white/[0.08] hover:text-foreground',
-                            isSelected && (light ? 'bg-black/[0.05] font-medium' : 'bg-white/[0.08] text-foreground font-medium')
+                              ? 'rounded-[10px] text-[13px] text-ink-body hover:bg-wash-4 hover:text-ink-title'
+                              : 'rounded-lg text-sm hover:bg-white/[0.08] hover:text-foreground',
+                            isSelected && (light ? 'text-ink-title' : 'bg-white/[0.08] text-foreground font-medium')
                           )}
                         >
                           <motion.span

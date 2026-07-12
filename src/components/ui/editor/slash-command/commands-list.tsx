@@ -57,7 +57,7 @@ const CommandsList = forwardRef<CommandsListHandle, CommandsListProps>(({ items,
   }));
 
   return (
-    <div className="bg-white text-[#2a2a2a] border-black/[0.06] z-50 min-w-44 overflow-hidden rounded-lg border p-1 shadow-seeko-pop">
+    <div className="bg-surface-1 text-ink-strong border-wash-6 z-50 min-w-44 overflow-hidden rounded-lg border p-1 shadow-seeko-pop">
       {items.length ? (
         items.map((item, index) => (
           <button
@@ -65,14 +65,14 @@ const CommandsList = forwardRef<CommandsListHandle, CommandsListProps>(({ items,
             type="button"
             onClick={() => selectItem(index)}
             aria-selected={selectedIndex === index}
-            className="focus:bg-black/[0.05] focus:text-[#111] aria-selected:bg-black/[0.05] aria-selected:text-[#111] relative flex w-full cursor-default items-center rounded-sm px-2 py-1.5 text-sm outline-none"
+            className="focus:bg-wash-5 focus:text-ink-title aria-selected:bg-wash-5 aria-selected:text-ink-title relative flex w-full cursor-default items-center rounded-sm px-2 py-1.5 text-sm outline-none"
           >
             <item.icon className="mr-2 size-4" />
             {item.title}
           </button>
         ))
       ) : (
-        <div className="text-[#9a9a9a] flex items-center px-2 py-1.5 text-sm">
+        <div className="text-ink-faint flex items-center px-2 py-1.5 text-sm">
           <Ban className="mr-2 size-4" />
           No results
         </div>

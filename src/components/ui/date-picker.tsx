@@ -70,17 +70,17 @@ export function DatePicker({ value, onChange, minDate, dateLabel, animated = fal
   /* Theme fragments — opt-in light flips dark tokens to dark-on-white. */
   const t = light
     ? {
-        panel: 'border-black/[0.08] bg-white',
-        navBtn: 'hover:bg-black/[0.05]',
-        navIcon: 'text-[#808080]',
-        monthLabel: 'text-[#111]',
-        dayHeader: 'text-[#9a9a9a]',
-        cellDisabled: 'text-[#c8c8c8] cursor-not-allowed',
-        cellHover: 'hover:bg-black/[0.05] cursor-pointer',
-        cellSelected: 'bg-[#0d7aff] text-white font-semibold hover:bg-[#0a63cc]',
-        cellToday: 'ring-1 ring-[#0d7aff]/40 text-[#0d7aff] font-medium',
-        cellDefault: 'text-[#2a2a2a]',
-        footer: 'text-[#808080] border-black/[0.08]',
+        panel: 'border-wash-8 bg-surface-1',
+        navBtn: 'hover:bg-wash-5',
+        navIcon: 'text-ink-muted',
+        monthLabel: 'text-ink-title',
+        dayHeader: 'text-ink-faint',
+        cellDisabled: 'text-[#c8c8c8] dark:text-ink-faintest cursor-not-allowed',
+        cellHover: 'hover:bg-wash-5 cursor-pointer',
+        cellSelected: 'bg-seeko-accent text-white font-semibold hover:bg-seeko-accent-ink',
+        cellToday: 'ring-1 ring-seeko-accent/40 text-seeko-accent font-medium',
+        cellDefault: 'text-ink-strong',
+        footer: 'text-ink-muted border-wash-8',
       }
     : {
         panel: 'border-border bg-background',

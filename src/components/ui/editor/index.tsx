@@ -224,7 +224,7 @@ export function Editor({
   const objectUrlByUploadIdRef = useRef(new Map<string, string>());
   const expectedBlobByUploadIdRef = useRef(new Map<string, string>());
   const tiptapSurfaceClass = cn(
-    "border-black/[0.08] text-[#2a2a2a] placeholder:text-[#b3b3b3] selection:bg-[#0d7aff]/20 selection:text-[#111] min-h-16 w-full rounded-md border bg-transparent px-3 py-2 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-[#0d7aff]/30 focus-visible:ring-2 focus-visible:ring-[#0d7aff]/30 md:text-sm [&_p.is-empty::before]:text-[#b3b3b3] [&_p.is-empty::before]:content-[attr(data-placeholder)] [&_p.is-empty::before]:pointer-events-none [&_p.is-empty::before]:float-left [&_p.is-empty::before]:h-0 [&_img[data-uploading=true]]:opacity-70 [&_img[data-uploading=true]]:animate-pulse [&_img[data-upload-error]]:ring-2 [&_img[data-upload-error]]:ring-destructive [&_img[data-upload-error]]:ring-offset-2 [&_img[data-upload-error]]:ring-offset-background",
+    "border-wash-8 text-ink-strong placeholder:text-ink-faintest selection:bg-seeko-accent/20 selection:text-ink-title min-h-16 w-full rounded-md border bg-transparent px-3 py-2 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-seeko-accent/30 focus-visible:ring-2 focus-visible:ring-seeko-accent/30 md:text-sm [&_p.is-empty::before]:text-ink-faintest [&_p.is-empty::before]:content-[attr(data-placeholder)] [&_p.is-empty::before]:pointer-events-none [&_p.is-empty::before]:float-left [&_p.is-empty::before]:h-0 [&_img[data-uploading=true]]:opacity-70 [&_img[data-uploading=true]]:animate-pulse [&_img[data-upload-error]]:ring-2 [&_img[data-upload-error]]:ring-destructive [&_img[data-upload-error]]:ring-offset-2 [&_img[data-upload-error]]:ring-offset-background",
     editorClassName,
   );
 
@@ -832,10 +832,10 @@ export function Editor({
   const removeColumn = () => editor.chain().focus().deleteColumn().run();
 
   const toolbarButtonClass =
-    "inline-flex size-7 items-center justify-center rounded-md text-[#505050] transition-colors hover:bg-black/[0.05] hover:text-[#111] focus-visible:ring-2 focus-visible:ring-[#0d7aff]/30 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50";
-  const toolbarToggleButtonClass = `${toolbarButtonClass} aria-pressed:bg-[#111] aria-pressed:text-white`;
+    "inline-flex size-7 items-center justify-center rounded-md text-ink-body transition-colors hover:bg-wash-5 hover:text-ink-title focus-visible:ring-2 focus-visible:ring-seeko-accent/30 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50";
+  const toolbarToggleButtonClass = `${toolbarButtonClass} aria-pressed:bg-ink-title aria-pressed:text-surface-1`;
   const toolbarInputClass =
-    "border-black/[0.08] bg-white text-[#2a2a2a] placeholder:text-[#b3b3b3] h-7 rounded-md border px-2 text-sm shadow-xs outline-none focus-visible:ring-2 focus-visible:ring-[#0d7aff]/30";
+    "border-wash-8 bg-surface-1 text-ink-strong placeholder:text-ink-faintest h-7 rounded-md border px-2 text-sm shadow-xs outline-none focus-visible:ring-2 focus-visible:ring-seeko-accent/30";
 
   const renderIconButton = ({
     label,
@@ -865,7 +865,7 @@ export function Editor({
         pluginKey="editor-bubble"
         ref={bubbleMenuRef}
         editor={editor}
-        className="z-50 w-fit max-w-[95vw] text-[#2a2a2a] outline-hidden"
+        className="z-50 w-fit max-w-[95vw] text-ink-strong outline-hidden"
         options={{
           placement: "top",
           offset: 10,
@@ -879,7 +879,7 @@ export function Editor({
         }}
       >
         <div className="flex flex-col gap-1">
-          <div className="border-black/[0.06] bg-white shadow-seeko-pop flex flex-nowrap items-center gap-0.5 overflow-x-auto rounded-lg border p-1 whitespace-nowrap">
+          <div className="border-wash-6 bg-surface-1 shadow-seeko-pop flex flex-nowrap items-center gap-0.5 overflow-x-auto rounded-lg border p-1 whitespace-nowrap">
             <div className="group/native-select relative w-fit">
               <select
                 id="block-style"
@@ -887,7 +887,7 @@ export function Editor({
                 onChange={(event) => setBlockType(event.target.value as BlockType)}
                 disabled={disabled}
                 aria-label="Block style"
-                className="h-7 w-full appearance-none rounded-md border border-transparent bg-transparent px-2 pr-5.5 text-sm text-[#2a2a2a] shadow-none outline-none hover:bg-black/[0.05] focus-visible:outline-none focus-visible:ring-0 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50"
+                className="h-7 w-full appearance-none rounded-md border border-transparent bg-transparent px-2 pr-5.5 text-sm text-ink-strong shadow-none outline-none hover:bg-wash-5 focus-visible:outline-none focus-visible:ring-0 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {blockOptions.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -896,7 +896,7 @@ export function Editor({
                 ))}
               </select>
               <ChevronDownIcon
-                className="text-[#9a9a9a] pointer-events-none absolute top-1/2 right-1.5 size-3.5 -translate-y-1/2 opacity-50"
+                className="text-ink-faint pointer-events-none absolute top-1/2 right-1.5 size-3.5 -translate-y-1/2 opacity-50"
                 aria-hidden="true"
               />
             </div>
@@ -945,7 +945,7 @@ export function Editor({
           {showLinkInput ? (
             <div
               data-state="open"
-              className="border-black/[0.06] bg-white data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=open]:slide-in-from-top-1 flex flex-nowrap items-center gap-0.5 overflow-x-auto rounded-lg border p-1 shadow-sm duration-200 whitespace-nowrap"
+              className="border-wash-6 bg-surface-1 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=open]:slide-in-from-top-1 flex flex-nowrap items-center gap-0.5 overflow-x-auto rounded-lg border p-1 shadow-sm duration-200 whitespace-nowrap"
             >
               <input
                 id="link-url"
@@ -981,7 +981,7 @@ export function Editor({
           {showAltInput && isOnImage ? (
             <div
               data-state="open"
-              className="border-black/[0.06] bg-white data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=open]:slide-in-from-top-1 flex flex-nowrap items-center gap-0.5 overflow-x-auto rounded-lg border p-1 shadow-sm duration-200 whitespace-nowrap"
+              className="border-wash-6 bg-surface-1 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=open]:slide-in-from-top-1 flex flex-nowrap items-center gap-0.5 overflow-x-auto rounded-lg border p-1 shadow-sm duration-200 whitespace-nowrap"
             >
               <input
                 id="image-alt"
@@ -1010,9 +1010,9 @@ export function Editor({
           {showTableActions && isInTable ? (
             <div
               data-state="open"
-              className="border-black/[0.06] bg-white data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=open]:slide-in-from-top-1 inline-flex w-fit flex-nowrap items-center gap-1 overflow-x-auto self-end rounded-lg border p-1 shadow-sm duration-200 whitespace-nowrap"
+              className="border-wash-6 bg-surface-1 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=open]:slide-in-from-top-1 inline-flex w-fit flex-nowrap items-center gap-1 overflow-x-auto self-end rounded-lg border p-1 shadow-sm duration-200 whitespace-nowrap"
             >
-              <span className="text-sm ml-1 text-[#808080]">Rows:</span>
+              <span className="text-sm ml-1 text-ink-muted">Rows:</span>
               {renderIconButton({
                 label: "Add row",
                 icon: Plus,
@@ -1025,8 +1025,8 @@ export function Editor({
                 onClick: removeRow,
                 disabled,
               })}
-              <span className="bg-black/[0.08] mx-0.5 h-4 w-px" aria-hidden="true" />
-              <span className="text-sm text-[#808080]">Columns:</span>
+              <span className="bg-wash-8 mx-0.5 h-4 w-px" aria-hidden="true" />
+              <span className="text-sm text-ink-muted">Columns:</span>
               {renderIconButton({
                 label: "Add column",
                 icon: Plus,

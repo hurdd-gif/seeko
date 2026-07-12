@@ -202,7 +202,7 @@ function DropdownMenuContent({
           className={cn(
             "z-50 min-w-[8rem]",
             light
-              ? "rounded-[14px] bg-white p-1 shadow-seeko-pop"
+              ? "rounded-[14px] bg-surface-1 p-1 shadow-seeko-pop"
               : "rounded-xl border border-white/[0.08] bg-popover/80 p-1.5 shadow-xl backdrop-blur-xl backdrop-saturate-150",
             className
           )}
@@ -266,11 +266,11 @@ const DropdownMenuItem = React.forwardRef<HTMLButtonElement, DropdownMenuItemPro
           light
             ? [
                 // Concentric with the 14px light surface (4px padding → 10px items)
-                "rounded-[10px] text-[13px] text-[#505050]",
-                "hover:bg-black/[0.04] hover:text-[#111]",
-                "focus:bg-black/[0.04] focus:text-[#111]",
-                isActive && "bg-black/[0.04] text-[#111]",
-                selected && "text-[#111]",
+                "rounded-[10px] text-[13px] text-ink-body",
+                "hover:bg-wash-4 hover:text-ink-title",
+                "focus:bg-wash-4 focus:text-ink-title",
+                isActive && "bg-wash-4 text-ink-title",
+                selected && "text-ink-title",
               ]
             : [
                 "rounded-lg text-sm",
@@ -321,7 +321,7 @@ function DropdownMenuLabel({
       className={cn(
         "px-2.5 py-1.5 text-[11px]",
         light
-          ? "font-medium text-[#9a9a9a]"
+          ? "font-medium text-ink-faint"
           : "font-semibold uppercase tracking-wider text-muted-foreground/60",
         className
       )}
@@ -335,7 +335,7 @@ function DropdownMenuLabel({
 
 function DropdownMenuSeparator({ className }: { className?: string }) {
   const light = React.useContext(DropdownLightContext)
-  return <div className={cn("my-1 h-px", light ? "bg-black/[0.05]" : "bg-white/[0.06]", className)} />
+  return <div className={cn("my-1 h-px", light ? "bg-wash-5" : "bg-white/[0.06]", className)} />
 }
 
 export {

@@ -192,7 +192,7 @@ const InputCopy = forwardRef<HTMLDivElement, InputCopyProps>(
       <span
         className={cn(
           "shrink-0 flex items-center gap-1.5 px-2 py-1.5 text-[12px] transition-colors duration-150",
-          "text-[#808080] group-hover:text-[#111]",
+          "text-ink-muted group-hover:text-ink-title",
           compact && "px-1 py-0.5",
         )}
         style={{ fontVariationSettings: fontWeights.normal }}
@@ -292,7 +292,7 @@ const InputCopy = forwardRef<HTMLDivElement, InputCopyProps>(
       <span
         className={cn(
           "shrink-0 px-2 py-1.5 transition-colors duration-150",
-          "text-[#a0a0a0] group-hover:text-[#111]",
+          "text-[#a0a0a0] group-hover:text-ink-title",
           compact && "px-1 py-0.5",
         )}
       >
@@ -303,7 +303,7 @@ const InputCopy = forwardRef<HTMLDivElement, InputCopyProps>(
     const valueElement = (
       <span
         className={cn(
-          "flex-1 min-w-0 text-left text-[12px] text-[#2a2a2a] py-1.5 select-none truncate",
+          "flex-1 min-w-0 text-left text-[12px] text-ink-strong py-1.5 select-none truncate",
           monospace ? "font-mono" : "font-sans",
           align === "left" ? "pl-1" : "pl-0",
           compact && "py-0.5 text-[11px]",
@@ -341,10 +341,10 @@ const InputCopy = forwardRef<HTMLDivElement, InputCopyProps>(
         aria-labelledby={label ? `${buttonId} ${labelId}` : undefined}
         className={cn(
           "group flex min-w-0 items-center w-full cursor-pointer outline-none transition-[background-color,box-shadow,transform] duration-150",
-          "rounded-lg px-2 hover:bg-black/[0.035] active:scale-[0.98]",
-          "focus-visible:ring-2 focus-visible:ring-[#0a63cc]/20",
+          "rounded-lg px-2 hover:bg-wash-4 active:scale-[0.98]",
+          "focus-visible:ring-2 focus-visible:ring-seeko-accent-ink/20",
           shape.input,
-          compact && "w-auto max-w-full rounded-md px-1 hover:bg-black/[0.025]",
+          compact && "w-auto max-w-full rounded-md px-1 hover:bg-wash-3",
         )}
       >
         {buttonContent}
