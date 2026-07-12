@@ -49,8 +49,8 @@ function ToolbarButton({
       className={cn(
         'flex size-7 items-center justify-center rounded text-xs transition-colors',
         active
-          ? 'bg-[#111] text-white'
-          : 'text-[#808080] hover:bg-black/[0.04] hover:text-[#111]'
+          ? 'bg-ink-title text-surface-1'
+          : 'text-ink-muted hover:bg-wash-4 hover:text-ink-title'
       )}
     >
       {children}
@@ -105,7 +105,7 @@ function ImagePopover({ onInsert }: { onInsert: (url: string) => void }) {
       </ToolbarButton>
 
       {open && (
-        <div className="absolute left-0 top-8 z-50 w-72 rounded-lg border border-black/[0.08] bg-white p-3 shadow-seeko-pop">
+        <div className="absolute left-0 top-8 z-50 w-72 rounded-lg border border-wash-8 bg-surface-1 p-3 shadow-seeko-pop">
           <div className="mb-2 flex gap-1">
             {(['url', 'upload'] as const).map(t => (
               <button
@@ -114,7 +114,7 @@ function ImagePopover({ onInsert }: { onInsert: (url: string) => void }) {
                 onClick={() => setTab(t)}
                 className={cn(
                   'rounded px-2 py-1 text-xs capitalize transition-colors',
-                  tab === t ? 'bg-black/[0.06] text-[#111]' : 'text-[#808080] hover:text-[#111]'
+                  tab === t ? 'bg-wash-6 text-ink-title' : 'text-ink-muted hover:text-ink-title'
                 )}
               >
                 {t === 'url' ? 'Paste URL' : 'Upload'}
@@ -138,7 +138,7 @@ function ImagePopover({ onInsert }: { onInsert: (url: string) => void }) {
           ) : (
             <div>
               <label className={cn(
-                'flex cursor-pointer items-center justify-center rounded border border-dashed border-black/[0.12] p-3 text-xs text-[#808080] transition-colors hover:border-black/25 hover:text-[#111]',
+                'flex cursor-pointer items-center justify-center rounded border border-dashed border-black/[0.12] p-3 text-xs text-ink-muted transition-colors hover:border-black/25 hover:text-ink-title',
                 uploading && 'pointer-events-none opacity-50'
               )}>
                 {uploading ? 'Uploading…' : 'Click to choose image (≤ 5 MB)'}
@@ -188,7 +188,7 @@ export function DocEditor({ doc, onSave, onCancel, team = [] }: DocEditorProps) 
     content: doc?.content ?? '',
     editorProps: {
       attributes: {
-        class: 'prose max-w-none min-h-[200px] focus:outline-none text-[#2a2a2a] prose-headings:text-[#111] prose-strong:text-[#111]',
+        class: 'prose max-w-none min-h-[200px] focus:outline-none text-ink-strong prose-headings:text-ink-title prose-strong:text-ink-title',
       },
     },
     onUpdate: () => { userEditedContentRef.current = true; },
@@ -433,12 +433,12 @@ export function DocEditor({ doc, onSave, onCancel, team = [] }: DocEditorProps) 
         value={title}
         onChange={e => setTitle(e.target.value)}
         placeholder="Document title"
-        className={cn(LIGHT_INPUT, 'h-10 text-base font-semibold text-[#1a1a1a]')}
+        className={cn(LIGHT_INPUT, 'h-10 text-base font-semibold text-ink-title')}
       />
 
       {/* Department restrict — multi-select toggles */}
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs text-[#808080] whitespace-nowrap">Restrict to:</span>
+        <span className="text-xs text-ink-muted whitespace-nowrap">Restrict to:</span>
         {DEPARTMENTS.map(dept => (
           <button
             key={dept}
@@ -447,8 +447,8 @@ export function DocEditor({ doc, onSave, onCancel, team = [] }: DocEditorProps) 
             className={cn(
               'rounded-full border px-2.5 py-0.5 text-xs transition-colors',
               departments.includes(dept)
-                ? 'border-[#0d7aff]/30 bg-[#0d7aff]/10 text-[#0d7aff]'
-                : 'border-black/[0.1] text-[#808080] hover:border-black/20 hover:text-[#111]'
+                ? 'border-seeko-accent/30 bg-seeko-accent/10 text-seeko-accent'
+                : 'border-wash-10 text-ink-muted hover:border-black/20 hover:text-ink-title'
             )}
           >
             {dept}
@@ -458,7 +458,7 @@ export function DocEditor({ doc, onSave, onCancel, team = [] }: DocEditorProps) 
           <button
             type="button"
             onClick={() => setDepartments([])}
-            className="text-xs text-[#9a9a9a] hover:text-[#505050] transition-colors"
+            className="text-xs text-ink-faint hover:text-ink-body transition-colors"
           >
             Clear
           </button>
@@ -468,7 +468,7 @@ export function DocEditor({ doc, onSave, onCancel, team = [] }: DocEditorProps) 
       {/* Also allow access — users who get access despite department restriction */}
       {team.length > 0 && (
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs text-[#808080] whitespace-nowrap">Also allow access:</span>
+          <span className="text-xs text-ink-muted whitespace-nowrap">Also allow access:</span>
           <Select
             light
             value={addUserValue}
@@ -491,13 +491,13 @@ export function DocEditor({ doc, onSave, onCancel, team = [] }: DocEditorProps) 
             return (
               <span
                 key={id}
-                className="inline-flex items-center gap-1 rounded-full border border-black/[0.08] bg-black/[0.03] px-2.5 py-0.5 text-xs text-[#2a2a2a]"
+                className="inline-flex items-center gap-1 rounded-full border border-wash-8 bg-wash-3 px-2.5 py-0.5 text-xs text-ink-strong"
               >
                 @{p?.display_name ?? 'Unknown'}
                 <button
                   type="button"
                   onClick={() => setGrantedIds(prev => prev.filter(x => x !== id))}
-                  className="rounded p-0.5 text-[#9a9a9a] hover:bg-[#d4503e]/10 hover:text-[#d4503e] transition-colors"
+                  className="rounded p-0.5 text-ink-faint hover:bg-danger/10 hover:text-danger transition-colors"
                   aria-label={`Remove ${p?.display_name ?? id}`}
                 >
                   <Trash2 className="size-3" />
@@ -539,7 +539,7 @@ export function DocEditor({ doc, onSave, onCancel, team = [] }: DocEditorProps) 
           {/* Mobile toolbar */}
           {editor && (
             <>
-              <div className="flex flex-wrap items-center gap-1 rounded-md border border-black/[0.08] bg-black/[0.02] px-2 py-1.5">
+              <div className="flex flex-wrap items-center gap-1 rounded-md border border-wash-8 bg-wash-2 px-2 py-1.5">
                 <ToolbarButton title="Heading 1" active={editor.isActive('heading', { level: 1 })} onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}>
                   <Heading1 className="size-3.5" />
                 </ToolbarButton>
@@ -550,7 +550,7 @@ export function DocEditor({ doc, onSave, onCancel, team = [] }: DocEditorProps) 
                   <Heading3 className="size-3.5" />
                 </ToolbarButton>
 
-                <div className="mx-1 h-4 w-px bg-black/[0.08]" />
+                <div className="mx-1 h-4 w-px bg-wash-8" />
 
                 <ToolbarButton title="Bold" active={editor.isActive('bold')} onClick={() => editor.chain().focus().toggleBold().run()}>
                   <Bold className="size-3.5" />
@@ -559,7 +559,7 @@ export function DocEditor({ doc, onSave, onCancel, team = [] }: DocEditorProps) 
                   <Italic className="size-3.5" />
                 </ToolbarButton>
 
-                <div className="mx-1 h-4 w-px bg-black/[0.08]" />
+                <div className="mx-1 h-4 w-px bg-wash-8" />
 
                 <ToolbarButton title="Bullet list" active={editor.isActive('bulletList')} onClick={() => editor.chain().focus().toggleBulletList().run()}>
                   <List className="size-3.5" />
@@ -568,11 +568,11 @@ export function DocEditor({ doc, onSave, onCancel, team = [] }: DocEditorProps) 
                   <ListOrdered className="size-3.5" />
                 </ToolbarButton>
 
-                <div className="mx-1 h-4 w-px bg-black/[0.08]" />
+                <div className="mx-1 h-4 w-px bg-wash-8" />
 
                 <ImagePopover onInsert={insertImage} />
 
-                <div className="mx-1 h-4 w-px bg-black/[0.08]" />
+                <div className="mx-1 h-4 w-px bg-wash-8" />
 
                 <ToolbarButton
                   title="Insert table (3×3)"
@@ -603,7 +603,7 @@ export function DocEditor({ doc, onSave, onCancel, team = [] }: DocEditorProps) 
               </div>
 
               {/* Mobile editor area */}
-              <div className="min-h-[200px] rounded-md border border-black/[0.08] bg-white p-3">
+              <div className="min-h-[200px] rounded-md border border-wash-8 bg-surface-1 p-3">
                 <EditorContent editor={editor} />
               </div>
             </>
@@ -615,7 +615,7 @@ export function DocEditor({ doc, onSave, onCancel, team = [] }: DocEditorProps) 
 
       {/* Actions: when not inside a Dialog, render inline; otherwise they're in the dialog footer */}
       {!setDialogFooter && (
-        <div className="sticky bottom-0 left-0 right-0 z-10 flex flex-shrink-0 items-center justify-end gap-3 border-t border-black/[0.06] bg-white pt-4 pb-2 -mx-6 px-6 mt-4">
+        <div className="sticky bottom-0 left-0 right-0 z-10 flex flex-shrink-0 items-center justify-end gap-3 border-t border-wash-6 bg-surface-1 pt-4 pb-2 -mx-6 px-6 mt-4">
           {actionBar}
         </div>
       )}

@@ -97,13 +97,13 @@ export function DocShareDialog({ open, onOpenChange, docId, docTitle }: DocShare
         <motion.div variants={{ hidden: { opacity: 0, y: 8 }, show: { opacity: 1, y: 0, transition: STAGGER_SPRING } }}>
           <DialogHeader>
             <DialogTitle className="text-base">Share &ldquo;{docTitle}&rdquo;</DialogTitle>
-            <p className="text-xs text-[#808080]">Send a secure, view-only link</p>
+            <p className="text-xs text-ink-muted">Send a secure, view-only link</p>
           </DialogHeader>
         </motion.div>
 
         <div className="space-y-3.5 pt-1 pb-2">
           <motion.div variants={{ hidden: { opacity: 0, y: 8 }, show: { opacity: 1, y: 0, transition: STAGGER_SPRING } }} className="space-y-1">
-            <label className="text-xs font-medium text-[#808080]">Email</label>
+            <label className="text-xs font-medium text-ink-muted">Email</label>
             <Input
               type="email"
               placeholder="name@example.com"
@@ -114,7 +114,7 @@ export function DocShareDialog({ open, onOpenChange, docId, docTitle }: DocShare
           </motion.div>
 
           <motion.div variants={{ hidden: { opacity: 0, y: 8 }, show: { opacity: 1, y: 0, transition: STAGGER_SPRING } }} className="space-y-1">
-            <label className="text-xs font-medium text-[#808080]">Note <span className="font-normal">(optional)</span></label>
+            <label className="text-xs font-medium text-ink-muted">Note <span className="font-normal">(optional)</span></label>
             <Input
               placeholder="Add a message..."
               value={note}
@@ -125,14 +125,14 @@ export function DocShareDialog({ open, onOpenChange, docId, docTitle }: DocShare
           </motion.div>
 
           <motion.div variants={{ hidden: { opacity: 0, y: 8 }, show: { opacity: 1, y: 0, transition: STAGGER_SPRING } }} className="space-y-1">
-            <label className="text-xs font-medium text-[#808080]">Expires <span className="font-normal">(default 30 days)</span></label>
+            <label className="text-xs font-medium text-ink-muted">Expires <span className="font-normal">(default 30 days)</span></label>
             <AnimatePresence mode="wait">
               {!showCalendar ? (
                 <motion.button
                   key="trigger"
                   type="button"
                   onClick={() => setShowCalendar(true)}
-                  className="flex items-center gap-2 rounded-lg border border-black/[0.08] bg-white px-3 py-2 text-sm text-[#808080] hover:border-black/20 hover:text-[#111] transition-colors w-full"
+                  className="flex items-center gap-2 rounded-lg border border-wash-8 bg-surface-1 px-3 py-2 text-sm text-ink-muted hover:border-black/20 hover:text-ink-title transition-colors w-full"
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
                   exit={{ opacity: 0, height: 0 }}
@@ -140,7 +140,7 @@ export function DocShareDialog({ open, onOpenChange, docId, docTitle }: DocShare
                 >
                   <Calendar className="size-3.5" />
                   {expiresAt ? (
-                    <span className="text-[#111]">{formattedExpiry}</span>
+                    <span className="text-ink-title">{formattedExpiry}</span>
                   ) : (
                     <span>Pick a date</span>
                   )}
@@ -163,7 +163,7 @@ export function DocShareDialog({ open, onOpenChange, docId, docTitle }: DocShare
                   <button
                     type="button"
                     onClick={() => setShowCalendar(false)}
-                    className="absolute top-1 right-1 flex size-6 items-center justify-center rounded text-[#9a9a9a] hover:text-[#111] transition-colors"
+                    className="absolute top-1 right-1 flex size-6 items-center justify-center rounded text-ink-faint hover:text-ink-title transition-colors"
                   >
                     <X className="size-3" />
                   </button>
@@ -173,15 +173,15 @@ export function DocShareDialog({ open, onOpenChange, docId, docTitle }: DocShare
           </motion.div>
 
           <motion.div variants={{ hidden: { opacity: 0, y: 8 }, show: { opacity: 1, y: 0, transition: STAGGER_SPRING } }} className="pt-1.5">
-            <Button onClick={handleSubmit} disabled={sending} className="w-full gap-2 bg-[#0d7aff] text-white hover:bg-[#0a63cc]">
+            <Button onClick={handleSubmit} disabled={sending} className="w-full gap-2 bg-seeko-accent text-white hover:bg-seeko-accent-ink">
               {sending ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
               {sending ? 'Sending...' : 'Send Share Link'}
             </Button>
           </motion.div>
 
           <motion.div variants={{ hidden: { opacity: 0 }, show: { opacity: 1, transition: { duration: 0.3 } } }} className="flex items-center justify-center gap-1.5 pt-0.5">
-            <Shield className="size-3 text-[#b3b3b3]" />
-            <p className="text-[11px] text-[#b3b3b3]">Single-session, read-only access</p>
+            <Shield className="size-3 text-ink-faintest" />
+            <p className="text-[11px] text-ink-faintest">Single-session, read-only access</p>
           </motion.div>
         </div>
       </motion.div>

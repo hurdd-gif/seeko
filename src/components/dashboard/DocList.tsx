@@ -39,7 +39,7 @@ import { useHaptics } from '@/components/HapticsProvider';
  * ───────────────────────────────────────────────────────── */
 const EditorFallback = () => (
   <div className="flex items-center justify-center py-16">
-    <Loader2 className="size-5 animate-spin text-[#9a9a9a]" />
+    <Loader2 className="size-5 animate-spin text-ink-faint" />
   </div>
 );
 
@@ -129,7 +129,7 @@ const tabSlideTransition = {
 /* Document glyphs relay the owning team. Color is hover-revealed: `hoverInk`
    colors the glyph and `glow` tints the glass overlay when the row is hovered. */
 const DEPT_DOC_ICON: Record<string, { Icon: LucideIcon; ink: string; hoverInk: string; glow: string }> = {
-  'Coding':         { Icon: Braces,       ink: 'text-[#0d7aff]', hoverInk: 'group-hover:text-[#0d7aff] group-focus-visible:text-[#0d7aff]', glow: '#0d7aff' },
+  'Coding':         { Icon: Braces,       ink: 'text-seeko-accent', hoverInk: 'group-hover:text-seeko-accent group-focus-visible:text-seeko-accent', glow: '#0d7aff' },
   'Visual Art':     { Icon: Palette,      ink: 'text-[#4757e6]', hoverInk: 'group-hover:text-[#4757e6] group-focus-visible:text-[#4757e6]', glow: '#4757e6' },
   'UI/UX':          { Icon: PenTool,      ink: 'text-[#7c3aed]', hoverInk: 'group-hover:text-[#7c3aed] group-focus-visible:text-[#7c3aed]', glow: '#7c3aed' },
   'Animation':      { Icon: Clapperboard, ink: 'text-[#b45309]', hoverInk: 'group-hover:text-[#b45309] group-focus-visible:text-[#b45309]', glow: '#f59e0b' },
@@ -168,7 +168,7 @@ function glassTileStyle(glow?: string): React.CSSProperties {
 
 /* Icon-button used across the Shared table rows */
 const ROW_ICON_BTN =
-  'flex size-8 items-center justify-center rounded-[10px] text-[#8a8a8a] transition-[color,background-color,transform] duration-150 hover:bg-black/[0.045] hover:text-[#111] active:scale-[0.97]';
+  'flex size-8 items-center justify-center rounded-[10px] text-ink-muted transition-[color,background-color,transform] duration-150 hover:bg-wash-5 hover:text-ink-title active:scale-[0.97]';
 
 /* ─────────────────────────────────────────────────────────
  * FilterPill (light — sentence-case, no uppercase eyebrow)
@@ -192,12 +192,12 @@ function FilterPill({
           className={cn(
             'inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full pl-4 pr-3 text-[13px] font-medium transition-[color,background-color] duration-150',
             value !== 'all'
-              ? 'bg-black/[0.06] text-[#111]'
-              : 'bg-black/[0.035] text-[#808080] hover:bg-black/[0.055] hover:text-[#111]'
+              ? 'bg-wash-6 text-ink-title'
+              : 'bg-wash-4 text-ink-muted hover:bg-wash-6 hover:text-ink-title'
           )}
         >
           {value !== 'all' ? options.find(o => o.value === value)?.label ?? label : label}
-          <ChevronDown className="size-3 text-[#9a9a9a]" />
+          <ChevronDown className="size-3 text-ink-faint" />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent light align="end" className="min-w-[176px]">
@@ -427,16 +427,16 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, is
               'group flex items-center gap-4 rounded-[14px] px-4 py-3.5 transition-[background-color] duration-150 focus-visible:outline-none',
               locked
                 ? 'cursor-default'
-                : 'cursor-pointer hover:bg-black/[0.025] active:bg-black/[0.045] focus-visible:bg-black/[0.035]',
+                : 'cursor-pointer hover:bg-wash-3 active:bg-wash-5 focus-visible:bg-wash-4',
             )}
           >
             {thumb ? (
               <div className="relative shrink-0">
                 {/* back sheet — peeks below multi-slide decks so they read as a stack */}
                 {(doc.slides?.length ?? 0) > 1 && (
-                  <div className="absolute inset-x-1.5 -bottom-[3px] h-full rounded-[10px] bg-white shadow-[0_0_0_1px_rgba(0,0,0,0.05)]" />
+                  <div className="absolute inset-x-1.5 -bottom-[3px] h-full rounded-[10px] bg-surface-1 shadow-[0_0_0_1px_rgba(0,0,0,0.05)]" />
                 )}
-                <div className="relative h-14 w-[100px] overflow-hidden rounded-[10px] bg-white shadow-[0_0_0_1px_rgba(0,0,0,0.07),0_1px_3px_rgba(0,0,0,0.06)]">
+                <div className="relative h-14 w-[100px] overflow-hidden rounded-[10px] bg-surface-1 shadow-[0_0_0_1px_rgba(0,0,0,0.07),0_1px_3px_rgba(0,0,0,0.06)]">
                   <img
                     src={thumb.thumbnail_url ?? thumb.url}
                     alt=""
@@ -447,7 +447,7 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, is
                     className="h-full w-full object-cover transition-transform duration-200 ease-out group-hover:scale-[1.04]"
                   />
                   {recent && (
-                    <span className="absolute right-1 top-1 size-2 rounded-full bg-[#0d7aff] ring-2 ring-white" />
+                    <span className="absolute right-1 top-1 size-2 rounded-full bg-seeko-accent ring-2 ring-white" />
                   )}
                 </div>
               </div>
@@ -466,28 +466,28 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, is
                   />
                 )}
                 {locked
-                  ? <Lock className="size-[15px] text-[#9a9a9a]" />
+                  ? <Lock className="size-[15px] text-ink-faint" />
                   : isDeck
-                    ? <Presentation className="relative size-4 text-[#8a8a8a]" />
+                    ? <Presentation className="relative size-4 text-ink-muted" />
                     : (
                       <DocGlyph
                         className={cn(
-                          'relative size-4 text-[#8a8a8a] transition-colors duration-200 ease-out',
+                          'relative size-4 text-ink-muted transition-colors duration-200 ease-out',
                           deptIcon?.hoverInk,
                         )}
                       />
                     )}
                 {recent && (
-                  <span className="absolute -right-0.5 -top-0.5 size-2 rounded-full bg-[#0d7aff] ring-2 ring-white" />
+                  <span className="absolute -right-0.5 -top-0.5 size-2 rounded-full bg-seeko-accent ring-2 ring-white" />
                 )}
               </div>
             )}
 
             <div className="min-w-0 flex-1">
-              <p className={cn('truncate text-[14px] font-medium', locked ? 'text-[#9a9a9a]' : 'text-[#111]')}>
+              <p className={cn('truncate text-[14px] font-medium', locked ? 'text-ink-faint' : 'text-ink-title')}>
                 {doc.title}
               </p>
-              <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[12.5px] text-[#969696]">
+              <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[12.5px] text-ink-faint">
                 <span>{isDeck ? (doc.slides?.length ? `Deck · ${doc.slides.length} ${doc.slides.length === 1 ? 'slide' : 'slides'}` : 'Deck') : 'Document'}</span>
                 {locked ? (
                   <>
@@ -524,21 +524,21 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, is
                 </DropdownMenuTrigger>
                 <DropdownMenuContent light align="end" className="min-w-[152px]">
                   <DropdownMenuItem onClick={() => setSelected(doc)}>
-                    <Eye className="size-3.5 text-[#9a9a9a]" />
+                    <Eye className="size-3.5 text-ink-faint" />
                     Open
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => isDeck ? setEditingDeck(doc) : setEditingDoc(doc)}>
-                    <Pencil className="size-3.5 text-[#9a9a9a]" />
+                    <Pencil className="size-3.5 text-ink-faint" />
                     Edit
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setShareDoc(doc)}>
-                    <Share2 className="size-3.5 text-[#9a9a9a]" />
+                    <Share2 className="size-3.5 text-ink-faint" />
                     Share
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     onClick={() => setDeletingId(doc.id)}
-                    className="text-[#b4432f] hover:bg-[#d4503e]/[0.08] hover:text-[#b4432f] focus:bg-[#d4503e]/[0.08] focus:text-[#b4432f]"
+                    className="text-[#b4432f] hover:bg-danger/[0.08] hover:text-[#b4432f] focus:bg-danger/[0.08] focus:text-[#b4432f]"
                   >
                     <Trash2 className="size-3.5" />
                     Delete
@@ -570,7 +570,7 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, is
       <div className="relative">
         {/* ── Toolbar row — tabs left, search + filter + create right, all on canvas ── */}
         <div className="flex flex-wrap items-center gap-2.5">
-          <div className="inline-flex items-center gap-1 rounded-full bg-black/[0.04] p-1">
+          <div className="inline-flex items-center gap-1 rounded-full bg-wash-4 p-1">
             {TABS.map(({ key, label }) => {
               const active = viewMode === key;
               return (
@@ -581,7 +581,7 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, is
                   onClick={() => setViewMode(key)}
                   className={cn(
                     'relative inline-flex h-8 items-center justify-center rounded-full px-3.5 text-[13px] font-medium transition-[color,transform] duration-150 active:scale-[0.97]',
-                    active ? 'text-[#111]' : 'text-[#808080] hover:text-[#111]'
+                    active ? 'text-ink-title' : 'text-ink-muted hover:text-ink-title'
                   )}
                 >
                   {active && (
@@ -589,7 +589,7 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, is
                       layoutId="docsTabPill"
                       initial={false}
                       transition={pillTransition}
-                      className="absolute inset-0 rounded-full bg-white shadow-seeko"
+                      className="absolute inset-0 rounded-full bg-surface-1 shadow-seeko"
                     />
                   )}
                   <span className="relative z-10">{label}</span>
@@ -602,13 +602,13 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, is
             {viewMode !== 'shared' && (
               <>
                 <div className="relative">
-                  <Search className="pointer-events-none absolute left-3.5 top-1/2 size-3.5 -translate-y-1/2 text-[#9a9a9a]" />
+                  <Search className="pointer-events-none absolute left-3.5 top-1/2 size-3.5 -translate-y-1/2 text-ink-faint" />
                   <input
                     type="search"
                     placeholder={viewMode === 'decks' ? 'Search decks...' : 'Search documents...'}
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}
-                    className="h-9 w-[210px] rounded-full bg-black/[0.035] pl-9 pr-4 text-[13px] text-[#2a2a2a] outline-none transition-[background-color] duration-150 placeholder:text-[#9a9a9a] hover:bg-black/[0.055] focus:bg-black/[0.055] focus-visible:ring-2 focus-visible:ring-[#0d7aff]/40 max-sm:w-[150px]"
+                    className="h-9 w-[210px] rounded-full bg-wash-4 pl-9 pr-4 text-[13px] text-ink-strong outline-none transition-[background-color] duration-150 placeholder:text-ink-faint hover:bg-wash-6 focus:bg-wash-6 focus-visible:ring-2 focus-visible:ring-seeko-accent/40 max-sm:w-[150px]"
                   />
                 </div>
                 <FilterPill
@@ -635,11 +635,11 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, is
                 </DropdownMenuTrigger>
                 <DropdownMenuContent light align="end" className="min-w-[152px]">
                   <DropdownMenuItem onClick={() => setEditingDoc('new')}>
-                    <FileText className="size-3.5 text-[#9a9a9a]" />
+                    <FileText className="size-3.5 text-ink-faint" />
                     Document
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setEditingDeck('new')}>
-                    <Presentation className="size-3.5 text-[#9a9a9a]" />
+                    <Presentation className="size-3.5 text-ink-faint" />
                     Deck
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -659,44 +659,44 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, is
               animate="active"
               exit="exit"
               transition={tabSlideTransition}
-              className="mt-4 rounded-[20px] bg-white p-5 shadow-seeko"
+              className="mt-4 rounded-[20px] bg-surface-1 p-5 shadow-seeko"
             >
               <div className="mb-3 flex items-center justify-between gap-3">
                 <div>
-                  <h2 className="text-[15px] font-medium text-[#111]">External access</h2>
-                  <p className="mt-0.5 text-[12px] text-[#8a8a8a]">Share links, recipient state, and expiry controls.</p>
+                  <h2 className="text-[15px] font-medium text-ink-title">External access</h2>
+                  <p className="mt-0.5 text-[12px] text-ink-muted">Share links, recipient state, and expiry controls.</p>
                 </div>
-                <span className="rounded-full bg-black/[0.04] px-2.5 py-1 text-[12px] tabular-nums text-[#777777]">{sharedCount} total</span>
+                <span className="rounded-full bg-wash-4 px-2.5 py-1 text-[12px] tabular-nums text-[#777777] dark:text-ink-muted">{sharedCount} total</span>
               </div>
 
               {sharedLoading ? (
                 <div className="flex items-center justify-center py-12">
-                  <div className="size-5 animate-spin rounded-full border-2 border-black/10 border-t-[#808080]" />
+                  <div className="size-5 animate-spin rounded-full border-2 border-black/10 border-t-ink-muted" />
                 </div>
               ) : sharedLinks.length === 0 ? (
-                <p className="rounded-[14px] bg-black/[0.025] py-10 text-center text-[13px] text-[#808080]">No shared links yet</p>
+                <p className="rounded-[14px] bg-wash-3 py-10 text-center text-[13px] text-ink-muted">No shared links yet</p>
               ) : (
-                <div className="overflow-hidden rounded-[14px] bg-white shadow-[0_0_0_1px_rgba(0,0,0,0.06)]">
-                  <div className="grid grid-cols-[minmax(0,1fr)_160px_104px_112px] gap-4 border-b border-black/[0.06] px-4 py-2 text-[12px] font-medium text-[#9a9a9a] max-lg:hidden">
+                <div className="overflow-hidden rounded-[14px] bg-surface-1 shadow-[0_0_0_1px_rgba(0,0,0,0.06)]">
+                  <div className="grid grid-cols-[minmax(0,1fr)_160px_104px_112px] gap-4 border-b border-wash-6 px-4 py-2 text-[12px] font-medium text-ink-faint max-lg:hidden">
                     <span>Document</span>
                     <span>Recipient</span>
                     <span>Status</span>
                     <span className="text-right">Actions</span>
                   </div>
-                  <div className="divide-y divide-black/[0.06]">
+                  <div className="divide-y divide-wash-6">
                     {(sharedExpanded ? sharedLinks : sharedLinks.slice(0, 6)).map(link => (
                       <div key={link.id} className="grid grid-cols-[minmax(0,1fr)_160px_104px_112px] items-center gap-4 px-4 py-3 max-lg:grid-cols-[minmax(0,1fr)_112px]">
                         <div className="flex min-w-0 items-center gap-3">
-                          <div className="flex size-9 shrink-0 items-center justify-center rounded-[10px] bg-[#f1f1f1]">
+                          <div className="flex size-9 shrink-0 items-center justify-center rounded-[10px] bg-control-fill">
                             {link.doc_type === 'deck' ? (
-                              <Presentation className="size-4 text-[#8a8a8a]" />
+                              <Presentation className="size-4 text-ink-muted" />
                             ) : (
-                              <FileText className="size-4 text-[#8a8a8a]" />
+                              <FileText className="size-4 text-ink-muted" />
                             )}
                           </div>
                           <div className="min-w-0">
-                            <p className="truncate text-[13.5px] font-medium text-[#111]">{link.doc_title ?? 'Untitled'}</p>
-                            <div className="mt-0.5 flex items-center gap-2 text-[11px] text-[#9a9a9a]">
+                            <p className="truncate text-[13.5px] font-medium text-ink-title">{link.doc_title ?? 'Untitled'}</p>
+                            <div className="mt-0.5 flex items-center gap-2 text-[11px] text-ink-faint">
                               <span className="flex items-center gap-1 tabular-nums"><Eye className="size-3" />{link.view_count ?? 0}</span>
                               <span className="tabular-nums">{timeAgo(link.created_at)}</span>
                               {link.expires_at && (link.status === 'pending' || link.status === 'verified') && (
@@ -705,13 +705,13 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, is
                             </div>
                           </div>
                         </div>
-                        <span className="truncate text-[12px] text-[#777777] max-lg:hidden">{link.recipient_email}</span>
+                        <span className="truncate text-[12px] text-[#777777] dark:text-ink-muted max-lg:hidden">{link.recipient_email}</span>
                         <span className={cn('w-fit rounded-full border px-2 py-0.5 text-[10px] font-medium capitalize', LIGHT_SIGNING_STATUS[link.status] ?? LIGHT_SIGNING_STATUS.expired)}>
                           {link.status}
                         </span>
                         <div className="flex justify-end gap-1.5">
                           {(link.status === 'pending' || link.status === 'verified') && (
-                            <button type="button" title="Revoke" onClick={() => handleRevoke(link.id)} className={cn(ROW_ICON_BTN, 'hover:bg-[#d4503e]/10 hover:text-[#d4503e]')}>
+                            <button type="button" title="Revoke" onClick={() => handleRevoke(link.id)} className={cn(ROW_ICON_BTN, 'hover:bg-danger/10 hover:text-danger')}>
                               <XCircle className="size-3.5" />
                             </button>
                           )}
@@ -742,10 +742,10 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, is
                               animate={{ opacity: 1, height: 'auto' }}
                               exit={{ opacity: 0, height: 0 }}
                               transition={{ type: 'spring', visualDuration: 0.3, bounce: 0 }}
-                              className="col-span-full overflow-hidden border-t border-black/[0.06]"
+                              className="col-span-full overflow-hidden border-t border-wash-6"
                             >
                               <div className="flex flex-col gap-2 py-3">
-                                <p className="text-xs text-[#808080]">
+                                <p className="text-xs text-ink-muted">
                                   Current expiry: {link.expires_at ? new Date(link.expires_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'None'}
                                 </p>
                                 <DatePicker
@@ -759,7 +759,7 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, is
                                     {deadlineLoading ? <Loader2 className="size-3 animate-spin" /> : null}
                                     Update
                                   </button>
-                                  <button type="button" onClick={() => { setEditingDeadlineId(null); setDeadlineDate(''); }} className="h-9 rounded-full px-4 text-[13px] font-medium text-[#808080] transition-colors duration-150 hover:text-[#111]">
+                                  <button type="button" onClick={() => { setEditingDeadlineId(null); setDeadlineDate(''); }} className="h-9 rounded-full px-4 text-[13px] font-medium text-ink-muted transition-colors duration-150 hover:text-ink-title">
                                     Cancel
                                   </button>
                                 </div>
@@ -773,7 +773,7 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, is
                 </div>
               )}
               {sharedLinks.length > 6 && (
-                <button type="button" onClick={() => setSharedExpanded(prev => !prev)} className="mt-3 py-1.5 text-[13px] text-[#808080] transition-colors duration-150 hover:text-[#111]">
+                <button type="button" onClick={() => setSharedExpanded(prev => !prev)} className="mt-3 py-1.5 text-[13px] text-ink-muted transition-colors duration-150 hover:text-ink-title">
                   {sharedExpanded ? 'Show less' : `Show ${sharedLinks.length - 6} more`}
                 </button>
               )}
@@ -792,9 +792,9 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, is
               className="mt-4"
             >
               {baseModeCount === 0 ? (
-                <div className="flex flex-col items-center rounded-[20px] bg-white px-8 py-16 text-center shadow-seeko">
-                  <p className="text-balance text-[15px] font-semibold text-[#111]">{viewMode === 'decks' ? 'No decks yet' : 'No documents yet'}</p>
-                  <p className="mt-1.5 max-w-[44ch] text-pretty text-[13px] leading-relaxed text-[#808080]">
+                <div className="flex flex-col items-center rounded-[20px] bg-surface-1 px-8 py-16 text-center shadow-seeko">
+                  <p className="text-balance text-[15px] font-semibold text-ink-title">{viewMode === 'decks' ? 'No decks yet' : 'No documents yet'}</p>
+                  <p className="mt-1.5 max-w-[44ch] text-pretty text-[13px] leading-relaxed text-ink-muted">
                     {isAdmin
                       ? (viewMode === 'decks' ? 'Upload a PDF to create your first deck.' : 'Create your first document to share specs and resources with the team.')
                       : (viewMode === 'decks' ? 'Decks will appear here when the team uploads them.' : 'Your lead can add team documents. Check back later or ask them to create one.')}
@@ -807,12 +807,12 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, is
                   )}
                 </div>
               ) : sortedDocs.length === 0 ? (
-                <div className="rounded-[20px] bg-white py-14 text-center shadow-seeko">
-                  <p className="text-[13px] text-[#808080]">No {viewMode === 'decks' ? 'decks' : 'documents'} match your search or filter.</p>
+                <div className="rounded-[20px] bg-surface-1 py-14 text-center shadow-seeko">
+                  <p className="text-[13px] text-ink-muted">No {viewMode === 'decks' ? 'decks' : 'documents'} match your search or filter.</p>
                 </div>
               ) : (
                 <section>
-                  <Stagger className="divide-y divide-black/[0.05]" staggerMs={LIST.staggerMs / 1000} delayMs={LIST.delayMs / 1000}>
+                  <Stagger className="divide-y divide-wash-5" staggerMs={LIST.staggerMs / 1000} delayMs={LIST.delayMs / 1000}>
                     {sortedDocs.map(renderDocRow)}
                   </Stagger>
                 </section>
@@ -844,11 +844,11 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, is
                 const Glyph = readDoc.type === 'deck' ? Presentation : (di?.Icon ?? FileText);
                 return (
                   <div className={cn(GLASS_TILE, 'size-7 rounded-[8px]')} style={glassTileStyle(di?.glow)}>
-                    <Glyph className={cn('size-3.5', di ? di.ink : 'text-[#808080]')} />
+                    <Glyph className={cn('size-3.5', di ? di.ink : 'text-ink-muted')} />
                   </div>
                 );
               })()}
-              <h2 className="truncate text-[13px] font-medium text-[#575757]">{readDoc.title}</h2>
+              <h2 className="truncate text-[13px] font-medium text-[#575757] dark:text-ink-body">{readDoc.title}</h2>
             </motion.div>
           </AnimatePresence>
         )}
@@ -858,7 +858,7 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, is
               type="button"
               title="Share externally"
               onClick={() => setShareDoc(readDoc)}
-              className="flex size-8 items-center justify-center rounded-lg text-[#6f6f6f] transition-[background-color,color] duration-150 ease-out hover:bg-black/[0.05] hover:text-[#111] active:bg-black/[0.08] focus:outline-none focus-visible:ring-2 focus-visible:ring-black/15"
+              className="flex size-8 items-center justify-center rounded-lg text-[#6f6f6f] transition-[background-color,color] duration-150 ease-out hover:bg-wash-5 hover:text-ink-title active:bg-wash-8 focus:outline-none focus-visible:ring-2 focus-visible:ring-black/15 dark:text-ink-muted dark:focus-visible:ring-white/25"
             >
               <Share2 className="size-4" />
             </button>
@@ -867,24 +867,24 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, is
                 <button
                   type="button"
                   aria-label={`Actions for ${readDoc.title}`}
-                  className="flex size-8 items-center justify-center rounded-lg text-[#6f6f6f] transition-[background-color,color] duration-150 ease-out hover:bg-black/[0.05] hover:text-[#111] active:bg-black/[0.08] focus:outline-none focus-visible:ring-2 focus-visible:ring-black/15"
+                  className="flex size-8 items-center justify-center rounded-lg text-[#6f6f6f] transition-[background-color,color] duration-150 ease-out hover:bg-wash-5 hover:text-ink-title active:bg-wash-8 focus:outline-none focus-visible:ring-2 focus-visible:ring-black/15 dark:text-ink-muted dark:focus-visible:ring-white/25"
                 >
                   <MoreHorizontal className="size-4" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent light align="end" className="min-w-[152px]">
                 <DropdownMenuItem onClick={() => readDoc.type === 'deck' ? setEditingDeck(readDoc) : setEditingDoc(readDoc)}>
-                  <Pencil className="size-3.5 text-[#9a9a9a]" />
+                  <Pencil className="size-3.5 text-ink-faint" />
                   Edit
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setShareDoc(readDoc)}>
-                  <Share2 className="size-3.5 text-[#9a9a9a]" />
+                  <Share2 className="size-3.5 text-ink-faint" />
                   Share
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={() => setDeletingId(readDoc.id)}
-                  className="text-[#b4432f] hover:bg-[#d4503e]/[0.08] hover:text-[#b4432f] focus:bg-[#d4503e]/[0.08] focus:text-[#b4432f]"
+                  className="text-[#b4432f] hover:bg-danger/[0.08] hover:text-[#b4432f] focus:bg-danger/[0.08] focus:text-[#b4432f]"
                 >
                   <Trash2 className="size-3.5" />
                   Delete
@@ -913,18 +913,18 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, is
                 <DocContent html={readDoc.content} />
               ) : (
                 <div className="flex flex-col items-center gap-3 py-16 text-center">
-                  <div className="flex size-12 items-center justify-center rounded-xl bg-[#f4f4f4]">
-                    <FileText className="size-5 text-[#9a9a9a]" />
+                  <div className="flex size-12 items-center justify-center rounded-xl bg-surface-4">
+                    <FileText className="size-5 text-ink-faint" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-[#111]">No content yet</p>
-                    <p className="text-xs text-[#808080] mt-1">Edit this document to add content.</p>
+                    <p className="text-sm font-medium text-ink-title">No content yet</p>
+                    <p className="text-xs text-ink-muted mt-1">Edit this document to add content.</p>
                   </div>
                   {isAdmin && (
                     <button
                       type="button"
                       onClick={() => { setSelected(null); setEditingDoc(readDoc); }}
-                      className="mt-2 text-xs font-medium text-[#0a63cc] hover:text-[#08509f] transition-colors"
+                      className="mt-2 text-xs font-medium text-seeko-accent-ink hover:text-[#08509f] transition-colors"
                     >
                       Edit document
                     </button>

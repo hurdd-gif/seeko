@@ -116,12 +116,12 @@ export function DeckViewer({ slides, title, notes, orientation = 'horizontal' }:
       <>
         <div className="flex flex-col gap-0">
           {/* Scrollable page stack */}
-          <div className="relative group rounded-xl overflow-hidden border border-black/[0.06]" style={{ backgroundColor: '#f4f4f4' }}>
+          <div className="relative group rounded-xl overflow-hidden border border-wash-6" style={{ backgroundColor: '#f4f4f4' }}>
             {/* Fullscreen button overlay */}
             <button
               type="button"
               onClick={() => setFullscreen(true)}
-              className="absolute top-3 right-3 z-10 flex items-center gap-1.5 text-[11px] font-medium text-[#505050] hover:text-[#111] bg-white/80 backdrop-blur-sm rounded-md px-2 py-1.5 shadow-sm transition-all opacity-0 group-hover:opacity-100"
+              className="absolute top-3 right-3 z-10 flex items-center gap-1.5 text-[11px] font-medium text-ink-body hover:text-ink-title bg-white/80 backdrop-blur-sm rounded-md px-2 py-1.5 shadow-sm transition-all opacity-0 group-hover:opacity-100"
             >
               <Maximize2 className="size-3" />
               Expand
@@ -145,7 +145,7 @@ export function DeckViewer({ slides, title, notes, orientation = 'horizontal' }:
           {/* Page count */}
           {sorted.length > 1 && (
             <div className="flex items-center justify-center mt-3">
-              <span className="text-xs font-medium tabular-nums text-[#9a9a9a]">
+              <span className="text-xs font-medium tabular-nums text-ink-faint">
                 {sorted.length} {sorted.length === 1 ? 'page' : 'pages'}
               </span>
             </div>
@@ -157,10 +157,10 @@ export function DeckViewer({ slides, title, notes, orientation = 'horizontal' }:
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ ...SMOOTH, delay: 0.15 }}
-              className="mt-4 rounded-xl border border-black/[0.06] bg-[#f9f9f9] p-4"
+              className="mt-4 rounded-xl border border-wash-6 bg-[#f9f9f9] dark:bg-surface-2 p-4"
             >
-              <p className="mb-2 text-[11px] font-medium text-[#9a9a9a]">Notes</p>
-              <div className="prose-sm text-sm leading-relaxed text-[#505050]" dangerouslySetInnerHTML={{ __html: notes }} />
+              <p className="mb-2 text-[11px] font-medium text-ink-faint">Notes</p>
+              <div className="prose-sm text-sm leading-relaxed text-ink-body" dangerouslySetInnerHTML={{ __html: notes }} />
             </motion.div>
           )}
         </div>
@@ -214,7 +214,7 @@ export function DeckViewer({ slides, title, notes, orientation = 'horizontal' }:
       {/* ── Inline view: main slide + filmstrip ───────────── */}
       <div className="flex flex-col gap-4">
         {/* Main slide area */}
-        <div className="relative group rounded-xl overflow-hidden shadow-seeko aspect-[16/9] border border-black/[0.06]" style={{ backgroundColor: '#f4f4f4' }}>
+        <div className="relative group rounded-xl overflow-hidden shadow-seeko aspect-[16/9] border border-wash-6" style={{ backgroundColor: '#f4f4f4' }}>
           <img
             src={sorted[currentSlide].url}
             alt={`Slide ${currentSlide + 1}`}
@@ -225,13 +225,13 @@ export function DeckViewer({ slides, title, notes, orientation = 'horizontal' }:
 
           {/* Overlay bar — slide counter + present button */}
           <div className="absolute top-0 inset-x-0 z-10 flex items-center justify-between px-3 py-2 bg-gradient-to-b from-white/85 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-            <span className="text-[11px] font-medium text-[#505050] tabular-nums">
+            <span className="text-[11px] font-medium text-ink-body tabular-nums">
               {currentSlide + 1} / {sorted.length}
             </span>
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); setCurrentSlide(0); setDirection(0); setFullscreen(true); }}
-              className="flex items-center gap-1.5 text-[11px] font-medium text-[#505050] hover:text-[#111] transition-colors"
+              className="flex items-center gap-1.5 text-[11px] font-medium text-ink-body hover:text-ink-title transition-colors"
             >
               <Maximize2 className="size-3" />
               Present
@@ -243,7 +243,7 @@ export function DeckViewer({ slides, title, notes, orientation = 'horizontal' }:
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); goPrev(); }}
-              className="absolute left-2 top-1/2 -translate-y-1/2 z-10 flex items-center justify-center size-9 rounded-full bg-white/80 backdrop-blur-sm text-[#505050] hover:bg-white hover:text-[#111] transition-all shadow-seeko sm:opacity-0 sm:group-hover:opacity-100"
+              className="absolute left-2 top-1/2 -translate-y-1/2 z-10 flex items-center justify-center size-9 rounded-full bg-white/80 backdrop-blur-sm text-ink-body hover:bg-white hover:text-ink-title transition-all shadow-seeko sm:opacity-0 sm:group-hover:opacity-100"
             >
               <ChevronLeft className="size-4" />
             </button>
@@ -258,7 +258,7 @@ export function DeckViewer({ slides, title, notes, orientation = 'horizontal' }:
                 if (currentSlide < sorted.length - 1) goNext();
                 else setFullscreen(true);
               }}
-              className="absolute right-2 top-1/2 -translate-y-1/2 z-10 flex items-center justify-center size-9 rounded-full bg-white/80 backdrop-blur-sm text-[#505050] hover:bg-white hover:text-[#111] transition-all shadow-seeko sm:opacity-0 sm:group-hover:opacity-100"
+              className="absolute right-2 top-1/2 -translate-y-1/2 z-10 flex items-center justify-center size-9 rounded-full bg-white/80 backdrop-blur-sm text-ink-body hover:bg-white hover:text-ink-title transition-all shadow-seeko sm:opacity-0 sm:group-hover:opacity-100"
             >
               {currentSlide < sorted.length - 1 ? <ChevronRight className="size-4" /> : <Maximize2 className="size-3.5" />}
             </button>
@@ -275,7 +275,7 @@ export function DeckViewer({ slides, title, notes, orientation = 'horizontal' }:
         {/* Slide counter — animated number transition */}
         {sorted.length > 1 && (
           <div className="flex items-center justify-center">
-            <span className="text-xs font-medium tabular-nums text-[#9a9a9a] flex items-center gap-0">
+            <span className="text-xs font-medium tabular-nums text-ink-faint flex items-center gap-0">
               <span className="relative inline-flex overflow-hidden h-[1.2em] w-[1.5ch] justify-center">
                 <AnimatePresence mode="popLayout" initial={false} custom={direction}>
                   <motion.span
@@ -308,7 +308,7 @@ export function DeckViewer({ slides, title, notes, orientation = 'horizontal' }:
                 onClick={() => goTo(i)}
                 whileHover={i !== currentSlide ? { scale: 1.04, opacity: 0.85 } : {}}
                 transition={SNAPPY}
-                className="relative shrink-0 rounded-lg overflow-hidden border border-black/[0.06]"
+                className="relative shrink-0 rounded-lg overflow-hidden border border-wash-6"
                 style={{ width: sorted.length <= 6 ? '7rem' : '5.5rem', aspectRatio: '16/9' }}
               >
                 {i === currentSlide && (
@@ -339,9 +339,9 @@ export function DeckViewer({ slides, title, notes, orientation = 'horizontal' }:
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ ...SMOOTH, delay: 0.15 }}
-            className="mt-2 rounded-xl border border-black/[0.06] bg-[#f9f9f9] p-4"
+            className="mt-2 rounded-xl border border-wash-6 bg-[#f9f9f9] dark:bg-surface-2 p-4"
           >
-            <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-[#9a9a9a]">Notes</p>
+            <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-ink-faint">Notes</p>
             <div className="prose-sm text-sm leading-relaxed text-foreground/70" dangerouslySetInnerHTML={{ __html: notes }} />
           </motion.div>
         )}

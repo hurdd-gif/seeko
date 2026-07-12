@@ -39,7 +39,7 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 /** Emphasised span — actors, task names, and "after" values get ink. */
 function Ink({ children }: { children: ReactNode }) {
-  return <span className="font-medium text-[#111]">{children}</span>;
+  return <span className="font-medium text-ink-title">{children}</span>;
 }
 
 /** Parse a legacy target like "task: Game Combat → Youngan" into parts. */
@@ -105,7 +105,7 @@ function eventCopy(a: TaskActivity, resolveName: (id: string) => string | undefi
     const destructive = /^delete/i.test(a.action);
     return (
       <>
-        <span className={destructive ? 'text-[#d4503e]' : undefined}>{verb}</span>{' '}
+        <span className={destructive ? 'text-danger' : undefined}>{verb}</span>{' '}
         <Ink>{legacy.name}</Ink>
         {legacy.value != null && (
           <>
@@ -195,28 +195,28 @@ function ActivityRow({
       {isEko ? (
         <span
           aria-label="EKO"
-          className="flex size-6 shrink-0 items-center justify-center rounded-full bg-[#0d7aff]/[0.12] text-[#0d7aff] outline outline-1 -outline-offset-1 outline-[#0d7aff]/25"
+          className="flex size-6 shrink-0 items-center justify-center rounded-full bg-seeko-accent/[0.12] text-seeko-accent outline outline-1 -outline-offset-1 outline-seeko-accent/25"
         >
           <Sparkles className="size-3.5" />
         </span>
       ) : (
-        <Avatar className="size-6 shrink-0 outline outline-1 -outline-offset-1 outline-black/[0.06]">
+        <Avatar className="size-6 shrink-0 outline outline-1 -outline-offset-1 outline-wash-6">
           <AvatarImage src={a.profiles?.avatar_url ?? undefined} alt="" />
-          <AvatarFallback className="bg-[#f4f4f4] text-[9px] text-[#505050]">
+          <AvatarFallback className="bg-surface-4 text-[9px] text-ink-body">
             {actorName ? getInitials(actorName) : '?'}
           </AvatarFallback>
         </Avatar>
       )}
-      <p className="min-w-0 flex-1 truncate text-[13px] leading-[1.45] text-[#6a6a6a]">
+      <p className="min-w-0 flex-1 truncate text-[13px] leading-[1.45] text-[#6a6a6a] dark:text-ink-muted-strong">
         {isEko ? (
-          <span className="font-medium text-[#0d7aff]">EKO</span>
+          <span className="font-medium text-seeko-accent">EKO</span>
         ) : (
           actorName && <Ink>{actorName}</Ink>
         )}
         {actorName ? ' ' : null}
         {eventCopy(a, resolveName)}
       </p>
-      <span className="shrink-0 text-[11px] tabular-nums text-[#9a9a9a]">{time}</span>
+      <span className="shrink-0 text-[11px] tabular-nums text-ink-faint">{time}</span>
     </li>
   );
 }
@@ -258,19 +258,19 @@ export function ActivityView({ view }: { view: ActivityViewData }) {
 
       {feed.length === 0 ? (
         <FadeRise y={6} delay={0.12}>
-          <div className="mt-6 rounded-2xl bg-white px-8 py-10 text-center shadow-seeko">
-            <p className="text-[14px] text-[#9a9a9a]">No activity yet.</p>
+          <div className="mt-6 rounded-2xl bg-surface-1 px-8 py-10 text-center shadow-seeko">
+            <p className="text-[14px] text-ink-faint">No activity yet.</p>
           </div>
         </FadeRise>
       ) : (
         feed.map((group, i) => (
           <FadeRise key={group.label} y={6} delay={Math.min(0.12 + i * 0.04, 0.36)}>
             <section className="mt-6">
-              <h3 className="px-1 text-[12px] font-medium text-[#9a9a9a]">{group.label}</h3>
-              <ol className="mt-2 rounded-2xl bg-white px-5 py-2.5 shadow-seeko">
+              <h3 className="px-1 text-[12px] font-medium text-ink-faint">{group.label}</h3>
+              <ol className="mt-2 rounded-2xl bg-surface-1 px-5 py-2.5 shadow-seeko">
                 {group.rows.map((a, j) => (
                   <Fragment key={a.id}>
-                    {j > 0 && <li aria-hidden className="h-px bg-black/[0.04]" />}
+                    {j > 0 && <li aria-hidden className="h-px bg-wash-4" />}
                     <ActivityRow a={a} resolveName={resolveName} />
                   </Fragment>
                 ))}
