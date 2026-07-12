@@ -36,10 +36,10 @@ export function ProgressRouteContent({ data }: { data: ProgressLoaderData }) {
         <div className="mx-auto max-w-3xl px-6 py-8">
           <FadeRise y={6} delay={0.08}>
             <div className="mb-8">
-              <h1 className="text-[24px] font-medium leading-[1.2] tracking-[-0.02em] text-[#1a1a1a]">
+              <h1 className="text-[24px] font-medium leading-[1.2] tracking-[-0.02em] text-ink-title">
                 Progress
               </h1>
-              <p className="mt-1 text-[13.5px] text-[#7a7a7a]">
+              <p className="mt-1 text-[13.5px] text-ink-muted">
                 Overall completion across the studio
                 {isAdmin ? ' — click the ring to update an area.' : '.'}
               </p>
@@ -47,7 +47,7 @@ export function ProgressRouteContent({ data }: { data: ProgressLoaderData }) {
           </FadeRise>
 
           <FadeRise y={6} delay={0.12}>
-            <section className="flex justify-center rounded-2xl bg-white px-6 pb-16 pt-24 shadow-seeko">
+            <section className="flex justify-center rounded-2xl bg-surface-1 px-6 pb-16 pt-24 shadow-seeko">
               <StudioProgressRing areas={areas} milestones={milestones} isAdmin={isAdmin} />
             </section>
           </FadeRise>

@@ -152,7 +152,7 @@ export function StudioProgressEditor({
     <Dialog open={open} onOpenChange={onOpenChange} light contentClassName="max-w-md">
       <DialogHeader>
         <DialogTitle>Studio progress</DialogTitle>
-        <p className="text-[13px] text-[#808080]">
+        <p className="text-[13px] text-ink-muted">
           Update progress, status, and phase for each area.
         </p>
       </DialogHeader>
@@ -162,11 +162,11 @@ export function StudioProgressEditor({
           const s = draft[a.id];
           if (!s) return null;
           return (
-            <div key={a.id} className={cn('py-5', i > 0 && 'border-t border-black/[0.06]')}>
+            <div key={a.id} className={cn('py-5', i > 0 && 'border-t border-wash-6')}>
               <div className="mb-3 flex items-center gap-2.5">
-                <h3 className="text-[15px] font-semibold text-[#111]">{a.name}</h3>
+                <h3 className="text-[15px] font-semibold text-ink-title">{a.name}</h3>
                 {s.phase && (
-                  <span className="rounded-full bg-black/[0.05] px-2 py-0.5 font-mono text-[11px] leading-none text-[#505050]">
+                  <span className="rounded-full bg-wash-5 px-2 py-0.5 font-mono text-[11px] leading-none text-ink-body">
                     {s.phase}
                   </span>
                 )}
@@ -175,7 +175,7 @@ export function StudioProgressEditor({
               {/* Progress — hero field with a live light bar */}
               <div className="mb-4">
                 <div className="mb-2 flex items-center justify-between">
-                  <span className="text-[11px] font-medium text-[#808080]">Progress</span>
+                  <span className="text-[11px] font-medium text-ink-muted">Progress</span>
                   <div className="flex items-baseline gap-1">
                     <input
                       type="number"
@@ -184,18 +184,18 @@ export function StudioProgressEditor({
                       aria-label={`Progress for ${a.name}`}
                       value={s.progress}
                       onChange={(e) => setField(a.id, 'progress', clamp(Number(e.target.value) || 0))}
-                      className="w-14 rounded-md px-1 bg-transparent text-right text-sm font-mono font-medium tabular-nums text-[#111] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d7aff]/30 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                      className="w-14 rounded-md px-1 bg-transparent text-right text-sm font-mono font-medium tabular-nums text-ink-title focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-seeko-accent/30 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                     />
-                    <span className="text-xs text-[#808080]">%</span>
+                    <span className="text-xs text-ink-muted">%</span>
                   </div>
                 </div>
-                <ProgressBar value={s.progress} className="bg-black/[0.06]" />
+                <ProgressBar value={s.progress} className="bg-wash-6" />
               </div>
 
               {/* Status + Phase */}
               <div className="mb-4 grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <span className="text-[11px] font-medium text-[#808080]">Status</span>
+                  <span className="text-[11px] font-medium text-ink-muted">Status</span>
                   <Select light value={s.status} onChange={(e) => setField(a.id, 'status', e.target.value)}>
                     {STATUSES.map((st) => (
                       <option key={st} value={st}>
@@ -205,7 +205,7 @@ export function StudioProgressEditor({
                   </Select>
                 </div>
                 <div className="space-y-1.5">
-                  <span className="text-[11px] font-medium text-[#808080]">Phase</span>
+                  <span className="text-[11px] font-medium text-ink-muted">Phase</span>
                   <Select light value={s.phase} onChange={(e) => setField(a.id, 'phase', e.target.value)}>
                     <option value="">—</option>
                     {PHASES.map((p) => (
@@ -219,18 +219,18 @@ export function StudioProgressEditor({
 
               {/* Target date */}
               <div className="mb-4">
-                <span className="mb-1.5 block text-[11px] font-medium text-[#808080]">Target date</span>
+                <span className="mb-1.5 block text-[11px] font-medium text-ink-muted">Target date</span>
                 <input
                   type="date"
                   value={s.target_date}
                   onChange={(e) => setField(a.id, 'target_date', e.target.value)}
-                  className={cn('flex h-9 w-full px-3 py-1 text-sm [color-scheme:light]', LIGHT_INPUT)}
+                  className={cn('flex h-9 w-full px-3 py-1 text-sm [color-scheme:light] dark:[color-scheme:dark]', LIGHT_INPUT)}
                 />
               </div>
 
               {/* Description */}
               <div>
-                <span className="mb-1.5 block text-[11px] font-medium text-[#808080]">Description</span>
+                <span className="mb-1.5 block text-[11px] font-medium text-ink-muted">Description</span>
                 <textarea
                   value={s.description}
                   onChange={(e) => setField(a.id, 'description', e.target.value)}
@@ -244,9 +244,9 @@ export function StudioProgressEditor({
         })}
       </div>
 
-      <div className="mt-1 flex flex-col gap-3 border-t border-black/[0.06] pt-5">
+      <div className="mt-1 flex flex-col gap-3 border-t border-wash-6 pt-5">
         {error && (
-          <p role="alert" className="text-sm text-[#d4503e]">
+          <p role="alert" className="text-sm text-danger">
             {error}
           </p>
         )}

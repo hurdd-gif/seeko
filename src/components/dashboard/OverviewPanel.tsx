@@ -51,7 +51,7 @@ export function OverviewPanel({
           )}
           <div className={`flex min-w-0 items-baseline gap-2${showEyebrow ? '' : ' pl-2'}`}>
             <span
-              className={`whitespace-nowrap text-[15px] leading-[18px] tabular-nums text-[#1b1b1b] ${showEyebrow ? 'font-medium' : 'font-semibold'}`}
+              className={`whitespace-nowrap text-[15px] leading-[18px] tabular-nums text-[#1b1b1b] dark:text-ink-title ${showEyebrow ? 'font-medium' : 'font-semibold'}`}
             >
               {stat}
             </span>
@@ -69,7 +69,7 @@ export function OverviewPanel({
         <div className="flex justify-center px-6 pb-5 pt-1">
           <Link
             href={cta.href}
-            className="inline-flex w-fit items-center justify-center gap-1.5 rounded-full py-2 pl-3.5 pr-3 text-[14px] leading-[18px] text-[#545454] transition-[background-color,transform] duration-150 ease-out hover:bg-[#0000000a] active:scale-[0.97]"
+            className="inline-flex w-fit items-center justify-center gap-1.5 rounded-full py-2 pl-3.5 pr-3 text-[14px] leading-[18px] text-[#545454] transition-[background-color,transform] duration-150 ease-out hover:bg-wash-4 active:scale-[0.97] dark:text-ink-muted"
           >
             <span>{label}</span>
             <svg

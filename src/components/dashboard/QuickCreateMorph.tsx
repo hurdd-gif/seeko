@@ -63,19 +63,19 @@ const DEPARTMENT_OPTIONS: PropertyOption<Department>[] = DEPARTMENTS.map((depart
 
 function metaChipClass() {
   return [
-    'inline-flex h-6 min-w-[30px] cursor-pointer select-none items-center justify-center gap-1.5 rounded-full bg-black/[0.025] px-2 text-[12px] leading-4 text-[#777777]',
-    'ring-1 ring-inset ring-black/[0.035] transition-[background-color,color,scale] duration-150 ease-out',
-    'hover:bg-black/[0.055] hover:text-[#222222] active:scale-[0.96]',
+    'inline-flex h-6 min-w-[30px] cursor-pointer select-none items-center justify-center gap-1.5 rounded-full bg-wash-3 px-2 text-[12px] leading-4 text-[#777777] dark:text-ink-muted',
+    'ring-1 ring-inset ring-wash-4 transition-[background-color,color,scale] duration-150 ease-out',
+    'hover:bg-wash-6 hover:text-[#222222] dark:hover:text-ink-strong active:scale-[0.96]',
   ].join(' ');
 }
 
 const QUICK_META_POPOVER = {
   panelWidth: 156,
   panelClassName:
-    'z-[200] origin-top-left overflow-hidden rounded-[14px] bg-white p-1 shadow-[0_12px_32px_rgba(0,0,0,0.12),0_2px_8px_rgba(0,0,0,0.05)] ring-1 ring-black/[0.055]',
+    'z-[200] origin-top-left overflow-hidden rounded-[14px] bg-surface-1 p-1 shadow-seeko-pop',
   optionClassName:
-    'flex h-7 w-full items-center gap-2 rounded-[10px] px-2 text-left transition-colors duration-150 ease-out hover:bg-black/[0.045]',
-  labelClassName: 'flex-1 truncate text-[12px] leading-4 tracking-[-0.1px] text-[#242424]',
+    'flex h-7 w-full items-center gap-2 rounded-[10px] px-2 text-left transition-colors duration-150 ease-out hover:bg-wash-5',
+  labelClassName: 'flex-1 truncate text-[12px] leading-4 tracking-[-0.1px] text-[#242424] dark:text-ink-strong',
   leadingClassName: 'flex size-3 shrink-0 items-center justify-center',
 } as const;
 
@@ -173,7 +173,7 @@ export function QuickCreateMorph({
         >
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
-              <p className="text-[14px] leading-[18px] tracking-[-0.22px] text-[#1a1a1a]">
+              <p className="text-[14px] leading-[18px] tracking-[-0.22px] text-ink-title">
                 Quick add
               </p>
               <div className="mt-2 flex max-w-[244px] flex-wrap items-center gap-1">
@@ -225,7 +225,7 @@ export function QuickCreateMorph({
               aria-label="Close quick add"
               tabIndex={open ? 0 : -1}
               onClick={() => !isPending && setMorphOpen(false)}
-              className="-mr-1 -mt-1 flex size-8 shrink-0 items-center justify-center rounded-full text-[#8a8a8a] transition-[background-color,color,scale] duration-150 ease-out hover:bg-black/[0.04] hover:text-[#2a2a2a] active:scale-[0.96]"
+              className="-mr-1 -mt-1 flex size-8 shrink-0 items-center justify-center rounded-full text-ink-muted transition-[background-color,color,scale] duration-150 ease-out hover:bg-wash-4 hover:text-ink-strong active:scale-[0.96]"
             >
               <X className="size-3.5" />
             </button>
@@ -238,7 +238,7 @@ export function QuickCreateMorph({
             placeholder="Issue title"
             aria-label="Issue title"
             tabIndex={open ? 0 : -1}
-            className="mt-4 h-9 w-full rounded-[14px] bg-[#f6f6f6] px-3 text-[14px] leading-5 tracking-[-0.18px] text-[#111111] outline-none ring-1 ring-inset ring-black/[0.05] transition-[background-color,box-shadow] duration-150 ease-out placeholder:text-[#a3a3a3] focus:bg-white focus:shadow-[0_0_0_3px_rgba(13,122,255,0.09)] focus:ring-[#0d7aff]/30"
+            className="mt-4 h-9 w-full rounded-[14px] bg-[#f6f6f6] dark:bg-surface-3 px-3 text-[14px] leading-5 tracking-[-0.18px] text-ink-title outline-none ring-1 ring-inset ring-wash-5 transition-[background-color,box-shadow] duration-150 ease-out placeholder:text-[#a3a3a3] focus:bg-surface-1 dark:focus:bg-surface-4 focus:shadow-[0_0_0_3px_rgba(13,122,255,0.09)] focus:ring-seeko-accent/30"
           />
 
           <textarea
@@ -248,7 +248,7 @@ export function QuickCreateMorph({
             aria-label="Description"
             tabIndex={open ? 0 : -1}
             rows={2}
-            className="mt-2 h-[54px] w-full resize-none rounded-[14px] bg-[#f6f6f6] px-3 py-2 text-[13px] leading-5 tracking-[-0.12px] text-[#2a2a2a] outline-none ring-1 ring-inset ring-black/[0.05] transition-[background-color,box-shadow] duration-150 ease-out placeholder:text-[#a3a3a3] focus:bg-white focus:shadow-[0_0_0_3px_rgba(13,122,255,0.09)] focus:ring-[#0d7aff]/30"
+            className="mt-2 h-[54px] w-full resize-none rounded-[14px] bg-[#f6f6f6] dark:bg-surface-3 px-3 py-2 text-[13px] leading-5 tracking-[-0.12px] text-ink-strong outline-none ring-1 ring-inset ring-wash-5 transition-[background-color,box-shadow] duration-150 ease-out placeholder:text-[#a3a3a3] focus:bg-surface-1 dark:focus:bg-surface-4 focus:shadow-[0_0_0_3px_rgba(13,122,255,0.09)] focus:ring-seeko-accent/30"
           />
 
           <div className="mt-3 flex items-center justify-between gap-3">
@@ -258,7 +258,7 @@ export function QuickCreateMorph({
                   {error}
                 </p>
               ) : (
-                <p className="text-[12px] leading-4 text-[#8a8a8a]">Press Enter to create</p>
+                <p className="text-[12px] leading-4 text-ink-muted">Press Enter to create</p>
               )}
             </div>
             <button
@@ -266,7 +266,7 @@ export function QuickCreateMorph({
               disabled={!canSubmit}
               tabIndex={open ? 0 : -1}
               data-testid="Submit issue"
-              className="inline-flex h-8 shrink-0 items-center justify-center rounded-full bg-[#111111] px-3.5 text-[13px] leading-4 tracking-[-0.16px] text-white transition-[background-color,opacity,scale] duration-150 ease-out hover:bg-[#2a2a2a] active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:bg-[#111111] disabled:active:scale-100"
+              className="inline-flex h-8 shrink-0 items-center justify-center rounded-full bg-ink-title px-3.5 text-[13px] leading-4 tracking-[-0.16px] text-surface-1 transition-[background-color,opacity,scale] duration-150 ease-out hover:bg-ink-strong active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:bg-ink-title disabled:active:scale-100"
             >
               {isPending ? <LoaderCircle className="size-3.5 animate-spin" /> : 'Create'}
             </button>

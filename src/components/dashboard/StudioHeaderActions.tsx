@@ -34,9 +34,12 @@ import {
   CreditCard,
   Activity,
   BadgePlus,
+  Moon,
+  Sun,
 } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import type { Notification } from '@/lib/types';
+import { getStoredTheme, setTheme, subscribeTheme, type Theme } from '@/lib/theme';
 import { springs } from '@/lib/motion';
 import { QuickCreateMorph } from '@/components/dashboard/QuickCreateMorph';
 
@@ -163,7 +166,7 @@ export function StudioHeaderActions({
   return (
     <div className="flex items-center gap-1.5">
       {/* ── Flat actions: bell · Create (the one framed pill) ──── */}
-      <span className="flex size-9 items-center justify-center text-[#808080]">
+      <span className="flex size-9 items-center justify-center text-ink-muted">
         {userId ? (
           <NotificationBell
             userId={userId}
@@ -202,7 +205,7 @@ export function StudioHeaderActions({
           {openMenu === 'account' && (
             <motion.div
               {...panelMotion}
-              className="group/menu absolute right-0 top-full z-[95] mt-2 flex w-[244px] flex-col overflow-hidden rounded-[20px] bg-white p-1 shadow-seeko"
+              className="group/menu absolute right-0 top-full z-[95] mt-2 flex w-[244px] flex-col overflow-hidden rounded-[20px] bg-surface-1 p-1 shadow-seeko-pop"
             >
               <motion.div
                 variants={reduce ? undefined : MENU_LIST}
@@ -217,15 +220,15 @@ export function StudioHeaderActions({
                 >
                   <div className="min-w-0">
                     {displayName && (
-                      <p className="truncate text-[14px] font-medium tracking-[-0.28px] text-[#0d0d0d]">
+                      <p className="truncate text-[14px] font-medium tracking-[-0.28px] text-ink-title">
                         {displayName}
                       </p>
                     )}
-                    <p className="mt-0.5 truncate text-[13px] text-[#808080]">{email}</p>
+                    <p className="mt-0.5 truncate text-[13px] text-ink-muted">{email}</p>
                   </div>
                 </motion.div>
 
-                <div className="mx-4 h-px bg-[#0000000d]" />
+                <div className="mx-4 h-px bg-wash-5" />
 
                 {/* Navigation */}
                 <div className="flex flex-col">
@@ -233,12 +236,13 @@ export function StudioHeaderActions({
                   <PopoverLink href="/team" icon={Users} label="Team" reduce={reduce} onClick={close} />
                   {/* Progress disabled 2026-07 — restore the PopoverLink (icon={Gauge}) to re-enable */}
                   <PopoverLink href="/settings" icon={Settings} label="Settings" reduce={reduce} onClick={close} />
+                  <AppearanceToggle reduce={reduce} />
                 </div>
 
                 {/* Admin-only surfaces */}
                 {isAdmin && (
                   <>
-                    <div className="mx-4 h-px bg-[#0000000d]" />
+                    <div className="mx-4 h-px bg-wash-5" />
                     <div className="flex flex-col">
                       <PopoverLink href="/payments" icon={CreditCard} label="Payments" reduce={reduce} onClick={close} />
                       {/* Deep link: /payments?new=1 auto-opens the create dialog after the passkey gate */}
@@ -249,7 +253,7 @@ export function StudioHeaderActions({
                   </>
                 )}
 
-                <div className="mx-4 h-px bg-[#0000000d]" />
+                <div className="mx-4 h-px bg-wash-5" />
 
                 {/* Sign out — destructive, last */}
                 <motion.div variants={reduce ? undefined : MENU_ROW} className="flex flex-col overflow-hidden">
@@ -263,7 +267,7 @@ export function StudioHeaderActions({
                         transition={{ ...SNAPPY, opacity: { duration: 0.12 } }}
                         className="flex items-center justify-between rounded-2xl px-4 py-3"
                       >
-                        <span className="text-[14px] font-medium tracking-[-0.28px] text-[#808080]">
+                        <span className="text-[14px] font-medium tracking-[-0.28px] text-ink-muted">
                           Sign out?
                         </span>
                         <div className="flex items-center gap-3">
@@ -278,7 +282,7 @@ export function StudioHeaderActions({
                           <button
                             type="button"
                             onClick={() => setConfirmingSignOut(false)}
-                            className="text-[14px] text-[#808080] transition-colors hover:text-[#0d0d0d]"
+                            className="text-[14px] text-ink-muted transition-colors hover:text-ink-title"
                           >
                             Cancel
                           </button>
@@ -293,7 +297,7 @@ export function StudioHeaderActions({
                         exit={{ opacity: 0, y: 8 }}
                         transition={{ ...SNAPPY, opacity: { duration: 0.12 } }}
                         onClick={() => setConfirmingSignOut(true)}
-                        className="flex w-full items-center justify-between rounded-2xl px-4 py-3 text-[14px] font-medium tracking-[-0.28px] text-[#0d0d0d] transition-[color,background-color] hover:bg-[rgba(229,72,77,0.08)] hover:text-[#e5484d]"
+                        className="flex w-full items-center justify-between rounded-2xl px-4 py-3 text-[14px] font-medium tracking-[-0.28px] text-ink-title transition-[color,background-color] hover:bg-[rgba(229,72,77,0.08)] hover:text-[#e5484d]"
                       >
                         <span>Sign out</span>
                         <LogOut className="size-5" />
@@ -308,6 +312,62 @@ export function StudioHeaderActions({
       </div>
 
     </div>
+  );
+}
+
+/* Icon crossfade for the theme swap: both glyphs stay mounted and retarget
+ * opacity/scale/blur from their current values, so rapid toggling stays
+ * interruptible instead of restarting. Spring 0.3/bounce 0 per the craft kit. */
+const THEME_ICON_SPRING = { type: 'spring' as const, duration: 0.3, bounce: 0 };
+
+/** Appearance row — same grammar as PopoverLink, but a toggle that keeps the
+ *  menu open so the flip is visible in place. Sun = light, Moon = dark. */
+function AppearanceToggle({ reduce }: { reduce: boolean | null }) {
+  const [theme, setThemeState] = useState<Theme>(() => getStoredTheme());
+
+  useEffect(() => subscribeTheme(setThemeState), []);
+
+  const isDark = theme === 'dark';
+
+  return (
+    <motion.div variants={reduce ? undefined : MENU_ROW}>
+      <motion.div whileHover={reduce ? undefined : { x: 2 }} transition={SNAPPY}>
+        <button
+          type="button"
+          aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+          onClick={() => setTheme(isDark ? 'light' : 'dark')}
+          className="flex w-full items-center justify-between rounded-2xl px-4 py-3 text-[14px] font-medium tracking-[-0.28px] text-ink-title opacity-100 transition-[color,background-color,opacity] group-hover/menu:opacity-20 hover:bg-wash-4 hover:opacity-100!"
+        >
+          <span>Appearance</span>
+          <span className="relative size-5 text-ink-muted" aria-hidden>
+            <motion.span
+              className="absolute inset-0"
+              initial={false}
+              animate={
+                reduce
+                  ? { opacity: isDark ? 0 : 1 }
+                  : { opacity: isDark ? 0 : 1, scale: isDark ? 0.25 : 1, filter: isDark ? 'blur(4px)' : 'blur(0px)' }
+              }
+              transition={reduce ? { duration: 0 } : THEME_ICON_SPRING}
+            >
+              <Sun className="size-5" />
+            </motion.span>
+            <motion.span
+              className="absolute inset-0"
+              initial={false}
+              animate={
+                reduce
+                  ? { opacity: isDark ? 1 : 0 }
+                  : { opacity: isDark ? 1 : 0, scale: isDark ? 1 : 0.25, filter: isDark ? 'blur(0px)' : 'blur(4px)' }
+              }
+              transition={reduce ? { duration: 0 } : THEME_ICON_SPRING}
+            >
+              <Moon className="size-5" />
+            </motion.span>
+          </span>
+        </button>
+      </motion.div>
+    </motion.div>
   );
 }
 
@@ -330,10 +390,10 @@ function PopoverLink({
         <Link
           href={href}
           onClick={onClick}
-          className="flex items-center justify-between rounded-2xl px-4 py-3 text-[14px] font-medium tracking-[-0.28px] text-[#0d0d0d] opacity-100 transition-[color,background-color,opacity] group-hover/menu:opacity-20 hover:bg-[#0000000a] hover:opacity-100!"
+          className="flex items-center justify-between rounded-2xl px-4 py-3 text-[14px] font-medium tracking-[-0.28px] text-ink-title opacity-100 transition-[color,background-color,opacity] group-hover/menu:opacity-20 hover:bg-wash-4 hover:opacity-100!"
         >
           <span>{label}</span>
-          <Icon className="size-5 text-[#808080]" />
+          <Icon className="size-5 text-ink-muted" />
         </Link>
       </motion.div>
     </motion.div>

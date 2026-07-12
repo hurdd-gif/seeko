@@ -108,7 +108,7 @@ export function ProgressRing({
 
   // Shared focus-ring + sizing for both the stat and the edit-button wrappers.
   const ringFrame =
-    'relative rounded-full outline-none focus-visible:ring-2 focus-visible:ring-[#0d7aff]/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--ov-bg)]';
+    'relative rounded-full outline-none focus-visible:ring-2 focus-visible:ring-seeko-accent/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--ov-bg)]';
 
   return (
     <div
@@ -137,7 +137,7 @@ export function ProgressRing({
               box sits outside the circle, so it never overlaps the arc. */}
           <span
             aria-hidden
-            className="pointer-events-none absolute right-1 top-1 flex size-7 scale-95 items-center justify-center rounded-full bg-white text-[#505050] opacity-0 shadow-seeko transition-[opacity,transform] duration-150 ease-out group-hover:scale-100 group-hover:opacity-100 group-focus-visible:scale-100 group-focus-visible:opacity-100 motion-reduce:transition-none"
+            className="pointer-events-none absolute right-1 top-1 flex size-7 scale-95 items-center justify-center rounded-full bg-surface-1 text-ink-body opacity-0 shadow-seeko transition-[opacity,transform] duration-150 ease-out group-hover:scale-100 group-hover:opacity-100 group-focus-visible:scale-100 group-focus-visible:opacity-100 motion-reduce:transition-none"
           >
             <Pencil className="size-3.5" />
           </span>
@@ -168,7 +168,7 @@ export function ProgressRing({
           initial={false}
           animate={open ? 'shown' : 'hidden'}
           style={{ transformOrigin: RING_TOOLTIP.shell.transformOrigin }}
-          className="rounded-2xl bg-white p-3 shadow-seeko-pop"
+          className="rounded-2xl bg-surface-1 p-3 shadow-seeko-pop"
         >
           <p className="mb-2 px-1 text-[12px] leading-none text-[var(--ov-muted)]">
             Health by area
