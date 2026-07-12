@@ -14,9 +14,15 @@ describe('QA preview routes', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByRole('heading', { name: 'Current state of SEEKO' })).toBeInTheDocument();
-    expect(screen.getByText('Main Game')).toBeInTheDocument();
-    expect(screen.getByText('Fighting Club')).toBeInTheDocument();
+    // No visual hero (user call 2026-07-11) — only the screen-reader h1 remains.
+    expect(screen.getByRole('heading', { name: 'Investor dashboard' })).toBeInTheDocument();
+    // Both preview areas carry target dates, so each area names a row in the
+    // Progress ledger AND the What's-shipping ledger.
+    expect(screen.getAllByText('Main Game').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Fighting Club').length).toBeGreaterThan(0);
+    // Milestones dither chart seeded with three milestones (11 of 20 done).
+    expect(screen.getByRole('heading', { name: 'Milestones' })).toBeInTheDocument();
+    expect(screen.getByText('11 of 20 tasks shipped')).toBeInTheDocument();
   });
 
   it('renders the signer QA agreement seed data', () => {

@@ -26,7 +26,8 @@ describe('ContractorRouteContent', () => {
     renderContent({ status: 'ready', index: ready });
     expect(screen.getByRole('heading', { name: /good morning, dana/i })).toBeInTheDocument();
     expect(screen.getByText(/1 deliverable · next due/i)).toBeInTheDocument();
-    expect(screen.getByText('Main menu wireframes')).toBeInTheDocument();
+    // Scoped to the card heading — the journey rail repeats the name as a stop.
+    expect(screen.getByRole('heading', { name: 'Main menu wireframes' })).toBeInTheDocument();
   });
 
   it('shows the empty state when the contractor has no deliverables', () => {

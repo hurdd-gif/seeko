@@ -71,9 +71,9 @@ function timeAgo(dateStr: string): string {
 const EVENT_ICONS: Record<string, { icon: typeof Eye; className: string; label: string }> = {
   page_view: { icon: Eye, className: 'text-blue-600', label: 'viewed' },
   click: { icon: MousePointer, className: 'text-amber-600', label: 'clicked' },
-  navigate: { icon: Eye, className: 'text-[#0d7aff]', label: 'navigated' },
-  select: { icon: MousePointer, className: 'text-[#808080]', label: 'selected' },
-  input: { icon: MousePointer, className: 'text-[#808080]', label: 'interacted' },
+  navigate: { icon: Eye, className: 'text-seeko-accent', label: 'navigated' },
+  select: { icon: MousePointer, className: 'text-ink-muted', label: 'selected' },
+  input: { icon: MousePointer, className: 'text-ink-muted', label: 'interacted' },
 };
 
 const PAGE_NAMES: Record<string, string> = {
@@ -309,7 +309,7 @@ export function SettingsPanel({ profile, isAdmin, team, revalidate, completedTas
       leftSlot={
         <Link
           href="/tasks"
-          className="flex items-center gap-1 text-[13px] text-[#9a9a9a] transition-colors hover:text-[#3a3a3a]"
+          className="flex items-center gap-1 text-[13px] text-ink-faint transition-colors hover:text-ink"
         >
           <ChevronLeft className="size-3.5" />
           <span>Settings</span>
@@ -319,16 +319,16 @@ export function SettingsPanel({ profile, isAdmin, team, revalidate, completedTas
       <main className="scroll-mask-y scrollbar-paper min-h-0 flex-1 overflow-y-auto">
         <div className="mx-auto flex w-full max-w-3xl flex-col gap-10 px-6 py-10">
           <div>
-            <h1 className="text-[22px] font-semibold tracking-tight text-[#111]">Settings</h1>
-            <p className="text-[13px] text-[#808080]">Manage your profile and preferences.</p>
+            <h1 className="text-[22px] font-semibold tracking-tight text-ink-title">Settings</h1>
+            <p className="text-[13px] text-ink-muted">Manage your profile and preferences.</p>
           </div>
 
           {/* ── Account ────────────────────────────────────── */}
           <FadeRise y={8} delay={0.06}>
             <section className="flex flex-col gap-4">
-              <h2 className="text-[13px] font-medium text-[#808080]">Account</h2>
+              <h2 className="text-[13px] font-medium text-ink-muted">Account</h2>
 
-              <section className="overflow-hidden rounded-2xl bg-white shadow-seeko">
+              <section className="overflow-hidden rounded-2xl bg-surface-1 shadow-seeko">
                 <div className="flex flex-col gap-6 p-6">
                   <div className="flex flex-col gap-1.5">
                     <h3 className={CARD_TITLE}>Profile</h3>
@@ -341,7 +341,7 @@ export function SettingsPanel({ profile, isAdmin, team, revalidate, completedTas
                         {avatarUrl ? (
                           <AvatarImage src={avatarUrl} alt={displayName} />
                         ) : (
-                          <AvatarFallback className="text-lg bg-[#ececec] text-[#505050]">
+                          <AvatarFallback className="text-lg bg-surface-5 text-ink-body">
                             {getInitials(displayName)}
                           </AvatarFallback>
                         )}
@@ -362,9 +362,9 @@ export function SettingsPanel({ profile, isAdmin, team, revalidate, completedTas
                       </label>
                     </div>
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-[#111]">{profile.display_name}</p>
-                      {profile.email && <p className="text-xs text-[#808080]">{profile.email}</p>}
-                      <p className="text-xs text-[#808080] mt-0.5">
+                      <p className="text-sm font-medium text-ink-title">{profile.display_name}</p>
+                      {profile.email && <p className="text-xs text-ink-muted">{profile.email}</p>}
+                      <p className="text-xs text-ink-muted mt-0.5">
                         {uploading ? 'Uploading...' : isTouchDevice ? 'Tap photo to change' : 'Hover photo to change'}
                       </p>
                     </div>
@@ -402,7 +402,7 @@ export function SettingsPanel({ profile, isAdmin, team, revalidate, completedTas
                     </div>
                   </div>
 
-                  {error && <p className="text-sm text-[#d4503e]">{error}</p>}
+                  {error && <p className="text-sm text-danger">{error}</p>}
 
                   <div className="flex flex-wrap items-center justify-end gap-2">
                     <button
@@ -422,9 +422,9 @@ export function SettingsPanel({ profile, isAdmin, team, revalidate, completedTas
                     className="flex items-center gap-2 w-full text-left"
                     onClick={() => setPwOpen(v => !v)}
                   >
-                    <Lock className="size-4 text-[#808080]" />
-                    <p className="text-sm font-medium text-[#111] flex-1">Change Password</p>
-                    <ChevronDown className={cn("size-4 text-[#808080] transition-transform duration-200", pwOpen && "rotate-180")} />
+                    <Lock className="size-4 text-ink-muted" />
+                    <p className="text-sm font-medium text-ink-title flex-1">Change Password</p>
+                    <ChevronDown className={cn("size-4 text-ink-muted transition-transform duration-200", pwOpen && "rotate-180")} />
                   </button>
 
                   <AnimatePresence>
@@ -473,8 +473,8 @@ export function SettingsPanel({ profile, isAdmin, team, revalidate, completedTas
                               />
                             </div>
                           </div>
-                          {pwError && <p className="text-sm text-[#d4503e]">{pwError}</p>}
-                          {pwSuccess && <p className="text-sm text-[#0d7aff]">Password updated successfully.</p>}
+                          {pwError && <p className="text-sm text-danger">{pwError}</p>}
+                          {pwSuccess && <p className="text-sm text-seeko-accent">Password updated successfully.</p>}
                           <div className="flex justify-end">
                             <button
                               type="button"
@@ -496,7 +496,7 @@ export function SettingsPanel({ profile, isAdmin, team, revalidate, completedTas
                     <form action="/auth/signout" method="post" className="pt-4">
                       <button
                         type="submit"
-                        className="flex items-center gap-2 text-sm text-[#d4503e] hover:text-[#b8402f] transition-colors"
+                        className="flex items-center gap-2 text-sm text-danger hover:text-[#b8402f] transition-colors"
                       >
                         <LogOut className="size-4" />
                         Sign out
@@ -516,9 +516,9 @@ export function SettingsPanel({ profile, isAdmin, team, revalidate, completedTas
           {!profile.is_investor && (
             <FadeRise y={8} delay={0.1}>
               <section className="flex flex-col gap-4">
-                <h2 className="text-[13px] font-medium text-[#808080]">Payments</h2>
+                <h2 className="text-[13px] font-medium text-ink-muted">Payments</h2>
 
-                <section className="overflow-hidden rounded-2xl bg-white shadow-seeko">
+                <section className="overflow-hidden rounded-2xl bg-surface-1 shadow-seeko">
                   <div className="flex flex-col gap-5 p-6">
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex flex-col gap-1.5">
@@ -548,14 +548,14 @@ export function SettingsPanel({ profile, isAdmin, team, revalidate, completedTas
                         />
                       </div>
                       {!paypalEmail.trim() && (
-                        <p className="text-xs text-[#b8860b]">Set your PayPal email to receive payments.</p>
+                        <p className="text-xs text-[#b8860b] dark:text-dept-ink-animation">Set your PayPal email to receive payments.</p>
                       )}
                     </div>
 
                     <div className={HAIRLINE} />
 
                     {loadingPayments ? (
-                      <p className="text-xs text-[#808080] text-center py-4">Loading...</p>
+                      <p className="text-xs text-ink-muted text-center py-4">Loading...</p>
                     ) : myPayments.length === 0 ? (
                       <EmptyState
                         icon="DollarSign"
@@ -573,27 +573,27 @@ export function SettingsPanel({ profile, isAdmin, team, revalidate, completedTas
                         className="py-8"
                       />
                     ) : (
-                      <div className="flex flex-col divide-y divide-black/[0.06]">
+                      <div className="flex flex-col divide-y divide-wash-6">
                         {myPayments.slice(0, 10).map(payment => (
                           <div key={payment.id} className="flex items-center justify-between py-3">
                             <div className="min-w-0">
-                              <p className="text-sm text-[#111] truncate">
+                              <p className="text-sm text-ink-title truncate">
                                 {payment.description || `${payment.items?.length ?? 0} items`}
                               </p>
-                              <p className="text-xs text-[#808080]">
+                              <p className="text-xs text-ink-muted">
                                 {new Date(payment.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                               </p>
                             </div>
                             <div className="flex items-center gap-3 shrink-0">
-                              <span className="text-sm font-medium font-mono tabular-nums text-[#111]">
+                              <span className="text-sm font-medium font-mono tabular-nums text-ink-title">
                                 {formatCurrency(Number(payment.amount))}
                               </span>
                               <span
                                 className={cn(
                                   "inline-flex items-center rounded-full text-[10px] font-medium py-0.5 px-2",
-                                  payment.status === 'paid' && "bg-[#0d7aff]/10 text-[#0d7aff]",
-                                  payment.status === 'cancelled' && "bg-[#d4503e]/10 text-[#d4503e]",
-                                  payment.status === 'pending' && "bg-black/[0.05] text-[#505050]"
+                                  payment.status === 'paid' && "bg-seeko-accent/10 text-seeko-accent",
+                                  payment.status === 'cancelled' && "bg-danger/10 text-danger",
+                                  payment.status === 'pending' && "bg-wash-5 text-ink-body"
                                 )}
                               >
                                 {payment.status === 'paid' ? 'Approved'
@@ -626,12 +626,12 @@ export function SettingsPanel({ profile, isAdmin, team, revalidate, completedTas
           {isAdmin && (
             <FadeRise y={8} delay={0.14}>
               <section className="flex flex-col gap-4">
-                <h2 className="text-[13px] font-medium text-[#808080]">Admin</h2>
+                <h2 className="text-[13px] font-medium text-ink-muted">Admin</h2>
 
-                <section className="overflow-hidden rounded-2xl bg-white shadow-seeko">
+                <section className="overflow-hidden rounded-2xl bg-surface-1 shadow-seeko">
                   <div className="flex flex-col gap-6 p-6">
                     <div className="flex items-center gap-2">
-                      <Monitor className="size-4 text-[#808080]" />
+                      <Monitor className="size-4 text-ink-muted" />
                       <div className="flex flex-col gap-1.5 flex-1">
                         <h3 className={CARD_TITLE}>User Activity</h3>
                         <p className={CARD_DESC}>Track what non-admin users view and interact with.</p>
@@ -649,7 +649,7 @@ export function SettingsPanel({ profile, isAdmin, team, revalidate, completedTas
                       </Select>
                     </div>
                     {loadingEvents ? (
-                      <p className="text-xs text-[#808080] text-center py-6">Loading activity...</p>
+                      <p className="text-xs text-ink-muted text-center py-6">Loading activity...</p>
                     ) : events.length === 0 ? (
                       <EmptyState
                         icon="Activity"
@@ -669,34 +669,34 @@ export function SettingsPanel({ profile, isAdmin, team, revalidate, completedTas
                             return (
                               <div key={event.id}>
                                 <div className="flex items-start gap-3 py-2.5">
-                                  <div className={`mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-black/[0.04] ${cfg.className}`}>
+                                  <div className={`mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-wash-4 ${cfg.className}`}>
                                     <Icon className="size-3" />
                                   </div>
                                   <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2">
-                                      <span className="text-sm font-medium text-[#111]">{userName}</span>
-                                      <span className="inline-flex items-center rounded-full bg-black/[0.05] text-[10px] text-[#505050] py-0.5 px-2">
+                                      <span className="text-sm font-medium text-ink-title">{userName}</span>
+                                      <span className="inline-flex items-center rounded-full bg-wash-5 text-[10px] text-ink-body py-0.5 px-2">
                                         {cfg.label}
                                       </span>
                                     </div>
-                                    <p className="text-xs text-[#808080] mt-0.5">
+                                    <p className="text-xs text-ink-muted mt-0.5">
                                       {event.event_type === 'page_view' ? (
-                                        <>Viewed <span className="font-medium text-[#505050]">{friendlyPage(event.page)}</span></>
+                                        <>Viewed <span className="font-medium text-ink-body">{friendlyPage(event.page)}</span></>
                                       ) : event.event_type === 'navigate' ? (
                                         <>
-                                          Went to <span className="font-medium text-[#505050]">{meta?.href ? friendlyPage(meta.href) : event.target}</span>
-                                          <span className="text-[#9a9a9a]"> from {friendlyPage(event.page)}</span>
+                                          Went to <span className="font-medium text-ink-body">{meta?.href ? friendlyPage(meta.href) : event.target}</span>
+                                          <span className="text-ink-faint"> from {friendlyPage(event.page)}</span>
                                         </>
                                       ) : (
                                         <>
                                           {cfg.label === 'clicked' ? 'Pressed' : cfg.label.charAt(0).toUpperCase() + cfg.label.slice(1)}{' '}
-                                          <span className="font-medium text-[#505050]">&quot;{event.target}&quot;</span>
-                                          <span className="text-[#9a9a9a]"> on {friendlyPage(event.page)}</span>
+                                          <span className="font-medium text-ink-body">&quot;{event.target}&quot;</span>
+                                          <span className="text-ink-faint"> on {friendlyPage(event.page)}</span>
                                         </>
                                       )}
                                     </p>
                                   </div>
-                                  <span className="text-[11px] text-[#9a9a9a] shrink-0 whitespace-nowrap">
+                                  <span className="text-[11px] text-ink-faint shrink-0 whitespace-nowrap">
                                     {timeAgo(event.created_at)}
                                   </span>
                                 </div>
@@ -710,10 +710,10 @@ export function SettingsPanel({ profile, isAdmin, team, revalidate, completedTas
                   </div>
                 </section>
 
-                <section className="overflow-hidden rounded-2xl bg-white shadow-seeko">
+                <section className="overflow-hidden rounded-2xl bg-surface-1 shadow-seeko">
                   <div className="flex flex-col gap-6 p-6">
                     <div className="flex items-center gap-2">
-                      <UserX className="size-4 text-[#808080]" />
+                      <UserX className="size-4 text-ink-muted" />
                       <div className="flex flex-col gap-1.5">
                         <h3 className={CARD_TITLE}>Team Management</h3>
                         <p className={CARD_DESC}>Remove members from the team. This action is permanent.</p>
@@ -727,27 +727,27 @@ export function SettingsPanel({ profile, isAdmin, team, revalidate, completedTas
                         className="py-4"
                       />
                     ) : (
-                      <div className="flex flex-col divide-y divide-black/[0.06]">
+                      <div className="flex flex-col divide-y divide-wash-6">
                         {team.filter(m => m.id !== profile.id).map(member => (
                           <div key={member.id} className="flex items-center justify-between py-3">
                             <div className="flex items-center gap-3 min-w-0">
                               <Avatar className="size-8 shrink-0 outline outline-1 -outline-offset-1 outline-black/10">
                                 {member.avatar_url && <AvatarImage src={member.avatar_url} alt={member.display_name ?? ''} />}
-                                <AvatarFallback className="text-xs bg-[#ececec] text-[#505050]">
+                                <AvatarFallback className="text-xs bg-surface-5 text-ink-body">
                                   {getInitials(member.display_name ?? '?')}
                                 </AvatarFallback>
                               </Avatar>
                               <div className="min-w-0">
-                                <p className="text-sm font-medium text-[#111] truncate">
+                                <p className="text-sm font-medium text-ink-title truncate">
                                   {member.display_name ?? 'Unknown'}
-                                  {member.is_admin && <span className="ml-1.5 text-[10px] text-[#808080] font-normal">(admin)</span>}
+                                  {member.is_admin && <span className="ml-1.5 text-[10px] text-ink-muted font-normal">(admin)</span>}
                                 </p>
-                                {member.email && <p className="text-xs text-[#808080] truncate">{member.email}</p>}
+                                {member.email && <p className="text-xs text-ink-muted truncate">{member.email}</p>}
                               </div>
                             </div>
                             <button
                               type="button"
-                              className="inline-flex shrink-0 items-center gap-1.5 rounded-full h-8 pl-2.5 pr-3 text-[13px] font-medium text-[#d4503e] transition-[background-color,transform] duration-150 ease-out hover:bg-[#d4503e]/10 active:scale-[0.98]"
+                              className="inline-flex shrink-0 items-center gap-1.5 rounded-full h-8 pl-2.5 pr-3 text-[13px] font-medium text-danger transition-[background-color,transform] duration-150 ease-out hover:bg-danger/10 active:scale-[0.98]"
                               onClick={() => { setBootTarget(member); setBootPassword(''); setBootError(''); }}
                             >
                               <UserX className="size-3.5" />
@@ -766,15 +766,15 @@ export function SettingsPanel({ profile, isAdmin, team, revalidate, completedTas
           )}
 
           {/* Boot member dialog — uses Dialog component (renders inline within .overview-light) */}
-          <Dialog open={!!bootTarget} onOpenChange={open => { if (!open) { setBootTarget(null); setBootPassword(''); setBootError(''); } }} contentClassName="max-w-sm bg-white border-black/[0.06]">
+          <Dialog open={!!bootTarget} onOpenChange={open => { if (!open) { setBootTarget(null); setBootPassword(''); setBootError(''); } }} contentClassName="max-w-sm bg-surface-1 border-wash-6">
             <div className="flex items-center gap-3 mb-4">
-              <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[#d4503e]/10">
-                <AlertTriangle className="size-5 text-[#d4503e]" />
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-danger/10">
+                <AlertTriangle className="size-5 text-danger" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-[#111]">Remove member</p>
-                <p className="text-xs text-[#808080]">
-                  This will permanently remove <span className="font-medium text-[#111]">{bootTarget?.display_name ?? bootTarget?.email}</span> from the team.
+                <p className="text-sm font-semibold text-ink-title">Remove member</p>
+                <p className="text-xs text-ink-muted">
+                  This will permanently remove <span className="font-medium text-ink-title">{bootTarget?.display_name ?? bootTarget?.email}</span> from the team.
                 </p>
               </div>
             </div>
@@ -792,7 +792,7 @@ export function SettingsPanel({ profile, isAdmin, team, revalidate, completedTas
                   className={LIGHT_INPUT}
                 />
               </div>
-              {bootError && <p className="text-xs text-[#d4503e]">{bootError}</p>}
+              {bootError && <p className="text-xs text-danger">{bootError}</p>}
             </div>
 
             <div className="flex gap-2 mt-5">
@@ -806,7 +806,7 @@ export function SettingsPanel({ profile, isAdmin, team, revalidate, completedTas
               </button>
               <button
                 type="button"
-                className={cn(BTN_BASE, 'flex-1 inline-flex items-center justify-center bg-[#d4503e] text-white hover:bg-[#b8402f] disabled:opacity-50')}
+                className={cn(BTN_BASE, 'flex-1 inline-flex items-center justify-center bg-danger text-white hover:bg-[#b8402f] disabled:opacity-50')}
                 onClick={handleBoot}
                 disabled={bootLoading || !bootPassword}
               >
@@ -843,11 +843,11 @@ function ReplayTourCard({ userId }: { userId: string }) {
   }
 
   return (
-    <section className="overflow-hidden rounded-2xl bg-white shadow-seeko">
+    <section className="overflow-hidden rounded-2xl bg-surface-1 shadow-seeko">
       <div className="flex items-center justify-between gap-3 p-5">
         <div className="flex flex-col gap-1.5">
-          <h3 className="text-[15px] font-semibold text-[#111]">Onboarding Tour</h3>
-          <p className="text-[13px] text-[#808080]">Replay the guided tour to revisit key features.</p>
+          <h3 className="text-[15px] font-semibold text-ink-title">Onboarding Tour</h3>
+          <p className="text-[13px] text-ink-muted">Replay the guided tour to revisit key features.</p>
         </div>
         <button
           type="button"
@@ -868,13 +868,13 @@ function HapticsToggleCard() {
 
   return (
     <div className="md:hidden">
-      <section className="overflow-hidden rounded-2xl bg-white shadow-seeko">
+      <section className="overflow-hidden rounded-2xl bg-surface-1 shadow-seeko">
         <div className="flex items-center justify-between gap-3 p-5">
           <div className="flex items-center gap-2">
-            <Vibrate className="size-4 text-[#808080]" />
+            <Vibrate className="size-4 text-ink-muted" />
             <div className="flex flex-col gap-1.5">
-              <h3 className="text-[15px] font-semibold text-[#111]">Haptic Feedback</h3>
-              <p className="text-[13px] text-[#808080]">Vibration feedback on taps and actions.</p>
+              <h3 className="text-[15px] font-semibold text-ink-title">Haptic Feedback</h3>
+              <p className="text-[13px] text-ink-muted">Vibration feedback on taps and actions.</p>
             </div>
           </div>
           <Switch
@@ -883,7 +883,7 @@ function HapticsToggleCard() {
               setEnabled(v);
               if (v) trigger('success');
             }}
-            className={enabled ? 'bg-[#111]' : 'bg-black/[0.12]'}
+            className={enabled ? 'bg-ink-title' : 'bg-black/[0.12]'}
           />
         </div>
       </section>

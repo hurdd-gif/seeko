@@ -11,8 +11,8 @@ export function PaperState({ title, description }: { title: string; description:
   return (
     <div className="overview-light fixed inset-0 z-40 flex items-center justify-center bg-[var(--ov-bg)] px-6 antialiased">
       <div className="w-full max-w-md text-center">
-        <h1 className="text-balance text-[15px] font-semibold text-[#111]">{title}</h1>
-        <p className="mx-auto mt-1.5 max-w-[44ch] text-pretty text-[13px] leading-relaxed text-[#808080]">
+        <h1 className="text-balance text-[15px] font-semibold text-ink-title">{title}</h1>
+        <p className="mx-auto mt-1.5 max-w-[44ch] text-pretty text-[13px] leading-relaxed text-ink-muted">
           {description}
         </p>
       </div>

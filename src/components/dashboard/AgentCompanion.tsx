@@ -1482,7 +1482,7 @@ export function AgentCompanion({ userKey }: { userKey?: string }) {
                     included), so an in-flow header detaches from the tray's top edge
                     on a hard fling. As an overlay it holds while content rubber-bands
                     beneath it; the scroller gets matching padding-top via ResizeObserver. */}
-                <div ref={trayHeaderRef} className="absolute inset-x-0 top-0 z-[2] isolate bg-transparent px-4 pb-5 pt-3.5 before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:-z-10 before:h-[calc(100%+34px)] before:bg-black/[0.08] before:backdrop-blur-[32px] before:[mask-image:linear-gradient(to_bottom,black_0%,black_64%,rgba(0,0,0,0.48)_84%,transparent_100%)] before:[-webkit-mask-image:linear-gradient(to_bottom,black_0%,black_64%,rgba(0,0,0,0.48)_84%,transparent_100%)] after:pointer-events-none after:absolute after:inset-x-0 after:top-0 after:-z-10 after:h-[78%] after:bg-black/[0.08] after:backdrop-blur-[56px] after:[mask-image:linear-gradient(to_bottom,black_0%,rgba(0,0,0,0.9)_46%,rgba(0,0,0,0.24)_82%,transparent_100%)] after:[-webkit-mask-image:linear-gradient(to_bottom,black_0%,rgba(0,0,0,0.9)_46%,rgba(0,0,0,0.24)_82%,transparent_100%)]">
+                <div ref={trayHeaderRef} className="absolute inset-x-0 top-0 z-[2] isolate bg-transparent px-4 pb-5 pt-3.5 before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:-z-10 before:h-[calc(100%+34px)] before:bg-wash-8 before:backdrop-blur-[32px] before:[mask-image:linear-gradient(to_bottom,black_0%,black_64%,rgba(0,0,0,0.48)_84%,transparent_100%)] before:[-webkit-mask-image:linear-gradient(to_bottom,black_0%,black_64%,rgba(0,0,0,0.48)_84%,transparent_100%)] after:pointer-events-none after:absolute after:inset-x-0 after:top-0 after:-z-10 after:h-[78%] after:bg-wash-8 after:backdrop-blur-[56px] after:[mask-image:linear-gradient(to_bottom,black_0%,rgba(0,0,0,0.9)_46%,rgba(0,0,0,0.24)_82%,transparent_100%)] after:[-webkit-mask-image:linear-gradient(to_bottom,black_0%,rgba(0,0,0,0.9)_46%,rgba(0,0,0,0.24)_82%,transparent_100%)]">
                 <div className="relative flex items-start justify-between gap-4">
                   <div className="flex min-w-0 items-center gap-2.5">
                     <motion.span
@@ -1534,14 +1534,14 @@ export function AgentCompanion({ userKey }: { userKey?: string }) {
                       className={cn(
                         'flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1.5 text-[11px] font-medium leading-3 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]',
                         phase === 'error'
-                          ? 'bg-[#d4503e]/16 text-[#ffd2cc] shadow-[inset_0_0_0_1px_rgba(255,178,168,0.24)]'
+                          ? 'bg-danger/16 text-[#ffd2cc] shadow-[inset_0_0_0_1px_rgba(255,178,168,0.24)]'
                         : approvalStatus === 'editing'
-                          ? 'bg-[#0d7aff]/18 text-[#c2ddff] shadow-[inset_0_0_0_1px_rgba(13,122,255,0.32)]'
+                          ? 'bg-seeko-accent/18 text-[#c2ddff] shadow-[inset_0_0_0_1px_rgba(13,122,255,0.32)]'
                         : phase === 'approval'
                           ? 'bg-[#ffce52]/16 text-[#ffe6a3] shadow-[inset_0_0_0_1px_rgba(255,206,82,0.28)]'
                         : approvalStatus === 'rejected'
                             ? 'bg-white/[0.06] px-2 text-[#ffd2cc] shadow-[inset_0_0_0_1px_rgba(255,178,168,0.22)]'
-                            : 'bg-[#0d7aff]/18 text-[#c2ddff] shadow-[inset_0_0_0_1px_rgba(13,122,255,0.34)]',
+                            : 'bg-seeko-accent/18 text-[#c2ddff] shadow-[inset_0_0_0_1px_rgba(13,122,255,0.34)]',
                       )}
                     >
                       <span
@@ -2000,7 +2000,7 @@ export function AgentCompanion({ userKey }: { userKey?: string }) {
                                   animate={actionFeedback === 'approve' ? { scale: [1, 1.04, 1] } : { scale: 1 }}
                                   transition={pulseTransition}
                                   className={cn(
-                                    'h-8 rounded-full bg-white px-4 text-[12px] font-semibold leading-4 text-[#14213b] transition-[background-color,box-shadow,opacity] duration-150 ease-out hover:bg-[#f5f5f5] active:bg-[#ececec] disabled:pointer-events-none',
+                                    'h-8 rounded-full bg-white px-4 text-[12px] font-semibold leading-4 text-[#14213b] transition-[background-color,box-shadow,opacity] duration-150 ease-out hover:bg-[#f5f5f5] active:bg-surface-5 disabled:pointer-events-none',
                                     approvalStatus === 'approved'
                                       ? 'bg-[#dff5eb] text-[#176b42] shadow-[0_0_0_3px_rgba(51,190,120,0.12)]'
                                       : '',

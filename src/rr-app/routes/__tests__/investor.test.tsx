@@ -52,6 +52,12 @@ const overview: InvestorOverviewData = {
       docId: null,
     },
   ],
+  milestones: [
+    { id: 'ms-1', name: 'ALPHA', targetDate: '2026-05-29', taskCount: 6, doneCount: 6 },
+    { id: 'ms-2', name: 'BETA', targetDate: null, taskCount: 9, doneCount: 4 },
+    // Zero linked tasks — must NOT earn a bar.
+    { id: 'ms-3', name: 'GHOST', targetDate: null, taskCount: 0, doneCount: 0 },
+  ],
   healthSummary: '2 tasks completed this week.',
 };
 
@@ -130,36 +136,63 @@ const payments: InvestorPaymentsData = {
 };
 
 describe('investor routes', () => {
-  it('renders the investor-focused dashboard overview', () => {
-    render(<InvestorRouteContent data={{ status: 'ready', data: { index: overview, payments } }} />);
+  it('renders the stripped-back investor dashboard overview', () => {
+    render(
+      <MemoryRouter>
+        <InvestorRouteContent data={{ status: 'ready', data: { index: overview, payments } }} />
+      </MemoryRouter>
+    );
 
-    expect(screen.getByRole('heading', { name: 'Current state of SEEKO' })).toBeInTheDocument();
-    expect(screen.getByText(/2 tasks completed this week\./)).toBeInTheDocument();
+    // No visual hero (user call 2026-07-11) — only a screen-reader h1 remains.
+    expect(screen.getByRole('heading', { name: 'Investor dashboard' })).toBeInTheDocument();
+    expect(screen.queryByText('SEEKO needs attention')).not.toBeInTheDocument();
+    expect(screen.queryByText(/2 tasks completed this week\./)).not.toBeInTheDocument();
 
-    expect(screen.getByRole('link', { name: /Documents Shared updates and decks/ })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Payments \$500 this month/ })).toBeInTheDocument();
+    // Quick-nav pills open the page.
+    expect(screen.getByRole('link', { name: /Documents & decks/ })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Payment history/ })).toBeInTheDocument();
 
-    expect(screen.getByText('Area progress')).toBeInTheDocument();
-    expect(screen.getByText('Build completion by area')).toBeInTheDocument();
-    expect(screen.getByText('Overall')).toBeInTheDocument();
-    expect(screen.getByText('Spend')).toBeInTheDocument();
+    // Frameless stat row — three cells; "burn" renamed to the capital card's
+    // "deployed" vocabulary and the At-risk cell removed (user calls 2026-07-11).
+    expect(screen.getByText('Overall progress')).toBeInTheDocument();
+    expect(screen.getByText('Tasks shipped')).toBeInTheDocument();
+    expect(screen.getByText('Deployed this month')).toBeInTheDocument();
+    expect(screen.queryByText('Burn this month')).not.toBeInTheDocument();
+    expect(screen.queryByText('At risk')).not.toBeInTheDocument();
+    expect(screen.getByText('4 of 10')).toBeInTheDocument();
 
-    expect(screen.getByText('Where we are')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Current build progress' })).toBeInTheDocument();
+    // The one elevated surface: the capital chart card with recent payments inside.
+    expect(screen.getByText('Capital deployed')).toBeInTheDocument();
+    expect(screen.getByText('Recent payments')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /View all/ })).toBeInTheDocument();
+
+    // Frameless progress ledger (one row per area, azure bar + tabular percent).
+    expect(screen.getByRole('heading', { name: 'Progress' })).toBeInTheDocument();
     expect(screen.getAllByText('Gameplay').length).toBeGreaterThan(0);
+    expect(screen.getByText('2 of 5 tasks')).toBeInTheDocument();
+    expect(screen.getByText('55%')).toBeInTheDocument();
 
-    expect(screen.getByText("Where we're going")).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Ship forecast' })).toBeInTheDocument();
+    // Shipping ledger: only dated areas earn a row; this area has no target date.
+    expect(screen.getByRole('heading', { name: "What's shipping" })).toBeInTheDocument();
+    expect(screen.getByText('No ship dates set yet.')).toBeInTheDocument();
 
-    expect(screen.getByText('What it cost')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Spend snapshot' })).toBeInTheDocument();
-    expect(screen.getByText('Paid total')).toBeInTheDocument();
+    // Milestones dither chart: header + summary; the canvas itself can't render
+    // in jsdom (zero-size measure), but the sr-only completion read must — and
+    // only milestones with linked tasks appear in it.
+    expect(screen.getByRole('heading', { name: 'Milestones' })).toBeInTheDocument();
+    expect(screen.getByText('10 of 15 tasks shipped')).toBeInTheDocument();
+    expect(screen.getByText(/ALPHA: 6 of 6 tasks shipped/)).toBeInTheDocument();
+    expect(screen.queryByText(/GHOST/)).not.toBeInTheDocument();
 
-    expect(screen.getByText('Recent updates')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Team movement' })).toBeInTheDocument();
+    // Latest ledger fed by recentActivity.
+    expect(screen.getByRole('heading', { name: 'Latest' })).toBeInTheDocument();
+    expect(screen.getByText('Prototype')).toBeInTheDocument();
 
-    expect(screen.queryByText('Game Areas')).not.toBeInTheDocument();
-    expect(screen.queryByText('Active Areas')).not.toBeInTheDocument();
+    // The old card-heavy sections are gone.
+    expect(screen.queryByText('Where we are')).not.toBeInTheDocument();
+    expect(screen.queryByText('Ship forecast')).not.toBeInTheDocument();
+    expect(screen.queryByText('Quick access')).not.toBeInTheDocument();
+    expect(screen.queryByText('Spend snapshot')).not.toBeInTheDocument();
   });
 
   it('renders the faithful investor docs (real DocList read-only view)', () => {

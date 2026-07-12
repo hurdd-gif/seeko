@@ -70,7 +70,7 @@ export function TeamRouteContent({ data }: { data: TeamLoaderData }) {
       leftSlot={
         <Link
           to="/tasks"
-          className="flex items-center gap-1 text-[13px] text-[#9a9a9a] transition-colors hover:text-[#3a3a3a]"
+          className="flex items-center gap-1 text-[13px] text-ink-faint transition-colors hover:text-ink"
         >
           <ChevronLeft className="size-3.5" />
           <span>Team</span>
@@ -83,20 +83,20 @@ export function TeamRouteContent({ data }: { data: TeamLoaderData }) {
             {/* Header */}
             <div className="flex flex-col gap-1">
               <FadeRise delay={delay(TIMING.heading)}>
-                <h1 className="text-balance text-[22px] font-semibold tracking-tight text-[#111]">
+                <h1 className="text-balance text-[22px] font-semibold tracking-tight text-ink-title">
                   Team
                 </h1>
               </FadeRise>
               <FadeRise delay={delay(TIMING.subtitle)}>
-                <div className="flex items-center gap-2 text-[13px] text-[#808080]">
+                <div className="flex items-center gap-2 text-[13px] text-ink-muted">
                   <span className="tabular-nums">
                     {members.length} {members.length === 1 ? 'member' : 'members'}
                   </span>
                   {onlineCount > 0 && (
                     <>
                       <span className="text-[#d0d0d0]">·</span>
-                      <span className="flex items-center gap-1.5 font-medium text-[#0a63cc]">
-                        <span className="size-1.5 rounded-full bg-[#0d7aff]" />
+                      <span className="flex items-center gap-1.5 font-medium text-seeko-accent-ink">
+                        <span className="size-1.5 rounded-full bg-seeko-accent" />
                         <span className="tabular-nums">{onlineCount} online</span>
                       </span>
                     </>
@@ -163,7 +163,7 @@ function IdentityPill({ children, className }: { children: ReactNode; className?
   return (
     <span
       className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium leading-none ${
-        className ?? 'bg-black/[0.05] text-[#808080]'
+        className ?? 'bg-wash-5 text-ink-muted'
       }`}
     >
       {children}
@@ -175,15 +175,15 @@ function IdentityPill({ children, className }: { children: ReactNode; className?
 function NdaPill({ member }: { member: TeamRosterMember }) {
   if (member.is_admin) return <IdentityPill>Exempt</IdentityPill>;
   if (member.nda_accepted_at)
-    return <IdentityPill className="bg-[#0a63cc]/10 text-[#0a63cc]">NDA ✓</IdentityPill>;
-  return <IdentityPill className="bg-[#b8801a]/10 text-[#946a00]">NDA Pending</IdentityPill>;
+    return <IdentityPill className="bg-seeko-accent-ink/10 text-seeko-accent-ink">NDA ✓</IdentityPill>;
+  return <IdentityPill className="bg-dept-wash-animation/10 text-dept-ink-animation">NDA Pending</IdentityPill>;
 }
 
 function DeptChip({ dept }: { dept: string }) {
   return (
     <span
       className={`inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${
-        LIGHT_DEPT_BADGE[dept] ?? 'bg-black/[0.04] text-[#808080]'
+        LIGHT_DEPT_BADGE[dept] ?? 'bg-wash-4 text-ink-muted'
       }`}
     >
       {dept}
@@ -206,10 +206,10 @@ function SectionLabel({
 }) {
   return (
     <div className="mb-3 flex items-center gap-2 px-1">
-      <Icon className="size-3.5 text-[#9a9a9a]" />
-      <p className="text-[13px] font-medium text-[#808080]">{label}</p>
-      <div className="h-px flex-1 bg-black/[0.06]" />
-      <span className="text-xs tabular-nums text-[#9a9a9a]">{count}</span>
+      <Icon className="size-3.5 text-ink-faint" />
+      <p className="text-[13px] font-medium text-ink-muted">{label}</p>
+      <div className="h-px flex-1 bg-wash-6" />
+      <span className="text-xs tabular-nums text-ink-faint">{count}</span>
     </div>
   );
 }
@@ -228,13 +228,13 @@ function LightEmpty({
   description: string;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-2.5 rounded-xl border border-dashed border-black/[0.10] bg-white/40 px-6 py-9 text-center">
-      <div className="flex size-9 items-center justify-center rounded-full bg-black/[0.04]">
-        <Icon className="size-4 text-[#9a9a9a]" />
+    <div className="flex flex-col items-center justify-center gap-2.5 rounded-xl border border-dashed border-wash-10 bg-white/40 px-6 py-9 text-center dark:bg-surface-1/40">
+      <div className="flex size-9 items-center justify-center rounded-full bg-wash-4">
+        <Icon className="size-4 text-ink-faint" />
       </div>
       <div className="space-y-0.5">
-        <p className="text-[13.5px] font-medium text-[#111]">{title}</p>
-        <p className="mx-auto max-w-xs text-[12.5px] text-[#808080]">{description}</p>
+        <p className="text-[13.5px] font-medium text-ink-title">{title}</p>
+        <p className="mx-auto max-w-xs text-[12.5px] text-ink-muted">{description}</p>
       </div>
     </div>
   );
@@ -256,11 +256,11 @@ function MemberCard({ member, isAdmin }: { member: TeamRosterMember; isAdmin: bo
   const presence = lastSeenLabel(member.last_seen_at, member.must_set_password);
 
   return (
-    <div className="flex flex-col rounded-xl bg-white p-3.5 shadow-seeko">
+    <div className="flex flex-col rounded-xl bg-surface-1 p-3.5 shadow-seeko">
       {/* Identity */}
       <div className="flex items-center gap-3">
         <div className="relative shrink-0">
-          <Avatar className="size-11 outline outline-1 -outline-offset-1 outline-black/[0.06]">
+          <Avatar className="size-11 outline outline-1 -outline-offset-1 outline-wash-6">
             <AvatarImage src={member.avatar_url} alt={member.display_name ?? ''} />
             <AvatarFallback hash={member.id} className="text-sm">
               {getInitials(member.display_name ?? '?')}
@@ -268,7 +268,7 @@ function MemberCard({ member, isAdmin }: { member: TeamRosterMember; isAdmin: bo
           </Avatar>
           <span
             className={`absolute -bottom-0.5 -right-0.5 size-3 rounded-full ring-2 ring-white ${
-              online ? 'bg-[#0d7aff]' : 'bg-[#c8c8c8]'
+              online ? 'bg-seeko-accent' : 'bg-[#c8c8c8]'
             }`}
             title={presence}
           />
@@ -276,7 +276,7 @@ function MemberCard({ member, isAdmin }: { member: TeamRosterMember; isAdmin: bo
 
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
-            <p className="truncate text-[14.5px] font-semibold text-[#111]">
+            <p className="truncate text-[14.5px] font-semibold text-ink-title">
               {member.display_name ?? 'Unknown'}
             </p>
             {member.is_admin && <IdentityPill>Lead</IdentityPill>}
@@ -284,14 +284,14 @@ function MemberCard({ member, isAdmin }: { member: TeamRosterMember; isAdmin: bo
           </div>
 
           {(member.role || member.timezone) && (
-            <p className="mt-0.5 flex items-center gap-1.5 text-[12.5px] text-[#808080]">
+            <p className="mt-0.5 flex items-center gap-1.5 text-[12.5px] text-ink-muted">
               {member.role && <span className="truncate">{member.role}</span>}
               {member.role && member.timezone && <span className="text-[#d0d0d0]">·</span>}
               {member.timezone && (
                 <span className="flex shrink-0 items-center gap-1 tabular-nums">
                   <Clock className="size-3" />
                   {localTime}
-                  <span className="hidden text-[#b8b8b8] sm:inline">{offset}</span>
+                  <span className="hidden text-ink-faintest sm:inline">{offset}</span>
                 </span>
               )}
             </p>
@@ -314,7 +314,7 @@ function MemberCard({ member, isAdmin }: { member: TeamRosterMember; isAdmin: bo
         </div>
         <span
           className={`shrink-0 text-[11px] tabular-nums ${
-            online ? 'font-medium text-[#0a63cc]' : 'text-[#9a9a9a]'
+            online ? 'font-medium text-seeko-accent-ink' : 'text-ink-faint'
           }`}
         >
           {online ? 'Online' : presence}

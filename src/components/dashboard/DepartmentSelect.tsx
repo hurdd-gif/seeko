@@ -59,10 +59,10 @@ export function DepartmentSelect({ userId, department, light = false }: Props) {
       className={cn(
         'h-auto py-0.5 px-1.5 text-xs bg-transparent border border-transparent',
         light
-          ? 'hover:border-black/15 hover:bg-black/[0.04]'
+          ? 'hover:border-black/15 hover:bg-wash-4'
           : 'hover:border-border hover:bg-muted',
         isPending && 'opacity-50',
-        (light ? LIGHT_DEPT_COLOR[value] : DEPT_COLOR[value]) ?? (light ? 'text-[#808080]' : 'text-muted-foreground'),
+        (light ? LIGHT_DEPT_COLOR[value] : DEPT_COLOR[value]) ?? (light ? 'text-ink-muted' : 'text-muted-foreground'),
       )}
     >
       {!value && <option value="">No department</option>}

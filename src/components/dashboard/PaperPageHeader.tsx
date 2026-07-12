@@ -64,7 +64,7 @@ export function PaperPageHeader({
         <div className="flex w-full items-center justify-between gap-3 px-[52px] pt-6 pb-3">
           <nav
             aria-label="Sections"
-            className="flex h-[54px] items-center gap-6 rounded-full bg-white px-3 shadow-seeko"
+            className="flex h-[54px] items-center gap-6 rounded-full bg-surface-1 px-3 shadow-seeko"
           >
             {TABS.map((t) =>
               t.id === active ? (
@@ -72,7 +72,7 @@ export function PaperPageHeader({
                   key={t.id}
                   href={t.href}
                   aria-current="page"
-                  className="flex h-[37px] items-center rounded-full bg-[#0000000d] px-3 py-1.5 text-[14px] font-medium leading-[18px] tracking-[-0.28px] text-[#626262]"
+                  className="flex h-[37px] items-center rounded-full bg-wash-5 px-3 py-1.5 text-[14px] font-medium leading-[18px] tracking-[-0.28px] text-[#626262] dark:text-ink-muted-strong"
                 >
                   {t.label}
                 </Link>
@@ -80,7 +80,7 @@ export function PaperPageHeader({
                 <Link
                   key={t.id}
                   href={t.href}
-                  className="flex items-center px-3 py-1.5 text-[14px] font-medium leading-[18px] tracking-[-0.28px] text-[#c5c5c5] transition-colors duration-150 ease-out hover:text-[#808080]"
+                  className="flex items-center px-3 py-1.5 text-[14px] font-medium leading-[18px] tracking-[-0.28px] text-[#c5c5c5] dark:text-ink-faintest transition-colors duration-150 ease-out hover:text-ink-muted"
                 >
                   {t.label}
                 </Link>

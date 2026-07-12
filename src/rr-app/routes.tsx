@@ -227,7 +227,7 @@ function ShellTabs() {
             key={tab.to}
             to={tab.to}
             aria-current={isActive ? 'page' : undefined}
-            className={`${TAB_BASE} ${isActive ? 'text-[#3a3a3a]' : 'text-[#8a8a8a] hover:text-[#5a5a5a]'}`}
+            className={`${TAB_BASE} ${isActive ? 'text-ink' : 'text-ink-muted hover:text-[#5a5a5a] dark:hover:text-ink-body'}`}
           >
             {tab.label}
           </Link>
@@ -252,10 +252,10 @@ function ChromeMenuLink({
     <Link
       to={to}
       onClick={onNavigate}
-      className="flex items-center justify-between rounded-2xl px-4 py-3 text-[14px] font-medium tracking-[-0.28px] text-[#0d0d0d] transition-[color,background-color] duration-150 ease-out hover:bg-[#0000000a]"
+      className="flex items-center justify-between rounded-2xl px-4 py-3 text-[14px] font-medium tracking-[-0.28px] text-ink-title transition-[color,background-color] duration-150 ease-out hover:bg-wash-4"
     >
       <span>{label}</span>
-      <Icon className="size-5 text-[#808080]" />
+      <Icon className="size-5 text-ink-muted" />
     </Link>
   );
 }
@@ -290,17 +290,17 @@ function StudioHeaderCluster() {
   return (
     <div className="flex items-center gap-1.5">
       {/* Notification glyph (visual parity with the live NotificationBell slot) */}
-      <span className="flex size-9 items-center justify-center text-[#808080]">
+      <span className="flex size-9 items-center justify-center text-ink-muted">
         <Inbox className="size-4" strokeWidth={2} aria-hidden />
       </span>
 
       {/* The one framed control on the bar */}
       <button
         type="button"
-        className="flex h-9 items-center gap-1.5 rounded-full bg-white pl-2.5 pr-3.5 shadow-seeko transition-[background-color,transform] duration-150 ease-out hover:bg-[#f7f7f7] active:scale-[0.97]"
+        className="flex h-9 items-center gap-1.5 rounded-full bg-surface-1 pl-2.5 pr-3.5 shadow-seeko transition-[background-color,transform] duration-150 ease-out hover:bg-surface-3 active:scale-[0.97]"
       >
-        <Plus className="size-[15px] text-[#0d0d0d]" strokeWidth={2.25} aria-hidden />
-        <span className="text-[14px] font-medium leading-[18px] tracking-[-0.28px] text-[#0d0d0d]">
+        <Plus className="size-[15px] text-ink-title" strokeWidth={2.25} aria-hidden />
+        <span className="text-[14px] font-medium leading-[18px] tracking-[-0.28px] text-ink-title">
           Create
         </span>
       </button>
@@ -311,13 +311,13 @@ function StudioHeaderCluster() {
           type="button"
           aria-expanded={open === 'more'}
           onClick={() => setOpen((prev) => (prev === 'more' ? null : 'more'))}
-          className="flex h-9 items-center gap-1 rounded-full pl-3 pr-2 transition-[background-color,transform] duration-150 ease-out hover:bg-[#0000000a] active:scale-[0.97]"
+          className="flex h-9 items-center gap-1 rounded-full pl-3 pr-2 transition-[background-color,transform] duration-150 ease-out hover:bg-wash-4 active:scale-[0.97]"
         >
-          <span className="text-[14px] font-medium leading-[18px] tracking-[-0.28px] text-[#0d0d0d]">
+          <span className="text-[14px] font-medium leading-[18px] tracking-[-0.28px] text-ink-title">
             More
           </span>
           <ChevronDown
-            className={`size-[14px] text-[#808080] transition-transform duration-200 ease-out motion-reduce:transition-none ${
+            className={`size-[14px] text-ink-muted transition-transform duration-200 ease-out motion-reduce:transition-none ${
               open === 'more' ? 'rotate-180' : ''
             }`}
             strokeWidth={2.25}
@@ -326,13 +326,13 @@ function StudioHeaderCluster() {
         </button>
 
         {open === 'more' && (
-          <div className="rr-pop absolute right-0 top-full z-50 mt-[9px] flex w-[244px] origin-top-right flex-col gap-1 overflow-hidden rounded-[20px] bg-white p-1 shadow-seeko">
+          <div className="rr-pop absolute right-0 top-full z-50 mt-[9px] flex w-[244px] origin-top-right flex-col gap-1 overflow-hidden rounded-[20px] bg-surface-1 p-1 shadow-seeko-pop">
             <div className="flex flex-col">
               {MORE_LINKS.map((link) => (
                 <ChromeMenuLink key={link.to} {...link} onNavigate={() => setOpen(null)} />
               ))}
             </div>
-            <div className="mx-4 h-px bg-[#0000000d]" />
+            <div className="mx-4 h-px bg-wash-5" />
             <div className="flex flex-col">
               {MORE_ADMIN_LINKS.map((link) => (
                 <ChromeMenuLink key={link.to} {...link} onNavigate={() => setOpen(null)} />
@@ -355,19 +355,19 @@ function StudioHeaderCluster() {
         </button>
 
         {open === 'account' && (
-          <div className="rr-pop absolute right-[-12px] top-[-14px] z-50 flex w-[244px] origin-top-right flex-col gap-1 overflow-hidden rounded-[20px] bg-white p-1 shadow-seeko">
+          <div className="rr-pop absolute right-[-12px] top-[-14px] z-50 flex w-[244px] origin-top-right flex-col gap-1 overflow-hidden rounded-[20px] bg-surface-1 p-1 shadow-seeko-pop">
             <div className="flex items-center px-3 py-2.5 pr-14">
               <div className="min-w-0">
-                <p className="truncate text-[14px] font-medium tracking-[-0.28px] text-[#0d0d0d]">
+                <p className="truncate text-[14px] font-medium tracking-[-0.28px] text-ink-title">
                   SEEKO Studio
                 </p>
-                <p className="mt-0.5 truncate text-[13px] text-[#808080]">studio@seeko.app</p>
+                <p className="mt-0.5 truncate text-[13px] text-ink-muted">studio@seeko.app</p>
               </div>
             </div>
-            <div className="mx-4 h-px bg-[#0000000d]" />
+            <div className="mx-4 h-px bg-wash-5" />
             <a
               href="/login"
-              className="flex w-full items-center justify-between rounded-2xl px-4 py-3 text-[14px] font-medium tracking-[-0.28px] text-[#0d0d0d] transition-[color,background-color] duration-150 ease-out hover:bg-[rgba(229,72,77,0.08)] hover:text-[#e5484d]"
+              className="flex w-full items-center justify-between rounded-2xl px-4 py-3 text-[14px] font-medium tracking-[-0.28px] text-ink-title transition-[color,background-color] duration-150 ease-out hover:bg-[rgba(229,72,77,0.08)] hover:text-[#e5484d]"
             >
               <span>Sign out</span>
               <LogOut className="size-5" />
@@ -387,7 +387,7 @@ function StudioHeaderCluster() {
 function ShellFrame({ children }: { children: ReactNode }) {
   return (
     <div className="overview-light fixed inset-0 z-40 flex flex-col overflow-hidden bg-[var(--ov-bg)] antialiased">
-      <header className="shrink-0 border-b border-black/[0.06]">
+      <header className="shrink-0 border-b border-wash-6">
         <div className="flex w-full items-center justify-between gap-3 px-6 pt-8 pb-3 md:px-[52px] md:pt-11">
           <ShellTabs />
           <StudioHeaderCluster />
@@ -435,11 +435,11 @@ function PaperErrorState({
 }) {
   return (
     <div className="mx-auto flex min-h-[min(620px,calc(100dvh-8rem))] w-full max-w-md flex-col items-center justify-center px-6 py-12 text-center">
-      <h1 className="text-balance text-[15px] font-semibold text-[#111]">{title}</h1>
-      <p className="mt-1.5 max-w-[44ch] text-pretty text-[13px] leading-relaxed text-[#808080]">
+      <h1 className="text-balance text-[15px] font-semibold text-ink-title">{title}</h1>
+      <p className="mt-1.5 max-w-[44ch] text-pretty text-[13px] leading-relaxed text-ink-muted">
         {description}
       </p>
-      <p className="mt-4 max-w-full truncate font-mono text-[11px] text-[#b3b3b3]">{detail}</p>
+      <p className="mt-4 max-w-full truncate font-mono text-[11px] text-ink-faintest">{detail}</p>
       <div className="mt-7 flex items-center justify-center gap-2">
         <button
           type="button"

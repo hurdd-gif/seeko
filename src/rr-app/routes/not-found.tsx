@@ -53,14 +53,14 @@ const FIELD = {
 const SHOW_DIALS = Boolean(import.meta.hot);
 
 const FOCUS_RING =
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d7aff]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-black';
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-seeko-accent/50 focus-visible:ring-offset-2 focus-visible:ring-offset-black';
 
 // Dark-surface buttons. Same canonical pill geometry as the design system
 // (BTN_BASE — rounded-full, h-9, scoped transition, active:scale), recoloured
 // for the black 404: the primary inverts to a white pill, the secondary is a
 // quiet translucent pill. Reusing BTN_BASE keeps press feedback + sizing in
 // lockstep with the app's buttons.
-const BTN_DARK_PRIMARY = `${BTN_BASE} bg-white text-[#111] hover:bg-white/90`;
+const BTN_DARK_PRIMARY = `${BTN_BASE} bg-surface-1 text-ink-title hover:bg-white/90`;
 const BTN_DARK_SECONDARY = `${BTN_BASE} bg-white/[0.08] text-[#f5f5f5] hover:bg-white/[0.14]`;
 
 const TAU = Math.PI * 2;

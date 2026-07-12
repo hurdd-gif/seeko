@@ -58,20 +58,20 @@ export function InviteForm() {
   }
 
   return (
-    <Card className="overflow-hidden rounded-xl border-0 bg-white shadow-seeko">
+    <Card className="overflow-hidden rounded-xl border-0 bg-surface-1 shadow-seeko">
       <button
         type="button"
         onClick={() => setExpanded(v => !v)}
         className="flex w-full items-center justify-between px-6 py-4 text-left"
       >
         <div className="flex items-center gap-2">
-          <UserPlus className="size-4 text-[#808080]" />
+          <UserPlus className="size-4 text-ink-muted" />
           <div>
-            <CardTitle className="text-[15px] font-semibold text-[#111]">Invite Member</CardTitle>
-            <CardDescription className="text-[13px] text-[#808080]">Send an invite link by email.</CardDescription>
+            <CardTitle className="text-[15px] font-semibold text-ink-title">Invite Member</CardTitle>
+            <CardDescription className="text-[13px] text-ink-muted">Send an invite link by email.</CardDescription>
           </div>
         </div>
-        <ChevronDown className={`size-4 text-[#9a9a9a] transition-transform ${expanded ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`size-4 text-ink-faint transition-transform ${expanded ? 'rotate-180' : ''}`} />
       </button>
 
       <AnimatePresence>
@@ -87,7 +87,7 @@ export function InviteForm() {
               <form onSubmit={handleInvite} className="flex flex-col gap-4">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
                   <div className="flex-1 space-y-2">
-                    <Label htmlFor="invite-email" className="text-[#808080]">Email</Label>
+                    <Label htmlFor="invite-email" className="text-ink-muted">Email</Label>
                     <Input
                       id="invite-email"
                       placeholder="colleague@example.com"
@@ -99,7 +99,7 @@ export function InviteForm() {
                     />
                   </div>
                   <div className="w-full space-y-2 sm:w-40">
-                    <Label className="text-[#808080]">Department</Label>
+                    <Label className="text-ink-muted">Department</Label>
                     <Select
                       light
                       value={department}
@@ -112,7 +112,7 @@ export function InviteForm() {
                     </Select>
                   </div>
                   <div className="w-full space-y-2 sm:w-36">
-                    <Label className="text-[#808080]">Role</Label>
+                    <Label className="text-ink-muted">Role</Label>
                     <Select
                       light
                       value={role}
@@ -143,8 +143,8 @@ export function InviteForm() {
                     >
                       <div className={`flex items-center gap-2 rounded-lg px-3 py-2 text-xs ${
                         result.ok
-                          ? 'bg-[#0d7aff]/10 text-[#0a63cc]'
-                          : 'bg-[#d4503e]/10 text-[#d4503e]'
+                          ? 'bg-seeko-accent/10 text-seeko-accent-ink'
+                          : 'bg-danger/10 text-danger'
                       }`}>
                         {result.ok && <CheckCircle2 className="size-3.5" />}
                         {result.message}
