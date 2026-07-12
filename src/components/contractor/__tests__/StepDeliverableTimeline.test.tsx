@@ -58,7 +58,7 @@ describe('StepDeliverableTimeline', () => {
   it('shows the "all caught up" line plus the timeline when active is empty but history exists', () => {
     render(<StepDeliverableTimeline active={[]} timeline={mayTimeline} now={NOW} />);
     expect(screen.getByText(/caught up/i)).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /timeline/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /delivered/i })).toBeInTheDocument();
     expect(screen.getByText('Combat SFX')).toBeInTheDocument();
   });
 });

@@ -3,86 +3,59 @@ import { Check, TriangleAlert } from 'lucide-react';
 import { motion, useReducedMotion } from 'motion/react';
 import type { DerivedStep } from '@/lib/contractor-steps';
 import { formatDueLabel, overdueLabel, parseDeadline } from '@/lib/contractor-buckets';
-import { LIGHT_DEPT_COLOR } from '@/components/dashboard/lightKit';
-import { springs } from '@/lib/motion';
-
-/* Node fill hexes — the AA-on-white department ramp (mirrors LIGHT_DEPT_COLOR),
- * plus the shared status colors used across the light kit. */
-const DEPT_HEX: Record<string, string> = {
-  'Coding': '#0a63cc',
-  'Visual Art': '#3f5fb5',
-  'UI/UX': '#6e4fc4',
-  'Animation': '#b8801a',
-  'Asset Creation': '#bd3f7c',
-};
-const REVIEW_BLUE = '#3f5fb5';
-const OVERDUE_RED = '#d4503e';
-const SUCCESS_GREEN = '#15803d';
-const FALLBACK_TINT = '#b8801a';
-/** emil's strong ease-out — the advance-fill color move (background-color only). */
-const EASE_OUT = 'cubic-bezier(0.23,1,0.32,1)';
+import { StateChip } from './StateChip';
 
 export type StepNodeProps = {
   derived: DerivedStep;
-  department: string | null;
   now: Date;
   onAdvance?: (stepId: string) => void | Promise<void>;
+  /** True only for the step the contractor advanced in this session — gates the
+   * "In review" entrance so server-seeded in_review rows never animate on load. */
+  justAdvanced?: boolean;
+  /** True when the OWNING CARD has a missed step — the card already escalates
+   * (warm surface, red ring/chip), so its submit affordance escalates with it:
+   * the one filled button on the page marks the "do this first" action. */
+  urgent?: boolean;
 };
 
 /**
- * One admin-authored step as a node on the single breadcrumb spine. The node fill
- * encodes the derived state; the focal node is enlarged. Only the focal `pending`
- * node is interactive (tap → submit for review). Missed/upcoming stay static — a
- * recurring pulse on a persistent condition would nag (design §6).
+ * One admin-authored step as a row on the deliverable's hairline spine. The
+ * journey rail (JourneyRail.tsx) carries the page's stepper nodes now, so the
+ * rows themselves stay dot-free (user call 2026-07-11 — duplicate node
+ * language read as noise): state lives in the trailing chip/date and the focal
+ * row's weight. Only the focal `pending` row is interactive (tap → submit for
+ * review). Missed/upcoming stay static — a recurring pulse on a persistent
+ * condition would nag (design §6).
  */
-export function StepNode({ derived, department, now, onAdvance }: StepNodeProps) {
+export function StepNode({ derived, now, onAdvance, justAdvanced = false, urgent = false }: StepNodeProps) {
   const reduce = useReducedMotion();
-  const { step, rendered, isFocal, canAdvance } = derived;
-  const deptTint = (department && DEPT_HEX[department]) || FALLBACK_TINT;
-  const deptText = (department && LIGHT_DEPT_COLOR[department]) || 'text-ink-strong';
+  const { step, rendered, canAdvance } = derived;
   const dueLabel = step.deadline ? formatDueLabel(parseDeadline(step.deadline)) : null;
-
-  const filled = rendered === 'active' || rendered === 'pending-review' || rendered === 'missed';
-  const fillColor =
-    rendered === 'active' ? deptTint : rendered === 'pending-review' ? REVIEW_BLUE : OVERDUE_RED;
-  const sizeCls = isFocal ? 'size-3 -left-[6px]' : 'size-2.5 -left-[5px]';
-
-  const node = filled ? (
-    <motion.span
-      className={`absolute ${sizeCls} top-1/2 -translate-y-1/2 rounded-full ring-2 ring-white`}
-      style={{ backgroundColor: fillColor, transition: `background-color 200ms ${EASE_OUT}` }}
-      initial={isFocal && !reduce ? { scale: 0.6 } : false}
-      animate={{ scale: 1 }}
-      transition={reduce ? { duration: 0 } : springs.snappy}
-      aria-hidden
-    />
-  ) : rendered === 'done' ? (
-    <span
-      className={`absolute ${sizeCls} top-1/2 -translate-y-1/2 flex items-center justify-center rounded-full bg-white ring-1 ring-hairline`}
-      aria-hidden
-    >
-      <span className="size-1 rounded-full bg-ink-ghost" />
-    </span>
-  ) : (
-    // upcoming — hollow
-    <span
-      className={`absolute ${sizeCls} top-1/2 -translate-y-1/2 rounded-full bg-white ring-1 ring-hairline`}
-      aria-hidden
-    />
-  );
 
   const trailing =
     rendered === 'pending-review' ? (
-      <span className="shrink-0 text-[12px] font-medium text-[#3f5fb5]">In review</span>
+      // Submitting is this page's one write — the chip springing in IS the
+      // confirmation (emil: state indication). Blur bridges the swap from the
+      // pill that just left. Server-seeded in_review rows mount static.
+      <motion.span
+        className="inline-flex shrink-0"
+        initial={justAdvanced && !reduce ? { opacity: 0, scale: 0.9, filter: 'blur(2px)' } : false}
+        animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+        transition={reduce ? { duration: 0 } : { type: 'spring', duration: 0.3, bounce: 0 }}
+      >
+        <StateChip tone="blue">In review</StateChip>
+      </motion.span>
     ) : rendered === 'missed' ? (
-      <span className="inline-flex shrink-0 items-center gap-1 text-[12px] tabular-nums text-[#d4503e]">
+      <StateChip tone="red">
         <TriangleAlert className="size-3" strokeWidth={2.5} aria-hidden />
         {overdueLabel(step.deadline!, now)}
-      </span>
+      </StateChip>
     ) : rendered === 'done' ? (
-      <span className="inline-flex shrink-0 items-center gap-1.5">
-        {dueLabel && <span className="text-[12px] tabular-nums text-ink-faint">{dueLabel}</span>}
-        <Check className="size-3.5 text-[#15803d]" strokeWidth={2.5} aria-hidden />
+      // With the spine dots gone, done-ness rides in the trailing cluster — one
+      // small green check ahead of the date (same glyph as the "N done" toggle).
+      <span className="flex shrink-0 items-center gap-1.5 text-[12px] tabular-nums text-ink-faint">
+        <Check className="size-3 text-success" strokeWidth={2.5} aria-hidden />
+        {dueLabel}
       </span>
     ) : (
       <span className={`shrink-0 text-[12px] tabular-nums ${dueLabel ? 'text-ink-muted' : 'text-ink-faintest'}`}>
@@ -90,17 +63,22 @@ export function StepNode({ derived, department, now, onAdvance }: StepNodeProps)
       </span>
     );
 
+  // Focal steps carry weight, not hue — color on this page is reserved for
+  // state (the node fill, review blue, overdue red); the app's light pages
+  // stay monochrome + status color.
   const nameCls =
     rendered === 'active'
-      ? `font-medium ${deptText}`
+      ? 'font-medium text-ink-heading'
       : rendered === 'done'
         ? 'text-ink-muted'
         : 'text-ink-muted-strong';
 
   const row = (
     <>
-      {node}
-      <span className={`min-w-0 flex-1 truncate text-[13px] ${nameCls}`}>{step.name}</span>
+      {/* grow (basis:auto), NOT flex-1 (basis:0) — the name must claim its
+       * content width so a tight line WRAPS the trailing chip/pill instead of
+       * crushing the name to nothing (375px focal rows carry chip + pill). */}
+      <span className={`min-w-0 grow truncate text-[14px] ${nameCls}`}>{step.name}</span>
       {trailing}
     </>
   );
@@ -112,12 +90,26 @@ export function StepNode({ derived, department, now, onAdvance }: StepNodeProps)
           type="button"
           onClick={() => onAdvance?.(step.id)}
           aria-label={`Submit ${step.name} for review`}
-          className="flex w-full items-center gap-2 py-1.5 pl-6 pr-1 text-left outline-none transition-transform duration-150 ease-out focus-visible:ring-2 focus-visible:ring-[#0d7aff]/40 active:scale-[0.99]"
+          className="group flex min-h-10 w-full flex-wrap items-center gap-2 py-1 pl-6 pr-1 text-left outline-none transition-transform duration-150 ease-out focus-visible:ring-2 focus-visible:ring-seeko-accent/40 active:scale-[0.99]"
         >
           {row}
+          {/* The page's one write gets a visible affordance — a quiet pill
+           * (span, not a nested button: the whole row is the control and the
+           * aria-label already names it). On an urgent card the pill fills
+           * dark (the form-submit treatment, DeadlineExtensionControl) — the
+           * card shouts overdue everywhere except the action otherwise. */}
+          <span
+            className={`ml-1 inline-flex h-7 shrink-0 items-center rounded-full px-3 text-[12px] font-medium transition-colors duration-150 ease-out motion-reduce:transition-none ${
+              urgent
+                ? 'bg-ink-title text-surface-1 group-hover:bg-ink-strong group-active:bg-ink-strong'
+                : 'bg-surface-1 text-ink ring-1 ring-hairline group-hover:bg-[#f5f5f5] group-active:bg-[#efefef] dark:group-hover:bg-surface-3 dark:group-active:bg-surface-4'
+            }`}
+          >
+            Submit for review
+          </span>
         </button>
       ) : (
-        <div className="flex items-center gap-2 py-1.5 pl-6 pr-1">{row}</div>
+        <div className="flex min-h-10 flex-wrap items-center gap-2 py-1 pl-6 pr-1">{row}</div>
       )}
     </li>
   );

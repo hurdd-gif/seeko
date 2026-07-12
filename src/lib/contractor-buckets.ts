@@ -28,9 +28,30 @@ function deadlineMs(d: ContractorDeliverable): number {
   return d.deadline ? parseDeadline(d.deadline).getTime() : Number.POSITIVE_INFINITY;
 }
 
-function sortByDeadlineThenPriority(a: ContractorDeliverable, b: ContractorDeliverable): number {
-  const da = deadlineMs(a);
-  const db = deadlineMs(b);
+/** Steps ride along optionally — this module predates the step model and the
+ * base ContractorDeliverable doesn't carry them, but urgency must read them:
+ * under the step model most tasks are undated and only steps hold deadlines. */
+type MaybeStepped = ContractorDeliverable & {
+  steps?: { deadline: string | null; state: string }[];
+};
+
+/**
+ * The date a deliverable is actually "due next": the earliest deadline among
+ * its not-done steps, falling back to the task's own deadline. Without this,
+ * step-model tasks (task deadline null) sank to the bottom of the active list
+ * even with a step days overdue.
+ */
+function effectiveDeadlineMs(d: MaybeStepped): number {
+  const stepMs = (d.steps ?? [])
+    .filter((s) => s.state !== 'done' && s.deadline != null)
+    .map((s) => parseDeadline(s.deadline!).getTime());
+  if (stepMs.length > 0) return Math.min(...stepMs);
+  return deadlineMs(d);
+}
+
+function sortByDeadlineThenPriority(a: MaybeStepped, b: MaybeStepped): number {
+  const da = effectiveDeadlineMs(a);
+  const db = effectiveDeadlineMs(b);
   if (da !== db) return da - db;
   return priorityRank(a.priority) - priorityRank(b.priority);
 }
@@ -117,15 +138,22 @@ export function splitDeliverables<T extends ContractorDeliverable>(
 
 export function summarizeDeliverables(
   items: ContractorDeliverable[],
-  _now: Date,
-): { count: number; nextDueLabel: string | null } {
-  const active = items.filter((i) => !DELIVERED[i.status] && !HIDDEN[i.status]);
-  const next = active
-    .filter((i) => i.deadline != null)
-    .sort((a, b) => parseDeadline(a.deadline!).getTime() - parseDeadline(b.deadline!).getTime())[0];
+  now: Date,
+): { count: number; nextDueLabel: string | null; overdueCount: number } {
+  const active = (items as MaybeStepped[]).filter((i) => !DELIVERED[i.status] && !HIDDEN[i.status]);
+  const dated = active
+    .map((i) => effectiveDeadlineMs(i))
+    .filter((ms) => Number.isFinite(ms))
+    .sort((a, b) => a - b);
+  const today = startOfDay(now);
+  // Next-due looks forward only — anything already past is reported through
+  // overdueCount instead, so the greeting never says "next due" about a date
+  // that has slipped.
+  const upcoming = dated.find((ms) => startOfDay(new Date(ms)) >= today);
   return {
     count: active.length,
-    nextDueLabel: next ? formatDueLabel(parseDeadline(next.deadline!)) : null,
+    nextDueLabel: upcoming != null ? formatDueLabel(new Date(upcoming)) : null,
+    overdueCount: dated.filter((ms) => startOfDay(new Date(ms)) < today).length,
   };
 }
 

@@ -15,16 +15,16 @@ export type StepDeliverableTimelineProps = {
 };
 
 /**
- * The contractor's single vertical breadcrumb. One continuous hairline spine runs
- * the full height. Up top, each active deliverable is a text group-heading whose
- * steps are the nodes; down the spine, delivered work condenses into the existing
- * month-grouped Timeline. Group headings (top-margin separated) are the only
- * "new group" signal — no card frames, no top-level "Deliverables" header.
+ * Everything sits frameless on the canvas (the /docs ledger lineage — user
+ * call 2026-07-11: no visible container). Each active deliverable renders as
+ * its own compact unit (heading + its own short spine) with generous space
+ * between units; the delivered history condenses below. No top-level
+ * "Deliverables" header.
  */
 export function StepDeliverableTimeline({ active, timeline, now, onAdvance }: StepDeliverableTimelineProps) {
   if (active.length === 0 && timeline.length === 0) {
     return (
-      <div className="rounded-2xl bg-white px-6 py-12 text-center shadow-seeko">
+      <div className="py-12 text-center">
         <Inbox className="mx-auto size-6 text-ink-ghost" strokeWidth={1.75} aria-hidden />
         <p className="mt-3 text-[15px] font-medium text-ink-heading">No deliverables assigned yet</p>
         <p className="mt-1 text-sm text-ink-faint">New work will show up here.</p>
@@ -33,30 +33,46 @@ export function StepDeliverableTimeline({ active, timeline, now, onAdvance }: St
   }
 
   return (
-    <div className="relative ml-1.5 border-l border-hairline">
-      <section className="space-y-8 pb-9">
-        {active.length > 0 ? (
-          active.map((d) => (
-            <DeliverableSteps
+    <>
+      {active.length > 0 ? (
+        // 20px between cards — surfaces need less separation than frameless
+        // units, but 16px read packed once every card carried a shadow.
+        // Entrances stagger 50ms per card (capped) — one settling cascade,
+        // not a page that pops in as a block.
+        <div className="space-y-5">
+          {active.map((d, i) => (
+            <div
               key={d.id}
-              name={d.name}
-              department={d.department}
-              steps={d.steps}
-              now={now}
-              taskId={d.id}
-              deadline={d.deadline}
-              latestExtension={d.latestExtension}
-              onAdvance={onAdvance ? (stepId) => onAdvance(d.id, stepId) : undefined}
-            />
-          ))
-        ) : (
-          <p className="pl-6 text-sm text-ink-faint">
-            You’re all caught up — nothing needs your attention right now.
-          </p>
-        )}
-      </section>
+              id={`deliverable-${d.id}`}
+              className="scroll-mt-24 animate-timeline-enter"
+              style={{ animationDelay: `${Math.min(i, 6) * 50}ms` }}
+            >
+              <DeliverableSteps
+                name={d.name}
+                steps={d.steps}
+                now={now}
+                taskId={d.id}
+                deadline={d.deadline}
+                latestExtension={d.latestExtension}
+                onAdvance={onAdvance ? (stepId) => onAdvance(d.id, stepId) : undefined}
+              />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-sm text-ink-faint">
+          You’re all caught up — nothing needs your attention right now.
+        </p>
+      )}
 
-      <CompletedTimeline timeline={timeline} />
-    </div>
+      {timeline.length > 0 ? (
+        // Anchor for the rail's "Delivered" stop (JourneyRail jump target).
+        <div id="delivered-history" className="scroll-mt-24">
+          <CompletedTimeline timeline={timeline} />
+        </div>
+      ) : (
+        <CompletedTimeline timeline={timeline} />
+      )}
+    </>
   );
 }

@@ -18,7 +18,7 @@ function derived(over: Partial<DerivedStep> & { rendered: DerivedStep['rendered'
 function renderNode(d: DerivedStep, onAdvance?: (id: string) => void) {
   return render(
     <ul>
-      <StepNode derived={d} department="UI/UX" now={NOW} onAdvance={onAdvance} />
+      <StepNode derived={d} now={NOW} onAdvance={onAdvance} />
     </ul>,
   );
 }

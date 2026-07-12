@@ -24,6 +24,25 @@ function d(partial: Partial<ContractorDeliverable>): ContractorDeliverable {
 }
 
 describe('splitDeliverables', () => {
+  it('sorts active by the earliest not-done STEP deadline when the task itself is undated', () => {
+    const items = [
+      // Undated task whose focal step is overdue — must lead the list.
+      d({ id: 'step-overdue', deadline: null }) as ContractorDeliverable & { steps: unknown },
+      d({ id: 'task-dated', deadline: '2026-07-20' }),
+      d({ id: 'step-soon', deadline: null }) as ContractorDeliverable & { steps: unknown },
+      d({ id: 'truly-undated', deadline: null }),
+    ];
+    (items[0] as { steps: unknown }).steps = [
+      { id: 's1', name: 'a', deadline: '2026-07-01', state: 'pending', sort_order: 0 },
+    ];
+    (items[2] as { steps: unknown }).steps = [
+      { id: 's2', name: 'done', deadline: '2026-06-01', state: 'done', sort_order: 0 }, // done steps don't count
+      { id: 's3', name: 'b', deadline: '2026-07-10', state: 'pending', sort_order: 1 },
+    ];
+    const { active } = splitDeliverables(items, NOW);
+    expect(active.map((i) => i.id)).toEqual(['step-overdue', 'step-soon', 'task-dated', 'truly-undated']);
+  });
+
   it('sorts active by deadline then priority (same-day High before Low)', () => {
     const items = [
       d({ id: 'b', deadline: '2026-07-08', priority: 'Low' }),
@@ -111,11 +130,24 @@ describe('summarizeDeliverables', () => {
     const s = summarizeDeliverables(items, NOW);
     expect(s.count).toBe(2); // Done excluded
     expect(s.nextDueLabel).toBe('Wed, Jul 8'); // earliest active deadline
+    expect(s.overdueCount).toBe(0);
   });
 
   it('returns null next-due when no active deadlines', () => {
     const s = summarizeDeliverables([d({ deadline: null })], NOW);
-    expect(s).toEqual({ count: 1, nextDueLabel: null });
+    expect(s).toEqual({ count: 1, nextDueLabel: null, overdueCount: 0 });
+  });
+
+  it('reads next-due and overdue from step deadlines when the task is undated', () => {
+    const stepped = d({ id: 'stepped', deadline: null }) as ContractorDeliverable & { steps: unknown };
+    stepped.steps = [
+      { id: 's1', name: 'late', deadline: '2026-07-01', state: 'pending', sort_order: 0 },
+    ];
+    const s = summarizeDeliverables([stepped, d({ id: 'plain', deadline: '2026-07-09' })], NOW);
+    expect(s.count).toBe(2);
+    // next-due stays future-facing — the overdue fact is carried by overdueCount
+    expect(s.nextDueLabel).toBe('Thu, Jul 9');
+    expect(s.overdueCount).toBe(1); // the stepped deliverable's focal step is overdue
   });
 });
 

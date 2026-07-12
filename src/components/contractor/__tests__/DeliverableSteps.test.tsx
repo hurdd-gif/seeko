@@ -22,7 +22,7 @@ describe('DeliverableSteps', () => {
       <ul>
         <DeliverableSteps
           name="Main menu wireframes"
-          department="UI/UX"
+
           now={NOW}
           steps={[
             s({ id: 'a', state: 'done', sort_order: 0 }),
@@ -38,7 +38,7 @@ describe('DeliverableSteps', () => {
   it('shows a "No steps yet" line when the deliverable has no steps', () => {
     render(
       <ul>
-        <DeliverableSteps name="Character portraits" department="Visual Art" now={NOW} steps={[]} />
+        <DeliverableSteps name="Character portraits" now={NOW} steps={[]} />
       </ul>,
     );
     expect(screen.getByText(/no steps yet/i)).toBeInTheDocument();
@@ -49,7 +49,7 @@ describe('DeliverableSteps', () => {
       <ul>
         <DeliverableSteps
           name="Main menu wireframes"
-          department="UI/UX"
+
           now={NOW}
           steps={[
             s({ id: 'a', name: 'Low-fi flows', state: 'done', sort_order: 0 }),
@@ -72,7 +72,7 @@ describe('DeliverableSteps', () => {
       <ul>
         <DeliverableSteps
           name="Combat HUD"
-          department="Animation"
+
           now={NOW}
           steps={[
             s({ id: 'a', name: 'Damage sprites', state: 'done', sort_order: 0 }),
@@ -91,7 +91,7 @@ describe('DeliverableSteps', () => {
       <ul>
         <DeliverableSteps
           name="Combat HUD"
-          department="Animation"
+
           now={NOW}
           onAdvance={onAdvance}
           steps={[s({ id: 'b', name: 'HUD integration', state: 'pending', deadline: '2026-07-25', sort_order: 0 })]}
@@ -112,7 +112,7 @@ describe('DeliverableSteps', () => {
       <ul>
         <DeliverableSteps
           name="Combat HUD"
-          department="Animation"
+
           now={NOW}
           onAdvance={onAdvance}
           steps={[s({ id: 'b', name: 'HUD integration', state: 'pending', deadline: '2026-07-25', sort_order: 0 })]}

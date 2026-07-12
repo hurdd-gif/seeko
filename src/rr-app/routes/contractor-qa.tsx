@@ -108,6 +108,10 @@ export function ContractorQaRoute() {
   return (
     <ContractorRouteContent
       now={NOW}
+      // QA has no session, so the real PATCH would always fail — resolve the
+      // advance locally so the submit path (optimistic move + "In review"
+      // confirmation) is exercisable here.
+      onAdvance={async () => {}}
       data={{
         status: 'ready',
         index: {

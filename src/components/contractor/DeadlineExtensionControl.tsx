@@ -70,7 +70,7 @@ function dayAfter(iso: string): string {
  * this file, used only for the two labels below — does not touch the shared
  * `lightKit` ghost-link tokens used elsewhere in the portal. */
 const GHOST_LINK =
-  'inline-flex items-center py-1.5 text-[11px] font-medium text-ink transition-colors duration-150 ease-out hover:text-ink active:text-[#111] motion-reduce:transition-none';
+  'inline-flex items-center py-2 text-[12px] font-medium text-ink transition-colors duration-150 ease-out hover:text-ink active:text-ink-title motion-reduce:transition-none';
 
 /**
  * Contractor-facing deadline-extension affordance for one deliverable heading.
@@ -103,8 +103,8 @@ export function DeadlineExtensionControl({
   // of pending", the affordance is fully suppressed.
   if (ext && ext.status === 'pending') {
     return (
-      <p className="mt-1 flex items-center gap-1.5 pl-6 text-[11px] font-medium" style={{ color: PENDING_AMBER }}>
-        <CalendarClock className="size-3" strokeWidth={2.5} aria-hidden />
+      <p className="flex min-h-7 items-center gap-1.5 text-[12px] font-medium" style={{ color: PENDING_AMBER }}>
+        <CalendarClock className="size-3 shrink-0" strokeWidth={2.5} aria-hidden />
         Extension requested — pending
         {/* ink-faint (#969696, ~2.96:1) failed AA on this date — it's the one
          * hard fact in the pending state, not decorative sublining. Raised to
@@ -152,7 +152,7 @@ export function DeadlineExtensionControl({
   // restore: closing the form just reveals the untouched resting state below.
   if (open) {
     return (
-      <div className="mt-1.5 ml-6 max-w-[320px] rounded-xl bg-[#fafafa] p-3 ring-1 ring-hairline">
+      <div className="max-w-[320px] rounded-xl bg-surface-1 p-3 ring-1 ring-hairline">
         <label className="block text-[11px] font-medium text-ink-faint" htmlFor={`ext-date-${taskId}`}>
           New deadline
         </label>
@@ -168,7 +168,7 @@ export function DeadlineExtensionControl({
           min={min}
           value={date}
           onChange={(e) => setDate(e.target.value)}
-          className="mt-1 w-full rounded-lg bg-white px-2.5 py-1.5 text-[13px] tabular-nums text-ink ring-1 ring-hairline transition-[box-shadow] duration-150 ease-out focus:outline-none focus:ring-[#0d7aff] motion-reduce:transition-none"
+          className="mt-1 w-full rounded-lg bg-surface-1 px-2.5 py-1.5 text-[13px] tabular-nums text-ink ring-1 ring-hairline transition-[box-shadow] duration-150 ease-out focus:outline-none focus:ring-seeko-accent motion-reduce:transition-none"
         />
         <textarea
           value={reason}
@@ -177,7 +177,7 @@ export function DeadlineExtensionControl({
           aria-label="Reason (optional)"
           rows={2}
           maxLength={500}
-          className="mt-2 w-full resize-none rounded-lg bg-white px-2.5 py-1.5 text-[13px] text-ink ring-1 ring-hairline transition-[box-shadow] duration-150 ease-out placeholder:text-ink-faintest focus:outline-none focus:ring-[#0d7aff] motion-reduce:transition-none"
+          className="mt-2 w-full resize-none rounded-lg bg-surface-1 px-2.5 py-1.5 text-[13px] text-ink ring-1 ring-hairline transition-[box-shadow] duration-150 ease-out placeholder:text-ink-faintest focus:outline-none focus:ring-seeko-accent motion-reduce:transition-none"
         />
         <div className="mt-2 flex items-center justify-end gap-2">
           <button
@@ -186,7 +186,7 @@ export function DeadlineExtensionControl({
               setOpen(false);
               setError(false);
             }}
-            className="inline-flex items-center py-1.5 text-[11px] text-ink-faint transition-colors duration-150 ease-out hover:text-ink active:text-[#111] motion-reduce:transition-none"
+            className="inline-flex items-center py-1.5 text-[11px] text-ink-faint transition-colors duration-150 ease-out hover:text-ink active:text-ink-title motion-reduce:transition-none"
           >
             Cancel
           </button>
@@ -194,7 +194,7 @@ export function DeadlineExtensionControl({
             type="button"
             onClick={submit}
             disabled={!date || submitting}
-            className="inline-flex items-center gap-1 rounded-full bg-[#111] px-3 py-1 text-[11px] font-medium text-white transition-[transform,background-color] duration-150 ease-out hover:bg-[#2a2a2a] active:scale-[0.98] disabled:opacity-100 disabled:bg-black/[0.06] disabled:text-black/35 motion-reduce:transition-none motion-reduce:active:scale-100"
+            className="inline-flex items-center gap-1 rounded-full bg-ink-title px-3 py-1 text-[11px] font-medium text-surface-1 transition-[transform,background-color] duration-150 ease-out hover:bg-ink-strong active:scale-[0.98] disabled:opacity-100 disabled:bg-wash-6 disabled:text-ink-faintest motion-reduce:transition-none motion-reduce:active:scale-100"
           >
             {submitting ? (
               'Submitting…'
@@ -205,48 +205,58 @@ export function DeadlineExtensionControl({
             )}
           </button>
         </div>
-        {error && <p className="mt-1 text-[11px] text-[#d4503e]">Couldn’t request — try again.</p>}
+        {error && <p className="mt-1 text-[11px] text-danger">Couldn’t request — try again.</p>}
       </div>
     );
   }
 
-  // Denied (latest) — subtle note + optional denial reason + request again.
+  // Denied (latest) — one footer row: the fact on the left (icon-led, same
+  // CalendarClock grammar as pending — every footer row is "about the
+  // deadline"), the recovery action inline on the right. The old stacked
+  // note + link read as loose prose (user call 2026-07-11).
   if (ext && ext.status === 'denied') {
     return (
-      <div className="mt-1 pl-6">
-        <p className="text-pretty text-[11px] text-ink-faint">
-          Extension denied
-          {ext.denial_reason ? <span className="text-ink"> — {ext.denial_reason}</span> : null}
-        </p>
-        <button
-          type="button"
-          onClick={() => {
-            setOpen(true);
-            setError(false);
-          }}
-          className={`mt-0.5 ${GHOST_LINK}`}
-        >
-          Request again
-        </button>
-        {error && <p className="mt-0.5 text-[11px] text-[#d4503e]">Couldn’t request — try again.</p>}
+      <div>
+        <div className="flex items-center justify-between gap-3">
+          <p className="flex min-w-0 items-center gap-1.5 text-pretty text-[12px] text-ink-faint">
+            <CalendarClock className="size-3 shrink-0" strokeWidth={2.5} aria-hidden />
+            <span className="min-w-0">
+              Extension denied
+              {ext.denial_reason ? <span className="text-ink"> — {ext.denial_reason}</span> : null}
+            </span>
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(true);
+              setError(false);
+            }}
+            className={`shrink-0 ${GHOST_LINK}`}
+          >
+            Request again
+          </button>
+        </div>
+        {error && <p className="mt-0.5 text-[11px] text-danger">Couldn’t request — try again.</p>}
       </div>
     );
   }
 
-  // None / approved (superseded) — request affordance.
+  // None / approved (superseded) — request affordance, icon-led like its
+  // sibling rows so the footer keeps one visual grammar.
   return (
-    <div className="mt-1">
+    <div>
       <button
         type="button"
         onClick={() => {
           setOpen(true);
           setError(false);
         }}
-        className={`ml-6 ${GHOST_LINK}`}
+        className={`gap-1.5 ${GHOST_LINK}`}
       >
+        <CalendarClock className="size-3 shrink-0" strokeWidth={2.5} aria-hidden />
         Request more time
       </button>
-      {error && <p className="ml-6 mt-0.5 text-[11px] text-[#d4503e]">Couldn’t request — try again.</p>}
+      {error && <p className="mt-0.5 text-[11px] text-danger">Couldn’t request — try again.</p>}
     </div>
   );
 }

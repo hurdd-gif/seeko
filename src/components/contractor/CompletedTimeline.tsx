@@ -35,14 +35,19 @@ export function CompletedTimeline({ timeline, initialCount = 4 }: CompletedTimel
 
   let lastMonth: string | null = null;
 
+  // The header sits at the left margin like the deliverable headings above,
+  // so every unit on the page shares one column; the spine indents beneath it.
   return (
-    <section>
-      <div className="mb-3 flex items-center gap-2 pl-6">
-        <h2 className="text-[11px] font-medium uppercase tracking-[0.08em] text-ink-faint">Timeline</h2>
-        <span className="text-[11px] tabular-nums text-ink-ghost">{total}</span>
+    <section className="mt-12">
+      <div className="mb-2 flex items-center gap-2">
+        {/* "Delivered", not "Timeline" — the rail's stop for this section
+         * already says Delivered; one object, one name (conceptual-model
+         * consistency). */}
+        <h2 className="text-[13px] font-medium text-ink-faint">Delivered</h2>
+        <span className="text-[12px] tabular-nums text-ink-ghost">{total}</span>
       </div>
 
-      <ol className="relative">
+      <ol className="relative ml-1.5 border-l border-hairline">
         {visible.map(({ item, monthKey, monthLabel }, i) => {
           const showMonth = monthKey !== lastMonth;
           lastMonth = monthKey;
@@ -66,20 +71,21 @@ export function CompletedTimeline({ timeline, initialCount = 4 }: CompletedTimel
                 }`}
                 style={isNew ? { animationDelay: `${(i - initialCount) * 60}ms` } : undefined}
               >
-                {/* node on the spine */}
+                {/* node on the spine — the delivered check lives IN the node
+                 * (same glyph as done steps above), so the history reads as a
+                 * spine of settled work without a column of repeated icons. */}
                 <span
-                  className="absolute -left-[5px] flex size-2.5 items-center justify-center rounded-full bg-white ring-1 ring-hairline"
+                  className="absolute -left-[5px] flex size-2.5 items-center justify-center rounded-full bg-[var(--ov-bg)] ring-1 ring-hairline"
                   aria-hidden
                 >
-                  <span className="size-1 rounded-full bg-ink-ghost" />
+                  <Check className="size-2 text-success" strokeWidth={3} aria-hidden />
                 </span>
-                <span className="min-w-0 flex-1 truncate text-[13px] text-ink-muted-strong">
+                <span className="min-w-0 flex-1 truncate text-[14px] text-ink-muted-strong">
                   {item.name}
                 </span>
                 {date && (
                   <span className="shrink-0 text-[12px] tabular-nums text-ink-faint">{date}</span>
                 )}
-                <Check className="size-3.5 shrink-0 text-[#15803d]" strokeWidth={2.5} aria-hidden />
               </div>
             </li>
           );
@@ -90,7 +96,7 @@ export function CompletedTimeline({ timeline, initialCount = 4 }: CompletedTimel
         <button
           type="button"
           onClick={() => setExpanded(true)}
-          className="mt-2 ml-6 inline-flex items-center gap-1 text-[12px] text-ink-faint transition-colors duration-150 ease-out hover:text-ink active:text-[#111]"
+          className="mt-1 ml-[30px] inline-flex min-h-10 items-center gap-1 text-[12px] text-ink-faint transition-colors duration-150 ease-out hover:text-ink active:text-ink-title"
         >
           Show {hiddenCount} earlier
           <ChevronDown className="size-3.5" strokeWidth={2} aria-hidden />

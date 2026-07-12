@@ -8,12 +8,12 @@ const steps: ContractorStep[] = [{ id: 's1', name: 'Draft', deadline: '2026-07-1
 
 describe('DeliverableSteps extension affordance', () => {
   it('renders the request affordance when the deliverable has a deadline', () => {
-    render(<DeliverableSteps name="Wireframes" department="UI/UX" steps={steps} now={NOW} taskId="task-1" deadline="2026-07-18" latestExtension={null} />);
+    render(<DeliverableSteps name="Wireframes" steps={steps} now={NOW} taskId="task-1" deadline="2026-07-18" latestExtension={null} />);
     expect(screen.getByRole('button', { name: /request more time/i })).toBeInTheDocument();
   });
 
   it('omits the affordance when the deliverable has no deadline', () => {
-    render(<DeliverableSteps name="Wireframes" department="UI/UX" steps={steps} now={NOW} taskId="task-1" deadline={null} latestExtension={null} />);
+    render(<DeliverableSteps name="Wireframes" steps={steps} now={NOW} taskId="task-1" deadline={null} latestExtension={null} />);
     expect(screen.queryByRole('button', { name: /request more time/i })).not.toBeInTheDocument();
   });
 });

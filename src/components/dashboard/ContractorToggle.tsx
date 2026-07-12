@@ -51,7 +51,7 @@ export function ContractorToggle({ userId, isContractor, light = false }: { user
         onClick={() => setConfirming(true)}
         className={cn(
           'text-[11px] transition-colors whitespace-nowrap',
-          light ? 'text-[#808080] hover:text-[#111]' : 'text-muted-foreground hover:text-foreground',
+          light ? 'text-ink-muted hover:text-ink-title' : 'text-muted-foreground hover:text-foreground',
         )}
       >
         {actionLabel}
@@ -70,7 +70,7 @@ export function ContractorToggle({ userId, isContractor, light = false }: { user
             <motion.div
               className={cn(
                 'relative w-full max-w-sm rounded-xl p-5',
-                light ? 'border border-black/[0.06] bg-white shadow-seeko' : 'border border-border bg-card shadow-2xl',
+                light ? 'border border-wash-6 bg-surface-1 shadow-seeko' : 'border border-border bg-card shadow-2xl',
               )}
               initial={{ opacity: 0, scale: 0.95, y: 8 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -81,13 +81,13 @@ export function ContractorToggle({ userId, isContractor, light = false }: { user
                 onClick={() => setConfirming(false)}
                 className={cn(
                   'absolute top-3 right-3 rounded-lg p-1 transition-colors',
-                  light ? 'text-[#9a9a9a] hover:text-[#111] hover:bg-black/[0.04]' : 'text-muted-foreground hover:text-foreground hover:bg-muted',
+                  light ? 'text-ink-faint hover:text-ink-title hover:bg-wash-4' : 'text-muted-foreground hover:text-foreground hover:bg-muted',
                 )}
               >
                 <X className="size-4" />
               </button>
-              <h3 className={cn('text-sm font-semibold', light ? 'text-[#111]' : 'text-foreground')}>{actionLabel}</h3>
-              <p className={cn('text-xs mt-1.5 leading-relaxed', light ? 'text-[#808080]' : 'text-muted-foreground')}>
+              <h3 className={cn('text-sm font-semibold', light ? 'text-ink-title' : 'text-foreground')}>{actionLabel}</h3>
+              <p className={cn('text-xs mt-1.5 leading-relaxed', light ? 'text-ink-muted' : 'text-muted-foreground')}>
                 {next
                   ? 'This will move them to the Contractors section. Contractors cannot see the Activity page.'
                   : 'This will move them back to the Members section with full access.'}
@@ -98,7 +98,7 @@ export function ContractorToggle({ userId, isContractor, light = false }: { user
                   disabled={loading}
                   className={cn(
                     'rounded-lg px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50',
-                    light ? 'bg-[#111] text-white hover:bg-[#2a2a2a]' : 'bg-primary text-primary-foreground hover:bg-primary/90',
+                    light ? 'bg-ink-title text-surface-1 hover:bg-ink-strong' : 'bg-primary text-primary-foreground hover:bg-primary/90',
                   )}
                 >
                   {loading ? 'Updating...' : 'Confirm'}
@@ -108,7 +108,7 @@ export function ContractorToggle({ userId, isContractor, light = false }: { user
                   disabled={loading}
                   className={cn(
                     'rounded-lg px-3 py-1.5 text-xs transition-colors',
-                    light ? 'text-[#505050] hover:text-[#111] hover:bg-black/[0.04]' : 'text-muted-foreground hover:text-foreground',
+                    light ? 'text-ink-body hover:text-ink-title hover:bg-wash-4' : 'text-muted-foreground hover:text-foreground',
                   )}
                 >
                   Cancel
