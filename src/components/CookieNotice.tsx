@@ -72,15 +72,15 @@ export function CookieNotice() {
           // card from sm up where the two no longer collide.
           className="fixed inset-x-4 bottom-4 z-50 rounded-2xl border border-black/[0.15] bg-white p-5 print:hidden sm:inset-x-auto sm:bottom-5 sm:right-5 sm:w-[min(360px,calc(100vw-40px))]"
         >
-          <h2 className="text-sm font-semibold text-[#111]">Cookies</h2>
-          <p className="mt-1.5 text-[13px] leading-relaxed text-[#6e6e6e]">
+          <h2 className="text-sm font-semibold text-ink-title">Cookies</h2>
+          <p className="mt-1.5 text-[13px] leading-relaxed text-ink-muted-strong">
             SEEKO uses only essential cookies — the ones that keep you signed in.
             They&rsquo;re required for the site to work and can&rsquo;t be switched
             off. No analytics, no advertising, no tracking.{' '}
             <a
               href="/legal/privacy#cookies"
               className={cn(
-                'rounded-sm font-medium text-[#2a2a2a] underline decoration-black/20 underline-offset-2 transition-colors duration-150 hover:decoration-black/50',
+                'rounded-sm font-medium text-ink-strong underline decoration-black/20 underline-offset-2 transition-colors duration-150 hover:decoration-black/50',
                 LIGHT_FOCUS_RING,
               )}
             >

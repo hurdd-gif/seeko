@@ -10,13 +10,25 @@ import { SegmentedCodeInput } from './SegmentedCodeInput';
 import { springs } from '@/lib/motion';
 import { cn } from '@/lib/utils';
 import { LIGHT_INPUT, LIGHT_FOCUS_RING } from '@/components/dashboard/lightKit';
+import { useIsDark } from '@/lib/theme';
 
 // Light Paper port: fields + CTA migrated dark→light onto the canonical lightKit
 // (azure-ring white input, #808080 labels, light segmented OTP cells, black-pill
 // CTA) so the invite tab matches the rest of the light auth flow. The error
 // AnimatePresence + the verifyOtp/profile-init/redirect logic are untouched.
 const SPRING = springs.smooth;
-const FIELD_LABEL = 'block text-xs font-medium text-[#808080] mb-1.5';
+const FIELD_LABEL = 'block text-xs font-medium text-ink-muted mb-1.5';
+
+/* CTA colors are Motion-animated JS hexes, unreachable by `dark:` classes —
+ * the component picks the map with useIsDark(). Dark mirrors BTN_PRIMARY's
+ * inversion (ink-title #f0f0f0 pill, surface-1 #2b2b2b label — the same pair
+ * the login submit resolves to), so "8th digit lands" springs to the SAME
+ * maximal-contrast affordance in both schemes. Resting matches the dark
+ * provider pills (#262626) with the dark faintest ink. */
+const CTA_COLORS = {
+  light: { ready: { bg: '#111111', fg: '#ffffff', hover: '#2a2a2a' }, resting: { bg: '#f1f1f1', fg: '#9a9a9a' } },
+  dark:  { ready: { bg: '#f0f0f0', fg: '#2b2b2b', hover: '#e4e4e4' }, resting: { bg: '#262626', fg: '#636363' } },
+};
 
 /* Error grammar — matches the login card's swap curves: entrances land on
  * the 250ms [0.22,1,0.36,1] ease with a height glide + 2px blur bridge,
@@ -46,6 +58,8 @@ export function InviteCodeForm() {
   const router = useRouter();
   const { trigger } = useHaptics();
   const reduceMotion = useReducedMotion();
+  const isDark = useIsDark();
+  const cta = CTA_COLORS[isDark ? 'dark' : 'light'];
   const [email, setEmail] = useState('');
   const [token, setToken] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -134,7 +148,7 @@ export function InviteCodeForm() {
             LIGHT_INPUT,
             // Error state overrides the azure focus ring — red, not blue.
             emailInvalid &&
-              'border-[#d4503e]/60 focus-visible:border-[#d4503e] focus-visible:ring-2 focus-visible:ring-[#d4503e]/15',
+              'border-danger/60 focus-visible:border-danger focus-visible:ring-2 focus-visible:ring-danger/15',
           )}
           aria-describedby={emailInvalid ? 'invite-email-error' : undefined}
         />
@@ -149,7 +163,7 @@ export function InviteCodeForm() {
               animate={{ height: 'auto', opacity: 1, filter: 'blur(0px)' }}
               exit={{ height: 0, opacity: 0, filter: 'blur(2px)', transition: reduceMotion ? { duration: 0 } : ERR.out }}
               transition={reduceMotion ? { duration: 0 } : ERR.in}
-              className="overflow-hidden text-[13px] leading-snug text-[#d4503e]"
+              className="overflow-hidden text-[13px] leading-snug text-danger"
             >
               <span className="block pt-1.5">{error}</span>
             </motion.p>
@@ -158,7 +172,7 @@ export function InviteCodeForm() {
       </div>
 
       <div ref={cellsRef} className="mb-[18px]">
-        <label className="block text-xs font-medium text-[#808080] mb-3 text-center">
+        <label className="block text-xs font-medium text-ink-muted mb-3 text-center">
           Enter the 8-digit code from your invite email
         </label>
         <SegmentedCodeInput
@@ -188,7 +202,7 @@ export function InviteCodeForm() {
               transition={reduceMotion ? { duration: 0 } : ERR.in}
               className="overflow-hidden"
             >
-              <p className="mt-4 rounded-lg bg-[#d4503e]/10 px-4 py-2 text-sm text-[#d4503e]">{error}</p>
+              <p className="mt-4 rounded-lg bg-danger/10 px-4 py-2 text-sm text-danger">{error}</p>
             </motion.div>
           )}
         </AnimatePresence>
@@ -206,8 +220,8 @@ export function InviteCodeForm() {
         disabled={loading || token.length < 8}
         initial={false}
         animate={{
-          backgroundColor: token.length === 8 ? '#111111' : '#f1f1f1',
-          color: token.length === 8 ? '#ffffff' : '#9a9a9a',
+          backgroundColor: token.length === 8 ? cta.ready.bg : cta.resting.bg,
+          color: token.length === 8 ? cta.ready.fg : cta.resting.fg,
           scale: token.length === 8 ? 1 : 0.98,
         }}
         // Reduced motion drops the scale movement but KEEPS the color fade —
@@ -218,7 +232,7 @@ export function InviteCodeForm() {
             : springs.firm
         }
         {...(token.length === 8
-          ? { whileHover: { backgroundColor: '#2a2a2a', transition: { duration: 0.15, ease: 'easeOut' as const } } }
+          ? { whileHover: { backgroundColor: cta.ready.hover, transition: { duration: 0.15, ease: 'easeOut' as const } } }
           : {})}
         className={cn(
           LIGHT_FOCUS_RING,

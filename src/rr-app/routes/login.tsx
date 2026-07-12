@@ -20,10 +20,12 @@ const CALLBACK_ERROR_MESSAGES: Record<string, string> = {
 
 /** Progressive frost halo over the halftone veil, centered on the card:
  *  three stacked backdrop layers with tightening radial masks, each pairing
- *  blur with a white tint — blur alone softens the dots but keeps their
- *  luminance, so the field still competed with the card; the tint is what
- *  actually clears it. Both fall off with distance, and the bloom's dense
- *  core at the bottom edge stays fully crisp. */
+ *  blur with a canvas-colored tint — blur alone softens the dots but keeps
+ *  their luminance, so the field still competed with the card; the tint is
+ *  what actually clears it. Both fall off with distance, and the bloom's
+ *  dense core at the bottom edge stays fully crisp. The tint color rides the
+ *  `--halo` variable set on the route root (white in light, #171717 in dark)
+ *  so the fog always reads as the page's own air, never a white wash. */
 const BLUR_HALO = [
   { blur: 3, tint: 0.1, mask: 'radial-gradient(ellipse 50% 50% at center, black 30%, transparent 96%)' },
   { blur: 8, tint: 0.18, mask: 'radial-gradient(ellipse 50% 50% at center, black 25%, transparent 84%)' },
@@ -46,8 +48,11 @@ export function LoginRouteContent() {
     // left. Symmetric gutters keep the card centered in either state.
     // color-scheme: the app body declares dark — override on this white
     // canvas or the scrollbar (visible whenever the email form expands past
-    // the viewport) renders as a dark track on the light page.
-    <div className="overview-light relative flex h-dvh flex-col overflow-y-auto bg-white px-4 antialiased pb-[env(safe-area-inset-bottom)] [scrollbar-gutter:stable_both-edges] [color-scheme:light]">
+    // the viewport) renders as a dark track on the light page. In dark the
+    // canvas deepens to the Figma LOGIN/DARK near-black (#171717, below the
+    // app's 0.240 ramp by design — reference-scoped, not a ramp change) and
+    // the scrollbar follows the scheme.
+    <div className="overview-light relative flex h-dvh flex-col overflow-y-auto bg-white dark:bg-[#171717] px-4 antialiased pb-[env(safe-area-inset-bottom)] [scrollbar-gutter:stable_both-edges] [color-scheme:light] dark:[color-scheme:dark] [--halo:255,255,255] dark:[--halo:23,23,23]">
       {/* Fixed (not absolute) so the field holds the bottom edge of the
           viewport even when the expanded email view scrolls; fixed elements
           paint above static siblings, hence the z-[1] on main. */}
@@ -67,7 +72,7 @@ export function LoginRouteContent() {
             key={blur}
             className="absolute inset-0"
             style={{
-              backgroundColor: `rgba(255,255,255,${tint})`,
+              backgroundColor: `rgba(var(--halo),${tint})`,
               backdropFilter: `blur(${blur}px)`,
               WebkitBackdropFilter: `blur(${blur}px)`,
               maskImage: mask,
@@ -83,13 +88,16 @@ export function LoginRouteContent() {
           {/* Refined gray mark (#6E6E6E) exported from the Paper reference
               header (27P-0) — replaces the outdated heavy black PNG. 24px
               keeps it proportionate to the 16px label (glyph sits inside
-              the box with padding, so 32px read oversized). */}
-          <img src="/seeko-mark.svg" alt="SEEKO" className="size-6" />
-          <span className="text-base font-medium text-[#686868]">Studio</span>
+              the box with padding, so 32px read oversized). Dark dims it to
+              ≈#3f3f3f (brightness .57) to sit with the #3e3e3e labels. */}
+          <img src="/seeko-mark.svg" alt="SEEKO" className="size-6 dark:brightness-[.57]" />
+          {/* Dark header labels: Figma LOGIN/DARK pins these to #3e3e3e —
+              deliberately recessive chrome; hover still brightens via tokens. */}
+          <span className="text-base font-medium text-ink-muted-strong dark:text-[#3e3e3e]">Studio</span>
         </div>
         <a
           href="mailto:legal@seekostudios.com?subject=SEEKO%20Studio%20sign-in%20help"
-          className="flex items-center gap-2 text-base text-[#686868] transition-colors duration-150 hover:text-[#3a3a3a] active:text-[#111]"
+          className="flex items-center gap-2 text-base text-ink-muted-strong dark:text-[#3e3e3e] transition-colors duration-150 hover:text-ink active:text-ink-title"
         >
           <CircleHelp className="size-[18px]" strokeWidth={1.75} />
           Help &amp; Support
@@ -116,17 +124,17 @@ export function LoginRouteContent() {
             No scrim behind it (user call): the text sits directly on the dot
             field — the dots here are mid-density pastels, not the dense core. */}
         <div className="relative mt-8">
-          <p className="relative max-w-[300px] text-pretty text-center text-sm leading-snug text-[#767676] contrast-more:text-[#3a3a3a]">
+          <p className="relative max-w-[300px] text-pretty text-center text-sm leading-snug text-[#767676] contrast-more:text-ink">
           By creating an account, you agree to our{' '}
-          <Link to="/legal/terms" className="font-medium text-[#5c5c5c] transition-colors duration-150 hover:text-[#111] contrast-more:text-[#111] contrast-more:underline">
+          <Link to="/legal/terms" className="font-medium text-[#5c5c5c] transition-colors duration-150 hover:text-ink-title contrast-more:text-ink-title contrast-more:underline">
             Terms of Use
           </Link>
           ,{' '}
-          <Link to="/legal/developer-terms" className="font-medium text-[#5c5c5c] transition-colors duration-150 hover:text-[#111] contrast-more:text-[#111] contrast-more:underline">
+          <Link to="/legal/developer-terms" className="font-medium text-[#5c5c5c] transition-colors duration-150 hover:text-ink-title contrast-more:text-ink-title contrast-more:underline">
             Developer Portal Terms of Service
           </Link>{' '}
           and{' '}
-          <Link to="/legal/privacy" className="font-medium text-[#5c5c5c] transition-colors duration-150 hover:text-[#111] contrast-more:text-[#111] contrast-more:underline">
+          <Link to="/legal/privacy" className="font-medium text-[#5c5c5c] transition-colors duration-150 hover:text-ink-title contrast-more:text-ink-title contrast-more:underline">
             Privacy Policy
           </Link>
           </p>

@@ -95,7 +95,7 @@ export function SegmentedCodeInput({ value, onChange, disabled, light = false, i
           {i === 4 && (
             <div className={cn(
               'w-2 sm:w-3 flex items-center justify-center text-base sm:text-lg font-light select-none',
-              light ? 'text-black/20' : 'text-muted-foreground/30',
+              light ? 'text-black/20 dark:text-white/20' : 'text-muted-foreground/30',
             )}>
               &ndash;
             </div>
@@ -126,17 +126,20 @@ export function SegmentedCodeInput({ value, onChange, disabled, light = false, i
               className={cn(
                 'w-full aspect-square rounded-[10px] border text-center text-base sm:text-[17px] font-medium font-mono tabular-nums transition-[border-color,background-color] duration-150 ease-out',
                 'focus:outline-none caret-transparent disabled:opacity-50',
-                light ? 'bg-white text-[#1c1c1c]' : 'bg-white/5 text-foreground',
+                // `light` = the scheme-aware Paper kit (surface-1/wash tokens
+                // flip under .dark); the hardcoded light-only inks get dark:
+                // twins here. The non-light branch stays the legacy dark kit.
+                light ? 'bg-surface-1 text-[#1c1c1c] dark:text-[#e4e4e4]' : 'bg-white/5 text-foreground',
                 invalid
                   ? light
-                    ? 'border-[#d4503e]/70 bg-[#fff7f6]'
+                    ? 'border-danger/70 bg-[#fff7f6] dark:bg-[#2a201f]'
                     : 'border-red-400/60'
                   : light
                     ? focusedIndex === i
-                      ? 'border-[#0d7aff]'
+                      ? 'border-seeko-accent'
                       : digit
-                        ? 'border-black/[0.16]'
-                        : 'border-black/[0.08]'
+                        ? 'border-black/[0.16] dark:border-white/[0.16]'
+                        : 'border-wash-8'
                     : focusedIndex === i
                       ? 'border-foreground/40'
                       : digit

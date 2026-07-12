@@ -71,6 +71,7 @@ import { springs } from '@/lib/motion';
 import { resolvePostLoginDestination, type MinimalSupabase } from '@/lib/post-login-destination';
 import { cn } from '@/lib/utils';
 import { LIGHT_INPUT, BTN_PRIMARY, LIGHT_FOCUS_RING } from '@/components/dashboard/lightKit';
+import { useIsDark } from '@/lib/theme';
 
 /* ─── Timing (ms after mount) ─────────────────────────────
  * Compressed stagger: everything interactive inside 200ms. The 40-50ms
@@ -116,6 +117,11 @@ const MORPH = {
   radius: { closed: 16, open: 20 },
   height: { closed: 48 },
   tint:   { closed: '#f1f1f1', open: '#f7f7f7' },
+  // Motion animates backgroundColor as a JS hex, which no `dark:` class can
+  // reach — the component picks the map with useIsDark(). Closed matches the
+  // dark pills (#262626); open settles toward the #1c1c1c card, the same
+  // closer-to-card direction the light pair travels.
+  tintDark: { closed: '#262626', open: '#212121' },
 };
 
 /* ─── Element configs ────────────────────────────────────── */
@@ -146,7 +152,7 @@ const FIELD_INPUT = cn(
 // Error state overrides the azure focus border — red, not blue (matches the
 // invite tab's treatment so both forms speak one error language).
 const FIELD_INPUT_INVALID =
-  'border-[#d4503e]/60 focus-visible:border-[#d4503e] focus-visible:ring-2 focus-visible:ring-[#d4503e]/15';
+  'border-danger/60 focus-visible:border-danger focus-visible:ring-2 focus-visible:ring-danger/15';
 
 /* Point-of-error continuity: the offending field shakes as the message lands
  * (same keyframes as InviteCodeForm — one grammar across the auth card). */
@@ -164,11 +170,13 @@ function shakeEl(el: HTMLElement | null, reduceMotion: boolean | null) {
 }
 
 /* Provider pill — reference geometry verbatim: 48px tall, #F1F1F1, 16px radius,
- * 8px icon–label gap, 24px icon + 16px/600 #3A3A3A label. */
+ * 8px icon–label gap, 24px icon + 16px/600 #3A3A3A label. Dark pins the
+ * Figma LOGIN/DARK pair (#262626 fill, #b0b0b0 label) over the app's
+ * control-fill/ink tokens; hover brightens instead of darkening. */
 const PILL = cn(
-  'flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[#f1f1f1]',
-  'text-base font-semibold text-[#3a3a3a]',
-  'transition-[background-color,transform] duration-150 ease-out hover:bg-[#eaeaea] active:scale-[0.98]',
+  'flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-control-fill dark:bg-[#262626]',
+  'text-base font-semibold text-ink dark:text-[#b0b0b0]',
+  'transition-[background-color,transform] duration-150 ease-out hover:bg-[#eaeaea] dark:hover:bg-[#2c2c2c] active:scale-[0.98]',
   'disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100',
   LIGHT_FOCUS_RING,
 );
@@ -176,7 +184,7 @@ const PILL = cn(
 /* #767676 is the AA floor on white (4.54:1) — the old #9a9a9a read as
  * decorative but carried real actions. contrast-more darkens further. */
 const SUBTLE_LINK =
-  'text-[13px] text-[#767676] transition-colors hover:text-[#3a3a3a] active:text-[#111] contrast-more:text-[#3a3a3a]';
+  'text-[13px] text-[#767676] transition-colors hover:text-ink active:text-ink-title contrast-more:text-ink';
 
 /* Busy-state content crossfade (never hard-swap a label/icon): tiny
  * opacity + scale + blur bridge, 150ms ease-out. */
@@ -207,6 +215,9 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
   const router = useRouter();
   const { trigger } = useHaptics();
   const reduceMotion = useReducedMotion();
+  // Scheme read for the one surface Motion paints as a JS hex (MORPH tint).
+  const isDark = useIsDark();
+  const morphTint = isDark ? MORPH.tintDark : MORPH.tint;
   const [view, setView] = useState<'signin' | 'invite'>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -538,7 +549,7 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
       {/* Layered elevation (contact + soft + ambient) so the card reads as a
           real surface above the white canvas, not paint on it. Still quiet. */}
       <motion.div
-        className="relative rounded-[20px] border border-[#E8E8E8]/75 bg-white px-6 py-10 shadow-[0_1px_2px_rgba(17,17,17,0.02),0_8px_16px_rgba(17,17,17,0.035),0_24px_48px_-16px_rgba(17,17,17,0.05)] contrast-more:border-black/30"
+        className="relative rounded-[20px] border border-[#E8E8E8]/75 bg-white px-6 py-10 shadow-[0_1px_2px_rgba(17,17,17,0.02),0_8px_16px_rgba(17,17,17,0.035),0_24px_48px_-16px_rgba(17,17,17,0.05)] dark:border-[rgba(60,60,60,0.75)] dark:bg-[#1c1c1c] dark:shadow-[0_1px_2px_rgba(0,0,0,0.2),0_8px_16px_rgba(0,0,0,0.25),0_24px_48px_-16px_rgba(0,0,0,0.35)] contrast-more:border-black/30 dark:contrast-more:border-white/40"
         initial={{ opacity: 0, y: CARD.offsetY }}
         animate={{ opacity: stage >= 1 ? 1 : 0, y: stage >= 1 ? 0 : CARD.offsetY }}
         transition={t(CARD.spring)}
@@ -553,15 +564,17 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
           transition={t(IDENTITY.spring)}
         >
           {/* White S-mark on the reference's #525252 disc — the dark-canvas
-              asset finally has a home on the light card. */}
-          <div className="flex size-16 shrink-0 items-center justify-center rounded-full bg-[#525252]">
+              asset finally has a home on the light card. Dark PINS #525252:
+              the ink-mark token flips to #bebebe there, but the Figma
+              LOGIN/DARK badge keeps the same mid-grey disc as light. */}
+          <div className="flex size-16 shrink-0 items-center justify-center rounded-full bg-ink-mark dark:bg-[#525252]">
             {/* 40px, not 32 — the PNG carries internal whitespace, so the
                 glyph needs the larger box to fill the disc like the reference. */}
             <img src="/seeko-s.png" alt="" width={40} height={40} className="h-10 w-auto object-contain" />
           </div>
           {/* #454545 = the reference's #515151 darkened 15% (user-decided
               2026-07-04); ~9.7:1 on white. */}
-          <h1 className="text-balance text-[22px] font-semibold tracking-[-0.02em] text-[#454545]">
+          <h1 className="text-balance text-[22px] font-semibold tracking-[-0.02em] text-ink-heading dark:text-[#b2b2b2]">
             Sign in to SEEKO
           </h1>
         </motion.div>
@@ -572,7 +585,7 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
         <motion.div
           // #767676 = AA floor on white; the old #b4b4b4 (2.1:1) treated the
           // page's one line of real copy as decoration.
-          className="mb-10 grid justify-items-center text-balance text-center text-base leading-snug text-[#767676] contrast-more:text-[#3a3a3a]"
+          className="mb-10 grid justify-items-center text-balance text-center text-base leading-snug text-[#767676] contrast-more:text-ink"
           initial={{ opacity: 0 }}
           animate={{ opacity: stage >= 3 ? 1 : 0 }}
           transition={t(FADE.spring)}
@@ -621,7 +634,7 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
                 exit={{ opacity: 0, height: 0 }}
                 transition={t({ duration: 0.2, ease: 'easeOut' })}
               >
-                <p className="mb-4 rounded-lg bg-[#d4503e]/10 px-3 py-2 text-sm text-[#d4503e]">
+                <p className="mb-4 rounded-lg bg-danger/10 px-3 py-2 text-sm text-danger">
                   {error}
                 </p>
               </motion.div>
@@ -643,7 +656,7 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
                 exit={{ opacity: 0, height: 0 }}
                 transition={t({ duration: 0.2, ease: 'easeOut' })}
               >
-                <p className="mb-4 rounded-lg bg-black/[0.05] px-3 py-2 text-sm text-[#3a3a3a]">
+                <p className="mb-4 rounded-lg bg-wash-5 px-3 py-2 text-sm text-ink">
                   {notice}
                 </p>
               </motion.div>
@@ -678,7 +691,7 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
                 {/* Linear-pattern recall: name the remembered method so the
                     promoted pill reads as deliberate, not reshuffled. */}
                 {promotedMethod && (
-                  <p className="pb-0.5 pl-1 text-[12px] text-[#767676] contrast-more:text-[#3a3a3a]">
+                  <p className="pb-0.5 pl-1 text-[12px] text-[#767676] contrast-more:text-ink">
                     You used {METHOD_LABEL[promotedMethod]} to sign in last time
                   </p>
                 )}
@@ -737,7 +750,7 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
                   animate={{
                     height: emailOpen ? 'auto' : MORPH.height.closed,
                     borderRadius: emailOpen ? MORPH.radius.open : MORPH.radius.closed,
-                    backgroundColor: emailOpen ? MORPH.tint.open : MORPH.tint.closed,
+                    backgroundColor: emailOpen ? morphTint.open : morphTint.closed,
                   }}
                   transition={reduceMotion ? { duration: 0 } : emailOpen ? MORPH.open : MORPH.close}
                   onAnimationComplete={() => setEmailClosing(false)}
@@ -758,7 +771,9 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
                     tabIndex={emailOpen ? -1 : 0}
                     className={cn(
                       PILL,
-                      'absolute inset-x-0 top-0 bg-transparent',
+                      // Both schemes go transparent — the morph surface owns
+                      // the paint, so the tint animation is never masked.
+                      'absolute inset-x-0 top-0 bg-transparent dark:bg-transparent',
                       emailOpen && 'pointer-events-none',
                     )}
                     // No initial={false} here: it suppresses the mount-time
@@ -802,15 +817,15 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
                     }
                   >
                     <div className="mb-2 flex items-center justify-between pl-1">
-                      <span className="text-[13px] font-medium text-[#6e6e6e]">Sign in with email</span>
+                      <span className="text-[13px] font-medium text-ink-muted-strong">Sign in with email</span>
                       <button
                         type="button"
                         onClick={closeEmail}
                         aria-label="Close email sign-in"
                         className={cn(
-                          'grid size-7 place-items-center rounded-full text-[#808080]',
+                          'grid size-7 place-items-center rounded-full text-ink-muted',
                           'transition-[background-color,color,transform] duration-150 ease-out',
-                          'hover:bg-black/[0.06] hover:text-[#3a3a3a] active:scale-95',
+                          'hover:bg-wash-6 hover:text-ink active:scale-95',
                           LIGHT_FOCUS_RING,
                         )}
                       >
@@ -879,7 +894,7 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
                           className={cn(
                             'absolute right-0.5 top-1/2 grid size-10 -translate-y-1/2 place-items-center rounded-md text-[#767676]',
                             'transition-[background-color,color,transform] duration-150 ease-out',
-                            'hover:bg-black/[0.05] hover:text-[#3a3a3a] active:scale-95',
+                            'hover:bg-wash-5 hover:text-ink active:scale-95',
                             LIGHT_FOCUS_RING,
                           )}
                         >

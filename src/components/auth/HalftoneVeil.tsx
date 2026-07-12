@@ -28,6 +28,7 @@ import {
   lensDisplacement,
   sampleVeilGradient,
 } from '@/lib/halftone-field';
+import { subscribeTheme } from '@/lib/theme';
 
 /** Same key LoginForm uses — one "has seen the entrance" signal per tab. */
 const ENTRANCE_PLAYED_KEY = 'seeko-login-entrance-played';
@@ -60,6 +61,13 @@ const LENS_STRENGTH = 30;
 const DOT_EASE = 0.18;
 
 const RISE = { delay: 0.15, type: 'spring', duration: 1.1, bounce: 0 } as const;
+
+/** Dark-scheme dot ink (Figma LOGIN/DARK node 1:2): the sunset bands read as
+ *  glare on the near-black canvas, so dark re-tints every dot to one quiet
+ *  grey and lets CORE_GLOW — layered OVER the field in dark (dark:z-10) —
+ *  supply the warmth at the bottom edge, matching the reference's
+ *  grey-dots-with-orange-bloom read. */
+const DARK_DOT_RGB = '90,90,90';
 
 /** Soft sunset wash under the dot field's dense core: the same palette and
  *  bottom-center ellipse as the bloom (echoing its 1.33 aspect) so glow and
@@ -120,7 +128,7 @@ type Dot = { x: number; y: number; r: number; fill: string; ox: number; oy: numb
 /** Precompute the resting field once per size — the rAF loop only repaints.
  *  Geometry is Delphi's elliptical bloom (intensity drives radius + alpha);
  *  color is a pure function of height (flat vertical sunset bands). */
-function buildDots(w: number, h: number): Dot[] {
+function buildDots(w: number, h: number, dark: boolean): Dot[] {
   const dots: Dot[] = [];
   const cx = w / 2;
   const ry = h * BLOOM_RY_FRAC;
@@ -132,8 +140,12 @@ function buildDots(w: number, h: number): Dot[] {
     // One color per row — bands stay perfectly horizontal like the mark.
     // Normalized to the bloom's vertical reach (not the canvas) so the full
     // palette lands on rows that actually have ink; above ry nothing draws.
-    const [red, green, blue] = sampleVeilGradient((1 - y / h) / BLOOM_RY_FRAC);
-    const rowFill = `${Math.round(red)},${Math.round(green)},${Math.round(blue)}`;
+    // Dark flattens the palette to one grey (see DARK_DOT_RGB).
+    let rowFill = DARK_DOT_RGB;
+    if (!dark) {
+      const [red, green, blue] = sampleVeilGradient((1 - y / h) / BLOOM_RY_FRAC);
+      rowFill = `${Math.round(red)},${Math.round(green)},${Math.round(blue)}`;
+    }
     for (let i = 0; i < cols; i++) {
       const x = i * PITCH + PITCH / 2;
       const n = bloomIntensity(x - cx, y - h, rx, ry);
@@ -318,7 +330,7 @@ export function HalftoneVeil() {
       canvas.width = Math.round(w * dpr);
       canvas.height = Math.round(h * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      dots = buildDots(w, h);
+      dots = buildDots(w, h, document.documentElement.classList.contains('dark'));
       paint();
     }
 
@@ -330,6 +342,10 @@ export function HalftoneVeil() {
       resizeRaf = requestAnimationFrame(resize);
     };
     window.addEventListener('resize', onResize);
+
+    // The dot ink is scheme-dependent — rebuild + repaint on preference flips
+    // (the login can mount already-dark via client-side nav from the app).
+    const unsubscribeTheme = subscribeTheme(() => resize());
 
     // The canvas is pointer-transparent, so the lens listens on the window.
     // Mouse-driven only: on touch there is no hover to trail, and reduced
@@ -370,6 +386,7 @@ export function HalftoneVeil() {
     return () => {
       cancelAnimationFrame(raf);
       cancelAnimationFrame(resizeRaf);
+      unsubscribeTheme();
       window.removeEventListener('resize', onResize);
       window.removeEventListener('pointermove', onMove);
       document.documentElement.removeEventListener('pointerleave', onLeave);
@@ -387,7 +404,10 @@ export function HalftoneVeil() {
       animate={{ opacity: 1, y: 0 }}
       transition={RISE}
     >
-      <div aria-hidden className="absolute inset-0" style={{ background: CORE_GLOW }} />
+      {/* Light: the glow sits UNDER the dots (sunset ink carries the color).
+          Dark: dark:z-10 lifts it OVER the grey field, per the Figma
+          reference's glow-over-dots layering — same gradient, new role. */}
+      <div aria-hidden className="absolute inset-0 dark:z-10" style={{ background: CORE_GLOW }} />
       <canvas ref={canvasRef} className="relative size-full" />
     </motion.div>
   );

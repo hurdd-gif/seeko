@@ -37,12 +37,12 @@ export function LightAuthShell({
             <img src="/seeko-logo.png" alt="SEEKO" className="size-14" />
           </FadeScale>
           <FadeRise delay={0.15}>
-            <h1 className="mt-4 text-2xl font-semibold tracking-tight text-[#111] text-balance">
+            <h1 className="mt-4 text-2xl font-semibold tracking-tight text-ink-title text-balance">
               {title}
             </h1>
           </FadeRise>
           <FadeRise delay={0.25}>
-            <p className="mt-2 text-sm text-[#808080] text-pretty">{subtitle}</p>
+            <p className="mt-2 text-sm text-ink-muted text-pretty">{subtitle}</p>
           </FadeRise>
         </div>
         {children ? (

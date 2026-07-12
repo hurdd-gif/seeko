@@ -15,7 +15,7 @@ import { LIGHT_INPUT, BTN_PRIMARY, LIGHT_FOCUS_RING } from '@/components/dashboa
 // inputs, black-pill CTA) so the set-password step matches the light app and
 // the signer ceremony. The AnimatePresence button state (idle ⇄ saving with the
 // ArrowRight / spinner) is preserved verbatim — only the colors changed.
-const FIELD_LABEL = 'block text-xs font-medium text-[#808080] mb-1.5';
+const FIELD_LABEL = 'block text-xs font-medium text-ink-muted mb-1.5';
 const FIELD_INPUT = cn(
   'w-full px-3 py-2 text-sm transition-[border-color,box-shadow] duration-150 focus-visible:outline-none',
   LIGHT_INPUT,
@@ -98,7 +98,7 @@ export function SetPasswordForm() {
       </div>
 
       {error && (
-        <p className="rounded-lg bg-[#d4503e]/10 px-3 py-2 text-sm text-[#d4503e]">{error}</p>
+        <p className="rounded-lg bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
       )}
 
       <button
