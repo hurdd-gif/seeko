@@ -54,7 +54,7 @@ const TIMING = {
 const d = (ms: number) => ms / 1000;
 const PAYMENT_MAIN_SURFACE = 'rounded-[20px] border-0 bg-surface-1 shadow-surface-1';
 const PAYMENT_RAIL_SURFACE = 'rounded-[18px] border-0 bg-surface-1 shadow-surface-1';
-const PAYMENT_SECTION_HEAD = 'px-5 py-3.5 border-b border-black/[0.06]';
+const PAYMENT_SECTION_HEAD = 'px-5 py-3.5 border-b border-wash-6';
 
 /* ── Helpers ── */
 function getInitials(name: string): string {
@@ -84,12 +84,12 @@ function LightEmpty({ icon: Icon, title, description }: {
 }) {
   return (
     <div className="flex flex-col items-center gap-3 py-12 text-center">
-      <div className="flex size-11 items-center justify-center rounded-full bg-[#f4f4f4]">
-        <Icon className="size-5 text-[#9a9a9a]" />
+      <div className="flex size-11 items-center justify-center rounded-full bg-surface-4">
+        <Icon className="size-5 text-ink-faint" />
       </div>
       <div className="space-y-1">
-        <p className="text-sm font-medium text-[#111]">{title}</p>
-        <p className="text-xs text-[#808080]">{description}</p>
+        <p className="text-sm font-medium text-ink-title">{title}</p>
+        <p className="text-xs text-ink-muted">{description}</p>
       </div>
     </div>
   );
@@ -104,7 +104,7 @@ function LightEmptyRow({ icon: Icon, text }: {
   return (
     <div className="flex items-center gap-2.5 py-3 px-1">
       <Icon className="size-4 shrink-0 text-[#c8c8c8]" />
-      <p className="text-xs text-[#9a9a9a]">{text}</p>
+      <p className="text-xs text-ink-faint">{text}</p>
     </div>
   );
 }
@@ -261,7 +261,7 @@ export function PaymentsAdmin({ team, viewerMode = false }: PaymentsAdminProps) 
     // either one is a crossfade of the body — never a layout jump.
     return (
       <LightShell fill bordered>
-        <div className="flex min-h-full flex-1 items-center justify-center text-[#9a9a9a]">
+        <div className="flex min-h-full flex-1 items-center justify-center text-ink-faint">
           <Loader2 className="size-4 animate-spin" />
         </div>
       </LightShell>
@@ -434,7 +434,7 @@ export function PaymentsAdmin({ team, viewerMode = false }: PaymentsAdminProps) 
       leftSlot={
         <Link
           href={backHref}
-          className="flex items-center gap-1 text-[13px] text-[#9a9a9a] transition-colors hover:text-[#3a3a3a]"
+          className="flex items-center gap-1 text-[13px] text-ink-faint transition-colors hover:text-ink"
         >
           <ChevronLeft className="size-3.5" />
           <span>{backLabel}</span>
@@ -446,17 +446,17 @@ export function PaymentsAdmin({ team, viewerMode = false }: PaymentsAdminProps) 
       {/* ── Header ── */}
       <FadeRise delay={d(TIMING.hero)}>
         <div>
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-y border-black/[0.06] py-3">
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-y border-wash-6 py-3">
             {summarySignals.map((signal) => (
               <div key={signal.label} className="flex min-w-0 items-baseline gap-2 text-[13px]">
-                <span className="shrink-0 text-[#858585]">{signal.label}</span>
+                <span className="shrink-0 text-[#858585] dark:text-ink-muted">{signal.label}</span>
                 <span className={cn(
                   'shrink-0 font-semibold tabular-nums',
-                  signal.danger ? 'text-[#d4503e]' : signal.active ? 'text-[#111]' : 'text-[#a0a0a0]'
+                  signal.danger ? 'text-danger' : signal.active ? 'text-ink-title' : 'text-[#a0a0a0]'
                 )}>
                   {signal.value}
                 </span>
-                <span className="hidden min-w-0 truncate text-[#9a9a9a] md:inline">{signal.detail}</span>
+                <span className="hidden min-w-0 truncate text-ink-faint md:inline">{signal.detail}</span>
               </div>
             ))}
           </div>
@@ -493,20 +493,20 @@ export function PaymentsAdmin({ team, viewerMode = false }: PaymentsAdminProps) 
               <CardHeader className={PAYMENT_SECTION_HEAD}>
                 <div className="flex items-center justify-between gap-4">
                   <div>
-                    <CardTitle className="text-[15px] font-semibold text-[#111]">
+                    <CardTitle className="text-[15px] font-semibold text-ink-title">
                       Needs review
                     </CardTitle>
-                    <CardDescription className="mt-0.5 text-xs text-[#808080]">
+                    <CardDescription className="mt-0.5 text-xs text-ink-muted">
                       Team-submitted payment requests waiting on an admin decision.
                     </CardDescription>
                   </div>
-                  <Badge variant="outline" className="border-[#b8801a]/35 bg-[#b8801a]/10 text-[#946a00] tabular-nums">
+                  <Badge variant="outline" className="border-dept-wash-animation/35 bg-dept-wash-animation/10 text-dept-ink-animation tabular-nums">
                     {pendingRequests.length}
                   </Badge>
                 </div>
               </CardHeader>
               <CardContent className="px-5 py-0">
-                <div className="divide-y divide-black/[0.06]">
+                <div className="divide-y divide-wash-6">
                   {pendingRequests.map((payment, i) => (
                     <motion.div
                       key={payment.id}
@@ -534,10 +534,10 @@ export function PaymentsAdmin({ team, viewerMode = false }: PaymentsAdminProps) 
             <CardHeader className={PAYMENT_SECTION_HEAD}>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <CardTitle className="text-[15px] font-semibold text-[#111]">Invoice queue</CardTitle>
-                  <CardDescription className="mt-0.5 text-xs text-[#808080]">Review external submissions and payout outcomes.</CardDescription>
+                  <CardTitle className="text-[15px] font-semibold text-ink-title">Invoice queue</CardTitle>
+                  <CardDescription className="mt-0.5 text-xs text-ink-muted">Review external submissions and payout outcomes.</CardDescription>
                 </div>
-                <div className="flex items-center gap-2 text-[11px] text-[#8a8a8a]">
+                <div className="flex items-center gap-2 text-[11px] text-ink-muted">
                   <span className="tabular-nums">{openInvoiceCount} open</span>
                   <span className="text-[#d0d0d0]">/</span>
                   <span className="tabular-nums">{invoiceRequests.length} total</span>
@@ -545,7 +545,7 @@ export function PaymentsAdmin({ team, viewerMode = false }: PaymentsAdminProps) 
               </div>
             </CardHeader>
             <CardContent className="px-5 py-0">
-              <div className="hidden grid-cols-[minmax(0,1fr)_92px_116px_112px] gap-3 border-b border-black/[0.06] px-3 py-2.5 text-[11px] font-medium text-[#a0a0a0] sm:grid">
+              <div className="hidden grid-cols-[minmax(0,1fr)_92px_116px_112px] gap-3 border-b border-wash-6 px-3 py-2.5 text-[11px] font-medium text-[#a0a0a0] sm:grid">
                 <span>Recipient</span>
                 <span className="text-left">Date</span>
                 <span className="text-right">Amount</span>
@@ -554,7 +554,7 @@ export function PaymentsAdmin({ team, viewerMode = false }: PaymentsAdminProps) 
               {invoiceQueueScrollable ? (
                 <div className="relative">
                   <ScrollArea className="h-[min(560px,calc(100vh-360px))] rounded-b-[16px]" viewportClassName="pr-3 pb-14">
-                    <div className="divide-y divide-black/[0.06]">
+                    <div className="divide-y divide-wash-6">
                       {visibleInvoiceRequests.map((inv, i) => (
                         <InvoiceRequestRow key={inv.id} invite={inv} index={i} onAction={fetchData} />
                       ))}
@@ -563,7 +563,7 @@ export function PaymentsAdmin({ team, viewerMode = false }: PaymentsAdminProps) 
                   <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-white/80 via-white/35 to-transparent" />
                 </div>
               ) : (
-                <div className="divide-y divide-black/[0.06]">
+                <div className="divide-y divide-wash-6">
                   {visibleInvoiceRequests.map((inv, i) => (
                     <InvoiceRequestRow key={inv.id} invite={inv} index={i} onAction={fetchData} />
                   ))}
@@ -573,7 +573,7 @@ export function PaymentsAdmin({ team, viewerMode = false }: PaymentsAdminProps) 
                 <button
                   type="button"
                   onClick={() => setInvoicesExpanded((v) => !v)}
-                  className="my-3 flex w-full items-center justify-center gap-1.5 rounded-[14px] py-2 text-xs font-medium text-[#808080] transition-[background-color,color,transform] hover:bg-black/[0.03] hover:text-[#111] active:scale-[0.96]"
+                  className="my-3 flex w-full items-center justify-center gap-1.5 rounded-[14px] py-2 text-xs font-medium text-ink-muted transition-[background-color,color,transform] hover:bg-wash-3 hover:text-ink-title active:scale-[0.96]"
                 >
                   {invoicesExpanded ? 'Show less' : `Show all ${invoiceRequests.length}`}
                   <ChevronDown className={`size-3.5 transition-transform ${invoicesExpanded ? 'rotate-180' : ''}`} />
@@ -597,10 +597,10 @@ export function PaymentsAdmin({ team, viewerMode = false }: PaymentsAdminProps) 
             <div className="space-y-3">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <CardTitle className="text-[15px] font-semibold text-[#111]">People</CardTitle>
-                  <CardDescription className="mt-0.5 text-xs text-[#808080]">Team payment status.</CardDescription>
+                  <CardTitle className="text-[15px] font-semibold text-ink-title">People</CardTitle>
+                  <CardDescription className="mt-0.5 text-xs text-ink-muted">Team payment status.</CardDescription>
                 </div>
-                <span className="rounded-md bg-[#f5f5f5] px-2 py-1 text-[11px] text-[#808080] tabular-nums">{peopleWithPending.length}</span>
+                <span className="rounded-md bg-[#f5f5f5] dark:bg-wash-4 px-2 py-1 text-[11px] text-ink-muted tabular-nums">{peopleWithPending.length}</span>
               </div>
               {/* Filter pills — only show when team is large enough to warrant filtering */}
               {peopleWithPending.length >= 5 && (
@@ -614,7 +614,7 @@ export function PaymentsAdmin({ team, viewerMode = false }: PaymentsAdminProps) 
                         onClick={() => setFilter(opt.value)}
                         className={cn(
                           'relative rounded-full px-2.5 py-1 text-xs font-medium transition-[color,transform] duration-150 active:scale-[0.97]',
-                          active ? 'text-[#0a63cc]' : 'text-[#808080] hover:text-[#111]'
+                          active ? 'text-seeko-accent-ink' : 'text-ink-muted hover:text-ink-title'
                         )}
                       >
                         {active && (
@@ -622,7 +622,7 @@ export function PaymentsAdmin({ team, viewerMode = false }: PaymentsAdminProps) 
                             layoutId="paymentsFilterPill"
                             initial={false}
                             transition={pillTransition}
-                            className="absolute inset-0 rounded-full bg-[#0a63cc]/10"
+                            className="absolute inset-0 rounded-full bg-seeko-accent-ink/10"
                           />
                         )}
                         <span className="relative z-10 inline-flex items-center">
@@ -630,7 +630,7 @@ export function PaymentsAdmin({ team, viewerMode = false }: PaymentsAdminProps) 
                           {opt.count > 0 && (
                             <span className={cn(
                               'ml-1 tabular-nums',
-                              active ? 'text-[#0a63cc]/70' : 'text-[#9a9a9a]'
+                              active ? 'text-seeko-accent-ink/70' : 'text-ink-faint'
                             )}>
                               {opt.count}
                             </span>
@@ -647,47 +647,47 @@ export function PaymentsAdmin({ team, viewerMode = false }: PaymentsAdminProps) 
             {loading ? (
               <div className="flex items-center justify-center py-12">
                 <div className="flex flex-col items-center gap-3">
-                  <div className="size-5 rounded-full border-2 border-black/10 border-t-[#0a63cc] animate-spin" />
-                  <p className="text-xs text-[#808080]">Loading payments...</p>
+                  <div className="size-5 rounded-full border-2 border-black/10 border-t-seeko-accent-ink animate-spin" />
+                  <p className="text-xs text-ink-muted">Loading payments...</p>
                 </div>
               </div>
             ) : filteredPeople.length === 0 ? (
               <LightEmpty icon={Users} title="No results" description="No team members match this filter." />
             ) : (
-              <Stagger className="divide-y divide-black/[0.06]" staggerMs={d(TIMING.peopleStagger)}>
+              <Stagger className="divide-y divide-wash-6" staggerMs={d(TIMING.peopleStagger)}>
                 {filteredPeople.map(person => (
                   <StaggerItem key={person.id}>
-                    <div className="flex items-center justify-between py-3 px-1 hover:bg-black/[0.03] transition-colors rounded-md -mx-1">
+                    <div className="flex items-center justify-between py-3 px-1 hover:bg-wash-3 transition-colors rounded-md -mx-1">
                       <div className="flex items-center gap-3 min-w-0">
-                        <Avatar className="size-9 outline outline-1 -outline-offset-1 outline-black/[0.06]">
+                        <Avatar className="size-9 outline outline-1 -outline-offset-1 outline-wash-6">
                           <AvatarImage src={person.avatar_url ?? undefined} alt={person.display_name ?? ''} />
-                          <AvatarFallback className="bg-[#f4f4f4] text-[#505050] text-[10px]">
+                          <AvatarFallback className="bg-surface-4 text-ink-body text-[10px]">
                             {getInitials(person.display_name ?? '?')}
                           </AvatarFallback>
                         </Avatar>
                         <div className="min-w-0">
-                          <p className="text-sm font-medium text-[#111] truncate">{person.display_name}</p>
-                          <p className="text-[11px] text-[#9a9a9a] font-mono">{person.department ?? 'Unassigned'}</p>
+                          <p className="text-sm font-medium text-ink-title truncate">{person.display_name}</p>
+                          <p className="text-[11px] text-ink-faint font-mono">{person.department ?? 'Unassigned'}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-3 shrink-0">
                         {person.pendingAmount > 0 ? (
                           <>
-                            <span className="text-sm font-semibold tabular-nums text-[#0a63cc]">
+                            <span className="text-sm font-semibold tabular-nums text-seeko-accent-ink">
                               {fmt(person.pendingAmount)}
                             </span>
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={() => handlePay(person)}
-                              className="text-[#0a63cc] hover:bg-[#0a63cc]/10 h-7 px-2.5 text-xs"
+                              className="text-seeko-accent-ink hover:bg-seeko-accent-ink/10 h-7 px-2.5 text-xs"
                             >
                               Pay
                             </Button>
                           </>
                         ) : person.hasPaid ? (
-                          <span className="flex items-center gap-1.5 text-xs text-[#808080]">
-                            <CheckCircle2 className="size-3.5 text-[#0a63cc]" />
+                          <span className="flex items-center gap-1.5 text-xs text-ink-muted">
+                            <CheckCircle2 className="size-3.5 text-seeko-accent-ink" />
                             Paid
                           </span>
                         ) : (
@@ -710,10 +710,10 @@ export function PaymentsAdmin({ team, viewerMode = false }: PaymentsAdminProps) 
           <CardHeader className={PAYMENT_SECTION_HEAD}>
             <div className="flex items-start justify-between gap-3">
               <div>
-                <CardTitle className="text-[15px] font-semibold text-[#111]">Recent payments</CardTitle>
-                <CardDescription className="mt-0.5 text-xs text-[#808080]">Completed payouts and refunds.</CardDescription>
+                <CardTitle className="text-[15px] font-semibold text-ink-title">Recent payments</CardTitle>
+                <CardDescription className="mt-0.5 text-xs text-ink-muted">Completed payouts and refunds.</CardDescription>
               </div>
-              <span className="rounded-md bg-[#f5f5f5] px-2 py-1 text-[11px] text-[#808080] tabular-nums">{recentPaid.length}</span>
+              <span className="rounded-md bg-[#f5f5f5] dark:bg-wash-4 px-2 py-1 text-[11px] text-ink-muted tabular-nums">{recentPaid.length}</span>
             </div>
           </CardHeader>
           <CardContent className="px-5 py-0">
@@ -722,7 +722,7 @@ export function PaymentsAdmin({ team, viewerMode = false }: PaymentsAdminProps) 
             ) : (
               <div className="relative">
                 <ScrollArea className="h-[clamp(340px,calc(100vh-500px),650px)]" viewportClassName="pr-2 pb-12">
-                  <div className="divide-y divide-black/[0.06]">
+                  <div className="divide-y divide-wash-6">
                     {recentPaid.map(payment => (
                       <PaidPaymentRow
                         key={payment.id}
@@ -862,30 +862,30 @@ function PaidPaymentRow({
         tabIndex={0}
         onClick={() => setExpanded(!expanded)}
         onKeyDown={e => { if (e.key === 'Enter') setExpanded(!expanded); }}
-        className="flex items-center justify-between py-3 px-1 w-full text-left hover:bg-black/[0.03] transition-colors cursor-pointer rounded-[14px] -mx-1"
+        className="flex items-center justify-between py-3 px-1 w-full text-left hover:bg-wash-3 transition-colors cursor-pointer rounded-[14px] -mx-1"
       >
         <div className="flex items-center gap-3 min-w-0">
           {hasTeamRecipient ? (
-            <Avatar className="size-8 outline outline-1 -outline-offset-1 outline-black/[0.06]">
+            <Avatar className="size-8 outline outline-1 -outline-offset-1 outline-wash-6">
               <AvatarImage src={payment.recipient?.avatar_url ?? undefined} />
-              <AvatarFallback className="bg-[#f4f4f4] text-[#505050] text-[10px]">
+              <AvatarFallback className="bg-surface-4 text-ink-body text-[10px]">
                 {fallbackInitials}
               </AvatarFallback>
             </Avatar>
           ) : isManualExternal ? (
-            <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#f4f4f4] text-[10px] font-medium text-[#505050] outline outline-1 -outline-offset-1 outline-black/[0.06]">
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-surface-4 text-[10px] font-medium text-ink-body outline outline-1 -outline-offset-1 outline-wash-6">
               {getInitials(payment.payee_name!)}
             </div>
           ) : (
-            <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#f4f4f4] outline outline-1 -outline-offset-1 outline-black/[0.06]">
-              <FileText className="size-3.5 text-[#808080]" />
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-surface-4 outline outline-1 -outline-offset-1 outline-wash-6">
+              <FileText className="size-3.5 text-ink-muted" />
             </div>
           )}
           <div className="min-w-0">
-            <p className="text-sm font-medium text-[#111] truncate">{compactTitle}</p>
-            <p className="text-[11px] text-[#808080] truncate">
+            <p className="text-sm font-medium text-ink-title truncate">{compactTitle}</p>
+            <p className="text-[11px] text-ink-muted truncate">
               {compactContext ?? `${payment.items?.length ?? 0} item${(payment.items?.length ?? 0) !== 1 ? 's' : ''}`}
-              <span className="ml-1.5 text-[#9a9a9a]">
+              <span className="ml-1.5 text-ink-faint">
                 · {hasTeamRecipient ? 'Payment' : isManualExternal ? 'External' : 'External invoice'}
               </span>
             </p>
@@ -895,32 +895,32 @@ function PaidPaymentRow({
           <div className="text-right">
             <span className={cn(
               'block text-sm font-medium tabular-nums',
-              hasRefund ? 'text-[#808080] line-through' : 'text-[#111]'
+              hasRefund ? 'text-ink-muted line-through' : 'text-ink-title'
             )}>
               {fmt(amount)}
             </span>
             {hasRefund && (
-              <span className="block text-[11px] font-medium text-[#111] tabular-nums">
+              <span className="block text-[11px] font-medium text-ink-title tabular-nums">
                 {fullyRefunded ? 'Refunded' : `${fmt(netAmount)} net`}
               </span>
             )}
           </div>
           {hasRefund && (
             <Badge variant="outline" className={cn(
-              'border-[#b8801a]/30 bg-[#b8801a]/10 text-[10px] text-[#946a00]',
-              fullyRefunded && 'border-[#d4503e]/25 bg-[#d4503e]/10 text-[#b8341f]'
+              'border-dept-wash-animation/30 bg-dept-wash-animation/10 text-[10px] text-dept-ink-animation',
+              fullyRefunded && 'border-danger/25 bg-danger/10 text-[#b8341f]'
             )}>
               {fullyRefunded ? 'Refunded' : 'Partial refund'}
             </Badge>
           )}
-          <span className="text-[11px] text-[#9a9a9a] tabular-nums">
+          <span className="text-[11px] text-ink-faint tabular-nums">
             {new Date(payment.paid_at!).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
           </span>
           <motion.div
             animate={{ rotate: expanded ? 180 : 0 }}
             transition={{ duration: 0.2 }}
           >
-            <ChevronDown className="size-4 text-[#b3b3b3]" />
+            <ChevronDown className="size-4 text-ink-faintest" />
           </motion.div>
         </div>
       </span>
@@ -935,30 +935,30 @@ function PaidPaymentRow({
           >
             <div className="pb-3 px-1 pt-1 space-y-2">
               {hasRefund && (
-                <div className="rounded-[14px] bg-[#fff7eb] px-3 py-2 text-xs text-[#946a00]">
+                <div className="rounded-[14px] bg-[#fff7eb] dark:bg-dept-wash-animation/[0.08] px-3 py-2 text-xs text-dept-ink-animation">
                   <div className="flex items-center justify-between gap-3">
                     <span>{fullyRefunded ? 'Fully refunded' : 'Partially refunded'}</span>
                     <span className="font-medium tabular-nums">{fmt(refundAmount)} of {fmt(amount)}</span>
                   </div>
                   {payment.refund_note && (
-                    <p className="mt-1 text-[11px] text-[#946a00]/75">{payment.refund_note}</p>
+                    <p className="mt-1 text-[11px] text-dept-ink-animation/75">{payment.refund_note}</p>
                   )}
                 </div>
               )}
               {(showPaypalEmail || (payment.items && payment.items.length > 0)) && (
-                <div className="overflow-hidden rounded-[14px] bg-[#f7f7f7] text-xs">
+                <div className="overflow-hidden rounded-[14px] bg-surface-3 text-xs">
                   {payment.items && payment.items.length > 0 && (
                     <div className="space-y-2 px-3 py-2">
                       {payment.items.map(item => (
                         <div key={item.id} className="flex items-center justify-between gap-3">
-                          <span className="min-w-0 truncate text-[#808080]">{item.label}</span>
-                          <span className="font-medium tabular-nums text-[#111]">{fmt(Number(item.amount))}</span>
+                          <span className="min-w-0 truncate text-ink-muted">{item.label}</span>
+                          <span className="font-medium tabular-nums text-ink-title">{fmt(Number(item.amount))}</span>
                         </div>
                       ))}
                     </div>
                   )}
                   {showPaypalEmail && (
-                    <div className={cn('px-3 py-2', payment.items && payment.items.length > 0 && 'border-t border-black/[0.04]')}>
+                    <div className={cn('px-3 py-2', payment.items && payment.items.length > 0 && 'border-t border-wash-4')}>
                       <InputCopy
                         value={paypalEmail}
                         variant="icon"
@@ -985,7 +985,7 @@ function PaidPaymentRow({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.12, ease: 'easeOut' }}
-              className="fixed inset-0 z-40 bg-black/[0.045]"
+              className="fixed inset-0 z-40 bg-wash-5"
               onMouseDown={() => setRefundMenu(null)}
             />
             <motion.div
@@ -994,35 +994,35 @@ function PaidPaymentRow({
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.98, y: -2 }}
               transition={{ type: 'spring', duration: 0.18, bounce: 0 }}
-              className="fixed z-50 w-[228px] rounded-[18px] bg-white p-1.5 shadow-[0_0_0_1px_rgba(0,0,0,0.08),0_10px_28px_rgba(0,0,0,0.14)]"
+              className="fixed z-50 w-[228px] rounded-[14px] bg-surface-1 p-1 shadow-seeko-pop"
               style={{ left: refundMenu.x, top: refundMenu.y, transformOrigin: 'top left' }}
               onMouseDown={(e) => e.stopPropagation()}
               onClick={(e) => e.stopPropagation()}
             >
               <div className="px-2.5 py-2">
-                <p className="text-xs font-medium text-[#505050]">Refund status</p>
-                <p className="mt-0.5 truncate text-xs text-[#8a8a8a]">
+                <p className="text-xs font-medium text-ink-body">Refund status</p>
+                <p className="mt-0.5 truncate text-xs text-ink-muted">
                   {hasRefund ? `${fmt(refundAmount)} recorded` : 'No refund recorded'}
                 </p>
               </div>
               <button
                 type="button"
-                className="flex w-full items-center gap-2.5 rounded-[14px] px-2.5 py-2 text-left text-xs font-medium text-[#7a5a00] transition-[background-color,transform] hover:bg-[#b8801a]/10 active:scale-[0.98] disabled:opacity-50"
+                className="flex w-full items-center gap-2.5 rounded-[10px] px-2.5 py-2 text-left text-xs font-medium text-[#7a5a00] dark:text-dept-ink-animation transition-[background-color,transform] hover:bg-dept-wash-animation/10 active:scale-[0.98] disabled:opacity-50"
                 onClick={() => { setRefundMenu(null); setRefundOpen(true); }}
                 disabled={refundLoading}
               >
-                <span className="flex size-6 shrink-0 items-center justify-center rounded-[9px] bg-[#b8801a]/10">
+                <span className="flex size-6 shrink-0 items-center justify-center rounded-[9px] bg-dept-wash-animation/10">
                   <RotateCw className="size-3.5" />
                 </span>
                 {hasRefund ? 'Edit partial refund' : 'Record partial refund'}
               </button>
               <button
                 type="button"
-                className="flex w-full items-center gap-2.5 rounded-[14px] px-2.5 py-2 text-left text-xs font-medium text-[#c43f30] transition-[background-color,transform] hover:bg-[#d4503e]/10 active:scale-[0.98] disabled:opacity-50"
+                className="flex w-full items-center gap-2.5 rounded-[10px] px-2.5 py-2 text-left text-xs font-medium text-[#c43f30] transition-[background-color,transform] hover:bg-danger/10 active:scale-[0.98] disabled:opacity-50"
                 onClick={() => { setRefundMenu(null); updateRefund(amount, payment.refund_note ?? 'Full refund'); }}
                 disabled={refundLoading || fullyRefunded}
               >
-                <span className="flex size-6 shrink-0 items-center justify-center rounded-[9px] bg-[#d4503e]/10">
+                <span className="flex size-6 shrink-0 items-center justify-center rounded-[9px] bg-danger/10">
                   <Ban className="size-3.5" />
                 </span>
                 Mark fully refunded
@@ -1030,11 +1030,11 @@ function PaidPaymentRow({
               {hasRefund && (
                 <button
                   type="button"
-                  className="flex w-full items-center gap-2.5 rounded-[14px] px-2.5 py-2 text-left text-xs font-medium text-[#707070] transition-[background-color,transform] hover:bg-black/[0.04] hover:text-[#111] active:scale-[0.98] disabled:opacity-50"
+                  className="flex w-full items-center gap-2.5 rounded-[10px] px-2.5 py-2 text-left text-xs font-medium text-[#707070] dark:text-ink-muted transition-[background-color,transform] hover:bg-wash-4 hover:text-ink-title active:scale-[0.98] disabled:opacity-50"
                   onClick={() => { setRefundMenu(null); updateRefund(0, null); }}
                   disabled={refundLoading}
                 >
-                  <span className="flex size-6 shrink-0 items-center justify-center rounded-[9px] bg-black/[0.04]">
+                  <span className="flex size-6 shrink-0 items-center justify-center rounded-[9px] bg-wash-4">
                     <XIcon className="size-3.5" />
                   </span>
                   Clear refund status
@@ -1096,14 +1096,14 @@ function RefundDialog({ open, onOpenChange, max, initialAmount, initialNote, loa
     <Dialog open={open} onOpenChange={onOpenChange} contentClassName="max-w-sm" light>
       <DialogHeader>
         <DialogTitle>Refund payment</DialogTitle>
-        <p className="text-[13px] text-[#808080]">Refund part or all of {fmt(max)}.</p>
+        <p className="text-[13px] text-ink-muted">Refund part or all of {fmt(max)}.</p>
       </DialogHeader>
       <DialogClose onClose={() => onOpenChange(false)} />
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <label className="flex flex-col gap-1.5">
-          <span className="text-xs font-medium text-[#505050]">Amount</span>
+          <span className="text-xs font-medium text-ink-body">Amount</span>
           <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-[#9a9a9a]">$</span>
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-ink-faint">$</span>
             <input
               type="number"
               min={0}
@@ -1112,14 +1112,14 @@ function RefundDialog({ open, onOpenChange, max, initialAmount, initialNote, loa
               value={amount}
               onChange={(e) => { setAmount(e.target.value); setError(null); }}
               autoFocus
-              className={`flex h-9 w-full pl-7 pr-3 text-sm tabular-nums focus-visible:outline-none ${LIGHT_INPUT} ${error ? 'border-[#d4503e] focus-visible:ring-[#d4503e]/30' : ''}`}
+              className={`flex h-9 w-full pl-7 pr-3 text-sm tabular-nums focus-visible:outline-none ${LIGHT_INPUT} ${error ? 'border-danger focus-visible:ring-danger/30' : ''}`}
             />
           </div>
-          {error && <span className="text-[11px] text-[#d4503e]">{error}</span>}
+          {error && <span className="text-[11px] text-danger">{error}</span>}
         </label>
         <label className="flex flex-col gap-1.5">
-          <span className="text-xs font-medium text-[#505050]">
-            Note <span className="font-normal text-[#9a9a9a]">(optional)</span>
+          <span className="text-xs font-medium text-ink-body">
+            Note <span className="font-normal text-ink-faint">(optional)</span>
           </span>
           <input
             type="text"
@@ -1177,17 +1177,17 @@ function PendingRequestRow({ payment, onAction }: { payment: Payment; onAction: 
         tabIndex={0}
         onClick={() => setExpanded(!expanded)}
         onKeyDown={e => { if (e.key === 'Enter') setExpanded(!expanded); }}
-        className="flex items-center justify-between py-3 px-1 w-full text-left hover:bg-black/[0.03] transition-colors cursor-pointer rounded-md -mx-1"
+        className="flex items-center justify-between py-3 px-1 w-full text-left hover:bg-wash-3 transition-colors cursor-pointer rounded-md -mx-1"
       >
         <div className="flex items-center gap-3 min-w-0">
-          <Avatar className="size-8 outline outline-1 -outline-offset-1 outline-[#b8801a]/25">
+          <Avatar className="size-8 outline outline-1 -outline-offset-1 outline-dept-wash-animation/25">
             <AvatarImage src={payment.recipient?.avatar_url ?? undefined} />
-            <AvatarFallback className="bg-[#b8801a]/10 text-[#946a00] text-[10px]">
+            <AvatarFallback className="bg-dept-wash-animation/10 text-dept-ink-animation text-[10px]">
               {(payment.recipient?.display_name ?? payment.payee_name ?? payment.recipient_email ?? '?').split(' ').map(p => p[0]).join('').toUpperCase().slice(0, 2)}
             </AvatarFallback>
           </Avatar>
           <div className="min-w-0">
-            <p className="text-sm font-medium text-[#111] truncate">
+            <p className="text-sm font-medium text-ink-title truncate">
               {payment.recipient?.display_name ?? payment.payee_name ?? payment.recipient_email ?? 'External'}
             </p>
             {payment.recipient?.paypal_email ? (
@@ -1200,19 +1200,19 @@ function PendingRequestRow({ payment, onAction }: { payment: Payment; onAction: 
                 onCopy={() => toast.success('PayPal email copied')}
               />
             ) : payment.recipient_email ? (
-              <span className="text-[11px] text-[#9a9a9a] font-mono truncate block">
+              <span className="text-[11px] text-ink-faint font-mono truncate block">
                 {payment.recipient_email}
               </span>
             ) : null}
           </div>
         </div>
         <div className="flex items-center gap-3 shrink-0">
-          <span className="text-sm font-semibold text-[#946a00] tabular-nums">{fmt(Number(payment.amount))}</span>
+          <span className="text-sm font-semibold text-dept-ink-animation tabular-nums">{fmt(Number(payment.amount))}</span>
           <motion.div
             animate={{ rotate: expanded ? 180 : 0 }}
             transition={{ duration: 0.2 }}
           >
-            <ChevronDown className="size-4 text-[#b3b3b3]" />
+            <ChevronDown className="size-4 text-ink-faintest" />
           </motion.div>
         </div>
       </span>
@@ -1227,14 +1227,14 @@ function PendingRequestRow({ payment, onAction }: { payment: Payment; onAction: 
           >
             <div className="pb-3 px-1 pt-1 space-y-3">
               {payment.description && (
-                <p className="text-xs text-[#808080]">{payment.description}</p>
+                <p className="text-xs text-ink-muted">{payment.description}</p>
               )}
               {payment.items && payment.items.length > 0 && (
-                <div className="rounded-lg bg-[#f7f7f7] p-3 space-y-2">
+                <div className="rounded-lg bg-surface-3 p-3 space-y-2">
                   {payment.items.map(item => (
                     <div key={item.id} className="flex items-center justify-between text-xs">
-                      <span className="text-[#808080]">{item.label}</span>
-                      <span className="text-[#111] font-medium tabular-nums">{fmt(Number(item.amount))}</span>
+                      <span className="text-ink-muted">{item.label}</span>
+                      <span className="text-ink-title font-medium tabular-nums">{fmt(Number(item.amount))}</span>
                     </div>
                   ))}
                 </div>
@@ -1242,7 +1242,7 @@ function PendingRequestRow({ payment, onAction }: { payment: Payment; onAction: 
               <div className="flex gap-2 pt-1">
                 <Button
                   size="sm"
-                  className="gap-1.5 bg-[#111] hover:bg-[#2a2a2a] text-white h-8"
+                  className="gap-1.5 bg-ink-title hover:bg-ink-strong text-surface-1 h-8"
                   onClick={(e) => { e.stopPropagation(); handleAction('paid'); }}
                   disabled={acting}
                 >
@@ -1252,7 +1252,7 @@ function PendingRequestRow({ payment, onAction }: { payment: Payment; onAction: 
                 <Button
                   size="sm"
                   variant="ghost"
-                  className="gap-1.5 text-[#d4503e] hover:text-[#b8341f] hover:bg-[#d4503e]/10 h-8"
+                  className="gap-1.5 text-danger hover:text-[#b8341f] hover:bg-danger/10 h-8"
                   onClick={(e) => { e.stopPropagation(); handleAction('cancelled'); }}
                   disabled={acting}
                 >
@@ -1324,15 +1324,15 @@ function InvoiceRequestRow({ invite, index, onAction }: { invite: InvoiceRequest
       initial={{ opacity: 0, x: -8 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ type: 'spring', visualDuration: 0.3, bounce: 0.1, delay: Math.min(index, 8) * 0.04 }}
-      className="grid min-w-0 gap-3 rounded-[12px] px-3 py-3.5 transition-colors hover:bg-black/[0.025] sm:grid-cols-[minmax(0,1fr)_92px_116px_112px] sm:items-center"
+      className="grid min-w-0 gap-3 rounded-[12px] px-3 py-3.5 transition-colors hover:bg-wash-3 sm:grid-cols-[minmax(0,1fr)_92px_116px_112px] sm:items-center"
     >
       <div className="flex min-w-0 items-center gap-3">
-        <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#f4f4f4] outline outline-1 -outline-offset-1 outline-black/[0.06]">
-          <FileText className="size-3.5 text-[#808080]" />
+        <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-surface-4 outline outline-1 -outline-offset-1 outline-wash-6">
+          <FileText className="size-3.5 text-ink-muted" />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium text-[#111] font-mono truncate">{invite.recipient_email}</p>
-          <div className="flex items-center gap-2 text-[11px] text-[#808080] sm:hidden">
+          <p className="text-sm font-medium text-ink-title font-mono truncate">{invite.recipient_email}</p>
+          <div className="flex items-center gap-2 text-[11px] text-ink-muted sm:hidden">
             <span>{new Date(invite.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
             {prefilledTotal > 0 && (
               <>
@@ -1357,10 +1357,10 @@ function InvoiceRequestRow({ invite, index, onAction }: { invite: InvoiceRequest
           )}
         </div>
       </div>
-      <span className="hidden text-left text-xs text-[#808080] tabular-nums sm:block">
+      <span className="hidden text-left text-xs text-ink-muted tabular-nums sm:block">
         {new Date(invite.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
       </span>
-      <span className="hidden text-right text-sm font-medium text-[#111] tabular-nums sm:block">
+      <span className="hidden text-right text-sm font-medium text-ink-title tabular-nums sm:block">
         {prefilledTotal > 0 ? fmt(prefilledTotal) : '—'}
       </span>
       <div className="flex items-center justify-between gap-2.5 sm:justify-end">
@@ -1373,24 +1373,24 @@ function InvoiceRequestRow({ invite, index, onAction }: { invite: InvoiceRequest
               onClick={() => handleAction('resend')}
               disabled={!!actionLoading}
               title="Resend"
-              className="rounded p-1.5 hover:bg-black/[0.04] transition-colors group"
+              className="rounded p-1.5 hover:bg-wash-4 transition-colors group"
             >
               {actionLoading === 'resend' ? (
-                <Loader2 className="size-3.5 animate-spin text-[#808080]" />
+                <Loader2 className="size-3.5 animate-spin text-ink-muted" />
               ) : (
-                <RotateCw className="size-3.5 text-[#808080] group-hover:text-[#111] transition-colors" />
+                <RotateCw className="size-3.5 text-ink-muted group-hover:text-ink-title transition-colors" />
               )}
             </button>
             <button
               onClick={() => handleAction('revoke')}
               disabled={!!actionLoading}
               title="Revoke"
-              className="rounded p-1.5 hover:bg-[#d4503e]/10 transition-colors group"
+              className="rounded p-1.5 hover:bg-danger/10 transition-colors group"
             >
               {actionLoading === 'revoke' ? (
-                <Loader2 className="size-3.5 animate-spin text-[#808080]" />
+                <Loader2 className="size-3.5 animate-spin text-ink-muted" />
               ) : (
-                <Ban className="size-3.5 text-[#808080] group-hover:text-[#d4503e] transition-colors" />
+                <Ban className="size-3.5 text-ink-muted group-hover:text-danger transition-colors" />
               )}
             </button>
           </div>

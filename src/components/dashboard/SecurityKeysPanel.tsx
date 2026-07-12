@@ -94,10 +94,10 @@ export function SecurityKeysPanel() {
   }, []);
 
   return (
-    <section className="overflow-hidden rounded-2xl bg-white shadow-seeko">
+    <section className="overflow-hidden rounded-2xl bg-surface-1 shadow-seeko">
       <div className="flex flex-col gap-6 p-6">
         <div className="flex items-center gap-2">
-          <KeyRound className="size-4 text-[#808080]" />
+          <KeyRound className="size-4 text-ink-muted" />
           <div className="flex flex-col gap-1.5">
             <h3 className={CARD_TITLE}>Security keys</h3>
             <p className={CARD_DESC}>Devices trusted to unlock the payments page.</p>
@@ -105,20 +105,20 @@ export function SecurityKeysPanel() {
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center py-6 text-[#9a9a9a]">
+          <div className="flex items-center justify-center py-6 text-ink-faint">
             <Loader2 className="size-4 animate-spin" />
           </div>
         ) : credentials.length === 0 ? (
           <div className="flex flex-col items-center gap-3 py-4 text-center">
-            <div className="flex size-10 items-center justify-center rounded-full bg-[#0d7aff]/10">
-              <KeyRound className="size-4 text-[#0d7aff]" />
+            <div className="flex size-10 items-center justify-center rounded-full bg-seeko-accent/10">
+              <KeyRound className="size-4 text-seeko-accent" />
             </div>
-            <p className="text-sm text-[#808080]">
+            <p className="text-sm text-ink-muted">
               No devices registered yet.
             </p>
           </div>
         ) : (
-          <ul className="flex flex-col divide-y divide-black/[0.06]">
+          <ul className="flex flex-col divide-y divide-wash-6">
             <AnimatePresence initial={false}>
               {credentials.map(cred => (
                 <motion.li
@@ -130,12 +130,12 @@ export function SecurityKeysPanel() {
                   className="flex items-center justify-between gap-3 py-3"
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <Fingerprint className="size-4 shrink-0 text-[#9a9a9a]" />
+                    <Fingerprint className="size-4 shrink-0 text-ink-faint" />
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-[#111] truncate">
+                      <p className="text-sm font-medium text-ink-title truncate">
                         {cred.device_name || 'Unnamed device'}
                       </p>
-                      <p className="text-xs text-[#9a9a9a] tabular-nums">
+                      <p className="text-xs text-ink-faint tabular-nums">
                         {formatLastUsed(cred.last_used_at)}
                       </p>
                     </div>
@@ -145,7 +145,7 @@ export function SecurityKeysPanel() {
                     onClick={() => revoke(cred.id)}
                     disabled={deletingId === cred.id}
                     aria-label={`Revoke ${cred.device_name || 'device'}`}
-                    className="flex size-8 shrink-0 items-center justify-center rounded-md text-[#9a9a9a] hover:text-[#d4503e] hover:bg-[#d4503e]/10 disabled:opacity-50 transition-[color,background-color,transform] duration-150 active:scale-[0.94]"
+                    className="flex size-8 shrink-0 items-center justify-center rounded-md text-ink-faint hover:text-danger hover:bg-danger/10 disabled:opacity-50 transition-[color,background-color,transform] duration-150 active:scale-[0.94]"
                   >
                     {deletingId === cred.id ? (
                       <Loader2 className="size-4 animate-spin" />
@@ -164,16 +164,16 @@ export function SecurityKeysPanel() {
             type="button"
             onClick={registerNew}
             disabled={registering}
-            className="w-full inline-flex items-center justify-center gap-2 rounded-xl border border-black/[0.08] px-3 py-2.5 text-[13px] font-medium text-[#111] transition-[background-color,transform] duration-150 ease-out hover:bg-black/[0.02] active:scale-[0.99] disabled:opacity-50"
+            className="w-full inline-flex items-center justify-center gap-2 rounded-xl border border-wash-8 px-3 py-2.5 text-[13px] font-medium text-ink-title transition-[background-color,transform] duration-150 ease-out hover:bg-wash-2 active:scale-[0.99] disabled:opacity-50"
           >
             {registering ? (
               <>
-                <Loader2 className="size-4 animate-spin text-[#505050]" />
+                <Loader2 className="size-4 animate-spin text-ink-body" />
                 Awaiting browser…
               </>
             ) : (
               <>
-                <Plus className="size-4 text-[#505050]" />
+                <Plus className="size-4 text-ink-body" />
                 Register this device
               </>
             )}

@@ -132,8 +132,8 @@ export function PaymentsPasskeyGate({ onAuthenticated }: PaymentsPasskeyGateProp
 
   const icon =
     mode === 'recovery' || mode === 'first-time-setup'
-      ? <KeyRound className="size-5 text-[#0a63cc]" />
-      : <Lock className="size-5 text-[#0a63cc]" />;
+      ? <KeyRound className="size-5 text-seeko-accent-ink" />
+      : <Lock className="size-5 text-seeko-accent-ink" />;
 
   const title =
     mode === 'first-time-setup' ? 'Set up payments access'
@@ -151,7 +151,7 @@ export function PaymentsPasskeyGate({ onAuthenticated }: PaymentsPasskeyGateProp
   const breadcrumb = (
     <Link
       href="/tasks"
-      className="flex items-center gap-1 text-[13px] text-[#9a9a9a] transition-colors hover:text-[#3a3a3a]"
+      className="flex items-center gap-1 text-[13px] text-ink-faint transition-colors hover:text-ink"
     >
       <ChevronLeft className="size-3.5" />
       <span>Payments</span>
@@ -168,17 +168,17 @@ export function PaymentsPasskeyGate({ onAuthenticated }: PaymentsPasskeyGateProp
             transition={springs.snappy}
             className="w-full max-w-[440px]"
           >
-            <Card className="w-full rounded-2xl border-0 bg-white shadow-seeko">
+            <Card className="w-full rounded-2xl border-0 bg-surface-1 shadow-seeko">
               <CardHeader className="text-center p-8 pb-5">
-                <div className="mx-auto mb-3 flex size-12 items-center justify-center rounded-full bg-[#0a63cc]/10">
+                <div className="mx-auto mb-3 flex size-12 items-center justify-center rounded-full bg-seeko-accent-ink/10">
                   {icon}
                 </div>
-                <CardTitle className="text-[#111]">{title}</CardTitle>
-                <CardDescription className="text-[#808080]">{description}</CardDescription>
+                <CardTitle className="text-ink-title">{title}</CardTitle>
+                <CardDescription className="text-ink-muted">{description}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4 p-8 pt-0">
                 {mode === 'loading' && (
-                  <div className="flex justify-center py-4 text-[#9a9a9a]">
+                  <div className="flex justify-center py-4 text-ink-faint">
                     <Loader2 className="size-4 animate-spin" />
                   </div>
                 )}
@@ -238,7 +238,7 @@ export function PaymentsPasskeyGate({ onAuthenticated }: PaymentsPasskeyGateProp
                     </Button>
                   </form>
                 )}
-                {error && <p className="text-sm text-[#d4503e]">{error}</p>}
+                {error && <p className="text-sm text-danger">{error}</p>}
                 {mode !== 'recovery' && mode !== 'loading' && (
                   <button
                     type="button"
@@ -246,7 +246,7 @@ export function PaymentsPasskeyGate({ onAuthenticated }: PaymentsPasskeyGateProp
                       setError('');
                       setMode('recovery');
                     }}
-                    className="block w-full text-center text-xs text-[#9a9a9a] hover:text-[#3a3a3a] transition-colors"
+                    className="block w-full text-center text-xs text-ink-faint hover:text-ink transition-colors"
                   >
                     {mode === 'first-time-setup' ? 'Skip enrollment — use recovery only' : 'Lost your devices? Use recovery'}
                   </button>
@@ -258,7 +258,7 @@ export function PaymentsPasskeyGate({ onAuthenticated }: PaymentsPasskeyGateProp
                       setError('');
                       setMode('unlock');
                     }}
-                    className="block w-full text-center text-xs text-[#9a9a9a] hover:text-[#3a3a3a] transition-colors"
+                    className="block w-full text-center text-xs text-ink-faint hover:text-ink transition-colors"
                   >
                     Back to passkey
                   </button>

@@ -345,7 +345,7 @@ export function PaymentCreateDialog({
             role="dialog"
             aria-modal="true"
             aria-labelledby="new-payment-title"
-            className="w-full max-w-md origin-bottom rounded-t-2xl border-0 bg-white p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-seeko max-h-[90dvh] overflow-y-auto touch-auto sm:origin-center sm:rounded-2xl sm:pb-6"
+            className="w-full max-w-md origin-bottom rounded-t-2xl border-0 bg-surface-1 p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-seeko max-h-[90dvh] overflow-y-auto touch-auto sm:origin-center sm:rounded-2xl sm:pb-6"
             initial={reduce ? { opacity: 1 } : { opacity: 0, y: 28, scale: 0.98 }}
             animate={reduce ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }}
             exit={reduce ? { opacity: 0 } : { opacity: 0, y: 18, scale: 0.985 }}
@@ -362,21 +362,21 @@ export function PaymentCreateDialog({
                   transition={contentTransition}
                 >
                   <motion.div
-                    className="flex size-14 items-center justify-center rounded-full bg-[#0a63cc]/10"
+                    className="flex size-14 items-center justify-center rounded-full bg-seeko-accent-ink/10"
                     initial={reduce ? { opacity: 1 } : { opacity: 0, scale: 0.82 }}
                     animate={reduce ? { opacity: 1 } : { opacity: 1, scale: 1 }}
                     transition={reduce ? { duration: 0 } : { ...contentTransition, delay: 0.08 }}
                   >
-                    <CheckCircle2 className="size-7 text-[#0a63cc]" />
+                    <CheckCircle2 className="size-7 text-seeko-accent-ink" />
                   </motion.div>
                   <div className="text-center">
-                    <p className="text-lg font-semibold text-[#111]">Payment Recorded</p>
-                    <p className="text-sm text-[#808080] mt-1">
-                      <span className="font-medium text-[#111] tabular-nums">
+                    <p className="text-lg font-semibold text-ink-title">Payment Recorded</p>
+                    <p className="text-sm text-ink-muted mt-1">
+                      <span className="font-medium text-ink-title tabular-nums">
                         {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(total)}
                       </span>{' '}
                       paid to{' '}
-                      <span className="font-medium text-[#111]">{payeeLabel}</span>.
+                      <span className="font-medium text-ink-title">{payeeLabel}</span>.
                     </p>
                   </div>
                   <Button onClick={() => { handleClose(); onCreated(); }} className={`mt-2 transition-[background-color,transform] duration-150 ease-out active:scale-[0.98] ${DIALOG_SAVE}`}>Done</Button>
@@ -391,17 +391,17 @@ export function PaymentCreateDialog({
                   transition={contentTransition}
                 >
                   <motion.div
-                    className="flex size-14 items-center justify-center rounded-full bg-[#0a63cc]/10"
+                    className="flex size-14 items-center justify-center rounded-full bg-seeko-accent-ink/10"
                     initial={reduce ? { opacity: 1 } : { opacity: 0, scale: 0.82 }}
                     animate={reduce ? { opacity: 1 } : { opacity: 1, scale: 1 }}
                     transition={reduce ? { duration: 0 } : { ...contentTransition, delay: 0.08 }}
                   >
-                    <CheckCircle2 className="size-7 text-[#0a63cc]" />
+                    <CheckCircle2 className="size-7 text-seeko-accent-ink" />
                   </motion.div>
                   <div className="text-center">
-                    <p className="text-lg font-semibold text-[#111]">Invoice Request Sent</p>
-                    <p className="text-sm text-[#808080] mt-1">
-                      <span className="font-medium text-[#111]">{sentEmail}</span>{' '}
+                    <p className="text-lg font-semibold text-ink-title">Invoice Request Sent</p>
+                    <p className="text-sm text-ink-muted mt-1">
+                      <span className="font-medium text-ink-title">{sentEmail}</span>{' '}
                       will receive an email with a secure link to submit their invoice.
                     </p>
                   </div>
@@ -419,7 +419,7 @@ export function PaymentCreateDialog({
                     <div>
                       {/* Title tracks intent (Mercury/Wise retitle request surfaces);
                           the h2 + id stay static so aria-labelledby never breaks. */}
-                      <h2 id="new-payment-title" className="text-lg font-semibold text-[#111]">
+                      <h2 id="new-payment-title" className="text-lg font-semibold text-ink-title">
                         <AnimatePresence mode="wait" initial={false}>
                           <motion.span
                             key={isInvoice ? 'title-invoice' : 'title-payment'}
@@ -433,7 +433,7 @@ export function PaymentCreateDialog({
                       <AnimatePresence mode="wait" initial={false}>
                         <motion.p
                           key={isInvoice ? 'desc-invoice' : 'desc-record'}
-                          className="text-xs text-[#808080]"
+                          className="text-xs text-ink-muted"
                           {...labelSwap}
                         >
                           {isInvoice
@@ -445,7 +445,7 @@ export function PaymentCreateDialog({
                     <button
                       onClick={handleClose}
                       aria-label="Close"
-                      className="-m-1.5 flex size-8 items-center justify-center rounded-lg text-[#9a9a9a] transition-[background-color,color,transform] duration-150 ease-out hover:bg-black/[0.04] hover:text-[#3a3a3a] active:scale-[0.94]"
+                      className="-m-1.5 flex size-8 items-center justify-center rounded-lg text-ink-faint transition-[background-color,color,transform] duration-150 ease-out hover:bg-wash-4 hover:text-ink active:scale-[0.94]"
                     >
                       <X className="size-5" />
                     </button>
@@ -474,9 +474,9 @@ export function PaymentCreateDialog({
                 }}
               >
                 <div className="flex items-center justify-between">
-                  <Label className="text-[#808080]">Recipient</Label>
+                  <Label className="text-ink-muted">Recipient</Label>
                   {/* Mode toggle — sliding pill (shared TAB_PILL_SPRING pattern) */}
-                  <div className="flex rounded-full bg-black/[0.04] p-0.5">
+                  <div className="flex rounded-full bg-wash-4 p-0.5">
                     {([['team', 'Team member'], ['external', 'External'], ['invoice', 'Invoice']] as const).map(([value, label]) => {
                       const active = payeeMode === value;
                       return (
@@ -485,7 +485,7 @@ export function PaymentCreateDialog({
                           type="button"
                           onClick={() => switchMode(value)}
                           className={`relative rounded-full px-2.5 py-1 text-[11px] font-medium transition-[color,transform] duration-150 ease-out active:scale-[0.97] ${
-                            active ? 'text-[#111]' : 'text-[#808080] hover:text-[#111]'
+                            active ? 'text-ink-title' : 'text-ink-muted hover:text-ink-title'
                           }`}
                         >
                           {active && (
@@ -493,7 +493,7 @@ export function PaymentCreateDialog({
                               layoutId="paymentPayeeModePill"
                               initial={false}
                               transition={reduce ? { duration: 0 } : TAB_PILL_SPRING}
-                              className="absolute inset-0 rounded-full bg-white shadow-[0_0_0_1px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.06)]"
+                              className="absolute inset-0 rounded-full bg-surface-1 shadow-[0_0_0_1px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.06)]"
                             />
                           )}
                           <span className="relative z-10">{label}</span>
@@ -528,7 +528,7 @@ export function PaymentCreateDialog({
                         placeholder="Payee — e.g. Anthropic"
                         className={LIGHT_INPUT}
                       />
-                      <p className="text-[11px] text-[#9a9a9a]">
+                      <p className="text-[11px] text-ink-faint">
                         For subscriptions and vendors without a team profile.
                       </p>
                     </motion.div>
@@ -552,13 +552,13 @@ export function PaymentCreateDialog({
                         }}
                         onBlur={() => { if (invEmail.trim()) validateInvoiceEmail(); }}
                         placeholder="name@example.com"
-                        className={`${LIGHT_INPUT} ${invEmailError ? 'border-[#d4503e] focus-visible:border-[#d4503e]' : ''}`}
+                        className={`${LIGHT_INPUT} ${invEmailError ? 'border-danger focus-visible:border-danger' : ''}`}
                       />
                       <AnimatePresence initial={false}>
                         {invEmailError ? (
                           <motion.p
                             key="inv-email-error"
-                            className="overflow-hidden text-[11px] text-[#d4503e]"
+                            className="overflow-hidden text-[11px] text-danger"
                             initial={reduce ? { opacity: 1, height: 'auto' } : { opacity: 0, height: 0 }}
                             animate={{ opacity: 1, height: 'auto' }}
                             exit={reduce ? { opacity: 0 } : { opacity: 0, height: 0 }}
@@ -567,7 +567,7 @@ export function PaymentCreateDialog({
                             {invEmailError}
                           </motion.p>
                         ) : (
-                          <motion.p key="inv-email-hint" className="text-[11px] text-[#9a9a9a]" {...labelSwap}>
+                          <motion.p key="inv-email-hint" className="text-[11px] text-ink-faint" {...labelSwap}>
                             For contractors and vendors who invoice you directly.
                           </motion.p>
                         )}
@@ -584,20 +584,20 @@ export function PaymentCreateDialog({
                       transition={contentTransition}
                     >
                       {recipient ? (
-                        <div className="flex items-center gap-3 rounded-lg bg-[#f7f7f7] p-3">
-                          <Avatar className="size-9 outline outline-1 -outline-offset-1 outline-black/[0.06]">
+                        <div className="flex items-center gap-3 rounded-lg bg-surface-3 p-3">
+                          <Avatar className="size-9 outline outline-1 -outline-offset-1 outline-wash-6">
                             <AvatarImage src={recipient.avatar_url ?? undefined} />
-                            <AvatarFallback className="bg-[#f4f4f4] text-[#505050] text-[10px]">
+                            <AvatarFallback className="bg-surface-4 text-ink-body text-[10px]">
                               {getInitials(recipient.display_name ?? '?')}
                             </AvatarFallback>
                           </Avatar>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-[#111]">{recipient.display_name}</p>
-                            <p className="text-xs text-[#9a9a9a] font-mono">{recipient.department ?? 'Unassigned'}</p>
+                            <p className="text-sm font-medium text-ink-title">{recipient.display_name}</p>
+                            <p className="text-xs text-ink-faint font-mono">{recipient.department ?? 'Unassigned'}</p>
                           </div>
                           <button
                             onClick={() => setRecipient(null)}
-                            className="text-xs text-[#9a9a9a] transition-[color,transform] duration-150 ease-out hover:text-[#3a3a3a] active:scale-[0.96]"
+                            className="text-xs text-ink-faint transition-[color,transform] duration-150 ease-out hover:text-ink active:scale-[0.96]"
                           >
                             Change
                           </button>
@@ -620,18 +620,18 @@ export function PaymentCreateDialog({
                       {/* PayPal email — inside the morph region so its appearance
                           grows the surface instead of shoving the form down. */}
                       {recipient?.paypal_email && (
-                        <div className="mt-5 flex items-center gap-2 rounded-lg bg-[#f7f7f7] p-3">
-                          <span className="text-xs text-[#808080]">PayPal:</span>
-                          <span className="text-sm font-mono text-[#111] flex-1 truncate">{recipient.paypal_email}</span>
+                        <div className="mt-5 flex items-center gap-2 rounded-lg bg-surface-3 p-3">
+                          <span className="text-xs text-ink-muted">PayPal:</span>
+                          <span className="text-sm font-mono text-ink-title flex-1 truncate">{recipient.paypal_email}</span>
                           <button
                             onClick={copyPaypalEmail}
                             aria-label="Copy PayPal email"
-                            className="-m-1.5 flex size-7 shrink-0 items-center justify-center rounded-md text-[#9a9a9a] transition-[background-color,color,transform] duration-150 ease-out hover:bg-black/[0.05] hover:text-[#3a3a3a] active:scale-[0.92]"
+                            className="-m-1.5 flex size-7 shrink-0 items-center justify-center rounded-md text-ink-faint transition-[background-color,color,transform] duration-150 ease-out hover:bg-wash-5 hover:text-ink active:scale-[0.92]"
                           >
                             <AnimatePresence mode="wait" initial={false}>
                               {copied ? (
                                 <motion.span key="check" className="flex" {...iconSwap}>
-                                  <Check className="size-4 text-[#0a63cc]" />
+                                  <Check className="size-4 text-seeko-accent-ink" />
                                 </motion.span>
                               ) : (
                                 <motion.span key="copy" className="flex" {...iconSwap}>
@@ -659,12 +659,12 @@ export function PaymentCreateDialog({
               >
                 <div className="flex items-start justify-between">
                   <div>
-                    <Label className="text-[#808080]">Line Items</Label>
+                    <Label className="text-ink-muted">Line Items</Label>
                     <AnimatePresence initial={false}>
                       {isInvoice && (
                         <motion.p
                           key="items-optional-hint"
-                          className="overflow-hidden text-[11px] text-[#9a9a9a]"
+                          className="overflow-hidden text-[11px] text-ink-faint"
                           initial={reduce ? { opacity: 1, height: 'auto' } : { opacity: 0, height: 0 }}
                           animate={{ opacity: 1, height: 'auto' }}
                           exit={reduce ? { opacity: 0 } : { opacity: 0, height: 0 }}
@@ -677,7 +677,7 @@ export function PaymentCreateDialog({
                   </div>
                   <button
                     onClick={addItem}
-                    className="flex items-center gap-1 text-xs text-[#0a63cc] transition-[color,transform] duration-150 ease-out hover:text-[#0a63cc]/80 active:scale-[0.96]"
+                    className="flex items-center gap-1 text-xs text-seeko-accent-ink transition-[color,transform] duration-150 ease-out hover:text-seeko-accent-ink/80 active:scale-[0.96]"
                   >
                     <Plus className="size-3" />
                     Add item
@@ -692,7 +692,7 @@ export function PaymentCreateDialog({
                       className={`flex-1 ${LIGHT_INPUT}`}
                     />
                     <div className="relative w-28">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-[#9a9a9a] pointer-events-none">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-ink-faint pointer-events-none">
                         <DollarSign className="size-3.5" />
                       </span>
                       <Input
@@ -709,7 +709,7 @@ export function PaymentCreateDialog({
                       <button
                         onClick={() => removeItem(item.id)}
                         aria-label="Remove item"
-                        className="-m-2 flex size-8 shrink-0 items-center justify-center rounded-md text-[#9a9a9a] transition-[background-color,color,transform] duration-150 ease-out hover:bg-[#d4503e]/10 hover:text-[#d4503e] active:scale-[0.92]"
+                        className="-m-2 flex size-8 shrink-0 items-center justify-center rounded-md text-ink-faint transition-[background-color,color,transform] duration-150 ease-out hover:bg-danger/10 hover:text-danger active:scale-[0.92]"
                       >
                         <Trash2 className="size-4" />
                       </button>
@@ -725,11 +725,11 @@ export function PaymentCreateDialog({
                   visible: { opacity: 1, y: 0, transition: contentTransition },
                 }}
               >
-                <div className="flex items-center justify-between pt-2 border-t border-black/[0.06]">
+                <div className="flex items-center justify-between pt-2 border-t border-wash-6">
                   <AnimatePresence mode="wait" initial={false}>
                     <motion.span
                       key={isInvoice ? 'total-prefilled' : 'total'}
-                      className="text-sm font-medium text-[#808080]"
+                      className="text-sm font-medium text-ink-muted"
                       {...labelSwap}
                     >
                       {isInvoice ? 'Pre-filled total' : 'Total'}
@@ -738,7 +738,7 @@ export function PaymentCreateDialog({
                   {/* An empty $0.00 shouldn't carry the row's maximum weight — mute it
                       until a real amount exists (Wise greys its zero amount the same way). */}
                   <span
-                    className={`text-lg font-semibold tabular-nums transition-[color] duration-150 ease-out ${total > 0 ? 'text-[#0a63cc]' : 'text-[#b3b3b3]'}`}
+                    className={`text-lg font-semibold tabular-nums transition-[color] duration-150 ease-out ${total > 0 ? 'text-seeko-accent-ink' : 'text-ink-faintest'}`}
                   >
                     {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(total)}
                   </span>
@@ -748,7 +748,7 @@ export function PaymentCreateDialog({
                     <motion.div key="invoice-extras" className="overflow-hidden" {...sectionGrow}>
                       <div className="space-y-5 pt-5">
                         <div className="space-y-2">
-                          <Label className="text-[#808080]" htmlFor="invoice-note">Personal Note</Label>
+                          <Label className="text-ink-muted" htmlFor="invoice-note">Personal Note</Label>
                           <textarea
                             id="invoice-note"
                             rows={2}
@@ -759,8 +759,8 @@ export function PaymentCreateDialog({
                           />
                         </div>
                         <div className="flex items-center justify-between">
-                          <Label className="text-[#808080]">Link Expiry</Label>
-                          <div className="flex rounded-full bg-black/[0.04] p-0.5">
+                          <Label className="text-ink-muted">Link Expiry</Label>
+                          <div className="flex rounded-full bg-wash-4 p-0.5">
                             {EXPIRY_OPTIONS.map(opt => {
                               const active = invExpiry === opt.value;
                               return (
@@ -769,7 +769,7 @@ export function PaymentCreateDialog({
                                   type="button"
                                   onClick={() => setInvExpiry(opt.value)}
                                   className={`relative rounded-full px-2.5 py-1 text-[11px] font-medium transition-[color,transform] duration-150 ease-out active:scale-[0.97] ${
-                                    active ? 'text-[#111]' : 'text-[#808080] hover:text-[#111]'
+                                    active ? 'text-ink-title' : 'text-ink-muted hover:text-ink-title'
                                   }`}
                                 >
                                   {active && (
@@ -777,7 +777,7 @@ export function PaymentCreateDialog({
                                       layoutId="invoiceExpiryPill"
                                       initial={false}
                                       transition={reduce ? { duration: 0 } : TAB_PILL_SPRING}
-                                      className="absolute inset-0 rounded-full bg-white shadow-[0_0_0_1px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.06)]"
+                                      className="absolute inset-0 rounded-full bg-surface-1 shadow-[0_0_0_1px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.06)]"
                                     />
                                   )}
                                   <span className="relative z-10 tabular-nums">{opt.label}</span>
@@ -801,12 +801,12 @@ export function PaymentCreateDialog({
                 }}
               >
                 {payeeMode === 'team' && recipient?.paypal_email && total > 0 && (
-                  <Button variant="outline" onClick={openPaypal} className="gap-1.5 pl-3 border-black/[0.08] bg-transparent text-[#2a2a2a] transition-[background-color,transform] duration-150 ease-out hover:bg-black/[0.04] active:scale-[0.98]">
+                  <Button variant="outline" onClick={openPaypal} className="gap-1.5 pl-3 border-wash-8 bg-transparent text-ink-strong transition-[background-color,transform] duration-150 ease-out hover:bg-wash-4 active:scale-[0.98]">
                     <ExternalLink className="size-3.5" />
                     PayPal
                   </Button>
                 )}
-                <Button variant="outline" className={`flex-1 border-black/[0.08] bg-transparent transition-[background-color,color,transform] duration-150 ease-out active:scale-[0.98] ${DIALOG_CANCEL}`} onClick={handleClose} disabled={saving}>
+                <Button variant="outline" className={`flex-1 border-wash-8 bg-transparent transition-[background-color,color,transform] duration-150 ease-out active:scale-[0.98] ${DIALOG_CANCEL}`} onClick={handleClose} disabled={saving}>
                   Cancel
                 </Button>
                 <Button
