@@ -54,7 +54,7 @@ export function PaymentsChartQaRoute() {
               data-testid={`${m} mode`}
               onClick={() => setMode(m)}
               className={`rounded-full px-3 py-1 text-[13px] transition-[background-color,color] duration-150 ease-out ${
-                mode === m ? 'bg-[#111] text-white' : 'bg-black/[0.05] text-[#505050]'
+                mode === m ? 'bg-ink-title text-surface-1' : 'bg-wash-5 text-ink-body'
               }`}
             >
               {m}

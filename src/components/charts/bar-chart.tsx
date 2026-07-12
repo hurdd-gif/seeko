@@ -298,20 +298,36 @@ const ChartCore = memo(function ChartCore({
       lines,
       data,
       innerHeight,
+      // Stacked bars measure against the row SUM, not the tallest single
+      // series — otherwise the stack overflows the plot top whenever a
+      // second series sits on the max row.
       resolveDomain: (dataKeys) => {
         let max = 0;
         for (const d of data) {
-          for (const key of dataKeys) {
-            const value = d[key];
-            if (typeof value === "number" && value > max) {
-              max = value;
+          if (stacked) {
+            let sum = 0;
+            for (const key of dataKeys) {
+              const value = d[key];
+              if (typeof value === "number") {
+                sum += value;
+              }
+            }
+            if (sum > max) {
+              max = sum;
+            }
+          } else {
+            for (const key of dataKeys) {
+              const value = d[key];
+              if (typeof value === "number" && value > max) {
+                max = value;
+              }
             }
           }
         }
         return [0, (max || 100) * 1.1];
       },
     });
-  }, [data, innerHeight, isHorizontal, lines, valueScale]);
+  }, [data, innerHeight, isHorizontal, lines, stacked, valueScale]);
 
   const primaryYScale = getPrimaryYScale(yScales, valueScale);
 

@@ -7,13 +7,17 @@
  * folded into the current month — pending money leaves now-or-later, so
  * scattering it across past created_at months would misread as history).
  *
- * Monochrome by design: the light palette reserves #0d7aff for the online
- * dot, and a money chart earns attention with height, not hue.
+ * Monochrome on white by design: the light palette reserves #0d7aff for the
+ * online dot, and a money chart earns attention with height, not hue. Dark
+ * mode is the exception — dark-on-dark bars vanish against the canvas, so the
+ * dark palette lifts paid to a flat azure and keeps pending a quiet flat
+ * slate-blue one rung below (see PALETTE.dark).
  */
 
 import { useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useReducedMotion } from 'motion/react';
+import { useIsDark } from '@/lib/theme';
 import { LinearGradient } from '@visx/gradient';
 import { BarChart } from '@/components/charts/bar-chart';
 import { Bar } from '@/components/charts/bar';
@@ -25,17 +29,32 @@ import type { Payment } from '@/lib/types';
 
 const MONTHS_SHOWN = 12;
 
-/* Loudness ladder on white: paid = real money left (dark, ~16:1), pending =
- * not yet (mid-grey, ~3.4:1 — clears the 3:1 graphics floor; exact figures
- * live in the tooltip and the summary strip above). Solid values anchor the
- * tooltip dots; the bars themselves wear vertical gradients (bklit's
- * gradient variant, kept monochrome): darkest at the tip — the edge the eye
- * reads value from — softening toward the baseline. Each stop stays inside
- * its rung of the ladder, so pending never reads louder than paid. */
-const PAID_FILL = '#1f1f1f';
-const PENDING_FILL = '#8c8c8c';
-const PAID_GRADIENT = { id: 'outflow-paid-gradient', from: '#161616', to: '#454545' };
-const PENDING_GRADIENT = { id: 'outflow-pending-gradient', from: '#808080', to: '#9a9a9a' };
+/* Loudness ladder: paid = real money left, pending = not yet, one rung
+ * quieter — never louder than paid. Solid values anchor the tooltip dots. Light
+ * keeps the ladder in lightness and the bars wear a vertical gradient (bklit's
+ * gradient variant) with the loudest stop at the tip — the edge the eye reads
+ * value from — softening toward the baseline (dark ~16:1 → mid-grey ~3.4:1,
+ * clears the 3:1 graphics floor). Dark keeps the ladder in hue instead (lit
+ * azure over quiet slate-blue) because dark-grey bars would disappear into the
+ * canvas — and stays a single flat fill per bar (from === to), no gradient.
+ * Gradient ids are stable across themes; only the stops swap. */
+const PALETTE = {
+  light: {
+    paidFill: '#1f1f1f',
+    pendingFill: '#8c8c8c',
+    paid: { from: '#161616', to: '#454545' },
+    pending: { from: '#808080', to: '#9a9a9a' },
+  },
+  dark: {
+    paidFill: '#49a2fe',
+    pendingFill: '#7488a1',
+    paid: { from: '#49a2fe', to: '#49a2fe' },
+    pending: { from: '#7488a1', to: '#7488a1' },
+  },
+} as const;
+
+const PAID_GRADIENT_ID = 'outflow-paid-gradient';
+const PENDING_GRADIENT_ID = 'outflow-pending-gradient';
 
 const monthLabelFmt = new Intl.DateTimeFormat('en-US', { month: 'short' });
 const monthTitleFmt = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' });
@@ -70,7 +89,7 @@ function DollarTicks() {
       {ticks.map((t) => (
         <span
           key={t}
-          className="absolute left-0 text-[11px] leading-none tabular-nums text-[#9a9a9a]"
+          className="absolute left-0 text-[11px] leading-none tabular-nums text-ink-faint"
           style={{ top: margin.top + yScale(t) - 14 }}
         >
           {compactUsd.format(t)}
@@ -135,6 +154,7 @@ export function PaymentsChart({
   className?: string;
 }) {
   const reduce = useReducedMotion();
+  const palette = useIsDark() ? PALETTE.dark : PALETTE.light;
   const data = useMemo(() => bucketPayments(payments), [payments]);
   const hasAnything = data.some((b) => b.paid > 0 || b.pending > 0);
 
@@ -143,8 +163,8 @@ export function PaymentsChart({
   if (!loading && !hasAnything) {
     return (
       <div className={className}>
-        <div className="flex h-[120px] items-center justify-center rounded-xl bg-black/[0.02]">
-          <p className="text-[13px] text-[#9a9a9a]">
+        <div className="flex h-[120px] items-center justify-center rounded-xl bg-wash-2">
+          <p className="text-[13px] text-ink-faint">
             Outflow lands here once the first payment is made.
           </p>
         </div>
@@ -158,8 +178,8 @@ export function PaymentsChart({
      * inline aspect-ratio resolves. */
     <div className={`[--outflow-ar:2.4/1] sm:[--outflow-ar:4.5/1] ${className ?? ''}`}>
       <div className="mb-2 flex items-baseline justify-between">
-        <h2 className="text-[13px] font-medium text-[#505050]">Outflow</h2>
-        <span className="text-[12px] text-[#9a9a9a]">
+        <h2 className="text-[13px] font-medium text-ink-body">Outflow</h2>
+        <span className="text-[12px] text-ink-faint">
           Last 12 months · paid net of refunds
         </span>
       </div>
@@ -175,10 +195,10 @@ export function PaymentsChart({
       >
         <Grid horizontal numTicksRows={3} />
         <DollarTicks />
-        <LinearGradient {...PAID_GRADIENT} />
-        <LinearGradient {...PENDING_GRADIENT} />
-        <Bar dataKey="paid" fill={`url(#${PAID_GRADIENT.id})`} lineCap={3} animate={!reduce} />
-        <Bar dataKey="pending" fill={`url(#${PENDING_GRADIENT.id})`} lineCap={3} animate={!reduce} />
+        <LinearGradient id={PAID_GRADIENT_ID} {...palette.paid} />
+        <LinearGradient id={PENDING_GRADIENT_ID} {...palette.pending} />
+        <Bar dataKey="paid" fill={`url(#${PAID_GRADIENT_ID})`} lineCap={3} animate={!reduce} />
+        <Bar dataKey="pending" fill={`url(#${PENDING_GRADIENT_ID})`} lineCap={3} animate={!reduce} />
         <BarXAxis showAllLabels />
         <ChartTooltip
           showDatePill={false}
@@ -187,13 +207,13 @@ export function PaymentsChart({
             const bucket = point as MonthBucket;
             const rows = [
               {
-                color: PAID_FILL,
+                color: palette.paidFill,
                 label: `Paid · ${bucket.paidCount} payment${bucket.paidCount === 1 ? '' : 's'}`,
                 value: fmtUsd(bucket.paid),
               },
             ];
             if (bucket.pending > 0) {
-              rows.push({ color: PENDING_FILL, label: 'Pending', value: fmtUsd(bucket.pending) });
+              rows.push({ color: palette.pendingFill, label: 'Pending', value: fmtUsd(bucket.pending) });
             }
             return <TooltipContent title={bucket.title} rows={rows} />;
           }}
