@@ -159,11 +159,11 @@ export function SendInviteForm({ onInviteSent, bare = false }: SendInviteFormPro
   const selectedTemplate = EXTERNAL_TEMPLATES.find((t) => t.id === templateId);
 
   return (
-    <div className={bare ? undefined : 'overflow-visible rounded-2xl border-0 bg-white p-6 shadow-seeko'}>
+    <div className={bare ? undefined : 'overflow-visible rounded-2xl border-0 bg-surface-1 p-6 shadow-seeko'}>
         <form onSubmit={handleSubmit} className="space-y-5">
           {/* ── Recipient ── */}
           <div className="space-y-2">
-            <Label className="text-[11px] font-medium uppercase tracking-[0.08em] text-[#9a9a9a]" htmlFor="recipient-email">Recipient</Label>
+            <Label className="text-[11px] font-medium uppercase tracking-[0.08em] text-ink-faint" htmlFor="recipient-email">Recipient</Label>
             <Input
               id="recipient-email"
               type="email"
@@ -177,10 +177,10 @@ export function SendInviteForm({ onInviteSent, bare = false }: SendInviteFormPro
 
           {/* ── Document ── */}
           <div className="space-y-3">
-            <Label className="text-[11px] font-medium uppercase tracking-[0.08em] text-[#9a9a9a]">Document</Label>
+            <Label className="text-[11px] font-medium uppercase tracking-[0.08em] text-ink-faint">Document</Label>
 
             {/* Mode toggle — sliding pill (shared TAB_PILL_SPRING pattern) */}
-            <div className="flex rounded-[18px] bg-black/[0.04] p-1 ring-1 ring-inset ring-black/[0.03]">
+            <div className="flex rounded-[18px] bg-wash-4 p-1 ring-1 ring-inset ring-wash-3">
               {([['preset', 'Template', FileText], ['upload', 'Upload PDF', Upload]] as const).map(([value, label, Icon]) => {
                 const active = templateMode === value;
                 return (
@@ -189,7 +189,7 @@ export function SendInviteForm({ onInviteSent, bare = false }: SendInviteFormPro
                     type="button"
                     onClick={() => switchTemplateMode(value)}
                     className={`relative flex min-h-9 flex-1 items-center justify-center gap-1.5 rounded-[14px] px-3 text-[13px] font-medium transition-[color,transform] duration-150 ease-out active:scale-[0.97] ${
-                      active ? 'text-[#111]' : 'text-[#808080] hover:text-[#111]'
+                      active ? 'text-ink-title' : 'text-ink-muted hover:text-ink-title'
                     }`}
                   >
                     {active && (
@@ -197,7 +197,7 @@ export function SendInviteForm({ onInviteSent, bare = false }: SendInviteFormPro
                         layoutId="docModePill"
                         initial={false}
                         transition={reduce ? { duration: 0 } : TAB_PILL_SPRING}
-                        className="absolute inset-0 rounded-[14px] bg-white shadow-[0_1px_3px_rgba(0,0,0,0.08)] ring-1 ring-black/[0.04]"
+                        className="absolute inset-0 rounded-[14px] bg-surface-1 shadow-[0_1px_3px_rgba(0,0,0,0.08)] ring-1 ring-wash-4"
                       />
                     )}
                     <Icon className="relative z-10 size-3.5" />
@@ -235,8 +235,8 @@ export function SendInviteForm({ onInviteSent, bare = false }: SendInviteFormPro
                       key={t.id}
                       className={`flex cursor-pointer items-start gap-3 rounded-2xl p-4 transition-[background-color,box-shadow,transform] duration-150 ease-out active:scale-[0.99] ${
                         selected
-                          ? 'bg-[#f8fbff] shadow-[inset_0_0_0_1px_rgba(10,99,204,0.24),0_10px_24px_-22px_rgba(10,99,204,0.75)]'
-                          : 'bg-white shadow-[inset_0_0_0_1px_rgba(0,0,0,0.08)] hover:bg-black/[0.015] hover:shadow-[inset_0_0_0_1px_rgba(0,0,0,0.14)]'
+                          ? 'bg-[#f8fbff] dark:bg-seeko-accent/10 shadow-[inset_0_0_0_1px_rgba(10,99,204,0.24),0_10px_24px_-22px_rgba(10,99,204,0.75)]'
+                          : 'bg-surface-1 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.08)] hover:bg-wash-2 hover:shadow-[inset_0_0_0_1px_rgba(0,0,0,0.14)]'
                       }`}
                     >
                       <input
@@ -250,18 +250,18 @@ export function SendInviteForm({ onInviteSent, bare = false }: SendInviteFormPro
                       <span
                         aria-hidden
                         className={`mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border transition-colors duration-150 ${
-                          selected ? 'border-[#0a63cc]' : 'border-black/25'
+                          selected ? 'border-seeko-accent-ink' : 'border-black/25'
                         }`}
                       >
                         <span
                           className={`size-2 rounded-full transition-[transform,opacity] duration-150 ease-out ${
-                            selected ? 'scale-100 bg-[#0a63cc] opacity-100' : 'scale-50 bg-[#111] opacity-0'
+                            selected ? 'scale-100 bg-seeko-accent-ink opacity-100' : 'scale-50 bg-ink-title opacity-0'
                           }`}
                         />
                       </span>
                       <span className="min-w-0">
-                        <span className="block text-[15px] font-semibold leading-tight text-[#111]">{t.name}</span>
-                        <span className="mt-1 block text-[13px] leading-snug text-[#808080]">{t.description}</span>
+                        <span className="block text-[15px] font-semibold leading-tight text-ink-title">{t.name}</span>
+                        <span className="mt-1 block text-[13px] leading-snug text-ink-muted">{t.description}</span>
                       </span>
                     </label>
                   );
@@ -270,17 +270,17 @@ export function SendInviteForm({ onInviteSent, bare = false }: SendInviteFormPro
                     ) : (
               <div className="space-y-2">
                 {!customSections ? (
-                  <label className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border border-dashed border-black/[0.16] p-7 transition-[border-color,background-color] duration-150 hover:border-black/[0.28] hover:bg-black/[0.015]">
+                  <label className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border border-dashed border-black/[0.16] p-7 transition-[border-color,background-color] duration-150 hover:border-black/[0.28] hover:bg-wash-2">
                     {parsing ? (
                       <>
-                        <Loader2 className="size-5 animate-spin text-[#9a9a9a]" />
-                        <span className="text-sm text-[#808080]">AI is parsing your PDF into sections...</span>
+                        <Loader2 className="size-5 animate-spin text-ink-faint" />
+                        <span className="text-sm text-ink-muted">AI is parsing your PDF into sections...</span>
                       </>
                     ) : (
                       <>
-                        <Upload className="size-5 text-[#9a9a9a]" />
-                        <span className="text-sm text-[#808080]">Tap to upload a PDF</span>
-                        <span className="text-xs text-[#9a9a9a]">Will be parsed into signable sections</span>
+                        <Upload className="size-5 text-ink-faint" />
+                        <span className="text-sm text-ink-muted">Tap to upload a PDF</span>
+                        <span className="text-xs text-ink-faint">Will be parsed into signable sections</span>
                       </>
                     )}
                     <input
@@ -294,18 +294,18 @@ export function SendInviteForm({ onInviteSent, bare = false }: SendInviteFormPro
                     />
                   </label>
                 ) : (
-                  <div className="flex items-center justify-between rounded-xl bg-[#f7f7f7] px-3.5 py-2.5">
+                  <div className="flex items-center justify-between rounded-xl bg-surface-3 px-3.5 py-2.5">
                     <div className="flex items-center gap-2">
-                      <FileText className="size-4 text-[#9a9a9a]" />
-                      <span className="text-sm text-[#111]">{customTitle}</span>
-                      <span className="text-xs text-[#808080]">{customSections.length} sections</span>
+                      <FileText className="size-4 text-ink-faint" />
+                      <span className="text-sm text-ink-title">{customTitle}</span>
+                      <span className="text-xs text-ink-muted">{customSections.length} sections</span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <button type="button" onClick={() => setShowPreview(!showPreview)} className="rounded p-1.5 hover:bg-black/[0.04]">
-                        <Eye className="size-4 text-[#9a9a9a]" />
+                      <button type="button" onClick={() => setShowPreview(!showPreview)} className="rounded p-1.5 hover:bg-wash-4">
+                        <Eye className="size-4 text-ink-faint" />
                       </button>
-                      <button type="button" onClick={() => { setCustomSections(null); setCustomTitle(''); }} className="rounded p-1.5 hover:bg-black/[0.04]">
-                        <X className="size-4 text-[#9a9a9a]" />
+                      <button type="button" onClick={() => { setCustomSections(null); setCustomTitle(''); }} className="rounded p-1.5 hover:bg-wash-4">
+                        <X className="size-4 text-ink-faint" />
                       </button>
                     </div>
                   </div>
@@ -320,11 +320,11 @@ export function SendInviteForm({ onInviteSent, bare = false }: SendInviteFormPro
                       exit={{ height: 0, opacity: 0 }}
                       className="overflow-hidden"
                     >
-                      <div className="max-h-64 overflow-y-auto rounded-xl bg-[#f7f7f7] p-4 [scrollbar-width:thin]">
+                      <div className="max-h-64 overflow-y-auto rounded-xl bg-surface-3 p-4 [scrollbar-width:thin]">
                         {customSections.map((s) => (
                           <div key={s.number} className="mb-3">
-                            <h4 className="text-sm font-semibold text-[#111]">{s.number}. {s.title}</h4>
-                            <div className="mt-1 text-xs text-[#808080] prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: sanitizeHtml(s.content) }} />
+                            <h4 className="text-sm font-semibold text-ink-title">{s.number}. {s.title}</h4>
+                            <div className="mt-1 text-xs text-ink-muted prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: sanitizeHtml(s.content) }} />
                           </div>
                         ))}
                       </div>
@@ -347,14 +347,14 @@ export function SendInviteForm({ onInviteSent, bare = false }: SendInviteFormPro
             onClick={() => setIsGuardianSigning(!isGuardianSigning)}
             className={`flex w-full cursor-pointer items-start gap-3 rounded-2xl p-4 text-left transition-[background-color,box-shadow] duration-150 ease-out active:scale-[0.99] ${
               isGuardianSigning
-                ? 'bg-[#f8fbff] shadow-[inset_0_0_0_1px_rgba(10,99,204,0.24)]'
-                : 'bg-white shadow-[inset_0_0_0_1px_rgba(0,0,0,0.08)] hover:bg-black/[0.015] hover:shadow-[inset_0_0_0_1px_rgba(0,0,0,0.14)]'
+                ? 'bg-[#f8fbff] dark:bg-seeko-accent/10 shadow-[inset_0_0_0_1px_rgba(10,99,204,0.24)]'
+                : 'bg-surface-1 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.08)] hover:bg-wash-2 hover:shadow-[inset_0_0_0_1px_rgba(0,0,0,0.14)]'
             }`}
           >
             <span
               aria-hidden
               className={`mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-[5px] border transition-colors duration-150 ${
-                isGuardianSigning ? 'border-[#0a63cc] bg-[#0a63cc]' : 'border-black/25'
+                isGuardianSigning ? 'border-seeko-accent-ink bg-seeko-accent-ink' : 'border-black/25'
               }`}
             >
               <svg
@@ -372,8 +372,8 @@ export function SendInviteForm({ onInviteSent, bare = false }: SendInviteFormPro
               </svg>
             </span>
             <span className="min-w-0">
-              <span className="block text-[15px] font-semibold leading-tight text-[#111]">Guardian signing for a minor</span>
-              <span className="mt-1 block text-[13px] leading-snug text-[#808080]">A parent or legal guardian will sign on behalf of someone under 18</span>
+              <span className="block text-[15px] font-semibold leading-tight text-ink-title">Guardian signing for a minor</span>
+              <span className="mt-1 block text-[13px] leading-snug text-ink-muted">A parent or legal guardian will sign on behalf of someone under 18</span>
             </span>
           </button>
 
@@ -381,7 +381,7 @@ export function SendInviteForm({ onInviteSent, bare = false }: SendInviteFormPro
           <button
             type="button"
             onClick={() => setShowOptions(!showOptions)}
-            className="flex min-h-9 items-center gap-1.5 rounded-full px-1 text-[13px] font-medium text-[#808080] transition-colors hover:text-[#111]"
+            className="flex min-h-9 items-center gap-1.5 rounded-full px-1 text-[13px] font-medium text-ink-muted transition-colors hover:text-ink-title"
           >
             {showOptions ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}
             {showOptions ? 'Hide options' : 'Expiration & personal note'}
@@ -396,10 +396,10 @@ export function SendInviteForm({ onInviteSent, bare = false }: SendInviteFormPro
                 transition={SPRING}
                 className="overflow-hidden"
               >
-                <div className="space-y-4 rounded-xl bg-[#f7f7f7] p-4">
+                <div className="space-y-4 rounded-xl bg-surface-3 p-4">
                   {/* Expiration */}
                   <div className="space-y-2">
-                    <Label className="text-xs text-[#808080]">Expires in</Label>
+                    <Label className="text-xs text-ink-muted">Expires in</Label>
                     <div className="flex flex-wrap gap-1.5">
                       {[
                         { value: '7', label: '7 days' },
@@ -413,8 +413,8 @@ export function SendInviteForm({ onInviteSent, bare = false }: SendInviteFormPro
                           onClick={() => setExpiration(opt.value)}
                           className={`rounded-full px-3 py-1 text-xs font-medium transition-[background-color,color,transform] duration-150 ease-out active:scale-[0.96] ${
                             expiration === opt.value
-                              ? 'bg-[#111] text-white'
-                              : 'bg-white text-[#808080] shadow-[0_0_0_1px_rgba(0,0,0,0.06)] hover:text-[#111]'
+                              ? 'bg-ink-title text-surface-1'
+                              : 'bg-surface-1 text-ink-muted shadow-[0_0_0_1px_rgba(0,0,0,0.06)] hover:text-ink-title'
                           }`}
                         >
                           {opt.label}
@@ -429,7 +429,7 @@ export function SendInviteForm({ onInviteSent, bare = false }: SendInviteFormPro
                         light
                       />
                     ) : (
-                      <p className="flex items-center gap-1.5 text-xs text-[#9a9a9a]">
+                      <p className="flex items-center gap-1.5 text-xs text-ink-faint">
                         <Calendar className="size-3" />
                         Expires {new Date(Date.now() + parseInt(expiration) * 86400000).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
                       </p>
@@ -438,7 +438,7 @@ export function SendInviteForm({ onInviteSent, bare = false }: SendInviteFormPro
 
                   {/* Personal Note */}
                   <div className="space-y-1.5">
-                    <Label htmlFor="personal-note" className="text-xs text-[#808080]">Personal Note</Label>
+                    <Label htmlFor="personal-note" className="text-xs text-ink-muted">Personal Note</Label>
                     <textarea
                       id="personal-note"
                       value={personalNote}
@@ -507,23 +507,23 @@ function ConfirmDialog({ show, onClose, onConfirm, email, templateMode, template
                 exit={{ opacity: 0, y: 40 }}
                 transition={SPRING}
                 onClick={(e) => e.stopPropagation()}
-                className="mx-0 sm:mx-4 w-full max-w-sm rounded-t-2xl sm:rounded-2xl border-0 bg-white p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:pb-6 shadow-seeko"
+                className="mx-0 sm:mx-4 w-full max-w-sm rounded-t-2xl sm:rounded-2xl border-0 bg-surface-1 p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:pb-6 shadow-seeko"
               >
                 <div className="flex flex-col gap-4">
                   <div className="flex items-center gap-3">
-                    <div className="flex size-10 items-center justify-center rounded-full bg-[#0a63cc]/[0.12]">
-                      <AlertCircle className="size-5 text-[#0a63cc]" />
+                    <div className="flex size-10 items-center justify-center rounded-full bg-seeko-accent-ink/[0.12]">
+                      <AlertCircle className="size-5 text-seeko-accent-ink" />
                     </div>
-                    <h3 className="text-base font-semibold text-[#111]">Confirm Send</h3>
+                    <h3 className="text-base font-semibold text-ink-title">Confirm Send</h3>
                   </div>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-[#808080]">Recipient</span>
-                      <span className="text-[#111] font-mono text-xs">{email}</span>
+                      <span className="text-ink-muted">Recipient</span>
+                      <span className="text-ink-title font-mono text-xs">{email}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-[#808080]">Document</span>
-                      <span className="text-[#111] text-xs">
+                      <span className="text-ink-muted">Document</span>
+                      <span className="text-ink-title text-xs">
                         {templateMode === 'preset'
                           ? templateName
                           : title || 'Custom PDF'}
@@ -531,25 +531,25 @@ function ConfirmDialog({ show, onClose, onConfirm, email, templateMode, template
                     </div>
                     {isGuardianSigning && (
                       <div className="flex justify-between">
-                        <span className="text-[#808080]">Signing type</span>
-                        <span className="text-[#111] text-xs">Guardian (for a minor)</span>
+                        <span className="text-ink-muted">Signing type</span>
+                        <span className="text-ink-title text-xs">Guardian (for a minor)</span>
                       </div>
                     )}
                     <div className="flex justify-between">
-                      <span className="text-[#808080]">Expires</span>
-                      <span className="text-[#111] text-xs">
+                      <span className="text-ink-muted">Expires</span>
+                      <span className="text-ink-title text-xs">
                         {expiration === 'custom' ? customDate : `${expiration} days`}
                       </span>
                     </div>
                   </div>
-                  <p className="text-xs text-[#808080]">
+                  <p className="text-xs text-ink-muted">
                     This will send a signing invitation email to the recipient.
                   </p>
                   <div className="flex gap-2">
                     <Button
                       variant="outline"
                       onClick={onClose}
-                      className={`flex-1 border-black/[0.08] ${DIALOG_CANCEL}`}
+                      className={`flex-1 border-wash-8 ${DIALOG_CANCEL}`}
                     >
                       Cancel
                     </Button>

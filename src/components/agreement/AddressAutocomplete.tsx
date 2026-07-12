@@ -117,7 +117,7 @@ export function AddressAutocomplete({
         />
         {loading && (
           <div className="absolute right-3 top-1/2 -translate-y-1/2">
-            <Loader2 className={cn('size-3.5 animate-spin', light ? 'text-[#9a9a9a]' : 'text-muted-foreground')} />
+            <Loader2 className={cn('size-3.5 animate-spin', light ? 'text-ink-faint' : 'text-muted-foreground')} />
           </div>
         )}
       </div>
@@ -130,10 +130,10 @@ export function AddressAutocomplete({
             exit={{ opacity: 0, y: -4 }}
             transition={{ duration: 0.15 }}
             className={cn(
-              'absolute z-50 mt-1 w-full rounded-lg overflow-hidden',
+              'absolute z-50 mt-1 w-full overflow-hidden',
               light
-                ? 'border border-black/[0.08] bg-white shadow-seeko'
-                : 'border border-border bg-popover shadow-xl'
+                ? 'rounded-[14px] bg-surface-1 shadow-seeko-pop'
+                : 'rounded-lg border border-border bg-popover shadow-xl'
             )}
           >
             {suggestions.map((result, i) => (
@@ -146,19 +146,19 @@ export function AddressAutocomplete({
                   'flex w-full items-start gap-2.5 px-3 py-2.5 text-left text-sm transition-colors',
                   light
                     ? i === activeIndex
-                      ? 'bg-black/[0.04] text-[#111]'
-                      : 'text-[#6e6e6e] hover:bg-black/[0.03]'
+                      ? 'bg-wash-4 text-ink-title'
+                      : 'text-ink-muted-strong hover:bg-wash-3'
                     : i === activeIndex
                       ? 'bg-muted text-foreground'
                       : 'text-muted-foreground hover:bg-muted/50'
                 )}
               >
-                <MapPin className={cn('size-3.5 shrink-0 mt-0.5', light ? 'text-[#9a9a9a]' : 'text-muted-foreground')} />
+                <MapPin className={cn('size-3.5 shrink-0 mt-0.5', light ? 'text-ink-faint' : 'text-muted-foreground')} />
                 <span className="line-clamp-2">{result.display_name}</span>
               </button>
             ))}
-            <div className={cn('px-3 py-1.5', light ? 'border-t border-black/[0.06]' : 'border-t border-border')}>
-              <p className={cn('text-[10px]', light ? 'text-[#9a9a9a]' : 'text-muted-foreground/50')}>Powered by OpenStreetMap</p>
+            <div className={cn('px-3 py-1.5', light ? 'border-t border-wash-6' : 'border-t border-border')}>
+              <p className={cn('text-[10px]', light ? 'text-ink-faint' : 'text-muted-foreground/50')}>Powered by OpenStreetMap</p>
             </div>
           </motion.div>
         )}

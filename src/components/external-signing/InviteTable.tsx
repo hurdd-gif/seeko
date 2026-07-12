@@ -33,19 +33,19 @@ interface InviteTableProps {
 // of tinted badges shouts; a colored dot + plain label keeps pending amber
 // findable while letting the signed majority recede.
 const STATUS_DOT: Record<string, string> = {
-  pending: 'bg-[#b8801a]',
-  verified: 'bg-[#0a63cc]',
-  signed: 'bg-[#15803d]',
-  expired: 'bg-[#b3b3b3]',
-  revoked: 'bg-[#d4503e]',
+  pending: 'bg-dept-wash-animation',
+  verified: 'bg-seeko-accent-ink',
+  signed: 'bg-success',
+  expired: 'bg-ink-faintest',
+  revoked: 'bg-danger',
 };
 
 const STATUS_BADGE: Record<string, string> = {
-  pending: 'bg-[#b8801a]/10 text-[#946a00] ring-[#b8801a]/20',
-  verified: 'bg-[#0a63cc]/10 text-[#0a63cc] ring-[#0a63cc]/20',
-  signed: 'bg-[#15803d]/10 text-[#15803d] ring-[#15803d]/20',
-  expired: 'bg-black/[0.04] text-[#6e6e6e] ring-black/[0.06]',
-  revoked: 'bg-[#d4503e]/10 text-[#d4503e] ring-[#d4503e]/20',
+  pending: 'bg-dept-wash-animation/10 text-dept-ink-animation ring-dept-wash-animation/20',
+  verified: 'bg-seeko-accent-ink/10 text-seeko-accent-ink ring-seeko-accent-ink/20',
+  signed: 'bg-success/10 text-success ring-success/20',
+  expired: 'bg-wash-4 text-ink-muted-strong ring-wash-6',
+  revoked: 'bg-danger/10 text-danger ring-danger/20',
 };
 
 const STATUS_CHIPS: { value: FilterStatus; label: string }[] = [
@@ -84,9 +84,9 @@ function StatusBadge({ status }: { status: ExternalSigningInvite['status'] }) {
   const label = SIGNING_STATUS_LABEL[status] ?? status;
   return (
     <span
-      className={`inline-flex min-h-7 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 text-xs font-medium ring-1 ring-inset ${STATUS_BADGE[status] || 'bg-black/[0.04] text-[#6e6e6e] ring-black/[0.06]'}`}
+      className={`inline-flex min-h-7 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 text-xs font-medium ring-1 ring-inset ${STATUS_BADGE[status] || 'bg-wash-4 text-ink-muted-strong ring-wash-6'}`}
     >
-      <span aria-hidden className={`size-1.5 shrink-0 rounded-full ${STATUS_DOT[status] || 'bg-[#b3b3b3]'}`} />
+      <span aria-hidden className={`size-1.5 shrink-0 rounded-full ${STATUS_DOT[status] || 'bg-ink-faintest'}`} />
       {label}
     </span>
   );
@@ -254,39 +254,39 @@ export function InviteTable({ refreshKey, onNewInvite }: InviteTableProps) {
         animate={rowEnterAnimate}
         exit={rowExit}
         transition={{ type: 'spring', duration: 0.3, bounce: 0, delay: Math.min(index, 6) * 0.02 }}
-        className="group border-b border-black/[0.06] transition-[background-color] hover:bg-[#f8fbff]"
+        className="group border-b border-wash-6 transition-[background-color] hover:bg-[#f8fbff] dark:hover:bg-seeko-accent/[0.07]"
       >
         {/* Two-line primary cell (Gusto Documents pattern): recipient on top,
             document beneath — kills the zero-information "Signing" type column
             and gives the doc name a home without its own column. */}
         <td className={`px-5 py-4 align-middle ${indent ? 'pl-12' : ''}`}>
           <div className="flex max-w-[360px] items-center gap-3">
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#f4f4f4] text-[12px] font-semibold text-[#6e6e6e] ring-1 ring-inset ring-black/[0.05]">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-surface-4 text-[12px] font-semibold text-ink-muted-strong ring-1 ring-inset ring-wash-5">
               {getRecipientInitial(invite.recipient_email)}
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <span className="truncate text-[14px] font-medium text-[#111]" title={invite.recipient_email}>{invite.recipient_email}</span>
+                <span className="truncate text-[14px] font-medium text-ink-title" title={invite.recipient_email}>{invite.recipient_email}</span>
               {invite.is_guardian_signing && (
                 <span
                   title="Guardian signing for a minor"
-                  className="shrink-0 inline-flex items-center rounded-full bg-[#f4f4f4] px-1.5 py-0.5 text-[9px] font-medium text-[#808080]"
+                  className="shrink-0 inline-flex items-center rounded-full bg-surface-4 px-1.5 py-0.5 text-[9px] font-medium text-ink-muted"
                 >
                   Guardian
                 </span>
               )}
             </div>
-              <span className="block truncate text-[12px] text-[#808080]" title={doc}>{doc}</span>
+              <span className="block truncate text-[12px] text-ink-muted" title={doc}>{doc}</span>
             </div>
           </div>
         </td>
         <td className="px-5 py-4 align-middle">
           <StatusBadge status={invite.status} />
         </td>
-        <td className="px-5 py-4 align-middle text-[#808080] text-xs tabular-nums whitespace-nowrap">
+        <td className="px-5 py-4 align-middle text-ink-muted text-xs tabular-nums whitespace-nowrap">
           {formatDate(invite.created_at)}
         </td>
-        <td className="px-5 py-4 align-middle text-[#808080] text-xs tabular-nums whitespace-nowrap">
+        <td className="px-5 py-4 align-middle text-ink-muted text-xs tabular-nums whitespace-nowrap">
           {formatDate(invite.expires_at)}
         </td>
         <td className="px-5 py-4 align-middle">
@@ -297,17 +297,17 @@ export function InviteTable({ refreshKey, onNewInvite }: InviteTableProps) {
                   onClick={() => handleAction(invite.id, 'resend')}
                   disabled={actionLoading === invite.id}
                   title="Resend invite"
-                  className="relative flex size-8 items-center justify-center rounded-full border border-black/[0.06] bg-white transition-[background-color,transform,border-color] hover:border-black/[0.12] hover:bg-black/[0.04] active:scale-[0.96] before:absolute before:inset-0 before:-m-2 before:content-['']"
+                  className="relative flex size-8 items-center justify-center rounded-full border border-wash-6 bg-surface-1 transition-[background-color,transform,border-color] hover:border-black/[0.12] hover:bg-wash-4 active:scale-[0.96] before:absolute before:inset-0 before:-m-2 before:content-['']"
                 >
-                  <RotateCw className="size-3.5 text-[#9a9a9a] transition-[color] group-hover:text-[#111]" />
+                  <RotateCw className="size-3.5 text-ink-faint transition-[color] group-hover:text-ink-title" />
                 </button>
                 <button
                   onClick={() => handleAction(invite.id, 'revoke')}
                   disabled={actionLoading === invite.id}
                   title="Revoke invite"
-                  className="relative flex size-8 items-center justify-center rounded-full border border-black/[0.06] bg-white transition-[background-color,transform,border-color] hover:border-[#d4503e]/20 hover:bg-[#d4503e]/10 active:scale-[0.96] before:absolute before:inset-0 before:-m-2 before:content-['']"
+                  className="relative flex size-8 items-center justify-center rounded-full border border-wash-6 bg-surface-1 transition-[background-color,transform,border-color] hover:border-danger/20 hover:bg-danger/10 active:scale-[0.96] before:absolute before:inset-0 before:-m-2 before:content-['']"
                 >
-                  <Ban className="size-3.5 text-[#9a9a9a] transition-[color] group-hover:text-[#d4503e]" />
+                  <Ban className="size-3.5 text-ink-faint transition-[color] group-hover:text-danger" />
                 </button>
               </>
             )}
@@ -316,9 +316,9 @@ export function InviteTable({ refreshKey, onNewInvite }: InviteTableProps) {
                 onClick={() => handleDownload(invite.id)}
                 disabled={actionLoading === invite.id}
                 title="Download signed PDF"
-                className="relative flex size-8 items-center justify-center rounded-full border border-black/[0.06] bg-white transition-[background-color,transform,border-color] hover:border-[#0a63cc]/20 hover:bg-[#0a63cc]/10 active:scale-[0.96] before:absolute before:inset-0 before:-m-2 before:content-['']"
+                className="relative flex size-8 items-center justify-center rounded-full border border-wash-6 bg-surface-1 transition-[background-color,transform,border-color] hover:border-seeko-accent-ink/20 hover:bg-seeko-accent-ink/10 active:scale-[0.96] before:absolute before:inset-0 before:-m-2 before:content-['']"
               >
-                <Download className="size-3.5 text-[#9a9a9a] transition-[color] group-hover:text-[#0a63cc]" />
+                <Download className="size-3.5 text-ink-faint transition-[color] group-hover:text-seeko-accent-ink" />
               </button>
             )}
           </div>
@@ -328,18 +328,18 @@ export function InviteTable({ refreshKey, onNewInvite }: InviteTableProps) {
   };
 
   if (loading) {
-    return <div className="flex justify-center py-12"><Loader2 className="size-5 animate-spin text-[#9a9a9a]" /></div>;
+    return <div className="flex justify-center py-12"><Loader2 className="size-5 animate-spin text-ink-faint" /></div>;
   }
 
   if (signingInvites.length === 0) {
     return (
-      <div className="flex flex-col items-center gap-4 rounded-2xl bg-white px-8 py-12 text-center shadow-seeko">
-        <div className="flex size-10 items-center justify-center rounded-full bg-[#f4f4f4]">
-          <Send className="size-4 text-[#9a9a9a]" />
+      <div className="flex flex-col items-center gap-4 rounded-2xl bg-surface-1 px-8 py-12 text-center shadow-seeko">
+        <div className="flex size-10 items-center justify-center rounded-full bg-surface-4">
+          <Send className="size-4 text-ink-faint" />
         </div>
         <div>
-          <p className="text-sm font-medium text-[#111]">No invites sent yet</p>
-          <p className="mt-0.5 text-xs text-[#808080]">
+          <p className="text-sm font-medium text-ink-title">No invites sent yet</p>
+          <p className="mt-0.5 text-xs text-ink-muted">
             Send a document for an external party to sign.
           </p>
         </div>
@@ -362,12 +362,12 @@ export function InviteTable({ refreshKey, onNewInvite }: InviteTableProps) {
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <h2 className={`${CARD_TITLE} text-[17px]`}>
           Sent invites
-          <span className="ml-2 text-xs font-normal text-[#9a9a9a] tabular-nums">({filtered.length})</span>
+          <span className="ml-2 text-xs font-normal text-ink-faint tabular-nums">({filtered.length})</span>
         </h2>
       </div>
 
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="inline-flex w-fit max-w-full flex-wrap gap-1 rounded-full bg-black/[0.04] p-1">
+        <div className="inline-flex w-fit max-w-full flex-wrap gap-1 rounded-full bg-wash-4 p-1">
           {STATUS_CHIPS.map((chip) => {
             const active = status === chip.value;
             const count = counts[chip.value];
@@ -376,8 +376,8 @@ export function InviteTable({ refreshKey, onNewInvite }: InviteTableProps) {
                 key={chip.value}
                 onClick={() => setStatus(chip.value)}
                 aria-pressed={active}
-                className={`relative inline-flex h-8 items-center justify-center rounded-full px-3.5 text-[13px] font-medium transition-[color,transform] duration-150 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d7aff]/30 ${
-                  active ? 'text-[#111]' : 'text-[#808080] hover:text-[#111]'
+                className={`relative inline-flex h-8 items-center justify-center rounded-full px-3.5 text-[13px] font-medium transition-[color,transform] duration-150 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-seeko-accent/30 ${
+                  active ? 'text-ink-title' : 'text-ink-muted hover:text-ink-title'
                 }`}
               >
                 {active && (
@@ -385,13 +385,13 @@ export function InviteTable({ refreshKey, onNewInvite }: InviteTableProps) {
                     layoutId="signingFilterPill"
                     initial={false}
                     transition={pillTransition}
-                    className="absolute inset-0 rounded-full bg-white shadow-seeko"
+                    className="absolute inset-0 rounded-full bg-surface-1 shadow-seeko"
                   />
                 )}
                 <span className="relative z-10 inline-flex items-center">
                   {chip.label}
                   {count > 0 && (
-                    <span className="ml-1 tabular-nums text-[#9a9a9a]">
+                    <span className="ml-1 tabular-nums text-ink-faint">
                       {count}
                     </span>
                   )}
@@ -402,14 +402,14 @@ export function InviteTable({ refreshKey, onNewInvite }: InviteTableProps) {
         </div>
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
           <div className="relative sm:w-72">
-            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#9a9a9a]" />
+            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ink-faint" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               aria-label="Search recipient"
               placeholder="Search recipient..."
-              className="h-10 w-full rounded-full border border-black/[0.08] bg-white pl-9 pr-4 text-[13px] text-[#2a2a2a] shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] placeholder:text-[#b3b3b3] focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d7aff]/30"
+              className="h-10 w-full rounded-full border border-wash-8 bg-surface-1 pl-9 pr-4 text-[13px] text-ink-strong shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] placeholder:text-ink-faintest focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-seeko-accent/30"
             />
           </div>
           <button
@@ -417,10 +417,10 @@ export function InviteTable({ refreshKey, onNewInvite }: InviteTableProps) {
             aria-label={grouped ? 'Ungroup recipients' : 'Group by recipient'}
             aria-pressed={grouped}
             title={grouped ? 'Ungroup' : 'Group by recipient'}
-            className={`relative flex min-h-10 items-center justify-center gap-2 rounded-full border px-3.5 text-[13px] font-medium transition-[background-color,color,border-color,transform] active:scale-[0.96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d7aff]/30 before:absolute before:inset-0 before:-m-1 before:content-[''] ${
+            className={`relative flex min-h-10 items-center justify-center gap-2 rounded-full border px-3.5 text-[13px] font-medium transition-[background-color,color,border-color,transform] active:scale-[0.96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-seeko-accent/30 before:absolute before:inset-0 before:-m-1 before:content-[''] ${
               grouped
-                ? 'border-[#0a63cc]/40 bg-[#0a63cc]/10 text-[#0a63cc]'
-                : 'border-black/[0.08] bg-white text-[#6e6e6e] hover:text-[#111]'
+                ? 'border-seeko-accent-ink/40 bg-seeko-accent-ink/10 text-seeko-accent-ink'
+                : 'border-wash-8 bg-surface-1 text-ink-muted-strong hover:text-ink-title'
             }`}
           >
             <Users className="size-4" />
@@ -433,17 +433,17 @@ export function InviteTable({ refreshKey, onNewInvite }: InviteTableProps) {
         initial={false}
         animate={{ height: tableHeight }}
         transition={reduce ? { duration: 0 } : { type: 'spring', duration: 0.45, bounce: 0 }}
-        className="overflow-hidden rounded-[24px] bg-white shadow-seeko ring-1 ring-black/[0.04]"
+        className="overflow-hidden rounded-[24px] bg-surface-1 shadow-seeko ring-1 ring-wash-4"
       >
         <div ref={setTableBodyEl} className="overflow-x-auto">
         <table className="w-full text-left text-sm">
           <thead>
-            <tr className="border-b border-black/[0.06] bg-[#fafafa]">
-              <th className="px-5 py-3 text-xs font-medium text-[#9a9a9a]">Recipient</th>
-              <th className="px-5 py-3 text-xs font-medium text-[#9a9a9a]">Status</th>
-              <th className="px-5 py-3 text-xs font-medium text-[#9a9a9a]">Sent</th>
-              <th className="px-5 py-3 text-xs font-medium text-[#9a9a9a]">Expires</th>
-              <th className="px-5 py-3 text-xs font-medium text-[#9a9a9a] sr-only">Actions</th>
+            <tr className="border-b border-wash-6 bg-[#fafafa] dark:bg-surface-2">
+              <th className="px-5 py-3 text-xs font-medium text-ink-faint">Recipient</th>
+              <th className="px-5 py-3 text-xs font-medium text-ink-faint">Status</th>
+              <th className="px-5 py-3 text-xs font-medium text-ink-faint">Sent</th>
+              <th className="px-5 py-3 text-xs font-medium text-ink-faint">Expires</th>
+              <th className="px-5 py-3 text-xs font-medium text-ink-faint sr-only">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -461,21 +461,21 @@ export function InviteTable({ refreshKey, onNewInvite }: InviteTableProps) {
                       animate={rowEnterAnimate}
                       exit={rowExit}
                       transition={{ type: 'spring', duration: 0.3, bounce: 0, delay: Math.min(gIndex, 6) * 0.02 }}
-                      className="border-b border-black/[0.06] transition-[background-color] hover:bg-black/[0.03]"
+                      className="border-b border-wash-6 transition-[background-color] hover:bg-wash-3"
                     >
                       <td className="px-4 py-3">
                         <button
                           type="button"
                           aria-expanded={expanded}
                           onClick={() => toggleGroup(group.email)}
-                          className="flex items-start gap-2 rounded-sm text-left focus-visible:outline-none focus-visible:bg-black/[0.03]"
+                          className="flex items-start gap-2 rounded-sm text-left focus-visible:outline-none focus-visible:bg-wash-3"
                         >
                           <ChevronRight
-                            className={`mt-0.5 size-3.5 shrink-0 text-[#9a9a9a] transition-transform ${expanded ? 'rotate-90' : ''}`}
+                            className={`mt-0.5 size-3.5 shrink-0 text-ink-faint transition-transform ${expanded ? 'rotate-90' : ''}`}
                           />
                           <span className="min-w-0">
-                            <span className="block truncate text-[13px] text-[#111]">{group.email}</span>
-                            <span className="block text-xs text-[#808080] tabular-nums">
+                            <span className="block truncate text-[13px] text-ink-title">{group.email}</span>
+                            <span className="block text-xs text-ink-muted tabular-nums">
                               {group.invites.length} {group.invites.length === 1 ? 'invite' : 'invites'}
                             </span>
                           </span>
@@ -484,10 +484,10 @@ export function InviteTable({ refreshKey, onNewInvite }: InviteTableProps) {
                       <td className="px-4 py-3">
                         <StatusBadge status={latest.status} />
                       </td>
-                      <td className="px-4 py-3 text-[#808080] text-xs tabular-nums whitespace-nowrap">
+                      <td className="px-4 py-3 text-ink-muted text-xs tabular-nums whitespace-nowrap">
                         {formatDate(latest.created_at)}
                       </td>
-                      <td className="px-4 py-3 text-[#808080] text-xs tabular-nums whitespace-nowrap">
+                      <td className="px-4 py-3 text-ink-muted text-xs tabular-nums whitespace-nowrap">
                         {formatDate(latest.expires_at)}
                       </td>
                       <td className="px-4 py-3" />
@@ -508,7 +508,7 @@ export function InviteTable({ refreshKey, onNewInvite }: InviteTableProps) {
                     exit={rowExit}
                     transition={{ type: 'spring', duration: 0.35, bounce: 0 }}
                   >
-                    <td colSpan={5} className="px-4 py-10 text-center text-xs text-[#9a9a9a]">
+                    <td colSpan={5} className="px-4 py-10 text-center text-xs text-ink-faint">
                       No invites in this view.
                     </td>
                   </motion.tr>
@@ -526,7 +526,7 @@ export function InviteTable({ refreshKey, onNewInvite }: InviteTableProps) {
         <div className="space-y-2">
           <button
             onClick={() => setShowArchive(s => !s)}
-            className="flex w-full items-center justify-center gap-1.5 rounded-lg py-2 text-xs text-[#808080] hover:text-[#111] transition-[color]"
+            className="flex w-full items-center justify-center gap-1.5 rounded-lg py-2 text-xs text-ink-muted hover:text-ink-title transition-[color]"
           >
             {showArchive ? 'Hide archived' : `Show archived (${archiveInvites.length})`}
           </button>
@@ -540,7 +540,7 @@ export function InviteTable({ refreshKey, onNewInvite }: InviteTableProps) {
                 transition={{ type: 'spring', duration: 0.35, bounce: 0 }}
                 className="overflow-hidden"
               >
-                <div className="overflow-x-auto rounded-xl border border-black/[0.06] opacity-60">
+                <div className="overflow-x-auto rounded-xl border border-wash-6 opacity-60">
                   <table className="w-full text-left text-sm">
                     <tbody>
                       <AnimatePresence initial={false}>

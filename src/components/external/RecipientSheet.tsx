@@ -222,7 +222,7 @@ export function RecipientSheet({ children, dismissible = false, onDismiss, expan
             if (dismissible && (info.offset.y > 100 || info.velocity.y > 300)) onDismiss?.();
           }}
           className={cn(
-            'relative mt-auto flex w-full flex-col overflow-hidden bg-white sm:mt-0',
+            'relative mt-auto flex w-full flex-col overflow-hidden bg-surface-1 sm:mt-0',
             // Container is programmatically focused on mount (focus move-in for the
             // aria-modal contract) — suppress the default outline on that focus.
             'focus:outline-none',
@@ -250,7 +250,7 @@ export function RecipientSheet({ children, dismissible = false, onDismiss, expan
               onClick={onDismiss}
               aria-label="Close"
               className={cn(
-                'absolute right-4 top-4 z-10 flex size-8 items-center justify-center rounded-full bg-black/[0.04] text-[#6e6e6e] transition-colors hover:bg-black/[0.08] active:scale-95',
+                'absolute right-4 top-4 z-10 flex size-8 items-center justify-center rounded-full bg-wash-4 text-ink-muted-strong transition-colors hover:bg-wash-8 active:scale-95',
                 LIGHT_FOCUS_RING,
               )}
             >

@@ -331,7 +331,7 @@ export function AgreementForm({
                 light
                   // Mobile: full-bleed drawer, 28px top corners (matches RecipientSheet).
                   // Desktop (sm:): unchanged centered modal — max-w-sm, all corners, gutter.
-                  ? 'rounded-t-[28px] border-black/[0.06] bg-white shadow-seeko sm:mx-4 sm:max-w-sm sm:rounded-2xl'
+                  ? 'rounded-t-[28px] border-wash-6 bg-surface-1 shadow-seeko sm:mx-4 sm:max-w-sm sm:rounded-2xl'
                   : 'mx-0 max-w-sm rounded-t-2xl border-border bg-card shadow-2xl sm:mx-4 sm:rounded-2xl',
               )}
             >
@@ -347,14 +347,14 @@ export function AgreementForm({
                   <div
                     className={cn(
                       'flex size-14 items-center justify-center rounded-full ring-1',
-                      light ? `${LIGHT_SUCCESS_CHIP} ring-[#15803d]/20` : 'bg-seeko-accent/15 ring-seeko-accent/30',
+                      light ? `${LIGHT_SUCCESS_CHIP} ring-success/20` : 'bg-seeko-accent/15 ring-seeko-accent/30',
                     )}
                   >
                     <Check className={cn('size-7', light ? LIGHT_SUCCESS_TEXT : 'text-seeko-accent')} strokeWidth={2.5} />
                   </div>
                 </motion.div>
                 <div className="text-center">
-                  <p className={cn('text-lg font-semibold', light ? 'text-[#111]' : 'text-foreground')}>Agreement Signed</p>
+                  <p className={cn('text-lg font-semibold', light ? 'text-ink-title' : 'text-foreground')}>Agreement Signed</p>
                   <p className={cn('mt-1.5 text-sm leading-relaxed', light ? LIGHT_RECIPIENT_MUTED : 'text-muted-foreground')}>
                     {successRedirect === null
                       ? downloadUrl
@@ -401,11 +401,11 @@ export function AgreementForm({
                 <div
                   className={cn(
                     'mb-4 rounded-lg border px-4 py-3',
-                    light ? 'border-black/[0.06] bg-black/[0.02]' : 'border-seeko-accent/20 bg-seeko-accent/5',
+                    light ? 'border-wash-6 bg-wash-2' : 'border-seeko-accent/20 bg-seeko-accent/5',
                   )}
                 >
-                  <p className={cn('text-xs font-medium mb-1', light ? 'text-[#6e6e6e]' : 'text-seeko-accent')}>Note from sender</p>
-                  <p className={cn('text-sm', light ? 'text-[#2a2a2a]' : 'text-muted-foreground')}>{personalNote}</p>
+                  <p className={cn('text-xs font-medium mb-1', light ? 'text-ink-muted-strong' : 'text-seeko-accent')}>Note from sender</p>
+                  <p className={cn('text-sm', light ? 'text-ink-strong' : 'text-muted-foreground')}>{personalNote}</p>
                 </div>
               )}
 
@@ -449,11 +449,11 @@ export function AgreementForm({
                          The % readout and progress bar are dropped in favor of the
                          bottom-fade cue on the scroll body + the scroll hint below. */
                       <div className="mb-4 flex items-start gap-3">
-                        <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-black/[0.04] text-[#6e6e6e]">
+                        <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-wash-4 text-ink-muted-strong">
                           <FileText className="size-[18px]" />
                         </div>
                         <div className="min-w-0 pt-0.5">
-                          <h2 className="text-[16px] font-semibold leading-tight tracking-[-0.01em] text-[#111]">{title}</h2>
+                          <h2 className="text-[16px] font-semibold leading-tight tracking-[-0.01em] text-ink-title">{title}</h2>
                           <p className={cn('mt-0.5 text-[13px]', LIGHT_RECIPIENT_MUTED)}>Read each section before signing.</p>
                         </div>
                       </div>
@@ -493,7 +493,7 @@ export function AgreementForm({
                         '[&_p]:text-sm [&_p]:leading-relaxed [&_p]:mb-3',
                         '[&_ul]:text-sm [&_ul]:ml-4 [&_ul]:mb-3 [&_li]:mb-1',
                         light
-                          ? 'max-h-[min(20rem,42dvh)] rounded-xl bg-[#fafafa] ring-1 ring-inset ring-black/[0.05] [scrollbar-color:#d4d4d4_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-black/15 [&::-webkit-scrollbar-track]:bg-transparent [&_h3]:!mt-0 [&_h3]:!mb-1.5 [&_h3]:tracking-[-0.01em] [&_h3]:text-balance [&_h3]:text-[#111] [&_p]:!mb-0 [&_p]:text-pretty [&_p]:text-[#4a4a4a] [&_p+p]:!mt-3 [&_ul]:text-[#4a4a4a]'
+                          ? 'max-h-[min(20rem,42dvh)] rounded-xl bg-[#fafafa] ring-1 ring-inset ring-wash-5 [scrollbar-color:#d4d4d4_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-black/15 [&::-webkit-scrollbar-track]:bg-transparent [&_h3]:!mt-0 [&_h3]:!mb-1.5 [&_h3]:tracking-[-0.01em] [&_h3]:text-balance [&_h3]:text-ink-title [&_p]:!mb-0 [&_p]:text-pretty [&_p]:text-[#4a4a4a] [&_p+p]:!mt-3 [&_ul]:text-[#4a4a4a]'
                           : 'bg-muted/20 prose-invert [&_h3]:text-foreground [&_p]:text-muted-foreground [&_ul]:text-muted-foreground',
                       )}
                     >
@@ -513,7 +513,7 @@ export function AgreementForm({
                               key={section.number}
                               className="grid grid-cols-[1.5rem_1fr] items-start gap-x-3"
                             >
-                              <span className="select-none text-right text-[18px] font-normal leading-[1.5] tabular-nums text-[#9a9a9a]">
+                              <span className="select-none text-right text-[18px] font-normal leading-[1.5] tabular-nums text-ink-faint">
                                 {section.number}
                               </span>
                               <div className="min-w-0">
@@ -624,22 +624,22 @@ export function AgreementForm({
                       onClick={() => setPhase('read')}
                       className={cn(
                         'flex w-full items-center gap-2 rounded-lg border px-4 py-3 text-left transition-colors',
-                        light ? 'border-black/[0.06] bg-black/[0.02] hover:bg-black/[0.04]' : 'border-border bg-muted/30 hover:bg-muted/50',
+                        light ? 'border-wash-6 bg-wash-2 hover:bg-wash-4' : 'border-border bg-muted/30 hover:bg-muted/50',
                         light && LIGHT_FOCUS_RING,
                       )}
                     >
-                      <FileText className={cn('size-4 shrink-0', light ? 'text-[#9a9a9a]' : 'text-seeko-accent')} />
+                      <FileText className={cn('size-4 shrink-0', light ? 'text-ink-faint' : 'text-seeko-accent')} />
                       <div className="flex-1 min-w-0">
-                        <p className={cn('text-sm font-medium', light ? 'text-[#111]' : 'text-foreground')}>{title}</p>
+                        <p className={cn('text-sm font-medium', light ? 'text-ink-title' : 'text-foreground')}>{title}</p>
                         <p className={cn('text-xs', light ? LIGHT_RECIPIENT_MUTED : 'text-muted-foreground')}>{sections.length} sections — read in full</p>
                       </div>
                       <Check className={cn('size-4 shrink-0', light ? LIGHT_SUCCESS_TEXT : 'text-seeko-accent')} />
                     </button>
 
-                    <Separator className={cn(light && 'bg-black/[0.06]')} />
+                    <Separator className={cn(light && 'bg-wash-6')} />
 
                     <div className="text-center">
-                      <p className={cn('text-sm font-medium', light ? 'text-[#111]' : 'text-foreground')}>
+                      <p className={cn('text-sm font-medium', light ? 'text-ink-title' : 'text-foreground')}>
                         {isGuardianSigning ? 'Sign as Guardian' : 'Sign the Agreement'}
                       </p>
                       <p className={cn('mt-1 text-xs', light ? LIGHT_RECIPIENT_MUTED : 'text-muted-foreground')}>
@@ -684,7 +684,7 @@ export function AgreementForm({
                       {...fieldRise(0.3)}
                       className="space-y-2"
                     >
-                      <Label htmlFor="full-name" className={cn(light && 'text-[#2a2a2a]')}>Legal Full Name</Label>
+                      <Label htmlFor="full-name" className={cn(light && 'text-ink-strong')}>Legal Full Name</Label>
                       <Input
                         id="full-name"
                         value={fullName}
@@ -701,7 +701,7 @@ export function AgreementForm({
                       {...fieldRise(0.4)}
                       className="space-y-2"
                     >
-                      <Label htmlFor="address" className={cn(light && 'text-[#2a2a2a]')}>Address</Label>
+                      <Label htmlFor="address" className={cn(light && 'text-ink-strong')}>Address</Label>
                       <AddressAutocomplete
                         id="address"
                         value={address}
@@ -718,7 +718,7 @@ export function AgreementForm({
                         {...fieldRise(0.45)}
                         className="space-y-2"
                       >
-                        <Label htmlFor="minor-name" className={cn(light && 'text-[#2a2a2a]')}>Minor&apos;s Full Legal Name</Label>
+                        <Label htmlFor="minor-name" className={cn(light && 'text-ink-strong')}>Minor&apos;s Full Legal Name</Label>
                         <Input
                           id="minor-name"
                           value={minorName}
@@ -737,7 +737,7 @@ export function AgreementForm({
                         dark onboarding keeps the auto-handwriting preview of the name. */}
                     {light ? (
                       <motion.div {...fieldRise(0)} className="space-y-2">
-                        <Label className="text-[#2a2a2a]">Signature</Label>
+                        <Label className="text-ink-strong">Signature</Label>
                         <SignaturePad light onChange={setSignatureValue} />
                       </motion.div>
                     ) : (
@@ -789,7 +789,7 @@ export function AgreementForm({
                       <p
                         className={cn(
                           'text-sm px-3 py-2 rounded-lg',
-                          light ? 'text-[#d4503e] bg-[#d4503e]/10' : 'text-destructive bg-destructive/10',
+                          light ? 'text-danger bg-danger/10' : 'text-destructive bg-destructive/10',
                         )}
                       >
                         {error}

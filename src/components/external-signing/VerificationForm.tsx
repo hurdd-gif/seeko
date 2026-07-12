@@ -201,7 +201,7 @@ export function VerificationForm({
           >
             <p className={cn('text-sm', light ? LIGHT_RECIPIENT_MUTED : 'text-muted-foreground')}>
               We&apos;ll send a code to{' '}
-              <span className={cn('font-mono text-xs', light ? 'text-[#111]' : 'text-foreground/60')}>{maskedEmail}</span>
+              <span className={cn('font-mono text-xs', light ? 'text-ink-title' : 'text-foreground/60')}>{maskedEmail}</span>
             </p>
             <Button
               type="button"
@@ -272,7 +272,7 @@ export function VerificationForm({
               disabled={resendCooldown > 0 || sending}
               className={cn(
                 'min-h-[44px] rounded-md px-4 text-xs transition-colors disabled:opacity-40 disabled:cursor-default flex items-center gap-1.5',
-                light ? 'text-[#6e6e6e] hover:text-[#111]' : 'text-muted-foreground hover:text-foreground',
+                light ? 'text-ink-muted-strong hover:text-ink-title' : 'text-muted-foreground hover:text-foreground',
                 light && LIGHT_FOCUS_RING,
               )}
             >
@@ -292,7 +292,7 @@ export function VerificationForm({
             exit={{ opacity: 0 }}
             className={cn(
               'text-sm px-4 py-2 rounded-lg',
-              light ? 'text-[#d4503e] bg-[#d4503e]/10' : 'text-destructive bg-destructive/10',
+              light ? 'text-danger bg-danger/10' : 'text-destructive bg-destructive/10',
             )}
           >
             {error}

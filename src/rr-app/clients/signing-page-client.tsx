@@ -113,7 +113,7 @@ export function SigningPageClient({ token, initialData }: SigningPageClientProps
           <motion.div key="verify" {...ceremonySwap(reduce)} className="flex flex-col gap-6">
             {/* Header — no logo (signer feedback): icon chip + the document name */}
             <div className="flex flex-col items-center gap-4 pt-2 text-center">
-              <div className="flex size-12 items-center justify-center rounded-2xl bg-black/[0.04] text-[#6e6e6e]">
+              <div className="flex size-12 items-center justify-center rounded-2xl bg-wash-4 text-ink-muted-strong">
                 <Mail className="size-5" />
               </div>
               <h1 className={cn('text-[22px] leading-tight tracking-[-0.01em]', LIGHT_RECIPIENT_TITLE)}>

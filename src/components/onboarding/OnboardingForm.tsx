@@ -177,11 +177,11 @@ export function OnboardingForm({
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl bg-white shadow-seeko">
+    <div className="overflow-hidden rounded-2xl bg-surface-1 shadow-seeko">
       <div className="p-6">
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="flex flex-col items-center gap-3">
-            <p className="text-center text-sm text-[#808080]">
+            <p className="text-center text-sm text-ink-muted">
               Upload a photo for your profile (optional).
             </p>
             <motion.div
@@ -189,7 +189,7 @@ export function OnboardingForm({
               whileHover={{ scale: 1.05 }}
               transition={springs.snappy}
             >
-              <Avatar className="size-20 border-2 border-black/[0.08]">
+              <Avatar className="size-20 border-2 border-wash-8">
                 {avatarUrl ? (
                   <img src={avatarUrl} alt="Avatar" className="size-full object-cover rounded-full" />
                 ) : (
@@ -209,13 +209,13 @@ export function OnboardingForm({
                 />
               </label>
             </motion.div>
-            <p className="text-xs text-[#808080]">
+            <p className="text-xs text-ink-muted">
               {uploading ? 'Uploading...' : 'Click the avatar to upload (optional)'}
             </p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="display-name" className="text-[#808080]">Display Name</Label>
+            <Label htmlFor="display-name" className="text-ink-muted">Display Name</Label>
             <Input
               id="display-name"
               value={name}
@@ -227,7 +227,7 @@ export function OnboardingForm({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="timezone" className="text-[#808080]">Timezone</Label>
+            <Label htmlFor="timezone" className="text-ink-muted">Timezone</Label>
             <Select
               id="timezone"
               value={timezone}
@@ -242,11 +242,11 @@ export function OnboardingForm({
                 <option value={timezone}>{formatTzLabel(timezone)}</option>
               )}
             </Select>
-            <p className="text-xs text-[#808080]">Auto-detected from your browser. Change if needed.</p>
+            <p className="text-xs text-ink-muted">Auto-detected from your browser. Change if needed.</p>
           </div>
 
           {error && (
-            <p className="text-sm text-[#d4503e]">{error}</p>
+            <p className="text-sm text-danger">{error}</p>
           )}
 
           <motion.button

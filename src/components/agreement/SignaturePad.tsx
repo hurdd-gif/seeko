@@ -207,25 +207,25 @@ export function SignaturePad({ onChange, light = false }: SignaturePadProps) {
   }
 
   // ── Theme tokens ──
-  const trackCls = light ? 'bg-[#f4f4f4]' : 'bg-muted/50';
+  const trackCls = light ? 'bg-surface-4' : 'bg-muted/50';
   const segActiveCls = light
-    ? 'bg-white text-[#111] shadow-seeko'
+    ? 'bg-surface-1 text-ink-title shadow-seeko'
     : 'bg-card text-foreground shadow';
   const segIdleCls = light
-    ? 'text-[#6e6e6e] hover:text-[#111]'
+    ? 'text-ink-muted-strong hover:text-ink-title'
     : 'text-muted-foreground hover:text-foreground';
   // In type mode the real control is the transparent inset <input>; ring the frame
   // (not the input) when it takes keyboard focus, so the pad shows focus like any
   // bordered field. The canvas (draw mode) isn't focusable, so this never fires there.
   const padFrameCls = light
-    ? `border-black/[0.10] bg-white ${LIGHT_FOCUS_RING_WITHIN}`
+    ? `border-wash-10 bg-white ${LIGHT_FOCUS_RING_WITHIN}`
     : 'border-border bg-muted/20';
-  const baselineCls = light ? 'bg-black/[0.10]' : 'bg-foreground/15';
+  const baselineCls = light ? 'bg-wash-10' : 'bg-foreground/15';
   // Instructional copy is active guidance on a legal step — it must clear AA, so it
   // uses the #6e6e6e muted tier (4.74:1), not the #9a9a9a fine-print tier (~2.8:1).
   const helperCls = light ? LIGHT_RECIPIENT_MUTED : 'text-muted-foreground';
   const clearCls = light
-    ? 'text-[#6e6e6e] hover:text-[#111]'
+    ? 'text-ink-muted-strong hover:text-ink-title'
     : 'text-muted-foreground hover:text-foreground';
 
   return (
@@ -292,7 +292,7 @@ export function SignaturePad({ onChange, light = false }: SignaturePadProps) {
               className={cn(
                 'absolute inset-x-5 bottom-[2.75rem] overflow-hidden bg-transparent text-center leading-none outline-none',
                 'transition-[font-size] duration-100 ease-out motion-reduce:transition-none',
-                light ? 'text-[#111] placeholder:text-[#c8c8c8]' : 'text-foreground placeholder:text-muted-foreground/50',
+                light ? 'text-ink-title placeholder:text-[#c8c8c8]' : 'text-foreground placeholder:text-muted-foreground/50',
               )}
             />
             {/* Off-screen measurer: the typed name at full size, used to derive the

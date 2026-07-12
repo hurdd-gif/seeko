@@ -82,7 +82,7 @@ export function SignatureDrawing({
                   delay,
                   ease: DRAW_EASING,
                 }}
-                className={cn('inline-block leading-tight', light ? 'text-[#111]' : 'text-foreground')}
+                className={cn('inline-block leading-tight', light ? 'text-ink-title' : 'text-foreground')}
                 style={{
                   fontFamily: 'var(--font-inter), sans-serif',
                   fontSize,

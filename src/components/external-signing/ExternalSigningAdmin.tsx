@@ -27,7 +27,7 @@ export function ExternalSigningAdmin() {
       leftSlot={
         <Link
           href="/tasks"
-          className="flex items-center gap-1 text-[13px] text-[#9a9a9a] transition-colors hover:text-[#3a3a3a]"
+          className="flex items-center gap-1 text-[13px] text-ink-faint transition-colors hover:text-ink"
         >
           <ChevronLeft className="size-3.5" />
           <span>External Signing</span>

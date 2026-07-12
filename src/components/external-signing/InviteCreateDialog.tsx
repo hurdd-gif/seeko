@@ -56,15 +56,15 @@ export function InviteCreateDialog({
             role="dialog"
             aria-modal="true"
             aria-labelledby="new-invite-title"
-            className="max-h-[90dvh] w-full max-w-xl origin-bottom overflow-y-auto rounded-t-[28px] border-0 bg-white shadow-[0_24px_80px_-48px_rgba(0,0,0,0.55)] ring-1 ring-black/[0.06] touch-auto sm:origin-center sm:rounded-[28px]"
+            className="max-h-[90dvh] w-full max-w-xl origin-bottom overflow-y-auto rounded-t-[28px] border-0 bg-surface-1 shadow-[0_24px_80px_-48px_rgba(0,0,0,0.55)] ring-1 ring-wash-6 touch-auto sm:origin-center sm:rounded-[28px]"
             initial={reduce ? { opacity: 1 } : { opacity: 0, y: 28, scale: 0.98 }}
             animate={reduce ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }}
             exit={reduce ? { opacity: 0 } : { opacity: 0, y: 18, scale: 0.985 }}
             transition={panelTransition}
           >
-            <div className="flex items-center justify-between border-b border-black/[0.06] bg-[#fbfbfb] px-6 py-5">
+            <div className="flex items-center justify-between border-b border-wash-6 bg-surface-2 px-6 py-5">
               <div className="flex items-center gap-3">
-                <div className="flex size-10 items-center justify-center rounded-2xl bg-[#0a63cc]/10 text-[#0a63cc]">
+                <div className="flex size-10 items-center justify-center rounded-2xl bg-seeko-accent-ink/10 text-seeko-accent-ink">
                   <FileSignature className="size-5" strokeWidth={1.9} />
                 </div>
                 <h2 id="new-invite-title" className={`${CARD_TITLE} text-[18px]`}>
@@ -75,7 +75,7 @@ export function InviteCreateDialog({
                 type="button"
                 onClick={onClose}
                 aria-label="Close"
-                className="-m-1.5 flex size-9 items-center justify-center rounded-full text-[#9a9a9a] transition-[background-color,color,transform] duration-150 ease-out hover:bg-black/[0.04] hover:text-[#3a3a3a] active:scale-[0.94]"
+                className="-m-1.5 flex size-9 items-center justify-center rounded-full text-ink-faint transition-[background-color,color,transform] duration-150 ease-out hover:bg-wash-4 hover:text-ink active:scale-[0.94]"
               >
                 <X className="size-4" />
               </button>
