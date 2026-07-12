@@ -169,6 +169,27 @@ export function PaymentCreateDialog({
     onOpenChange(false);
   }
 
+  // "Add another" — clear the transaction details and drop back to the form
+  // without closing, so a run of payments doesn't mean reopening the dialog
+  // each time. The payee lane (mode + selected team member) is kept so paying
+  // the same person again is one tap; the amount/items always start fresh.
+  // onCreated() refreshes the list behind the dialog so the recorded payment
+  // shows up immediately.
+  function startAnother() {
+    setPayeeName('');
+    setItems([{ id: uuid(), label: '', amount: '' }]);
+    setSaving(false);
+    setSuccess(false);
+    setCopied(false);
+    setInvEmail('');
+    setInvEmailError('');
+    setInvNote('');
+    setInvExpiry('30');
+    setInvoiceSuccess(false);
+    setSentEmail('');
+    onCreated();
+  }
+
   const isExternal = payeeMode === 'external';
   const isInvoice = payeeMode === 'invoice';
   const externalName = payeeName.trim();
@@ -379,7 +400,21 @@ export function PaymentCreateDialog({
                       <span className="font-medium text-ink-title">{payeeLabel}</span>.
                     </p>
                   </div>
-                  <Button onClick={() => { handleClose(); onCreated(); }} className={`mt-2 transition-[background-color,transform] duration-150 ease-out active:scale-[0.98] ${DIALOG_SAVE}`}>Done</Button>
+                  <div className="mt-2 flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={startAnother}
+                      className={`border-wash-8 bg-transparent transition-[background-color,color,transform] duration-150 ease-out active:scale-[0.98] ${DIALOG_CANCEL}`}
+                    >
+                      Add another
+                    </Button>
+                    <Button
+                      onClick={() => { handleClose(); onCreated(); }}
+                      className={`transition-[background-color,transform] duration-150 ease-out active:scale-[0.98] ${DIALOG_SAVE}`}
+                    >
+                      Done
+                    </Button>
+                  </div>
                 </motion.div>
               ) : invoiceSuccess ? (
                 <motion.div
@@ -405,7 +440,21 @@ export function PaymentCreateDialog({
                       will receive an email with a secure link to submit their invoice.
                     </p>
                   </div>
-                  <Button onClick={() => { handleClose(); onCreated(); }} className={`mt-2 transition-[background-color,transform] duration-150 ease-out active:scale-[0.98] ${DIALOG_SAVE}`}>Done</Button>
+                  <div className="mt-2 flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={startAnother}
+                      className={`border-wash-8 bg-transparent transition-[background-color,color,transform] duration-150 ease-out active:scale-[0.98] ${DIALOG_CANCEL}`}
+                    >
+                      Add another
+                    </Button>
+                    <Button
+                      onClick={() => { handleClose(); onCreated(); }}
+                      className={`transition-[background-color,transform] duration-150 ease-out active:scale-[0.98] ${DIALOG_SAVE}`}
+                    >
+                      Done
+                    </Button>
+                  </div>
                 </motion.div>
               ) : (
                 <motion.div
