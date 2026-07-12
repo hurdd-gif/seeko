@@ -18,17 +18,15 @@ interface AvatarImageProps extends Omit<React.ImgHTMLAttributes<HTMLImageElement
 }
 
 const AvatarImage = React.forwardRef<HTMLImageElement, AvatarImageProps>(
-  ({ className, src, alt = '', ...props }, ref) => {
-    if (!src) return null;
-    return (
-      <img
-        ref={ref}
-        src={src}
-        alt={alt}
-        className={cn('aspect-square h-full w-full object-cover', className)}
-        {...props}
-      />
-    );
+  (_props, _ref) => {
+    // Product decision: everyone renders the deterministic gradient avatar
+    // instead of an uploaded photo. This is the single app-wide chokepoint —
+    // every `<Avatar>` in the app pairs an `<AvatarImage src=… />` with a
+    // seeded `<AvatarFallback>`, so short-circuiting the photo here lets the
+    // gradient fallback take over everywhere. Callers are untouched (the prop
+    // signature is preserved) so this is a one-line revert: restore the
+    // original `src`-rendering body to bring photos back.
+    return null;
   }
 );
 AvatarImage.displayName = 'AvatarImage';
