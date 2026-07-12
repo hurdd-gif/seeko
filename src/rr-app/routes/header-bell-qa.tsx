@@ -59,7 +59,7 @@ export function HeaderBellQaRoute() {
         areas: [],
       }}
     >
-      <div className="px-[52px] py-12 text-sm text-[#808080]">
+      <div className="px-[52px] py-12 text-sm text-ink-muted">
         Visual-QA preview — the live inbox bell + slide/pop unread badge live in
         the header (top-right). Click it to open the dropdown feed.
       </div>

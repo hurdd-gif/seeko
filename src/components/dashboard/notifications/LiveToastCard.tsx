@@ -190,7 +190,7 @@ export function LiveToastCard({
           }}
           className={[
             'absolute top-3 right-3 flex size-6 items-center justify-center rounded-full',
-            'bg-black/[0.05] text-[rgb(99,99,94)] hover:bg-black/[0.09] hover:text-[rgb(33,32,28)] transition-colors cursor-pointer',
+            'bg-wash-5 text-[rgb(99,99,94)] hover:bg-black/[0.09] hover:text-[rgb(33,32,28)] transition-colors cursor-pointer',
           ].join(' ')}
           role="button"
           aria-label="Dismiss notification"

@@ -74,12 +74,12 @@ export const MobileNotificationSheet = forwardRef<HTMLDivElement, MobileNotifica
 
               {/* Header */}
               <div className="flex items-center justify-between px-4 py-3">
-                <h3 className="text-[15px] font-medium tracking-[-0.28px] text-[#0d0d0d]">Inbox</h3>
+                <h3 className="text-[15px] font-medium tracking-[-0.28px] text-ink-title">Inbox</h3>
                 <div className="flex items-center gap-3">
                   {unreadCount > 0 && (
                     <button
                       onClick={onMarkAllRead}
-                      className="inline-flex items-center gap-1.5 text-[13px] text-[#808080] active:text-[#0d0d0d] transition-colors"
+                      className="inline-flex items-center gap-1.5 text-[13px] text-ink-muted active:text-ink-title transition-colors"
                     >
                       <CheckCheck className="size-3.5" />
                       Mark all read
@@ -87,14 +87,14 @@ export const MobileNotificationSheet = forwardRef<HTMLDivElement, MobileNotifica
                   )}
                   <button
                     onClick={onClose}
-                    className="flex size-8 items-center justify-center rounded-full bg-[#0000000d] text-[#808080] active:bg-[#0000001a]"
+                    className="flex size-8 items-center justify-center rounded-full bg-wash-5 text-ink-muted active:bg-wash-10"
                   >
                     <X className="size-4" />
                   </button>
                 </div>
               </div>
 
-              <div className="mx-4 h-px bg-[#0000000d]" />
+              <div className="mx-4 h-px bg-wash-5" />
 
               {/* Notification list */}
               <div
@@ -104,14 +104,14 @@ export const MobileNotificationSheet = forwardRef<HTMLDivElement, MobileNotifica
                 {isEmpty ? (
                   <div className="flex flex-col items-center justify-center py-16 text-center">
                     <CheckCircle2 className="size-10 text-[#0000001f]" />
-                    <p className="mt-3 text-[13px] text-[#808080]">You&apos;re all caught up</p>
+                    <p className="mt-3 text-[13px] text-ink-muted">You&apos;re all caught up</p>
                   </div>
                 ) : (
                   <AnimatePresence mode="popLayout">
                     {grouped.map((group, gi) => (
                       <div key={group.label} className={gi > 0 ? 'mt-1' : ''}>
-                        {gi > 0 && <div className="mx-4 mb-1 h-px bg-[#0000000d]" />}
-                        <div className="px-4 pt-2 pb-1.5 text-[13px] text-[#808080]">
+                        {gi > 0 && <div className="mx-4 mb-1 h-px bg-wash-5" />}
+                        <div className="px-4 pt-2 pb-1.5 text-[13px] text-ink-muted">
                           {group.label}
                         </div>
                         {group.items.map((notif) => {

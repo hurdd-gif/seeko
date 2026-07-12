@@ -35,7 +35,7 @@ export const BellToggle = forwardRef<HTMLButtonElement, BellToggleProps>(
         transition={d.bell.spring}
         className={`relative flex size-8 items-center justify-center rounded-full transition-colors duration-150 ease-[cubic-bezier(0.22,1,0.36,1)] ${
           light
-            ? 'text-[#808080] hover:bg-[#00000012] hover:text-[#0d0d0d]'
+            ? 'text-ink-muted hover:bg-[#00000012] hover:text-ink-title'
             : 'text-muted-foreground hover:text-foreground'
         }`}
       >

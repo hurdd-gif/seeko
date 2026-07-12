@@ -1,6 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { showRichToast } from '@/components/ui/rich-toast';
+import {
+  TaskDeleteUndoToastSlot,
+  UNDO_WINDOW_MS,
+} from '@/components/dashboard/tasks/TaskDeleteUndoToast';
 import { LiveToastContainer } from '@/components/dashboard/notifications/LiveToastContainer';
 import { useLiveToast } from '@/components/dashboard/notifications/LiveToastContext';
 import type { Notification, NotificationKind } from '@/lib/types';
@@ -58,6 +62,21 @@ function QaButton({ label, onClick }: { label: string; onClick: () => void }) {
 export function ToastQaRoute() {
   const { addLiveToast } = useLiveToast();
   const [kindIdx, setKindIdx] = useState(0);
+
+  // Task-delete undo toast — in the app the parent (TasksBoard) owns the
+  // window timer; here a local timeout mirrors it so the drain lines up.
+  const [pendingDeleteName, setPendingDeleteName] = useState<string | null>(null);
+  const undoTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const showUndoToast = () => {
+    clearTimeout(undoTimerRef.current);
+    setPendingDeleteName('Boss arena lighting pass');
+    undoTimerRef.current = setTimeout(() => setPendingDeleteName(null), UNDO_WINDOW_MS);
+  };
+  const clearUndoToast = () => {
+    clearTimeout(undoTimerRef.current);
+    setPendingDeleteName(null);
+  };
+  useEffect(() => () => clearTimeout(undoTimerRef.current), []);
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -120,6 +139,7 @@ export function ToastQaRoute() {
           />
         </div>
         <div className="flex flex-wrap gap-2">
+          <QaButton label="task delete undo" onClick={showUndoToast} />
           <QaButton
             label="live toast (cycles kind)"
             onClick={() => {
@@ -137,6 +157,11 @@ export function ToastQaRoute() {
         </p>
       </div>
 
+      <TaskDeleteUndoToastSlot
+        pendingTaskName={pendingDeleteName}
+        onUndo={clearUndoToast}
+        onCommit={clearUndoToast}
+      />
       <LiveToastContainer onTapToast={() => {}} onOpenPanel={() => {}} />
     </div>
   );

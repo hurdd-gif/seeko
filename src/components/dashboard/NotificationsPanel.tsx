@@ -61,7 +61,7 @@ const levels: { id: NotifLevel; label: string; description: string; icon: typeof
 
 // White surface lifted by the canonical shadow — the same material as every other
 // light app card. `rounded-2xl` outer; inner rows nest at `rounded-xl` (concentric).
-const PAPER_CARD = 'overflow-hidden rounded-2xl bg-white shadow-seeko';
+const PAPER_CARD = 'overflow-hidden rounded-2xl bg-surface-1 shadow-seeko';
 
 export function NotificationsPanel() {
   const reduce = useReducedMotion();
@@ -93,8 +93,8 @@ export function NotificationsPanel() {
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
       <div>
-        <h1 className="text-[22px] font-semibold tracking-tight text-[#111] text-balance">Notifications</h1>
-        <p className="text-[13px] text-[#808080]">Choose what you want to be notified about.</p>
+        <h1 className="text-[22px] font-semibold tracking-tight text-ink-title text-balance">Notifications</h1>
+        <p className="text-[13px] text-ink-muted">Choose what you want to be notified about.</p>
       </div>
 
       <motion.div
@@ -121,7 +121,7 @@ export function NotificationsPanel() {
                       LIGHT_FOCUS_RING,
                       active
                         ? 'border-transparent'
-                        : 'border-black/[0.06] hover:border-black/[0.12] hover:bg-black/[0.02]'
+                        : 'border-wash-6 hover:border-black/[0.12] hover:bg-wash-2'
                     )}
                   >
                     {active && (
@@ -129,25 +129,25 @@ export function NotificationsPanel() {
                         layoutId="notifLevelPill"
                         initial={false}
                         transition={pillTransition}
-                        className="absolute inset-0 rounded-xl border border-[#0d7aff]/30 bg-[#0d7aff]/[0.06]"
+                        className="absolute inset-0 rounded-xl border border-seeko-accent/30 bg-seeko-accent/[0.06]"
                       />
                     )}
                     <div className={cn(
                       'relative z-10 flex size-9 items-center justify-center rounded-lg transition-colors',
-                      active ? 'bg-[#0a63cc]/10 text-[#0a63cc]' : 'bg-black/[0.04] text-[#808080]'
+                      active ? 'bg-seeko-accent-ink/10 text-seeko-accent-ink' : 'bg-wash-4 text-ink-muted'
                     )}>
                       <level.icon className="size-4" />
                     </div>
                     <div className="relative z-10 flex-1">
-                      <p className="text-sm font-medium text-[#111]">{level.label}</p>
-                      <p className="text-xs text-[#808080]">{level.description}</p>
+                      <p className="text-sm font-medium text-ink-title">{level.label}</p>
+                      <p className="text-xs text-ink-muted">{level.description}</p>
                     </div>
                     {active && (
                       <motion.div
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
                         transition={springs.snappy}
-                        className="relative z-10 size-2 rounded-full bg-[#0d7aff] shrink-0"
+                        className="relative z-10 size-2 rounded-full bg-seeko-accent shrink-0"
                       />
                     )}
                   </button>
@@ -175,18 +175,18 @@ export function NotificationsPanel() {
                 return (
                   <div
                     key={channel.id}
-                    className="flex items-center justify-between rounded-xl px-3 py-3 transition-colors hover:bg-black/[0.02]"
+                    className="flex items-center justify-between rounded-xl px-3 py-3 transition-colors hover:bg-wash-2"
                   >
                     <div className="flex items-center gap-3">
                       <div className={cn(
                         'flex size-8 items-center justify-center rounded-lg transition-colors',
-                        on ? 'bg-[#0a63cc]/10 text-[#0a63cc]' : 'bg-black/[0.04] text-[#808080]'
+                        on ? 'bg-seeko-accent-ink/10 text-seeko-accent-ink' : 'bg-wash-4 text-ink-muted'
                       )}>
                         <channel.icon className="size-3.5" />
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-[#111]">{channel.label}</p>
-                        <p className="text-xs text-[#808080]">{channel.description}</p>
+                        <p className="text-sm font-medium text-ink-title">{channel.label}</p>
+                        <p className="text-xs text-ink-muted">{channel.description}</p>
                       </div>
                     </div>
                     <button
@@ -198,7 +198,7 @@ export function NotificationsPanel() {
                       className={cn(
                         'inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-150 ease-out',
                         LIGHT_FOCUS_RING,
-                        on ? 'bg-[#0d7aff]' : 'bg-black/[0.14]'
+                        on ? 'bg-seeko-accent' : 'bg-black/[0.14]'
                       )}
                     >
                       <span
@@ -222,7 +222,7 @@ export function NotificationsPanel() {
         transition={{ ...springs.snappy, delay: 0.2 }}
         className="flex items-center justify-between gap-3"
       >
-        <p className="text-[13px] text-[#808080]">
+        <p className="text-[13px] text-ink-muted">
           {activeChannels.length > 0
             ? `Receiving: ${activeChannels.join(', ')}`
             : 'All channels muted'}

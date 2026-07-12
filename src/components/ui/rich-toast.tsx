@@ -206,7 +206,7 @@ function RichToastCard({
                 type="button"
                 onClick={close}
                 aria-label="Dismiss"
-                className="absolute right-[12px] top-[10px] flex size-6 items-center justify-center rounded-md transition-[background-color,transform] duration-150 ease-out hover:bg-black/[0.05] active:scale-95 active:bg-black/[0.09] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-black/20"
+                className="absolute right-[12px] top-[10px] flex size-6 items-center justify-center rounded-md transition-[background-color,transform] duration-150 ease-out hover:bg-wash-5 active:scale-95 active:bg-black/[0.09] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-black/20"
                 style={{ color: muted }}
               >
                 <X className="size-4" strokeWidth={2} />

@@ -41,21 +41,21 @@ export function InboxRow({ notification, group, index, stagger = 0, onTap, entra
         whileHover={{ x: 2 }}
         transition={SNAPPY}
         onClick={() => onTap(notification)}
-        className="flex w-full items-start gap-3 rounded-2xl px-4 py-3 text-left transition-colors hover:bg-[#0000000a]"
+        className="flex w-full items-start gap-3 rounded-2xl px-4 py-3 text-left transition-colors hover:bg-wash-4"
       >
-        <Icon className="size-5 text-[#808080] shrink-0 mt-px" aria-hidden />
+        <Icon className="size-5 text-ink-muted shrink-0 mt-px" aria-hidden />
         <div className="flex-1 min-w-0">
           <p
             className={`text-[14px] leading-snug tracking-[-0.28px] tabular-nums ${
-              !notification.read ? 'font-medium text-[#0d0d0d]' : 'text-[#808080]'
+              !notification.read ? 'font-medium text-ink-title' : 'text-ink-muted'
             }`}
           >
             {notification.title}
           </p>
           {notification.body && (
-            <p className="text-xs mt-0.5 line-clamp-2 text-[#808080] [text-wrap:pretty]">{notification.body}</p>
+            <p className="text-xs mt-0.5 line-clamp-2 text-ink-muted [text-wrap:pretty]">{notification.body}</p>
           )}
-          <p className="text-[11px] mt-1 text-[#808080] tabular-nums">
+          <p className="text-[11px] mt-1 text-ink-muted tabular-nums">
             {formatTime(notification.created_at, group)}
           </p>
         </div>
