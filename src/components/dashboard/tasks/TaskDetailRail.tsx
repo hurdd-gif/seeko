@@ -338,7 +338,7 @@ export function TaskDetailRail({
               transition={shouldReduce ? { duration: 0 } : SPRING}
               className="flex h-full min-h-0 flex-col"
             >
-              <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-2">
+              <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pb-2">
                 <RailSection
                   title="Milestones"
                   defaultOpen

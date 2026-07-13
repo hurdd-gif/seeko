@@ -40,7 +40,9 @@ export function RailSection({
 
   return (
     <section className="overflow-hidden rounded-xl bg-surface-1 shadow-seeko">
-      <div className="flex items-center gap-2 px-4 pt-3.5 pb-2">
+      {/* Header 14/8 → 12/6: a 14px title over a 12px chevron was carrying 47px
+          of card height. The rail is a dense reference column, not a page. */}
+      <div className="flex items-center gap-2 px-4 pt-3 pb-1.5">
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
@@ -72,7 +74,7 @@ export function RailSection({
             transition={shouldReduce ? { duration: 0 } : SPRING}
             style={{ overflow: 'hidden' }}
           >
-            <div className="px-4 pb-4">{children}</div>
+            <div className="px-4 pb-3">{children}</div>
           </motion.div>
         )}
       </AnimatePresence>
