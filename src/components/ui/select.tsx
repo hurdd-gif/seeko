@@ -178,7 +178,7 @@ const Select = React.forwardRef<
                 className={cn(
                   'overflow-hidden min-w-[var(--select-dropdown-width)] w-max max-w-[calc(100vw-16px)]',
                   light
-                    ? 'rounded-[14px] bg-surface-1 shadow-seeko-pop'
+                    ? 'rounded-[14px] bg-overlay shadow-seeko-pop'
                     : 'rounded-xl border border-white/[0.08] bg-popover/80 shadow-xl backdrop-blur-xl backdrop-saturate-150'
                 )}
               >

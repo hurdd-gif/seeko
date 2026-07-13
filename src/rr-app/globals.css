@@ -124,6 +124,21 @@
   --surface-7: oklch(0.9128 0 0);  /* #e2e2e2 */
   --surface-8: oklch(0.8945 0 0);  /* #dcdcdc */
 
+  /* OVERLAY — the fill of a surface that FLOATS: menu, popover, dropdown, dialog.
+     Not a rung of the ladder above; a semantic that resolves to a different rung
+     in each scheme, and that is the entire reason it exists.
+     THE LADDER RUNS THE OTHER WAY IN DARK. On light, `--surface-1` is white — the
+     TOP of the ladder, and the reason a white menu on a #fafafa canvas reads as
+     lifted at all. On dark, `--surface-1` is the CARD BASE — the BOTTOM. So a
+     floating menu painted `bg-surface-1` landed at exactly the lightness of the
+     cards it was floating over, and the only thing left holding it apart was its
+     ring. That's a halo, not elevation.
+     In dark, elevation IS lightness. A black drop shadow on a 0.218 canvas has
+     almost nothing left to darken — the pool it casts is invisible, so no amount
+     of shadow tuning could have separated those two layers. Lifting the fill can.
+     Light keeps white, byte-for-byte; dark gets the popover tier. */
+  --overlay: oklch(1.0000 0 0);    /* #ffffff — identical to --surface-1 */
+
   --sh-surface-1:
     0 0 0 0.5px rgba(0, 0, 0, 0.055),
     0 1px 2px rgba(0, 0, 0, 0.035);
@@ -236,7 +251,13 @@
      Card base sits a full 0.05 L above the canvas — the same canvas↔card
      delta the light theme carries (#eeeeee 0.949 ↔ white 1.0) — with
      slightly widened steps so surface tiers stay legible on the lift */
-  --surface-1: oklch(0.290 0 0); /* #2b2b2b — card base */
+  /* Card base. Was 0.290 — a full 0.072 over the canvas, which turned every card
+     into a mid-grey slab that announced itself before its contents did. 0.265
+     still clears the canvas by 0.047 (comfortably more than the 0.034 that once
+     produced the "black card" complaint, so this is NOT a slide back to that),
+     but it reads as the canvas raised rather than as a lighter colour laid on
+     top. --card tracks it below; the two must never drift apart. */
+  --surface-1: oklch(0.265 0 0); /* #262626 — card base */
   --surface-2: oklch(0.303 0 0);
   --surface-3: oklch(0.316 0 0);
   --surface-4: oklch(0.332 0 0); /* secondary-button fill tier */
@@ -244,6 +265,18 @@
   --surface-6: oklch(0.364 0 0);
   --surface-7: oklch(0.382 0 0);
   --surface-8: oklch(0.400 0 0);
+
+  /* The whole point of the semantic (see :root): the floating tier, NOT the card
+     base. It only has to CLEAR the card, not shout over it — the popover rung
+     (0.332) does clear it but lands on a grey bright enough to read as its own
+     colour rather than as the same material lifted. This is the quiet version:
+     0.025 over the card, and that's ALL it takes — with the ring and the pool
+     underneath, a 0.02-ish L step already says "on top of". Going brighter
+     doesn't add elevation, it just adds grey.
+     PINNED TO THE CARD, not to an absolute. It must be re-derived whenever
+     --surface-1 moves, or the floating tier silently drifts away from the thing
+     it floats over. card 0.265 + 0.025 = 0.290. */
+  --overlay: oklch(0.290 0 0);
 
   --control-fill: oklch(0.338 0 0);
   --hairline:     oklch(1 0 0 / 0.12);
@@ -254,7 +287,7 @@
      card" that doesn't read as elevated). Re-anchor them onto the same surface
      ladder the payments UI already uses (card = surface-1) so every dark card
      lifts to a real, monotonic elevation over the canvas. */
-  --card:      oklch(0.290 0 0); /* = --surface-1, the documented card base */
+  --card:      oklch(0.265 0 0); /* = --surface-1, the documented card base */
   --popover:   oklch(0.332 0 0); /* floats above cards (= surface-4 tier) */
   --muted:     oklch(0.303 0 0); /* muted fill sits just over the card */
   --secondary: oklch(0.303 0 0);
@@ -324,15 +357,41 @@
      light to fill them). Ring alphas run hotter than a naive flip (0.13–0.17)
      because on the lifted ramp the ring IS the elevation cue — dark drop
      shadows barely register against a 0.24 canvas. --sh-elevated and
-     --sh-accent-inset are already dark-correct and inherit unchanged. */
+     --sh-accent-inset are already dark-correct and inherit unchanged.
+
+     RESTING SURFACES ARE NOT THE PROBLEM AND MUST NOT BE "FIXED". Cards,
+     columns and chrome (--sh-seeko, --sh-surface-*) read correctly as-is:
+     they sit ON the canvas, and the tiny 1–2px pool is all the separation
+     they should have. Deepening those pools puts a hard, dirty halo around
+     every card — tried it, it's worse. Only the FLOATING tier was broken,
+     and only the floating tier is retuned below. */
   --sh-accent-glow: 0 0 12px oklch(0.6037 0.2168 257.92 / 0.10);
   --sh-seeko:
     0 0 0 0.5px oklch(1 0 0 / 0.14),
     0 1px 2px oklch(0 0 0 / 0.35);
+
+  /* ─── The floating tier ──────────────────────────────────────────────────
+     What actually lifts a menu in dark is its FILL (see --overlay: it now
+     sits a real 0.042 L above the card it floats over). The shadow's job is
+     only to sell that gap — so it can finally be quiet, which is the whole
+     point of the retune:
+
+     - THE RING DROPS 0.16 → 0.08. It used to be cranked that hot on purpose:
+       the fill wasn't lifting, so the ring was made to carry the elevation
+       alone. But a bright, UNIFORM outline isn't how a lit edge behaves —
+       light comes from one direction. Ringed equally on all four sides, the
+       surface reads as EMITTING light, and that glow was the pale halo.
+     - A TOP-EDGE INSET replaces it. One 1px highlight where the light would
+       actually land says "this has thickness" better than any amount of ring
+       — the same trick --sh-elevated has always used.
+     - THE POOL STAYS SOFT AND WIDE. Big blur, low alpha, no hard edge. A
+       dark, tight pool on a 0.218 canvas doesn't read as depth, it reads as
+       grime. This one just quietly darkens the ground under the panel. */
   --sh-seeko-pop:
-    0 0 0 0.5px oklch(1 0 0 / 0.16),
-    0 6px 16px -4px oklch(0 0 0 / 0.45),
-    0 16px 32px -12px oklch(0 0 0 / 0.55);
+    0 0 0 0.5px oklch(1 0 0 / 0.06),
+    inset 0 1px 0 oklch(1 0 0 / 0.06),
+    0 8px 28px -10px oklch(0 0 0 / 0.22),
+    0 24px 56px -24px oklch(0 0 0 / 0.26);
   --sh-float: 0 10px 20px oklch(0 0 0 / 0.45);
   --sh-surface-1:
     0 0 0 0.5px oklch(1 0 0 / 0.13),
@@ -444,6 +503,12 @@
   --color-surface-6: var(--surface-6);
   --color-surface-7: var(--surface-7);
   --color-surface-8: var(--surface-8);
+
+  /* `bg-overlay` — the fill for anything that floats. Reach for this instead of
+     `bg-surface-1` on menus, popovers, dropdowns and dialogs: surface-1 names a
+     RUNG (which is the top of the ladder on light and the bottom of it on dark),
+     and this names the JOB. */
+  --color-overlay: var(--overlay);
 
   --shadow-surface-1: var(--sh-surface-1);
   --shadow-surface-2: var(--sh-surface-2);

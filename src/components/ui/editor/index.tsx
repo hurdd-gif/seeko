@@ -879,7 +879,7 @@ export function Editor({
         }}
       >
         <div className="flex flex-col gap-1">
-          <div className="border-wash-6 bg-surface-1 shadow-seeko-pop flex flex-nowrap items-center gap-0.5 overflow-x-auto rounded-lg border p-1 whitespace-nowrap">
+          <div className="border-wash-6 bg-overlay shadow-seeko-pop flex flex-nowrap items-center gap-0.5 overflow-x-auto rounded-lg border p-1 whitespace-nowrap">
             <div className="group/native-select relative w-fit">
               <select
                 id="block-style"

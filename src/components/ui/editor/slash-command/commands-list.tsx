@@ -57,7 +57,7 @@ const CommandsList = forwardRef<CommandsListHandle, CommandsListProps>(({ items,
   }));
 
   return (
-    <div className="bg-surface-1 text-ink-strong border-wash-6 z-50 min-w-44 overflow-hidden rounded-lg border p-1 shadow-seeko-pop">
+    <div className="bg-overlay text-ink-strong border-wash-6 z-50 min-w-44 overflow-hidden rounded-lg border p-1 shadow-seeko-pop">
       {items.length ? (
         items.map((item, index) => (
           <button

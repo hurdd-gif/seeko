@@ -262,7 +262,11 @@ export function TaskCard({
             width: CONTEXT_MENU_WIDTH,
             transformOrigin: 'top left',
           }}
-          className="z-[220] overflow-hidden rounded-[14px] bg-surface-1 p-1 shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_2px_4px_-1px_rgba(0,0,0,0.08),0_10px_24px_-12px_rgba(0,0,0,0.22),0_24px_44px_-28px_rgba(0,0,0,0.18)]"
+          /* The inline shadow is black-alpha and therefore INVISIBLE in dark —
+             it's the one floating menu the shadow tokens never reached. Dark
+             takes the canonical pop token instead; light keeps the hand-tuned
+             stack it already ships. */
+          className="z-[220] overflow-hidden rounded-[14px] bg-overlay p-1 shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_2px_4px_-1px_rgba(0,0,0,0.08),0_10px_24px_-12px_rgba(0,0,0,0.22),0_24px_44px_-28px_rgba(0,0,0,0.18)] dark:shadow-seeko-pop"
         >
           {canContextEdit && (
             <button

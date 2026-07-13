@@ -158,7 +158,7 @@ export function DatePopover({
           exit={reduce ? { opacity: 0 } : { opacity: 0, y: -4 }}
           transition={reduce ? { duration: 0 } : SPRING}
           style={{ position: 'fixed', left: coords.left, top: coords.top, width: PANEL_WIDTH }}
-          className="z-[200] origin-top-left overflow-hidden rounded-[14px] bg-surface-1 p-2.5 shadow-seeko-pop"
+          className="z-[200] origin-top-left overflow-hidden rounded-[14px] bg-overlay p-2.5 shadow-seeko-pop"
         >
           {/* Month nav */}
           <div className="flex items-center justify-between px-1 pb-2">

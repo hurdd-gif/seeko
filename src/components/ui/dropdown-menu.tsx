@@ -202,7 +202,7 @@ function DropdownMenuContent({
           className={cn(
             "z-50 min-w-[8rem]",
             light
-              ? "rounded-[14px] bg-surface-1 p-1 shadow-seeko-pop"
+              ? "rounded-[14px] bg-overlay p-1 shadow-seeko-pop"
               : "rounded-xl border border-white/[0.08] bg-popover/80 p-1.5 shadow-xl backdrop-blur-xl backdrop-saturate-150",
             className
           )}

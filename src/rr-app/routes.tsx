@@ -326,7 +326,7 @@ function StudioHeaderCluster() {
         </button>
 
         {open === 'more' && (
-          <div className="rr-pop absolute right-0 top-full z-50 mt-[9px] flex w-[244px] origin-top-right flex-col gap-1 overflow-hidden rounded-[20px] bg-surface-1 p-1 shadow-seeko-pop">
+          <div className="rr-pop absolute right-0 top-full z-50 mt-[9px] flex w-[244px] origin-top-right flex-col gap-1 overflow-hidden rounded-[20px] bg-overlay p-1 shadow-seeko-pop">
             <div className="flex flex-col">
               {MORE_LINKS.map((link) => (
                 <ChromeMenuLink key={link.to} {...link} onNavigate={() => setOpen(null)} />
@@ -355,7 +355,7 @@ function StudioHeaderCluster() {
         </button>
 
         {open === 'account' && (
-          <div className="rr-pop absolute right-[-12px] top-[-14px] z-50 flex w-[244px] origin-top-right flex-col gap-1 overflow-hidden rounded-[20px] bg-surface-1 p-1 shadow-seeko-pop">
+          <div className="rr-pop absolute right-[-12px] top-[-14px] z-50 flex w-[244px] origin-top-right flex-col gap-1 overflow-hidden rounded-[20px] bg-overlay p-1 shadow-seeko-pop">
             <div className="flex items-center px-3 py-2.5 pr-14">
               <div className="min-w-0">
                 <p className="truncate text-[14px] font-medium tracking-[-0.28px] text-ink-title">

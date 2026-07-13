@@ -994,7 +994,7 @@ function PaidPaymentRow({
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.98, y: -2 }}
               transition={{ type: 'spring', duration: 0.18, bounce: 0 }}
-              className="fixed z-50 w-[228px] rounded-[14px] bg-surface-1 p-1 shadow-seeko-pop"
+              className="fixed z-50 w-[228px] rounded-[14px] bg-overlay p-1 shadow-seeko-pop"
               style={{ left: refundMenu.x, top: refundMenu.y, transformOrigin: 'top left' }}
               onMouseDown={(e) => e.stopPropagation()}
               onClick={(e) => e.stopPropagation()}

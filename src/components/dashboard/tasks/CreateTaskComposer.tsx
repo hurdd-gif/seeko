@@ -313,7 +313,7 @@ export function CreateTaskComposer({
             aria-label="New issue"
             {...modalCardEntrance(reduce ?? null)}
             style={{ width: 'min(720px, calc(100vw - 32px))' }}
-            className="flex flex-col overflow-hidden rounded-[18px] bg-surface-1 shadow-seeko-pop ring-1 ring-wash-6"
+            className="flex flex-col overflow-hidden rounded-[18px] bg-overlay shadow-seeko-pop ring-1 ring-wash-6"
           >
             {/* ── Header ───────────────────────────────────── */}
             <div className="flex items-center gap-2 px-3 py-2.5">

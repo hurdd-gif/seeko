@@ -168,7 +168,7 @@ export function ProgressRing({
           initial={false}
           animate={open ? 'shown' : 'hidden'}
           style={{ transformOrigin: RING_TOOLTIP.shell.transformOrigin }}
-          className="rounded-2xl bg-surface-1 p-3 shadow-seeko-pop"
+          className="rounded-2xl bg-overlay p-3 shadow-seeko-pop"
         >
           <p className="mb-2 px-1 text-[12px] leading-none text-[var(--ov-muted)]">
             Health by area

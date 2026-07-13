@@ -292,7 +292,7 @@ function IssueRow({
             width: CONTEXT_MENU_WIDTH,
             transformOrigin: 'top left',
           }}
-          className="z-[220] overflow-hidden rounded-[14px] bg-surface-1 p-1 shadow-seeko-pop"
+          className="z-[220] overflow-hidden rounded-[14px] bg-overlay p-1 shadow-seeko-pop"
         >
           <button
             type="button"

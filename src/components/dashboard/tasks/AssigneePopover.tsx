@@ -132,7 +132,7 @@ export function AssigneePopover({
           exit={reduce ? { opacity: 0 } : { opacity: 0, y: -4 }}
           transition={reduce ? { duration: 0 } : SPRING}
           style={{ position: 'fixed', left: coords.left, top: coords.top, width: PANEL_WIDTH }}
-          className="z-[200] origin-top-right overflow-hidden rounded-[14px] bg-surface-1 p-1 shadow-seeko-pop"
+          className="z-[200] origin-top-right overflow-hidden rounded-[14px] bg-overlay p-1 shadow-seeko-pop"
         >
           <div className="max-h-[320px] overflow-y-auto [scrollbar-width:thin]">
             {/* No assignee */}

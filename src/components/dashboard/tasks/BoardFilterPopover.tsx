@@ -110,7 +110,7 @@ export function BoardFilterPopover({
             animate={{ opacity: 1, y: 0 }}
             exit={reduce ? { opacity: 0 } : { opacity: 0, y: -4 }}
             transition={reduce ? { duration: 0 } : SPRING}
-            className="group/menu absolute right-0 top-[calc(100%+4px)] z-[100] w-56 origin-top-right overflow-hidden rounded-[14px] bg-surface-1 p-1 shadow-seeko-pop"
+            className="group/menu absolute right-0 top-[calc(100%+4px)] z-[100] w-56 origin-top-right overflow-hidden rounded-[14px] bg-overlay p-1 shadow-seeko-pop"
             role="menu"
             aria-label="Filter tasks"
           >

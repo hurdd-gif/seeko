@@ -132,7 +132,7 @@ export function AddressAutocomplete({
             className={cn(
               'absolute z-50 mt-1 w-full overflow-hidden',
               light
-                ? 'rounded-[14px] bg-surface-1 shadow-seeko-pop'
+                ? 'rounded-[14px] bg-overlay shadow-seeko-pop'
                 : 'rounded-lg border border-border bg-popover shadow-xl'
             )}
           >

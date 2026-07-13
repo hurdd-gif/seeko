@@ -155,7 +155,7 @@ export function PageHeaderUser({
               exit={{ opacity: 0, scale: 0.96, y: -4 }}
               transition={SMOOTH}
               style={{ transformOrigin: 'top center' }}
-              className="group/menu absolute inset-x-0 top-full z-50 mt-[9px] flex flex-col gap-1 overflow-hidden rounded-[20px] bg-surface-1 p-1 shadow-seeko-pop"
+              className="group/menu absolute inset-x-0 top-full z-50 mt-[9px] flex flex-col gap-1 overflow-hidden rounded-[20px] bg-overlay p-1 shadow-seeko-pop"
             >
               {/* User info */}
               <div className="px-4 py-3">

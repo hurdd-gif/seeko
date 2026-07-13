@@ -142,7 +142,7 @@ export function TasksBoardColumn({
           exit={reduce ? { opacity: 0 } : { opacity: 0, y: -4 }}
           transition={reduce ? { duration: 0 } : MENU_SPRING}
           style={{ position: 'fixed', left: coords.left, top: coords.top, width: MENU_WIDTH }}
-          className="z-[200] origin-top-right overflow-hidden rounded-[14px] bg-surface-1 p-1 shadow-seeko-pop"
+          className="z-[200] origin-top-right overflow-hidden rounded-[14px] bg-overlay p-1 shadow-seeko-pop"
         >
           <button
             type="button"

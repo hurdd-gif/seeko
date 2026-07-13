@@ -72,7 +72,7 @@ function metaChipClass() {
 const QUICK_META_POPOVER = {
   panelWidth: 156,
   panelClassName:
-    'z-[200] origin-top-left overflow-hidden rounded-[14px] bg-surface-1 p-1 shadow-seeko-pop',
+    'z-[200] origin-top-left overflow-hidden rounded-[14px] bg-overlay p-1 shadow-seeko-pop',
   optionClassName:
     'flex h-7 w-full items-center gap-2 rounded-[10px] px-2 text-left transition-colors duration-150 ease-out hover:bg-wash-5',
   labelClassName: 'flex-1 truncate text-[12px] leading-4 tracking-[-0.1px] text-[#242424] dark:text-ink-strong',

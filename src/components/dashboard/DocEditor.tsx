@@ -105,7 +105,7 @@ function ImagePopover({ onInsert }: { onInsert: (url: string) => void }) {
       </ToolbarButton>
 
       {open && (
-        <div className="absolute left-0 top-8 z-50 w-72 rounded-lg border border-wash-8 bg-surface-1 p-3 shadow-seeko-pop">
+        <div className="absolute left-0 top-8 z-50 w-72 rounded-lg border border-wash-8 bg-overlay p-3 shadow-seeko-pop">
           <div className="mb-2 flex gap-1">
             {(['url', 'upload'] as const).map(t => (
               <button

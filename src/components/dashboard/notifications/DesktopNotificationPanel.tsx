@@ -31,7 +31,7 @@ export const DesktopNotificationPanel = forwardRef<HTMLDivElement, DesktopNotifi
             ref={ref}
             {...shellEntrance(reduce)}
             style={{ transformOrigin: DROPDOWN.shell.transformOrigin }}
-            className="absolute right-0 top-full mt-[9px] w-[340px] z-[9999] flex flex-col gap-1 overflow-hidden rounded-[20px] bg-surface-1 p-1 shadow-seeko-pop"
+            className="absolute right-0 top-full mt-[9px] w-[340px] z-[9999] flex flex-col gap-1 overflow-hidden rounded-[20px] bg-overlay p-1 shadow-seeko-pop"
           >
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3">

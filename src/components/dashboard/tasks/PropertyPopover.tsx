@@ -166,7 +166,7 @@ export function PropertyPopover<V extends string>({
           style={{ position: 'fixed', left: coords.left, top: coords.top, width: panelWidth }}
           className={
             panelClassName ??
-            'z-[200] origin-top-left overflow-hidden rounded-[14px] bg-surface-1 p-1 shadow-seeko-pop'
+            'z-[200] origin-top-left overflow-hidden rounded-[14px] bg-overlay p-1 shadow-seeko-pop'
           }
         >
           <div className="max-h-[360px] overflow-y-auto [scrollbar-width:thin]">

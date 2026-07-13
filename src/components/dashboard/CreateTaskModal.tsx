@@ -306,7 +306,7 @@ function ThemedSelect({
             role="listbox"
             {...shellEntrance(reduce)}
             style={{ transformOrigin: 'top center' }}
-            className="absolute inset-x-0 top-full z-[80] mt-1.5 max-h-60 overflow-y-auto rounded-[14px] bg-surface-1 p-1 shadow-seeko-pop"
+            className="absolute inset-x-0 top-full z-[80] mt-1.5 max-h-60 overflow-y-auto rounded-[14px] bg-overlay p-1 shadow-seeko-pop"
           >
             {options.map((opt) => {
               const isSelected = opt.value === value;
@@ -415,7 +415,7 @@ function ThemedDatePicker({ value, onChange }: { value: string; onChange: (v: st
             ref={popRef}
             {...shellEntrance(reduce)}
             style={{ transformOrigin: 'top center' }}
-            className="absolute inset-x-0 top-full z-[80] mt-1.5 rounded-[14px] bg-surface-1 p-2.5 shadow-seeko-pop"
+            className="absolute inset-x-0 top-full z-[80] mt-1.5 rounded-[14px] bg-overlay p-2.5 shadow-seeko-pop"
           >
             <div className="flex items-center justify-between px-1 pb-2">
               <button
