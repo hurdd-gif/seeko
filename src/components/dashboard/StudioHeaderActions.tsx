@@ -40,7 +40,7 @@ import {
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import type { Notification } from '@/lib/types';
 import { getStoredTheme, setTheme, subscribeTheme, type Theme } from '@/lib/theme';
-import { springs } from '@/lib/motion';
+import { springs, shellEntrance, DROPDOWN } from '@/lib/motion';
 import { QuickCreateMorph } from '@/components/dashboard/QuickCreateMorph';
 
 const NotificationBell = dynamic(
@@ -51,42 +51,43 @@ const NotificationBell = dynamic(
 const SNAPPY = springs.snappy;
 
 /* ── Avatar menu motion ─────────────────────────────────────
- * The panel is `right-0 top-full mt-2`, w-[244px]. The avatar (36px)
- * sits directly above the panel's top-right, so the clip-path circle
- * originates at the avatar's centre: x = 244 − 18 = 226px from the
- * panel's left, y = −26px (18px half-avatar + 8px mt gap) above its top.
+ * This menu is on the CANONICAL dropdown entrance (`DROPDOWN` in
+ * @/lib/motion) — the same one the notification panel two buttons over
+ * already uses. It used to run a bespoke clip-path circle that wiped open
+ * from the avatar over 400ms while the rows rose 24px behind it on a 45ms
+ * stagger. That's a reveal, and a reveal is the wrong genre for a surface
+ * you open dozens of times a day: it made a routine menu into an event.
  *
- * STORYBOARD (ms after open):
- *     0ms   PANEL  clip-path circle 18px → 720px at the avatar, opacity 0→1
- *            (starts at avatar radius, never 0 — "nothing scales from 0";
- *             720px covers the panel + its shadow bleed)
- *            spring: visualDuration .40 · bounce 0 (a reveal, not a snap)
- *    60ms   ROWS   opacity 0→1 · y 24→0, staggered 45ms, crisp 460/34
- *            → the list rises out of the growing circle
- *   exit    PANEL only · circle → 18px · opacity→0 · 200ms accelerate-out
- *            (quieter + faster than enter; rows vanish under the clip)
- *   reduced-motion → opacity-only 110ms, no clip-path, no stagger
+ * Simpler and shared beats bespoke here. Two menus that hang off the same
+ * bar should open the same way, or the bar reads as two components.
+ *
+ * STORYBOARD (ms after open) — spec lives in DROPDOWN, not re-inlined:
+ *     0ms   SHELL  opacity 0→1 · scale .96→1 · y −6→0, origin top-right
+ *            → unfurls from under the avatar (~190ms, bounce .08)
+ *    20ms   ROWS   opacity 0→1 · y 6→0, staggered 18ms
+ *            → shell + content read as ONE arrival, no "opens … then fills"
+ *   exit    SHELL only · 130ms accelerate-out (leaving never makes you wait)
+ *   reduced-motion → opacity-only 110ms, no transform, no stagger
+ *
+ * The rows keep a variants orchestrator rather than DROPDOWN's index-based
+ * `rowEntrance()` because two of them live inside PopoverLink/AppearanceToggle
+ * — variants inherit down through those children, an index would have to be
+ * threaded through their props. Same numbers, different plumbing.
  */
-const MENU_ORIGIN = '226px -26px';
-const MENU_R_OPEN = 720;
-const MENU_R_CLOSED = 18;
-const MENU_CIRCLE_SPRING = { type: 'spring' as const, visualDuration: 0.4, bounce: 0 };
-const MENU_CIRCLE_EXIT = { duration: 0.2, ease: [0.4, 0, 1, 1] as const };
-
-/** Stagger orchestrator for the row list (no visual props of its own). */
 const MENU_LIST: Variants = {
   hidden: {},
-  shown: { transition: { staggerChildren: 0.045, delayChildren: 0.06 } },
+  shown: {
+    transition: {
+      staggerChildren: DROPDOWN.row.stagger,
+      delayChildren: DROPDOWN.row.baseDelay,
+    },
+  },
 };
 
-/** Each row rises in; no exit (rows disappear under the closing clip). */
+/** Each row rides in with the shell; no exit (the shell fades out over them). */
 const MENU_ROW: Variants = {
-  hidden: { opacity: 0, y: 24 },
-  shown: {
-    opacity: 1,
-    y: 0,
-    transition: { type: 'spring', stiffness: 460, damping: 34 },
-  },
+  hidden: DROPDOWN.row.initial,
+  shown: { opacity: 1, y: 0, transition: DROPDOWN.row.spring },
 };
 
 type OpenMenu = 'account' | null;
@@ -144,24 +145,6 @@ export function StudioHeaderActions({
     };
   }, [openMenu]);
 
-  // Clip-path circle reveal (or plain fade under reduced-motion).
-  const panelMotion = reduce
-    ? {
-        initial: { opacity: 0 },
-        animate: { opacity: 1 },
-        exit: { opacity: 0, transition: { duration: 0.11 } },
-        transition: { duration: 0.11 },
-      }
-    : {
-        initial: { clipPath: `circle(${MENU_R_CLOSED}px at ${MENU_ORIGIN})`, opacity: 0 },
-        animate: { clipPath: `circle(${MENU_R_OPEN}px at ${MENU_ORIGIN})`, opacity: 1 },
-        exit: {
-          clipPath: `circle(${MENU_R_CLOSED}px at ${MENU_ORIGIN})`,
-          opacity: 0,
-          transition: { clipPath: MENU_CIRCLE_EXIT, opacity: { duration: 0.12 } },
-        },
-        transition: { clipPath: MENU_CIRCLE_SPRING, opacity: { duration: 0.16 } },
-      };
 
   return (
     <div className="flex items-center gap-1.5">
@@ -203,16 +186,49 @@ export function StudioHeaderActions({
 
         <AnimatePresence>
           {openMenu === 'account' && (
-            <motion.div
-              {...panelMotion}
-              className="group/menu absolute right-0 top-full z-[95] mt-2 flex w-[244px] flex-col overflow-hidden rounded-[20px] bg-surface-1 p-1 shadow-seeko-pop"
-            >
+            <>
+              {/*
+                The page recedes while the menu is open. In dark this is doing
+                real work, not decoration: the menu clears the cards beneath it
+                by only ~0.025 L, and darkening everything else is what widens
+                that gap into an unmistakable one — the same separation a shadow
+                would give you on a light canvas, which a dark canvas can't.
+
+                It lives INSIDE accountRef, so the outside-click listener treats
+                a click on it as a click *on* the menu and won't close it. Hence
+                the explicit onMouseDown, matching the refund menu's scrim.
+
+                Eased in and out, not sprung: a scrim has no mass and nothing to
+                overshoot — it's a light level changing, and a spring on a light
+                level reads as a flicker. z-40 keeps it under the avatar (z-60),
+                so the thing you pressed stays lit while its surroundings drop
+                away.
+
+                Exit is shorter than enter, and deliberately ~= the panel's own
+                130ms accelerate-out: a scrim that outlives the menu it dimmed
+                for reads as the page being slow to come back.
+              */}
               <motion.div
-                variants={reduce ? undefined : MENU_LIST}
-                initial={reduce ? undefined : 'hidden'}
-                animate={reduce ? undefined : 'shown'}
-                className="flex flex-col gap-1"
+                key="account-menu-scrim"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0, transition: { duration: 0.14, ease: 'easeInOut' } }}
+                transition={{ duration: 0.22, ease: 'easeInOut' }}
+                className="fixed inset-0 z-40 bg-scrim"
+                onMouseDown={close}
+                aria-hidden
+              />
+              <motion.div
+                {...shellEntrance(reduce)}
+                style={{ transformOrigin: DROPDOWN.shell.transformOrigin }}
+                className="group/menu absolute right-0 top-full z-[95] mt-2 flex w-[244px] flex-col overflow-hidden rounded-[20px] bg-overlay p-1 shadow-seeko-pop"
               >
+                <motion.div
+                  variants={reduce ? undefined : MENU_LIST}
+                  initial={reduce ? undefined : 'hidden'}
+                  animate={reduce ? undefined : 'shown'}
+                  className="flex flex-col gap-1"
+                >
                 {/* Identity header — name + email */}
                 <motion.div
                   variants={reduce ? undefined : MENU_ROW}
@@ -306,7 +322,8 @@ export function StudioHeaderActions({
                   </AnimatePresence>
                 </motion.div>
               </motion.div>
-            </motion.div>
+              </motion.div>
+            </>
           )}
         </AnimatePresence>
       </div>

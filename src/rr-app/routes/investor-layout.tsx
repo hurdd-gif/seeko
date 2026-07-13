@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { AnimatePresence, motion, useReducedMotion, type Variants } from 'motion/react';
 import { toast } from 'sonner';
-import { springs } from '@/lib/motion';
+import { springs, shellEntrance, DROPDOWN } from '@/lib/motion';
 import type { InvestorOverviewData, InvestorProfile } from '@/lib/investor-index';
 
 /* ─────────────────────────────────────────────────────────
@@ -131,23 +131,28 @@ const TAB_ACTIVE = 'text-ink';
 const TAB_INACTIVE = 'text-ink-muted hover:text-[#5a5a5a] dark:hover:text-ink-body';
 
 /* ── Account menu motion — mirrors the studio header menu (StudioHeaderActions)
- * so the investor dropdown reads identically: a clip-path circle blooming from
- * the avatar (226px,-26px is the 36px avatar's centre over a 244px panel), rows
- * rising + staggering behind it, a confirm-to-sign-out toggle. Reduced-motion
- * collapses to a plain opacity fade. */
+ * so the investor dropdown reads identically. Both now sit on the CANONICAL
+ * dropdown entrance (`DROPDOWN` in @/lib/motion): shell unfurls from under the
+ * avatar (origin top-right, scale .96→1, ~190ms), rows ride in 20ms behind it
+ * on an 18ms stagger, exit accelerates out in 130ms. Reduced-motion collapses
+ * to a plain opacity fade.
+ *
+ * Was a 400ms clip-path circle blooming from the avatar with rows rising 24px
+ * behind it — dropped with the studio menu's: too much ceremony for a surface
+ * you open constantly. If you change one of these two menus, change the other. */
 const SNAPPY = springs.snappy;
-const MENU_ORIGIN = '226px -26px';
-const MENU_R_OPEN = 720;
-const MENU_R_CLOSED = 18;
-const MENU_CIRCLE_SPRING = { type: 'spring' as const, visualDuration: 0.4, bounce: 0 };
-const MENU_CIRCLE_EXIT = { duration: 0.2, ease: [0.4, 0, 1, 1] as const };
 const MENU_LIST: Variants = {
   hidden: {},
-  shown: { transition: { staggerChildren: 0.045, delayChildren: 0.06 } },
+  shown: {
+    transition: {
+      staggerChildren: DROPDOWN.row.stagger,
+      delayChildren: DROPDOWN.row.baseDelay,
+    },
+  },
 };
 const MENU_ROW: Variants = {
-  hidden: { opacity: 0, y: 24 },
-  shown: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 460, damping: 34 } },
+  hidden: DROPDOWN.row.initial,
+  shown: { opacity: 1, y: 0, transition: DROPDOWN.row.spring },
 };
 
 export function InvestorShell({
@@ -184,25 +189,6 @@ export function InvestorShell({
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, [profileOpen]);
-
-  // Clip-path circle reveal from the avatar (or a plain fade under reduced-motion).
-  const panelMotion = reduce
-    ? {
-        initial: { opacity: 0 },
-        animate: { opacity: 1 },
-        exit: { opacity: 0, transition: { duration: 0.11 } },
-        transition: { duration: 0.11 },
-      }
-    : {
-        initial: { clipPath: `circle(${MENU_R_CLOSED}px at ${MENU_ORIGIN})`, opacity: 0 },
-        animate: { clipPath: `circle(${MENU_R_OPEN}px at ${MENU_ORIGIN})`, opacity: 1 },
-        exit: {
-          clipPath: `circle(${MENU_R_CLOSED}px at ${MENU_ORIGIN})`,
-          opacity: 0,
-          transition: { clipPath: MENU_CIRCLE_EXIT, opacity: { duration: 0.12 } },
-        },
-        transition: { clipPath: MENU_CIRCLE_SPRING, opacity: { duration: 0.16 } },
-      };
 
   async function handleDownloadPdf() {
     if (pdfLoading) return;
@@ -302,10 +288,33 @@ export function InvestorShell({
 
               <AnimatePresence>
                 {profileOpen && (
+                  <>
+                  {/* Page recedes behind the menu — same scrim as the studio
+                      header's account menu (see StudioHeaderActions for the
+                      full reasoning). z-40 sits under the avatar (z-60), so the
+                      thing you pressed stays lit. Exit is shorter than enter and
+                      tracks the panel's 130ms out. */}
                   <motion.div
-                    {...panelMotion}
+                    key="investor-menu-scrim"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0, transition: { duration: 0.14, ease: 'easeInOut' } }}
+                    transition={{ duration: 0.22, ease: 'easeInOut' }}
+                    className="fixed inset-0 z-40 bg-scrim"
+                    onPointerDown={() => {
+                      // The scrim is INSIDE profileMenuRef, so the document
+                      // pointerdown listener reads a click here as a click *on*
+                      // the menu and won't dismiss. Hence the explicit close.
+                      setProfileOpen(false);
+                      setConfirmingSignOut(false);
+                    }}
+                    aria-hidden
+                  />
+                  <motion.div
+                    {...shellEntrance(reduce)}
+                    style={{ transformOrigin: DROPDOWN.shell.transformOrigin }}
                     role="menu"
-                    className="group/menu absolute right-0 top-full z-[95] mt-2 flex w-[244px] flex-col overflow-hidden rounded-[20px] bg-surface-1 p-1 shadow-seeko-pop"
+                    className="group/menu absolute right-0 top-full z-[95] mt-2 flex w-[244px] flex-col overflow-hidden rounded-[20px] bg-overlay p-1 shadow-seeko-pop"
                   >
                     <motion.div
                       variants={reduce ? undefined : MENU_LIST}
@@ -398,6 +407,7 @@ export function InvestorShell({
                       </motion.div>
                     </motion.div>
                   </motion.div>
+                  </>
                 )}
               </AnimatePresence>
             </div>
