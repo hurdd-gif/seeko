@@ -17,8 +17,10 @@
  * ───────────────────────────────────────────────────────── */
 
 import { useMemo, type ReactNode } from 'react';
-import { useLoaderData, type LoaderFunctionArgs } from 'react-router';
+import { useLoaderData, useRouteLoaderData, type LoaderFunctionArgs } from 'react-router';
 import { motion, useReducedMotion } from 'motion/react';
+import { INVESTOR_LAYOUT_ROUTE_ID } from '../route-ids';
+import type { InvestorLayoutReady } from './investor-layout';
 import { Link } from '@/lib/react-router-adapters';
 import { FadeRise } from '@/components/motion';
 import { AreaChart } from '@/components/charts/area-chart';
@@ -55,31 +57,36 @@ const CARD =
 /** Frameless section header — type carries the structure cards used to. */
 const SECTION_H = 'text-[15px] font-semibold leading-[20px] text-ink-title';
 
-export async function investorLoader(_args: LoaderFunctionArgs): Promise<InvestorLoaderData> {
-  const [response, paymentsResponse] = await Promise.all([
-    fetch('/api/investor-index'),
-    fetch('/api/investor-payments-index'),
-  ]);
-
-  if (response.status === 401) return { status: 'unauthorized' };
-  if (response.status === 403) return { status: 'forbidden' };
-  if (response.status === 404) return { status: 'not_found' };
-
-  if (!response.ok) {
-    throw new Response('Unable to load investor overview', { status: response.status });
-  }
-
-  const index = (await response.json()) as InvestorOverviewData;
-  const payments = paymentsResponse.ok
+/* Fetches ONLY payments.
+ *
+ * The overview index is loaded — and access-gated — by the parent layout
+ * (investorLayoutLoader), which runs in parallel with this loader. This route
+ * used to fetch /api/investor-index a second time, concurrently, for data the
+ * parent already had; it now reads that response back off the parent instead.
+ * Do not re-add the fetch here. */
+export async function investorLoader(
+  _args: LoaderFunctionArgs,
+): Promise<InvestorPaymentsData | null> {
+  const paymentsResponse = await fetch('/api/investor-payments-index');
+  return paymentsResponse.ok
     ? ((await paymentsResponse.json()) as InvestorPaymentsData)
     : null;
-
-  return { status: 'ready', data: { index, payments } };
 }
 
 export function InvestorRoute() {
-  const data = useLoaderData() as InvestorLoaderData;
-  return <InvestorRouteContent data={data} />;
+  // The parent only renders <Outlet /> in its 'ready' branch, so by the time
+  // this mounts the index is present — 401/403/404 were already turned into a
+  // redirect or the forbidden card upstream. The ViewState wrapper survives for
+  // InvestorRouteContent's other callers (the /investor-preview QA route and
+  // the unit tests), which drive it by prop rather than through the router.
+  const layout = useRouteLoaderData(INVESTOR_LAYOUT_ROUTE_ID) as InvestorLayoutReady;
+  const payments = useLoaderData() as InvestorPaymentsData | null;
+
+  return (
+    <InvestorRouteContent
+      data={{ status: 'ready', data: { index: layout.index, payments } }}
+    />
+  );
 }
 
 export function InvestorRouteContent({ data }: { data: InvestorLoaderData }) {

@@ -1,21 +1,6 @@
 'use client';
 
-/* ─────────────────────────────────────────────────────────
- * ANIMATION STORYBOARD — Cookie Notice Card
- *
- *    0ms   page renders, card absent
- *  600ms   card slides up into the bottom-right corner
- *          (y 16 → 0 + fade, smooth spring) — after the
- *          page's own entrance so it never competes with it
- *  click   Got it → acknowledgement persisted, card exits
- *          down-and-out (y 8 + fade, 150ms ease-out)
- * ───────────────────────────────────────────────────────── */
-
-import { useState } from 'react';
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
-import { BTN_PRIMARY, LIGHT_FOCUS_RING } from '@/components/dashboard/lightKit';
-import { springs } from '@/lib/motion';
-import { cn } from '@/lib/utils';
+import { lazy, Suspense, useState } from 'react';
 
 /* This is a NOTICE, not a consent request — a legal-review decision
  * (2026-07-04). The workspace sets only strictly-necessary cookies (auth
@@ -39,63 +24,42 @@ function isAcknowledged(): boolean {
   }
 }
 
-export function CookieNotice() {
-  const reduceMotion = useReducedMotion();
-  const [open, setOpen] = useState(() => !isAcknowledged());
+/* The card is the ONLY thing in the entry's import graph that reaches `motion`
+ * (~40 KB gzip) — every other consumer already sits behind a lazy route. Left
+ * as a static import it was downloaded and parsed before first paint on EVERY
+ * visit, including the overwhelming majority where isAcknowledged() is true and
+ * the component renders nothing at all.
+ *
+ * So the split is a gate, not merely a deferral. This module stays eager and
+ * costs a localStorage read; the dynamic import below is only ever reached on a
+ * visit that will actually show the notice. A returning visitor never fetches
+ * the chunk. A first-time visitor fetches it after paint, which is right for a
+ * card that deliberately waits 600ms before animating in anyway.
+ *
+ * Rollup places `motion` in a chunk shared with the lazy routes, so this costs
+ * no duplication. */
+const CookieNoticeCard = lazy(() =>
+  import('./CookieNoticeCard').then((mod) => ({ default: mod.CookieNoticeCard }))
+);
 
-  function acknowledge() {
-    try {
-      localStorage.setItem(STORAGE_KEY, new Date().toISOString());
-    } catch {
-      // Non-fatal — the card still dismisses for this visit.
-    }
-    setOpen(false);
-  }
+export function CookieNotice() {
+  // Read once, at mount. This answers "has this browser ever acknowledged?",
+  // which cannot change during the visit — dismissal is the card's business.
+  const [acknowledged] = useState(isAcknowledged);
+
+  if (acknowledged) return null;
 
   return (
-    <AnimatePresence>
-      {open && (
-        <motion.section
-          aria-label="Cookie notice"
-          initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{
-            opacity: 0,
-            y: reduceMotion ? 0 : 8,
-            transition: { duration: 0.15, ease: 'easeOut' },
-          }}
-          transition={reduceMotion ? { duration: 0.2 } : { ...springs.smooth, delay: 0.6 }}
-          // Outline over shadow (user-decided 2026-07-04): a crisp 1px border
-          // defines the card against the near-white canvas; no drop shadow.
-          // Placement: full-width bottom banner on mobile (a 360px corner card
-          // sat on top of the login card's legal footnote below ~sm), corner
-          // card from sm up where the two no longer collide.
-          className="fixed inset-x-4 bottom-4 z-50 rounded-2xl border border-black/[0.15] bg-white dark:border-hairline dark:bg-overlay p-5 print:hidden sm:inset-x-auto sm:bottom-5 sm:right-5 sm:w-[min(360px,calc(100vw-40px))]"
-        >
-          <h2 className="text-sm font-semibold text-ink-title">Cookies</h2>
-          <p className="mt-1.5 text-[13px] leading-relaxed text-ink-muted-strong">
-            SEEKO uses only essential cookies — the ones that keep you signed in.
-            They&rsquo;re required for the site to work and can&rsquo;t be switched
-            off. No analytics, no advertising, no tracking.{' '}
-            <a
-              href="/legal/privacy#cookies"
-              className={cn(
-                'rounded-sm font-medium text-ink-strong underline decoration-black/20 underline-offset-2 transition-colors duration-150 hover:decoration-black/50',
-                LIGHT_FOCUS_RING,
-              )}
-            >
-              Cookie details
-            </a>
-          </p>
-          <button
-            type="button"
-            onClick={acknowledge}
-            className={cn(BTN_PRIMARY, LIGHT_FOCUS_RING, 'mt-4 w-full')}
-          >
-            Got it
-          </button>
-        </motion.section>
-      )}
-    </AnimatePresence>
+    <Suspense fallback={null}>
+      <CookieNoticeCard
+        onAcknowledge={() => {
+          try {
+            localStorage.setItem(STORAGE_KEY, new Date().toISOString());
+          } catch {
+            // Non-fatal — the card still dismisses for this visit.
+          }
+        }}
+      />
+    </Suspense>
   );
 }

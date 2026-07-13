@@ -22,6 +22,7 @@ import {
   Users,
 } from 'lucide-react';
 import { BTN_PRIMARY, BTN_SECONDARY, LIGHT_FOCUS_RING } from '@/components/dashboard/lightKit';
+import { INVESTOR_LAYOUT_ROUTE_ID } from './route-ids';
 
 export const routeInventory = [
   {
@@ -522,6 +523,12 @@ export const router = createBrowserRouter([
     // mounts OUTSIDE RootLayout as its own layout route: investorLayoutLoader
     // gates access + supplies the sidebar identity, and the four investor pages
     // render as bare column content inside the shell's <Outlet>.
+    //
+    // The explicit id is load-bearing, not cosmetic: investorLayoutLoader is the
+    // single owner of /api/investor-index, and the index child reaches its data
+    // via useRouteLoaderData(INVESTOR_LAYOUT_ROUTE_ID) instead of fetching the
+    // endpoint a second time in parallel. Removing the id breaks that route.
+    id: INVESTOR_LAYOUT_ROUTE_ID,
     path: '/investor',
     ErrorBoundary: StandaloneErrorBoundary,
     lazy: async () => {

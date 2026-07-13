@@ -26,9 +26,29 @@ import type { InvestorOverviewData, InvestorProfile } from '@/lib/investor-index
  * The exposed tabs stay investor-specific: Dashboard, Documents, Payments.
  * ───────────────────────────────────────────────────────── */
 
+/* This loader OWNS /api/investor-index for the whole investor cluster.
+ *
+ * It used to keep only `index.profile` and drop the rest — while the /investor
+ * index route fetched the very same URL again, concurrently, for the rest of
+ * it. React Router runs layout and child loaders in PARALLEL, so that was two
+ * simultaneous hits per visit on an endpoint that reads the entire tasks table
+ * unbounded (src/lib/investor-index.ts).
+ *
+ * The response was always right here in hand, so the fix is to stop throwing it
+ * away: keep the whole index, and let the child read it back through
+ * useRouteLoaderData('investor-layout') instead of re-fetching. React Router
+ * does not re-run a parent loader when navigating between its children, so the
+ * index is now fetched exactly once per entry into the cluster.
+ *
+ * Anything added here that needs the index must read THIS loader's data — do
+ * not reintroduce a second fetch of /api/investor-index in a child route. */
 type InvestorLayoutData =
-  | { status: 'ready'; profile: InvestorProfile }
+  | { status: 'ready'; index: InvestorOverviewData }
   | { status: 'forbidden' };
+
+/** Narrowed shape a child route can rely on: the layout renders <Outlet /> only
+ *  in the 'ready' branch, so a mounted child cannot observe 'forbidden'. */
+export type InvestorLayoutReady = Extract<InvestorLayoutData, { status: 'ready' }>;
 
 export async function investorLayoutLoader(
   _args: LoaderFunctionArgs,
@@ -44,7 +64,7 @@ export async function investorLayoutLoader(
   }
 
   const index = (await response.json()) as InvestorOverviewData;
-  return { status: 'ready', profile: index.profile };
+  return { status: 'ready', index };
 }
 
 export function InvestorLayout() {
@@ -71,7 +91,7 @@ export function InvestorLayout() {
   }
 
   return (
-    <InvestorShell profile={data.profile}>
+    <InvestorShell profile={data.index.profile}>
       <Outlet />
     </InvestorShell>
   );
