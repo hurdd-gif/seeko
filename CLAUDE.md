@@ -83,13 +83,34 @@ User task
 ## Repo Info
 
 - Root: /Volumes/CODEUSER/seeko-studio
-- Stack: Next.js 16 (App Router) · shadcn/ui · Tailwind v4 · Supabase (Auth + Data)
+- Stack: React 19 + Vite + React Router · HeroUI v3 · Tailwind v4 · Supabase (Auth + Data)
 - Hosting: Render (render.yaml at root)
 - Auth: Supabase email/password — karti invites team members
 - Data: Supabase Postgres (tables: tasks, areas, team_members, docs, profiles)
-- Dev server: npm run dev → localhost:3000
-- Test runner: npm test (Vitest)
+- Test runner: npm test (Vitest) — run it with cwd = seeko-studio, never overlap two runs
 - Plans saved to: docs/plans/YYYY-MM-DD-<topic>.md
+
+### Dev server — two processes, not one
+
+The app was migrated off Next.js. There is no `localhost:3000` and no Next dev
+server; the client and the API are separate processes.
+
+| Process | Command | Port | Serves |
+|---------|---------|------|--------|
+| Vite client (HMR) | `npm run dev` | `5173` | The React app, hot-reloaded. Proxies `/api` and `/auth` → the API server (`VITE_API_TARGET`, default `http://localhost:8787`). |
+| API server | `npm start` | `8787` (`PORT` overrides — commonly run at `8788`) | `src/api-server/index.ts` via `tsx`. Also serves the **built** client out of `dist/`, reading `index.html` per request. |
+
+Which port to use:
+- **`5173`** — normal development. HMR, instant client feedback.
+- **`8788`** (or whatever `PORT` is set to) — QA against the real build. It reads
+  `index.html` on every request, so **`vite build` alone ships client changes there**
+  — no restart needed.
+
+Two gotchas that cost time:
+- The API server is plain `tsx` with **no watch** — after editing `src/api-server/**`
+  you must **restart it**. Client edits never need a restart.
+- `npm run dev` alone gives you a client with a **dead API** unless the API server is
+  also running; the Vite proxy has nothing to forward to.
 
 ---
 *Kept current by docs/agents/maintenance.md*
