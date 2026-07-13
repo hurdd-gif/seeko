@@ -43,9 +43,30 @@ export function TaskDetailRouteContent({ data }: { data: TaskDetailLoaderData })
     );
   }
 
-  const { task, areas, team, milestones, activity, comments, currentUserId, isAdmin, pendingExtension } = data.data;
+  const {
+    task,
+    areas,
+    team,
+    milestones,
+    activity,
+    comments,
+    currentUserId,
+    isAdmin,
+    pendingExtension,
+    links,
+    linkCandidates,
+  } = data.data;
+  // `key` is load-bearing, not decoration. /tasks/:id → /tasks/:otherId keeps the
+  // SAME route element mounted — React Router just re-renders it with new loader
+  // data. But TaskDetailPage (and TaskLinksSection, and the comment thread) seed
+  // local mirrors with `useState(initialX)`, and a useState initializer only runs
+  // at mount. Without a key the URL changed, the loader refetched, and the page
+  // went on rendering the task you navigated AWAY from. Keying on the task id
+  // turns an id change into a remount, which reseeds every mirror in one stroke —
+  // and drops stale per-task UI state (comment drafts, open popovers) with it.
   return (
     <TaskDetailPage
+      key={task.id}
       task={task}
       areas={areas}
       team={team}
@@ -55,6 +76,8 @@ export function TaskDetailRouteContent({ data }: { data: TaskDetailLoaderData })
       currentUserId={currentUserId}
       isAdmin={isAdmin}
       pendingExtension={pendingExtension}
+      links={links}
+      linkCandidates={linkCandidates}
     />
   );
 }

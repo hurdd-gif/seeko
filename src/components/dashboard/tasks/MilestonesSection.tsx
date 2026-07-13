@@ -6,7 +6,8 @@
 
 'use client';
 
-import { Flag } from 'lucide-react';
+import { CalendarClock, Flag } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import type { Milestone, TaskWithAssignee } from '@/lib/types';
 import { MilestoneEditPopover } from './MilestoneEditPopover';
 import { MilestoneHealthBadge } from './MilestoneHealthBadge';
@@ -53,10 +54,18 @@ export function describeTargetDate(
   };
 }
 
-const TONE_COLOR: Record<TargetTone, string> = {
-  overdue: '#f04438', // red — past due
-  soon: '#bd7e10', // amber — due today / within a week
-  normal: '#9a9a9a', // grey — comfortably out
+/**
+ * The date reads as a CHIP, not as colored text — the same chip the board's
+ * cards already wear for their deadlines (TaskCard: h-6, rounded-full, tinted
+ * fill, CalendarClock). It used to be a bare red string, which made "45d
+ * overdue" the loudest raw text in the rail while the identical fact on a card
+ * two inches away sat calmly inside a pill. Same fact, same object type, two
+ * different visual weights — the tint carries the alarm, the fill contains it.
+ */
+const TONE_CHIP: Record<TargetTone, string> = {
+  overdue: 'bg-[#f04438]/10 dark:bg-danger/15 text-[#d92d20] dark:text-danger',
+  soon: 'bg-[#bd7e10]/10 dark:bg-[#fbbf24]/15 text-[#a86d0c] dark:text-[#fbbf24]',
+  normal: 'bg-wash-4 text-[#777777] dark:text-ink-muted',
 };
 
 function RowContent({ milestone }: { milestone: Milestone }) {
@@ -71,11 +80,12 @@ function RowContent({ milestone }: { milestone: Milestone }) {
       <span className="min-w-0 flex-1 truncate">{milestone.name}</span>
       {due && (
         <span
-          className={`shrink-0 text-[12px] tabular-nums ${
-            due.tone === 'normal' ? '' : 'font-medium'
-          }`}
-          style={{ color: TONE_COLOR[due.tone] }}
+          className={cn(
+            'inline-flex h-6 shrink-0 items-center gap-1.5 rounded-full px-2 text-[11px] font-medium leading-none tabular-nums',
+            TONE_CHIP[due.tone],
+          )}
         >
+          <CalendarClock className="size-3 shrink-0" strokeWidth={1.75} />
           {due.label}
         </span>
       )}

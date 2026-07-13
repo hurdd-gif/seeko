@@ -20,6 +20,14 @@ interface LightShellProps {
   animatePill?: boolean; // default true; wrap pill (and right cluster) in FadeRise
   headerPadding?: string; // default 'px-[52px] pt-11 pb-3'
   leftSlot?: React.ReactNode; // when set, replaces the pill nav (for breadcrumb/back headers)
+  /**
+   * A row that unfolds INSIDE the header, under the toolbar and above the
+   * hairline (the board's filter chips). Inside, not below, on purpose: a
+   * filter row is chrome — it describes what the page is showing, it isn't part
+   * of the showing — so the border-b stays the one line between chrome and
+   * content, and the board's own top gutter is measured from it either way.
+   */
+  subBar?: React.ReactNode;
   children: React.ReactNode;
 }
 
@@ -47,6 +55,7 @@ export function LightShell({
   animatePill = true,
   headerPadding = 'px-[52px] pt-11 pb-3',
   leftSlot,
+  subBar,
   children,
 }: LightShellProps) {
   const pill = (
@@ -114,6 +123,7 @@ export function LightShell({
               rightCluster
             ))}
         </div>
+        {subBar}
       </header>
       {children}
       {/* EKO bus: routes tray-emitted `navigate` events (UI choreography only). */}

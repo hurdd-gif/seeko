@@ -124,7 +124,7 @@ export function InviteCodeForm({ email: emailProp, onEmailChange }: InviteCodeFo
       setEmailInvalid(true);
       setError(
         trimmed
-          ? "That doesn't look like an email address."
+          ? 'That doesn’t look like an email address.'
           : 'Enter the email your invite was sent to.',
       );
       emailRef.current?.focus();

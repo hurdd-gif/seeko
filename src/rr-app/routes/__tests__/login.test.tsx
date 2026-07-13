@@ -121,6 +121,6 @@ describe('LoginRouteContent', () => {
 
   it('surfaces a failed OAuth callback redirect as an inline error', () => {
     renderLogin('/login?error=auth_callback_failed');
-    expect(screen.getByText("Google sign-in didn't complete. Please try again.")).toBeInTheDocument();
+    expect(screen.getByText('Google sign-in didn’t complete. Please try again.')).toBeInTheDocument();
   });
 });

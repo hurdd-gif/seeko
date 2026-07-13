@@ -785,6 +785,19 @@ export const router = createBrowserRouter([
     },
   },
   {
+    // No-backend visual-QA preview (no loader gate) for the comment card's
+    // hold-to-delete control — the open → sweep → commit sequence and the
+    // release retraction, in both schemes. Not in routeInventory.
+    path: '/tasks/hold-delete-qa',
+    ErrorBoundary: StandaloneErrorBoundary,
+    lazy: async () => {
+      const route = await import('./routes/hold-delete-qa');
+      return {
+        Component: route.HoldDeleteQaRoute,
+      };
+    },
+  },
+  {
     // No-backend visual-QA preview (no loader gate) for all three toast
     // systems (sonner, rich toast, live notification toast) in the Delphi
     // alert language. Not in routeInventory.

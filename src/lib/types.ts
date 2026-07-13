@@ -19,6 +19,18 @@ export const TASK_STATUSES: readonly TaskStatus[] = [
   'Duplicate',
 ] as const;
 
+/**
+ * Statuses a task does not come back from. Nothing is expected of a terminal
+ * task, so nothing about it can be *late* — its deadline is history, not a
+ * warning. Anything that escalates on time (overdue chips, urgency sorts,
+ * chase notifications) has to ask this before it raises an alarm.
+ */
+export const TERMINAL_STATUSES: readonly TaskStatus[] = ['Done', 'Canceled', 'Duplicate'] as const;
+
+export function isTerminalStatus(status: TaskStatus): boolean {
+  return TERMINAL_STATUSES.includes(status);
+}
+
 export type Priority = 'Urgent' | 'High' | 'Medium' | 'Low';
 export type Department =
   | 'Coding'
@@ -42,6 +54,20 @@ export type Task = {
   progress?: number;
   created_at?: string;
   updated_at?: string;
+};
+
+// A task as seen from ANOTHER task — the lightweight shape used by "connected
+// tasks" (public.task_links) for both the link list and the picker's candidates.
+// Deliberately narrow: enough to render a row and navigate, nothing more.
+//
+// Links are SYMMETRIC and untyped — "A is connected to B" IS "B is connected to
+// A" (one row, canonically ordered; see 20260713120000_task_links.sql). There is
+// no direction and no kind, so there is nothing to model here beyond the target.
+export type LinkedTask = {
+  id: string;
+  task_number: number | null;
+  name: string;
+  status: TaskStatus;
 };
 
 // Milestones (schema only this round — empty-state UI in Phase C).

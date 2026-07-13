@@ -1,300 +1,99 @@
-import { useEffect, useRef } from 'react';
-import { Link } from 'react-router';
-import { motion, useReducedMotion } from 'motion/react';
-import { useDialKit, DialRoot } from 'dialkit';
-import 'dialkit/styles.css';
-import { BTN_BASE } from '@/components/dashboard/lightKit';
+import { useEffect, useState } from 'react';
+import { Link, useLocation } from 'react-router';
+import { motion, useMotionTemplate, useReducedMotion, useSpring } from 'motion/react';
+import { cn } from '@/lib/utils';
+import { veilGradientStops } from '@/lib/halftone-field';
+import { BTN_PRIMARY, LIGHT_FOCUS_RING } from '@/components/dashboard/lightKit';
+import { TOUCH_TARGET } from '@/components/public/PublicLink';
+import { PublicTopBar } from '@/components/public/PublicTopBar';
+import { HalftoneVeil } from '@/components/auth/HalftoneVeil';
 
 /* ─────────────────────────────────────────────────────────────────────────
- * MAGNETIC DOT-GRID 404 — cursor-driven reveal
+ * 404 — the sunset, twice
  *
- *   A field of dots covers the numeral area. Dots that fall on the "404"
- *   glyphs carry colour (ink 4s, azure 0) and sit faint at rest; as the
- *   cursor nears, nearby dots swell + brighten, so moving the pointer
- *   sculpts the numerals out of the field. A one-time intro sweep lights
- *   the 404 left→right on mount, then hands off to the live pointer.
+ *   The page is built from ONE palette in TWO materials, and the pairing is
+ *   the whole idea:
  *
- *   Layering by best tool:
- *     • canvas + rAF   → the reactive dot field (eased per-dot lerp gives
- *                        the spring-like "wave"; 60fps, GPU-cheap)
- *     • Motion (DOM)   → headline/copy/CTA staggered entrance
+ *     • the numerals  → the sunset as continuous ink (a gradient clipped to
+ *                       the type, interpolated in OKLab)
+ *     • the veil      → the sunset as halftone dots (login's HalftoneVeil,
+ *                       imported verbatim — same component, same bloom, same
+ *                       cursor lens)
  *
- *   Live tuning: on the dev server only, a DialKit panel (top-right) drives
- *   every value below — colours, grid density, motion, dot sizes, page bg.
- *   `FIELD` stays the single source of truth: DialKit seeds its controls from
- *   it, and in tests/production (no DialRoot) useDialKit returns these exact
- *   defaults, so the page renders identically to the un-instrumented version.
+ *   Both read their colors from VEIL_STOPS, so they cannot drift apart. The
+ *   "404" is the horizon; the field below it is the same horizon dithered.
  *
- *   Fallback (always reachable): touch / no-hover / reduced-motion render
- *   the full 404 statically and skip all pointer wiring.
+ *   WHY IT REPLACED THE OLD PAGE. The previous 404 was a black canvas with a
+ *   magnetic dot-grid: dots on the glyphs sat at alpha 0.32, radius 1.2px, in
+ *   #0e7aff on #000. Screenshotted at rest, the numerals were not visible —
+ *   they resolved only if the cursor happened to sweep through them, and
+ *   nothing on the page invited that. A 404 whose 404 you cannot see is a
+ *   structural failure. It was also the product's only pure-black surface, in
+ *   an app whose login, legal, docs and dashboard are all Paper light.
+ *
+ *   ANIMATION STORYBOARD
+ *      0ms   canvas + chrome at rest
+ *     50ms   numerals fade up (blur 4 → 0)
+ *    130ms   headline
+ *    210ms   copy + attempted path
+ *    290ms   actions
+ *    150ms   (in parallel) the veil rises from the bottom edge — its own RISE
+ *    hover   the gradient inside the numerals drifts vertically with the
+ *            cursor (lazy, overdamped) so the type catches light; the veil's
+ *            dots part around the pointer. Two reactions, one gesture.
+ *
+ *   Reduced motion / coarse pointer: everything renders at rest, no drift.
+ *   forced-colors + prefers-contrast: more: the gradient is dropped and the
+ *   numerals fall back to solid ink (see NUMERAL_FALLBACK).
  * ───────────────────────────────────────────────────────────────────────── */
 
-// Canonical defaults — the single source of truth for the dot field.
-const FIELD = {
-  cell: 10, // px between dot centres (CSS units)
-  aspect: 0.65, // canvas height = width * aspect
-  influence: 218, // px radius of cursor influence
-  ease: 0.24, // per-dot easing toward target (wave feel)
-  follow: 0.37, // virtual cursor easing toward target
-  introMs: 1250, // intro sweep duration
-  ink: '#0e7aff', // 4s (blue on the dark field)
-  azure: '#0d7aff', // 0
-  bg: '#000000', // page background (dark 404)
-  // glyph dots read as a faint blue 404 at rest; the cursor blazes them to
-  // full. bg dots stay a quiet textural field.
-  glyph: { restAlpha: 0.32, baseR: 1.2, maxR: 5.3 },
-  bgDot: { restAlpha: 0.09, baseR: 1.7, maxR: 2.0, gain: 0.12 },
-} as const;
+/** The login gradient, as ink. Bottom-anchored like the veil's bloom (deep
+ *  orange at the baseline, ultramarine at the cap), so the numerals and the
+ *  field below them agree about which way the sky goes. `in oklab` is not
+ *  optional: sRGB blending between these saturated bands detours through
+ *  desaturated middles that read as grey seams in continuous ink. */
+const SUNSET_INK = `linear-gradient(to top in oklab, ${veilGradientStops()})`;
 
-// Dev-only: show the live tuning panel on the dev server, never in tests/prod.
-// `import.meta.hot` is defined by Vite's dev server (HMR), statically undefined
-// in production builds, and absent under Vitest — so dials show only while
-// developing, and the panel + dialkit import dead-code-eliminate from prod.
-const SHOW_DIALS = Boolean(import.meta.hot);
+/** The gradient is painted slightly taller than the type so there is headroom to
+ *  slide it, and the cursor moves it ±DRIFT% around center. The margin is TIGHT
+ *  (130%, ±8) for a reason. At 150%/±16 the visible window was the palette's
+ *  middle — amber → cream → sky → cerulean — which put the CREAM stop (#f2e3c2,
+ *  1.2:1 on white) on the glyph baselines: the numerals faded out at the bottom
+ *  and read as a rendering fault, and the palette's most distinctive color, the
+ *  deep orange, never appeared in the mark at all. 130%/±8 keeps the window at
+ *  roughly 4–96% of the palette in every drift position, so the baselines stay
+ *  anchored in orange (3.9:1) and cream retreats to a thin highlight band across
+ *  the lower third — a glare on the horizon, which is what it is. */
+const INK_HEIGHT = '130%';
+const DRIFT = 8;
+/** Rest position of that window, biased DOWN the palette rather than centered.
+ *  `to top` puts orange at the image's bottom, so a larger background-position-y
+ *  shows more of the warm end. Centered (50%) the glyph terminals sampled amber
+ *  (#ee8a2f, 2.4:1) — the numerals still trailed off pale at the baseline, just
+ *  less than before. The type's box is taller than the glyphs sitting in it (the
+ *  descender space below the baseline is empty), so the palette's warmest inches
+ *  were being spent on air. 62% spends them on the glyphs instead. */
+const INK_REST = 62;
+/** Overdamped and lazy, well past critical damping — the same instinct as the
+ *  veil's own drift. This is light moving across a surface, not a control
+ *  answering a command; it should trail the cursor, never chase it. */
+const DRIFT_SPRING = { stiffness: 42, damping: 20, mass: 1 } as const;
 
-const FOCUS_RING =
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-seeko-accent/50 focus-visible:ring-offset-2 focus-visible:ring-offset-black';
+/** Where the gradient can't survive. `background-clip: text` + a transparent
+ *  fill is invisible in forced-colors mode (the UA repaints backgrounds and the
+ *  glyphs go with them), and under prefers-contrast: more a six-band gradient is
+ *  the opposite of what was asked for. Both fall back to solid ink. */
+const NUMERAL_FALLBACK = cn(
+  'contrast-more:![background:none] contrast-more:[-webkit-text-fill-color:var(--ink-title)]',
+  'forced-colors:![background:none] forced-colors:[-webkit-text-fill-color:currentColor]',
+);
 
-// Dark-surface buttons. Same canonical pill geometry as the design system
-// (BTN_BASE — rounded-full, h-9, scoped transition, active:scale), recoloured
-// for the black 404: the primary inverts to a white pill, the secondary is a
-// quiet translucent pill. Reusing BTN_BASE keeps press feedback + sizing in
-// lockstep with the app's buttons.
-const BTN_DARK_PRIMARY = `${BTN_BASE} bg-surface-1 text-ink-title hover:bg-white/90`;
-const BTN_DARK_SECONDARY = `${BTN_BASE} bg-white/[0.08] text-[#f5f5f5] hover:bg-white/[0.14]`;
-
-const TAU = Math.PI * 2;
-const clamp01 = (n: number) => (n < 0 ? 0 : n > 1 ? 1 : n);
-const easeInOut = (t: number) => (t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2);
-
-// Live field configuration (DialKit-driven in dev, FIELD defaults otherwise).
-type FieldCfg = {
-  cell: number;
-  aspect: number;
-  influence: number;
-  ease: number;
-  follow: number;
-  introMs: number;
-  ink: string;
-  azure: string;
-  glyph: { restA: number; baseR: number; maxR: number };
-  bg: { restA: number; baseR: number; maxR: number; gain: number };
-};
-
-// Colour resolves live from cfg (not baked in), so ink/azure changes need no
-// rebuild — only cell/aspect (grid density) do.
-type Dot = { x: number; y: number; glyph: boolean; azure: boolean; a: number; r: number };
-
-/**
- * Sample "404" into an offscreen buffer and turn covered cells into dots.
- * The two 4s are drawn into the red channel, the 0 into the blue channel, so
- * one readback tags each dot's glyph + which colour it carries. Returns [] if
- * 2D canvas is unavailable (e.g. jsdom under test) so the effect no-ops safely.
- */
-function buildDots(w: number, h: number, cell: number): Dot[] {
-  if (typeof document === 'undefined') return [];
-  try {
-    const buf = document.createElement('canvas');
-    buf.width = w;
-    buf.height = h;
-    const bx = buf.getContext('2d', { willReadFrequently: true });
-    if (!bx) return [];
-
-    const size = h * 0.92;
-    bx.textBaseline = 'middle';
-    bx.font = `500 ${size}px Inter, ui-sans-serif, system-ui, sans-serif`;
-    const gap = size * 0.16;
-    const w4 = bx.measureText('4').width;
-    const w0 = bx.measureText('0').width;
-    const total = w4 * 2 + w0 + gap * 2;
-    let x = (w - total) / 2;
-    const midY = h / 2;
-
-    bx.fillStyle = 'rgb(255,0,0)'; // left 4 → red
-    bx.fillText('4', x, midY);
-    x += w4 + gap;
-    bx.fillStyle = 'rgb(0,0,255)'; // 0 → blue
-    bx.fillText('0', x, midY);
-    x += w0 + gap;
-    bx.fillStyle = 'rgb(255,0,0)'; // right 4 → red
-    bx.fillText('4', x, midY);
-
-    const img = bx.getImageData(0, 0, w, h).data;
-    const dots: Dot[] = [];
-    for (let py = cell / 2; py < h; py += cell) {
-      for (let px = cell / 2; px < w; px += cell) {
-        const i = (Math.floor(py) * w + Math.floor(px)) * 4;
-        const red = img[i];
-        const blue = img[i + 2];
-        const cover = Math.max(red, blue) / 255;
-        const glyph = cover > 0.35;
-        dots.push({ x: px, y: py, glyph, azure: glyph && blue > red, a: 0, r: 0 });
-      }
-    }
-    return dots;
-  } catch {
-    return [];
-  }
-}
-
-function DotField404({ interactive, cfg }: { interactive: boolean; cfg: FieldCfg }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  // The rAF loop reads live values through this ref, so DialKit edits to
-  // colours / motion / dot sizes apply mid-flight without restarting it.
-  const cfgRef = useRef(cfg);
-  cfgRef.current = cfg;
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    const ctx = canvas?.getContext?.('2d');
-    if (!canvas || !ctx) return; // jsdom / unsupported → static aria-only canvas
-
-    let dots: Dot[] = [];
-    let cssW = 0;
-    let cssH = 0;
-    let raf = 0;
-    const dpr = Math.min(typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1, 2);
-
-    // Animated "virtual" cursor + its target. Off-canvas target = field at rest.
-    const target = { x: -9999, y: -9999 };
-    const cur = { x: -9999, y: -9999 };
-    let introStart = 0;
-    let introDone = !interactive; // static fallback skips the sweep
-    let pointerSeen = false;
-
-    const colorOf = (d: Dot) => {
-      const c = cfgRef.current;
-      return d.glyph ? (d.azure ? c.azure : c.ink) : c.ink;
-    };
-
-    const measure = () => {
-      const c = cfgRef.current;
-      const rect = canvas.getBoundingClientRect();
-      cssW = Math.round(rect.width);
-      cssH = Math.round(cssW * c.aspect);
-      canvas.width = cssW * dpr;
-      canvas.height = cssH * dpr;
-      canvas.style.height = `${cssH}px`;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      dots = buildDots(cssW, cssH, c.cell);
-      for (const d of dots) {
-        const set = d.glyph ? c.glyph : c.bg;
-        d.a = set.restA;
-        d.r = set.baseR;
-      }
-    };
-
-    const paint = () => {
-      const c = cfgRef.current;
-      const glyphGain = 1 - c.glyph.restA;
-      ctx.clearRect(0, 0, cssW, cssH);
-      for (const d of dots) {
-        const dx = d.x - cur.x;
-        const dy = d.y - cur.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        const infl = clamp01(1 - dist / c.influence) ** 2;
-        const set = d.glyph ? c.glyph : c.bg;
-        const gain = d.glyph ? glyphGain : c.bg.gain;
-        const tR = set.baseR + infl * (set.maxR - set.baseR);
-        const tA = set.restA + infl * gain;
-        d.r += (tR - d.r) * c.ease;
-        d.a += (tA - d.a) * c.ease;
-        if (d.a <= 0.001) continue;
-        ctx.globalAlpha = d.a;
-        ctx.fillStyle = colorOf(d);
-        ctx.beginPath();
-        ctx.arc(d.x, d.y, d.r, 0, TAU);
-        ctx.fill();
-      }
-      ctx.globalAlpha = 1;
-    };
-
-    // Static fallback: settle every glyph dot to full, paint once, done.
-    if (!interactive) {
-      measure();
-      if (!dots.length) return; // canvas unsupported (e.g. test env) → DOM-only
-      const c = cfgRef.current;
-      for (const d of dots) {
-        const set = d.glyph ? c.glyph : c.bg;
-        d.a = d.glyph ? 0.92 : set.restA;
-        d.r = d.glyph ? set.maxR * 0.74 : set.baseR;
-      }
-      ctx.clearRect(0, 0, cssW, cssH);
-      for (const d of dots) {
-        ctx.globalAlpha = d.a;
-        ctx.fillStyle = colorOf(d);
-        ctx.beginPath();
-        ctx.arc(d.x, d.y, d.r, 0, TAU);
-        ctx.fill();
-      }
-      ctx.globalAlpha = 1;
-      return;
-    }
-
-    const loop = (t: number) => {
-      const c = cfgRef.current;
-      if (!introStart) introStart = t;
-      if (!introDone && !pointerSeen) {
-        const p = clamp01((t - introStart) / c.introMs);
-        target.x = easeInOut(p) * cssW;
-        target.y = cssH / 2;
-        if (p >= 1) {
-          introDone = true;
-          target.x = -9999; // retreat → invites the user to move
-          target.y = -9999;
-        }
-      }
-      cur.x += (target.x - cur.x) * c.follow;
-      cur.y += (target.y - cur.y) * c.follow;
-      paint();
-      raf = requestAnimationFrame(loop);
-    };
-
-    const onMove = (e: PointerEvent) => {
-      pointerSeen = true;
-      introDone = true;
-      const rect = canvas.getBoundingClientRect();
-      target.x = e.clientX - rect.left;
-      target.y = e.clientY - rect.top;
-    };
-    const onLeave = () => {
-      target.x = -9999;
-      target.y = -9999;
-    };
-
-    measure();
-    if (!dots.length) return; // canvas unsupported (e.g. test env) → DOM-only
-    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null;
-    ro?.observe(canvas);
-    window.addEventListener('pointermove', onMove, { passive: true });
-    canvas.addEventListener('pointerleave', onLeave);
-    raf = requestAnimationFrame(loop);
-
-    return () => {
-      cancelAnimationFrame(raf);
-      ro?.disconnect();
-      window.removeEventListener('pointermove', onMove);
-      canvas.removeEventListener('pointerleave', onLeave);
-    };
-    // Rebuild only on grid-density change; every other value flows via cfgRef.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [interactive, cfg.cell, cfg.aspect]);
-
-  return (
-    <canvas
-      ref={canvasRef}
-      role="img"
-      aria-label="404"
-      // Width is the smaller of a width budget (92vw, capped 720px) and a
-      // height budget: with height = width × aspect, clamping width by
-      // (viewport height − room for the copy/CTAs) guarantees the whole
-      // composition fits on short windows instead of clipping. `dvh` keeps it
-      // honest on mobile browser chrome.
-      style={{ width: `min(92vw, 720px, calc((100dvh - 340px) / ${cfg.aspect}))` }}
-      className="select-none"
-    />
-  );
-}
+const GHOST_ACTION = cn(
+  'text-[13px] font-medium text-ink-body',
+  TOUCH_TARGET,
+  'transition-[color,opacity] duration-150 ease-out hover:text-ink-title',
+  'active:opacity-55 active:duration-[60ms]',
+);
 
 export function NotFoundRoute() {
   return <NotFoundContent />;
@@ -302,71 +101,52 @@ export function NotFoundRoute() {
 
 export function NotFoundContent() {
   const reduce = useReducedMotion();
+  const { pathname } = useLocation();
 
-  // Live tuning panel (dev only). FIELD supplies every default, so production —
-  // where DialRoot is absent and useDialKit returns these defaults — is
-  // identical to a hand-coded version.
-  const dk = useDialKit('404 Dot-Grid', {
-    colors: {
-      background: { type: 'color', default: FIELD.bg },
-      ink: { type: 'color', default: FIELD.ink },
-      azure: { type: 'color', default: FIELD.azure },
-    },
-    grid: {
-      cell: [FIELD.cell, 8, 28, 1],
-      aspect: [FIELD.aspect, 0.3, 0.65, 0.01],
-    },
-    motion: {
-      influence: [FIELD.influence, 40, 320, 1],
-      ease: [FIELD.ease, 0.02, 0.5, 0.01],
-      follow: [FIELD.follow, 0.02, 0.6, 0.01],
-      introMs: [FIELD.introMs, 0, 3000, 50],
-    },
-    glyphDots: {
-      restAlpha: [FIELD.glyph.restAlpha, 0, 1, 0.01],
-      baseR: [FIELD.glyph.baseR, 0.3, 5, 0.1],
-      maxR: [FIELD.glyph.maxR, 1, 12, 0.1],
-    },
-    bgDots: {
-      restAlpha: [FIELD.bgDot.restAlpha, 0, 0.4, 0.01],
-      baseR: [FIELD.bgDot.baseR, 0.2, 4, 0.1],
-      maxR: [FIELD.bgDot.maxR, 0.5, 6, 0.1],
-      gain: [FIELD.bgDot.gain, 0, 1, 0.01],
-    },
-  });
+  /* The gradient's vertical offset, in percent, as a spring — it rides around
+     INK_REST, not zero. useMotionTemplate keeps it on the compositor: no React
+     state, no re-render per pointermove. */
+  const drift = useSpring(INK_REST, DRIFT_SPRING);
+  const inkPosition = useMotionTemplate`50% ${drift}%`;
 
-  const cfg: FieldCfg = {
-    cell: dk.grid.cell,
-    aspect: dk.grid.aspect,
-    influence: dk.motion.influence,
-    ease: dk.motion.ease,
-    follow: dk.motion.follow,
-    introMs: dk.motion.introMs,
-    ink: dk.colors.ink,
-    azure: dk.colors.azure,
-    glyph: { restA: dk.glyphDots.restAlpha, baseR: dk.glyphDots.baseR, maxR: dk.glyphDots.maxR },
-    bg: {
-      restA: dk.bgDots.restAlpha,
-      baseR: dk.bgDots.baseR,
-      maxR: dk.bgDots.maxR,
-      gain: dk.bgDots.gain,
-    },
-  };
+  /* Mouse-only, and only when motion is welcome. A touch device has no hover to
+     trail, and there is nothing here worth spending a listener on without one. */
+  const [finePointer, setFinePointer] = useState(false);
+  useEffect(() => {
+    if (typeof window.matchMedia !== 'function') return;
+    setFinePointer(window.matchMedia('(hover: hover) and (pointer: fine)').matches);
+  }, []);
 
-  // Cursor reveal is a progressive enhancement: only on hover-capable, fine
-  // pointers without a reduced-motion preference. Everyone else gets the
-  // static full 404 below.
-  const canHover =
-    typeof window !== 'undefined' && typeof window.matchMedia === 'function'
-      ? window.matchMedia('(hover: hover) and (pointer: fine)').matches
-      : false;
-  const interactive = canHover && !reduce;
+  useEffect(() => {
+    if (reduce || !finePointer) return;
+    const onMove = (e: PointerEvent) => {
+      if (e.pointerType !== 'mouse') return;
+      // Cursor height, normalized to −0.5…0.5 from center, mapped to ±DRIFT
+      // around the resting window.
+      drift.set(INK_REST + (e.clientY / window.innerHeight - 0.5) * 2 * DRIFT);
+    };
+    // Alt-tab parks the cursor wherever it was — settle back rather than leave
+    // the sky frozen mid-tilt around a ghost pointer.
+    const onLeave = () => drift.set(INK_REST);
+    window.addEventListener('pointermove', onMove, { passive: true });
+    document.documentElement.addEventListener('pointerleave', onLeave);
+    window.addEventListener('blur', onLeave);
+    return () => {
+      window.removeEventListener('pointermove', onMove);
+      document.documentElement.removeEventListener('pointerleave', onLeave);
+      window.removeEventListener('blur', onLeave);
+    };
+  }, [drift, reduce, finePointer]);
 
-  // Section-level entrance: mark → copy → CTAs (staggered fade-up).
-  const stagger = {
-    hidden: {},
-    show: { transition: { staggerChildren: 0.08, delayChildren: 0.05 } },
-  };
+  /* "Go back" is only offered when there IS a back — a pasted URL or a fresh tab
+     lands here with no history, and a button that does nothing is worse than no
+     button. Read once, after mount, so SSR/tests don't fork on it. */
+  const [canGoBack, setCanGoBack] = useState(false);
+  useEffect(() => {
+    setCanGoBack(window.history.length > 1);
+  }, []);
+
+  const stagger = { hidden: {}, show: { transition: { staggerChildren: 0.08, delayChildren: 0.05 } } };
   const item = reduce
     ? { hidden: {}, show: {} }
     : {
@@ -380,42 +160,92 @@ export function NotFoundContent() {
       };
 
   return (
-    <div
-      className="flex min-h-screen items-center justify-center px-6 py-12 text-[#f5f5f5] antialiased"
-      style={{ backgroundColor: SHOW_DIALS ? dk.colors.background : FIELD.bg }}
-    >
-      <motion.div
+    // The Paper canvas, identical to /login's — including the color-scheme
+    // override, without which the scrollbar renders as a dark track on the
+    // white page (the app body declares dark).
+    <div className="overview-light relative flex min-h-dvh flex-col bg-white px-6 antialiased [color-scheme:light] dark:bg-[#171717] dark:[color-scheme:dark]">
+      <PublicTopBar />
+
+      {/* The login gradient, verbatim: the same halftone bloom, pinned to the
+          bottom edge, with the same cursor lens. Fixed, so it holds the floor of
+          the viewport; it paints above static siblings, hence the z-[1] on main. */}
+      <HalftoneVeil />
+
+      <motion.main
         variants={stagger}
         initial="hidden"
         animate="show"
-        className="flex flex-col items-center gap-7"
+        className="relative z-[1] mx-auto my-auto flex w-full max-w-[440px] flex-col items-center py-24 text-center"
       >
-        <motion.div variants={item}>
-          <DotField404 interactive={interactive} cfg={cfg} />
+        {/* role="img" rather than bare text: the glyphs are a mark, not prose,
+            and AT should say "404" once — not spell it into the headline that
+            follows. leading-[0.85] pulls the type's own optical box tight so the
+            gradient spans the numerals, not the empty air above them. */}
+        <motion.div
+          variants={item}
+          role="img"
+          aria-label="404"
+          style={{
+            backgroundImage: SUNSET_INK,
+            backgroundSize: `100% ${INK_HEIGHT}`,
+            backgroundPosition: reduce || !finePointer ? `50% ${INK_REST}%` : inkPosition,
+          }}
+          className={cn(
+            'bg-clip-text text-[clamp(104px,17vw,196px)] font-medium leading-[0.85] tracking-[-0.04em] tabular-nums',
+            '[-webkit-text-fill-color:transparent]',
+            NUMERAL_FALLBACK,
+          )}
+        >
+          404
         </motion.div>
 
-        <motion.div variants={item} className="flex flex-col items-center gap-4 text-center">
-          <h1 className="text-balance text-[clamp(22px,2.4vw,28px)] font-semibold text-[#f5f5f5]">
-            This page wandered off the map
-          </h1>
-          <p className="max-w-md text-pretty text-[14px] leading-relaxed text-[#a3a3a3]">
-            The page you’re looking for doesn’t exist or was moved. Let’s get you back on track.
-          </p>
-          {/* Dark-surface pills: canonical BTN_BASE geometry recoloured for the
-              black field — white primary, translucent secondary. Focus ring
-              offsets against black. */}
-          <div className="mt-1 flex items-center gap-3">
-            <Link to="/tasks" className={`${BTN_DARK_PRIMARY} ${FOCUS_RING}`}>
-              Back to tasks
-            </Link>
-            <Link to="/docs" className={`${BTN_DARK_SECONDARY} ${FOCUS_RING}`}>
-              Open docs
-            </Link>
-          </div>
-        </motion.div>
-      </motion.div>
+        <motion.h1
+          variants={item}
+          className="mt-9 text-balance text-[22px] font-medium leading-tight text-ink-title"
+        >
+          This page doesn’t exist
+        </motion.h1>
 
-      {SHOW_DIALS ? <DialRoot position="top-right" /> : null}
+        <motion.p
+          variants={item}
+          className="mt-3 max-w-[340px] text-pretty text-sm leading-normal text-ink-muted-strong dark:text-ink-muted"
+        >
+          The link may be broken, or the page may have moved.
+        </motion.p>
+
+        {/* The path you actually asked for. The error boundary already prints its
+            failure detail in mono; this is the same courtesy for a wrong URL —
+            enough to spot your own typo, and enough to paste into a bug report.
+            ink-muted-strong (4.9:1), not the faint tier the error card uses: a
+            path is information, not decoration. */}
+        {pathname && pathname !== '/' ? (
+          <motion.p
+            variants={item}
+            className="mt-5 max-w-full truncate rounded-full bg-wash-4 px-3 py-1 font-mono text-[12px] text-ink-muted-strong"
+          >
+            {pathname}
+          </motion.p>
+        ) : null}
+
+        {/* ONE primary. The old page offered "Back to tasks" and "Open docs" as
+            near-equal pills — but "docs" is a guess at what a lost user wants,
+            not a recovery path, and /tasks is only a redirect to /issues, so the
+            label was speaking a word the product retired. */}
+        <motion.div variants={item} className="mt-8 flex items-center gap-5">
+          <Link to="/issues" className={cn(BTN_PRIMARY, LIGHT_FOCUS_RING, 'inline-flex items-center')}>
+            Back to Issues
+          </Link>
+          {canGoBack ? (
+            <button
+              type="button"
+              onClick={() => window.history.back()}
+              className={cn(GHOST_ACTION, LIGHT_FOCUS_RING, 'rounded-full')}
+            >
+              Go back
+            </button>
+          ) : null}
+        </motion.div>
+      </motion.main>
     </div>
   );
 }

@@ -1,16 +1,34 @@
 /* PropertiesSection — property rows for the task rail.
  *
- * Read-only by default. When `isAdmin` is true, each editable property row
- * becomes a click-to-edit trigger anchored to a PropertyPopover. Mutations
- * go straight to Supabase via the browser client (RLS enforces auth); the
- * parent gets an optimistic patch via `onTaskUpdated` so the rail and the
- * card cluster stay in sync without a refetch. */
+ * NO LABEL COLUMN. Each row is a glyph + its value, and nothing else. The
+ * label column used to eat 88px of a 348px card to tell you that "Coding" is
+ * a department and that "May 11" is a date — which the value and its glyph
+ * already say. Dropping it gives the values the full width and leaves the
+ * card with a single text spine.
+ *
+ * That only works if EVERY row has a glyph, because the glyph box is what the
+ * text aligns to: a row without one starts its text 24px left of its
+ * neighbours. Hence Area (Folder) and unset-Assignee (CircleDashed) — both
+ * lifted from the CreateTaskComposer / AssigneePopover vocabulary rather than
+ * invented here.
+ *
+ * Empty values render "Set priority" / "Unassigned", not an em-dash. The
+ * placeholder IS the affordance — it says the slot is fillable at the moment
+ * you notice it's empty. Because that text is now actionable rather than
+ * decorative it sits at `ink-muted-strong` (4.9:1, the AA floor), NOT at
+ * `ink-faintest`, which the token ladder reserves for decoration.
+ *
+ * Read-only by default. When `isAdmin` is true, each row becomes a
+ * click-to-edit trigger anchored to a PropertyPopover. Mutations go straight
+ * to Supabase via the browser client (RLS enforces auth); the parent gets an
+ * optimistic patch via `onTaskUpdated` so the rail and the card cluster stay
+ * in sync without a refetch. */
 
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
-import { Calendar as CalendarIcon } from 'lucide-react';
+import { Calendar as CalendarIcon, CircleDashed, Folder } from 'lucide-react';
 import type {
   Area,
   Priority,
@@ -36,25 +54,42 @@ const DEPARTMENT_COLOR: Record<string, string> = {
 
 const DEPARTMENTS = ['Coding', 'Visual Art', 'UI/UX', 'Animation', 'Asset Creation'] as const;
 
-function Row({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
+/* The row bleeds 8px into RailSection's px-4 so the hover/press surface is the
+ * whole row, not the value pill it used to be. `w-[calc(100%+16px)]` pays back
+ * the two negative margins. 16px glyph + 2×8px padding = a 32px row: the rows
+ * tile with no gap, so the hit areas meet exactly and never overlap.
+ *
+ * No scale-on-press here, deliberately. A 332px-wide row scaling to 0.96 reads
+ * as the whole card flexing; for full-width list rows the press signal is the
+ * fill (`active:bg-wash-4`), same as every other row list in the app. */
+const ROW =
+  '-mx-2 flex w-[calc(100%+16px)] min-w-0 items-center gap-2 rounded-md px-2 py-2 text-left';
+const ROW_INTERACTIVE = `${ROW} transition-colors duration-150 ease-out hover:bg-wash-3 active:bg-wash-4 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-seeko-accent`;
+
+/** The shared 16px box every glyph sits in — this is what the value text aligns to. */
+const GLYPH = 'flex size-4 shrink-0 items-center justify-center text-ink-muted';
+
+function Row({ glyph, value, muted }: { glyph: ReactNode; value: string; muted?: boolean }) {
   return (
-    <div className="flex min-h-[28px] items-center gap-3">
-      <span className="w-[88px] shrink-0 text-[12.5px] text-ink-faint">{label}</span>
-      <span className="flex min-w-0 flex-1 items-center gap-1.5 text-[13px] text-ink-strong">
-        {children}
+    <>
+      <span className={GLYPH}>{glyph}</span>
+      {/* `title` because `truncate` is a one-way door: a long area or assignee name
+          clipped at 300px would otherwise be unreadable with no way to recover it. */}
+      <span
+        title={value}
+        className={`min-w-0 flex-1 truncate text-[13px] leading-4 ${
+          muted ? 'text-ink-muted-strong' : 'text-ink-strong'
+        }`}
+      >
+        {value}
       </span>
-    </div>
+    </>
   );
 }
 
-function Empty() {
-  return <span className="text-ink-faintest">—</span>;
+/** Unset department — a dashed swatch, so set/unset read as one glyph in two states. */
+function EmptySwatch() {
+  return <span className="size-3 rounded-[3.5px] border border-dashed border-ink-ghost" />;
 }
 
 function formatDate(iso?: string) {
@@ -95,6 +130,7 @@ export function PropertiesSection({
   const area = areas.find((a) => a.id === task.area_id);
   const deadline = formatDate(task.deadline);
   const deptColor = DEPARTMENT_COLOR[task.department ?? ''];
+  const priority = (task.priority ?? null) as Priority | null;
 
   // ── Option lists ─────────────────────────────────────────
   const statusOptions: PropertyOption<TaskStatus>[] = useMemo(
@@ -177,153 +213,160 @@ export function PropertiesSection({
     }
   }
 
-  // ── Row contents (read-only) ─────────────────────────────
-  const statusContent = (
-    <>
-      <StatusDot status={task.status} size="sm" />
-      <span>{task.status}</span>
-    </>
-  );
+  // ── Rows ─────────────────────────────────────────────────
+  // Status is the one property that can't be empty, so it has no placeholder.
+  const statusRow = <Row glyph={<StatusDot status={task.status} size="md" />} value={task.status} />;
 
-  const priorityContent = task.priority ? (
-    <>
-      <PriorityIcon
-        level={task.priority as Priority}
-        className="size-3.5"
-        style={{ color: PRIORITY_COLOR[task.priority as Priority] }}
-      />
-      <span>{task.priority}</span>
-    </>
-  ) : (
-    <Empty />
-  );
-
-  const departmentContent = task.department ? (
-    <>
-      <span
-        className="inline-block size-2 rounded-sm"
-        style={{ backgroundColor: deptColor ?? '#9a9a9a' }}
-      />
-      <span>{task.department}</span>
-    </>
-  ) : (
-    <Empty />
-  );
-
-  const areaContent = area ? <span>{area.name}</span> : <Empty />;
-
-  const assigneeContent = task.assignee ? (
-    <>
-      <Avatar className="size-5 ring-1 ring-wash-4">
-        <AvatarImage
-          src={task.assignee.avatar_url ?? undefined}
-          alt={task.assignee.display_name ?? ''}
+  const priorityRow = (
+    <Row
+      glyph={
+        <PriorityIcon
+          level={priority}
+          // The null glyph draws its dots from currentColor at 25% opacity, so it
+          // needs a dark source to read as a ghost instead of vanishing.
+          className={priority ? 'size-3.5' : 'size-3.5 text-ink-strong'}
+          style={priority ? { color: PRIORITY_COLOR[priority] } : undefined}
         />
-        <AvatarFallback className="bg-[#e5e5e5] dark:bg-surface-6 text-[9px] font-medium text-ink-body">
-          {initial(task.assignee.display_name)}
-        </AvatarFallback>
-      </Avatar>
-      <span className="truncate">{task.assignee.display_name}</span>
-    </>
-  ) : (
-    <Empty />
+      }
+      value={priority ?? 'Set priority'}
+      muted={!priority}
+    />
   );
 
-  const deadlineContent = deadline ? (
-    <>
-      <CalendarIcon className="size-3.5 text-ink-faint" />
-      <span>{deadline}</span>
-    </>
-  ) : (
-    <Empty />
+  const departmentRow = (
+    <Row
+      glyph={
+        task.department ? (
+          <span
+            className="size-3 rounded-[3.5px]"
+            style={{ backgroundColor: deptColor ?? '#9a9a9a' }}
+          />
+        ) : (
+          <EmptySwatch />
+        )
+      }
+      value={task.department ?? 'Set department'}
+      muted={!task.department}
+    />
+  );
+
+  const areaRow = (
+    <Row glyph={<Folder className="size-3.5" />} value={area?.name ?? 'Set area'} muted={!area} />
+  );
+
+  const assigneeRow = (
+    <Row
+      glyph={
+        task.assignee ? (
+          <Avatar className="size-4">
+            <AvatarImage
+              src={task.assignee.avatar_url ?? undefined}
+              alt={task.assignee.display_name ?? ''}
+            />
+            <AvatarFallback className="bg-[#e5e5e5] dark:bg-surface-6 text-[8px] font-medium text-ink-body">
+              {initial(task.assignee.display_name)}
+            </AvatarFallback>
+          </Avatar>
+        ) : (
+          <CircleDashed className="size-4" strokeWidth={1.5} />
+        )
+      }
+      value={task.assignee?.display_name ?? 'Unassigned'}
+      muted={!task.assignee}
+    />
+  );
+
+  const deadlineRow = (
+    <Row
+      glyph={<CalendarIcon className="size-3.5" />}
+      value={deadline ?? 'Set deadline'}
+      muted={!deadline}
+    />
   );
 
   // ── Render ───────────────────────────────────────────────
   if (!isAdmin) {
     return (
-      <div className="flex flex-col gap-1.5">
-        <Row label="Status">{statusContent}</Row>
-        <Row label="Priority">{priorityContent}</Row>
-        <Row label="Department">{departmentContent}</Row>
-        <Row label="Area">{areaContent}</Row>
-        <Row label="Assignee">{assigneeContent}</Row>
-        <Row label="Deadline">{deadlineContent}</Row>
+      <div className="flex flex-col">
+        <div className={ROW}>{statusRow}</div>
+        <div className={ROW}>{priorityRow}</div>
+        <div className={ROW}>{departmentRow}</div>
+        <div className={ROW}>{areaRow}</div>
+        <div className={ROW}>{assigneeRow}</div>
+        <div className={ROW}>{deadlineRow}</div>
       </div>
     );
   }
 
-  // Admin: each row is a popover trigger.
+  // Admin: each row is a popover trigger. The aria-label is the only place the
+  // property NAME survives now that the visible label column is gone, so it
+  // carries the name AND the current value — a button whose accessible name is
+  // a bare "Change status" would announce nothing about what the status is.
   return (
-    <div className="flex flex-col gap-1.5" data-saving={saving ?? undefined}>
-      <Row label="Status">
-        <PropertyPopover<TaskStatus>
-          value={task.status}
-          options={statusOptions}
-          ariaLabel="Change status"
-          onSelect={(next) => next && update('status', next)}
-        >
-          {statusContent}
-        </PropertyPopover>
-      </Row>
+    <div className="flex flex-col" data-saving={saving ?? undefined}>
+      <PropertyPopover<TaskStatus>
+        value={task.status}
+        options={statusOptions}
+        ariaLabel={`Status: ${task.status}`}
+        triggerClassName={ROW_INTERACTIVE}
+        onSelect={(next) => next && update('status', next)}
+      >
+        {statusRow}
+      </PropertyPopover>
 
-      <Row label="Priority">
-        <PropertyPopover<Priority>
-          value={(task.priority ?? null) as Priority | null}
-          options={priorityOptions}
-          ariaLabel="Change priority"
-          onSelect={(next) => next && update('priority', next)}
-        >
-          {priorityContent}
-        </PropertyPopover>
-      </Row>
+      <PropertyPopover<Priority>
+        value={priority}
+        options={priorityOptions}
+        ariaLabel={`Priority: ${priority ?? 'not set'}`}
+        triggerClassName={ROW_INTERACTIVE}
+        onSelect={(next) => next && update('priority', next)}
+      >
+        {priorityRow}
+      </PropertyPopover>
 
-      <Row label="Department">
-        <PropertyPopover<string>
-          value={(task.department ?? null) as string | null}
-          options={departmentOptions}
-          ariaLabel="Change department"
-          onSelect={(next) => next && update('department', next)}
-        >
-          {departmentContent}
-        </PropertyPopover>
-      </Row>
+      <PropertyPopover<string>
+        value={(task.department ?? null) as string | null}
+        options={departmentOptions}
+        ariaLabel={`Department: ${task.department ?? 'not set'}`}
+        triggerClassName={ROW_INTERACTIVE}
+        onSelect={(next) => next && update('department', next)}
+      >
+        {departmentRow}
+      </PropertyPopover>
 
-      <Row label="Area">
-        <PropertyPopover<string>
-          value={task.area_id ?? null}
-          options={areaOptions}
-          ariaLabel="Change area"
-          allowClear
-          onSelect={(next) => update('area_id', next ?? undefined)}
-        >
-          {areaContent}
-        </PropertyPopover>
-      </Row>
+      <PropertyPopover<string>
+        value={task.area_id ?? null}
+        options={areaOptions}
+        ariaLabel={`Area: ${area?.name ?? 'not set'}`}
+        triggerClassName={ROW_INTERACTIVE}
+        allowClear
+        onSelect={(next) => update('area_id', next ?? undefined)}
+      >
+        {areaRow}
+      </PropertyPopover>
 
-      <Row label="Assignee">
-        <PropertyPopover<string>
-          value={task.assignee_id ?? null}
-          options={assigneeOptions}
-          ariaLabel="Change assignee"
-          allowClear
-          onSelect={(next) => {
-            const nextAssignee = next ? team.find((p) => p.id === next) ?? null : null;
-            update('assignee_id', next ?? undefined, { assignee: nextAssignee });
-          }}
-        >
-          {assigneeContent}
-        </PropertyPopover>
-      </Row>
+      <PropertyPopover<string>
+        value={task.assignee_id ?? null}
+        options={assigneeOptions}
+        ariaLabel={`Assignee: ${task.assignee?.display_name ?? 'unassigned'}`}
+        triggerClassName={ROW_INTERACTIVE}
+        allowClear
+        onSelect={(next) => {
+          const nextAssignee = next ? team.find((p) => p.id === next) ?? null : null;
+          update('assignee_id', next ?? undefined, { assignee: nextAssignee });
+        }}
+      >
+        {assigneeRow}
+      </PropertyPopover>
 
-      <Row label="Deadline">
-        <DatePopover
-          value={task.deadline ?? null}
-          ariaLabel="Change deadline"
-          onChange={(next) => update('deadline', next ?? undefined)}
-        >
-          {deadlineContent}
-        </DatePopover>
-      </Row>
+      <DatePopover
+        value={task.deadline ?? null}
+        ariaLabel={`Deadline: ${deadline ?? 'not set'}`}
+        triggerClassName={ROW_INTERACTIVE}
+        onChange={(next) => update('deadline', next ?? undefined)}
+      >
+        {deadlineRow}
+      </DatePopover>
     </div>
   );
 }

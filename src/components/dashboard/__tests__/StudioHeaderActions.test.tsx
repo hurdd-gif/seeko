@@ -8,6 +8,8 @@ vi.mock('@/lib/react-router-adapters', () => ({
   Link: ({ href, to, ...props }: { href?: string; to?: string; children?: unknown }) => (
     <a href={href ?? to} {...props} />
   ),
+  // CreateIssueButton (rendered inside the header) navigates on press.
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn(), prefetch: vi.fn() }),
   dynamic: () => () => null,
 }));
 

@@ -124,6 +124,19 @@
   --surface-7: oklch(0.9128 0 0);  /* #e2e2e2 */
   --surface-8: oklch(0.8945 0 0);  /* #dcdcdc */
 
+  /* SUNKEN — the fill of a surface that RECEDES: a well you type into, not a card
+     that sits on the page. The ladder above only climbs, so there was no rung for
+     this, and the comment composer ended up on --surface-1 — ABOVE the canvas,
+     reading as a raised card rather than as a place to put something.
+
+     Like --overlay, this is a semantic, not a rung, because sinking runs opposite
+     ways in the two schemes: on light the canvas is grey (#eeeeee) and a well sinks
+     by going WHITE (an input's paper is brighter than the desk it lies on), which is
+     exactly --surface-1 — so light is unchanged, deliberately, byte for byte. On
+     dark the canvas is already near-black and a well can only sink by going darker
+     still. See the .dark block for the value and why it stops where it does. */
+  --surface-sunken: var(--surface-1);
+
   /* OVERLAY — the fill of a surface that FLOATS: menu, popover, dropdown, dialog.
      Not a rung of the ladder above; a semantic that resolves to a different rung
      in each scheme, and that is the entire reason it exists.
@@ -266,6 +279,17 @@
   --surface-7: oklch(0.382 0 0);
   --surface-8: oklch(0.400 0 0);
 
+  /* SUNKEN in dark: the only direction left is down. The canvas is 0.240, so a well
+     has to sit BELOW it — 0.212 is the mirror of the 0.025 lift the composer used to
+     have, which is a step already proven visible at this darkness.
+
+     It deliberately stops short of 0.205. That value is the old investor-dashboard
+     look this scheme was lifted away from, and it must not creep back — but the ban
+     is on the CANVAS AND CARDS, the broad areas that set how black the app feels. A
+     single input well going quietly darker than its page is the opposite move: it
+     buys depth without darkening anything you actually read against. */
+  --surface-sunken: oklch(0.212 0 0);
+
   /* The whole point of the semantic (see :root): the floating tier, NOT the card
      base. It only has to CLEAR the card, not shout over it — the popover rung
      (0.332) does clear it but lands on a grey bright enough to read as its own
@@ -351,23 +375,38 @@
   /* Scrim does NOT flip with the washes — it stays black and deepens. */
   --scrim:   oklch(0 0 0 / 0.25);
 
-  /* Shadow language relit. Two moves, same anatomy: the hairline ring flips
-     to white-alpha (the ring draws the silhouette — a black ring vanishes on
-     a dark canvas), and the drop pools go deeper/stronger (less ambient
-     light to fill them). Ring alphas run hotter than a naive flip (0.13–0.17)
-     because on the lifted ramp the ring IS the elevation cue — dark drop
-     shadows barely register against a 0.24 canvas. --sh-elevated and
-     --sh-accent-inset are already dark-correct and inherit unchanged.
+  /* Shadow language relit. The hairline ring flips to white-alpha (a black
+     ring vanishes on a dark canvas) and the drop pools go deeper (less ambient
+     light to fill them). --sh-elevated and --sh-accent-inset are already
+     dark-correct and inherit unchanged.
 
-     RESTING SURFACES ARE NOT THE PROBLEM AND MUST NOT BE "FIXED". Cards,
-     columns and chrome (--sh-seeko, --sh-surface-*) read correctly as-is:
-     they sit ON the canvas, and the tiny 1–2px pool is all the separation
-     they should have. Deepening those pools puts a hard, dirty halo around
-     every card — tried it, it's worse. Only the FLOATING tier was broken,
-     and only the floating tier is retuned below. */
+     STILL TRUE: don't fix resting surfaces by DEEPENING THE POOL. A dark,
+     tight pool on a lifted canvas doesn't read as depth, it reads as grime —
+     tried it, it's worse.
+
+     THE RING WAS THE OTHER HALF, and it took a second complaint to see it.
+     Resting rings used to run 0.13–0.17, on the theory that the ring had to
+     BE the elevation cue because dark pools barely register. That is the exact
+     mistake the floating tier already diagnosed and fixed below: a bright,
+     UNIFORM outline is not how a lit edge behaves. Light comes from one
+     direction. Ringed equally on all four sides, a card stops reading as a
+     surface and starts reading as a drawn box — "weird outlines".
+
+     Why it bit hardest here: --surface-1 (0.265) was tuned to clear the APP
+     canvas (0.218) by 0.047. But the task/board pages run on --ov-bg (0.240),
+     where that same card clears by only 0.025 — half the intended fill lift.
+     With the fill barely separating, the ring was left shouting alone, and a
+     shouting ring is a border.
+
+     So the ring drops to a whisper and the edge goes DIRECTIONAL: one 1px
+     top inset where the light would actually land says "this has thickness"
+     better than any uniform stroke (the same trick --sh-elevated has always
+     used). The pool is unchanged. Cards now separate by fill + a lit top
+     edge, not by an outline drawn around them. */
   --sh-accent-glow: 0 0 12px oklch(0.6037 0.2168 257.92 / 0.10);
   --sh-seeko:
-    0 0 0 0.5px oklch(1 0 0 / 0.14),
+    0 0 0 0.5px oklch(1 0 0 / 0.05),
+    inset 0 1px 0 oklch(1 0 0 / 0.055),
     0 1px 2px oklch(0 0 0 / 0.35);
 
   /* ─── The floating tier ──────────────────────────────────────────────────
@@ -393,8 +432,14 @@
     0 8px 28px -10px oklch(0 0 0 / 0.22),
     0 24px 56px -24px oklch(0 0 0 / 0.26);
   --sh-float: 0 10px 20px oklch(0 0 0 / 0.45);
+  /* Surface-1 is the SAME resting-card role as --sh-seeko, so it gets the same
+     treatment: whisper ring + directional top edge, no drawn box. Tiers 2–5
+     below keep their hotter rings — they are the elevated/floating tiers and
+     carry real pools underneath, so their edge is read against a shadow, not
+     against bare canvas. */
   --sh-surface-1:
-    0 0 0 0.5px oklch(1 0 0 / 0.13),
+    0 0 0 0.5px oklch(1 0 0 / 0.05),
+    inset 0 1px 0 oklch(1 0 0 / 0.055),
     0 1px 2px oklch(0 0 0 / 0.30);
   --sh-surface-2:
     0 0 0 0.5px oklch(1 0 0 / 0.14),
@@ -463,7 +508,24 @@
   --font-handwriting: var(--font-inter);
 
   /* Single-weight dashboard typography. Keep utility classes compatible while
-     resolving every requested weight to Inter Medium. */
+     resolving every requested weight to Inter Medium.
+
+     The ladder must be covered END TO END. It used to start at `normal`, which
+     left `thin`/`extralight`/`light` mapped to Tailwind's defaults — so those
+     three utilities were the only ones that escaped the rule. `font-light` did
+     escape it: it resolved to 300, and with only 400/500/600 loaded the browser
+     rendered the nearest real file, 400, pulling down a font Inter otherwise
+     never needed on that screen. Only one glyph in the app was ever affected
+     (the code-input separator dash), which is exactly why it went unnoticed for
+     so long. Closing the low end means no utility can silently opt out.
+
+     This governs the WEIGHT UTILITIES, not weight itself. A surface that has a
+     deliberate reason to carry real hierarchy still can, via an arbitrary value
+     (`font-[600]` on the login h1) — which is legible as an exception precisely
+     because the utilities cannot produce one by accident. */
+  --font-weight-thin: 500;
+  --font-weight-extralight: 500;
+  --font-weight-light: 500;
   --font-weight-normal: 500;
   --font-weight-medium: 500;
   --font-weight-semibold: 500;
@@ -503,6 +565,7 @@
   --color-surface-6: var(--surface-6);
   --color-surface-7: var(--surface-7);
   --color-surface-8: var(--surface-8);
+  --color-surface-sunken: var(--surface-sunken);
 
   /* `bg-overlay` — the fill for anything that floats. Reach for this instead of
      `bg-surface-1` on menus, popovers, dropdowns and dialogs: surface-1 names a
@@ -1638,8 +1701,15 @@ body.tour-cmd-k-active #command-palette-container * {
   background-color: #f7f5f33f;
 }
 
-/* Light-mode variant — black-tinted thumb on transparent track, for use
-   inside white popovers/menus. Same pill shape, inverted contrast. */
+/* THE CANONICAL OVERLAY SCROLLBAR — use this one on any scroller that sits on a
+   themed surface (pages, rails, popover lists). Transparent track, 6px pill thumb
+   that lifts on hover, no channel, no arrows: the macOS overlay bar, not the
+   15px native slab that steals layout width and paints a track down the page.
+
+   It is THEME-AWARE, unlike `.scrollbar-thin` above (which is hardcoded for
+   dark-only surfaces). The thumb is black-tinted on light and white-tinted on
+   dark, so one class is correct on both. Any scroller reaching for a scrollbar
+   should reach for this. */
 .scrollbar-paper {
   scrollbar-width: thin;
   scrollbar-color: rgba(0, 0, 0, 0.16) transparent;
@@ -1657,6 +1727,20 @@ body.tour-cmd-k-active #command-palette-container * {
 }
 .scrollbar-paper::-webkit-scrollbar-thumb:hover {
   background-color: rgba(0, 0, 0, 0.28);
+}
+
+/* Dark: invert the thumb. Without this the class painted a BLACK pill on a dark
+   panel — invisible — everywhere it was already in use (e.g. the link picker's
+   result list). Alphas are a touch higher than light's because white-on-dark
+   reads quieter than black-on-white at the same opacity. */
+.dark .scrollbar-paper {
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+}
+.dark .scrollbar-paper::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.18);
+}
+.dark .scrollbar-paper::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.32);
 }
 
 /* No native bars at all — for scrollers that draw their own indicator

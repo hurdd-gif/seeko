@@ -18,7 +18,7 @@ import { HalftoneVeil } from '@/components/auth/HalftoneVeil';
  */
 
 const CALLBACK_ERROR_MESSAGES: Record<string, string> = {
-  auth_callback_failed: "Google sign-in didn't complete. Please try again.",
+  auth_callback_failed: 'Google sign-in didn’t complete. Please try again.',
 };
 
 /**
@@ -34,11 +34,24 @@ const CALLBACK_ERROR_MESSAGES: Record<string, string> = {
  * acknowledgement is one continuous gesture rather than a flicker followed by
  * dead air.
  */
+/* UNDERLINED, always. These were distinguished from the sentence around them by
+ * a `font-medium` that the remapped weight token rendered at 500 — i.e. nothing —
+ * and one step on the ink ramp (#505050 link vs #686868 body, about 1.15:1 against
+ * each other). Three links inside a wrapping paragraph, marked only by a grey a
+ * shade darker than its neighbours: not identifiable as links, and colour-alone is
+ * exactly what WCAG 1.4.1 rules out. The `contrast-more:underline` that was already
+ * here is the admission — the right answer was sitting behind a preference almost
+ * nobody sets. It's now unconditional, so the variant no longer needs to add it.
+ *
+ * from-font takes position and thickness from Inter's own metrics instead of the
+ * browser's guess, and skip-ink lifts the line around the descenders in "Privacy
+ * Policy" and "Developer". */
 const FOOTNOTE_LINK = cn(
-  'font-medium text-ink-body dark:text-ink',
+  'text-ink-body dark:text-ink',
+  'underline decoration-from-font underline-offset-2 [text-decoration-skip-ink:auto]',
   'transition-[color,opacity] duration-150 ease-out hover:text-ink-title',
   'active:opacity-55 active:duration-[60ms] data-[pending]:opacity-55',
-  'contrast-more:text-ink-title contrast-more:underline',
+  'contrast-more:text-ink-title',
 );
 
 /* There used to be a "frost halo" here: three stacked backdrop-filter layers
@@ -209,7 +222,11 @@ export function LoginRouteContent() {
             thing in the paragraph. Dark puts the body on ink-muted and lifts the
             links a tier ABOVE it, to text-ink. */}
         <div className="relative mt-8">
-          <p className="relative max-w-[300px] text-pretty text-center text-sm leading-snug text-ink-muted-strong dark:text-ink-muted contrast-more:text-ink">
+          {/* leading-normal (1.5), not leading-snug (1.375): this is three lines
+              of real reading copy at 14px, not a tagline. Body copy wants 1.5–1.6,
+              and the extra leading is also what keeps the new underlines from
+              crowding the line beneath them. */}
+          <p className="relative max-w-[300px] text-pretty text-center text-sm leading-normal text-ink-muted-strong dark:text-ink-muted contrast-more:text-ink">
           By creating an account, you agree to our{' '}
           <PublicLink to="/legal/terms" className={FOOTNOTE_LINK}>
             Terms of Use

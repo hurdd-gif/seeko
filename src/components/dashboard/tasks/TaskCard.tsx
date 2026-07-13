@@ -29,7 +29,7 @@ import { UserPlus, CalendarClock, Calendar, Pencil, Trash2 } from 'lucide-react'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { springs } from '@/lib/motion';
 import { useEkoSpotlight } from '@/lib/hooks/useEkoSpotlight';
-import type { Profile, TaskStatus, TaskWithAssignee } from '@/lib/types';
+import { isTerminalStatus, type Profile, type TaskStatus, type TaskWithAssignee } from '@/lib/types';
 import { StatusDot } from './StatusDot';
 import { AssigneePopover } from './AssigneePopover';
 import { StatusPopover } from './StatusPopover';
@@ -81,6 +81,10 @@ function shortCreated(dateStr?: string): string | null {
  * it from local components so it doesn't shift a day west of UTC, then compare
  * calendar days (not timestamps) so a task due *today* is not flagged overdue.
  * `now` is injectable for testing.
+ *
+ * `overdue` here is the CALENDAR fact — "this date is in the past" — and nothing
+ * more. Whether past-ness is worth an alarm is the card's call, not this
+ * function's: a shipped task's deadline is history. See `missedDeadline` below.
  */
 export function formatDeadline(
   deadline: string | null | undefined,
@@ -150,6 +154,12 @@ export function TaskCard({
   const idLabel = task.task_number != null ? String(task.task_number) : null;
   const created = shortCreated(task.created_at);
   const deadline = formatDeadline(task.deadline);
+  // A Done/Canceled/Duplicate card is finished, so it cannot be LATE — a red
+  // "Overdue May 22" on a task that shipped is the board shouting about a race
+  // that's already over, and it drains the alarm of meaning on the cards that
+  // are genuinely late. The date stays (it's still a fact about the task); only
+  // the alarm goes, leaving the same neutral chip an on-time due date wears.
+  const missedDeadline = !!deadline?.overdue && !isTerminalStatus(task.status);
   const assignee = task.assignee;
 
   const canQuickAssign = isAdmin && !!team && !!onAssign;
@@ -373,13 +383,13 @@ export function TaskCard({
             <span
               className={cn(
                 'inline-flex h-6 min-w-0 items-center gap-1.5 rounded-full px-2 text-[11px] font-medium leading-none tabular-nums',
-                deadline.overdue
+                missedDeadline
                   ? 'bg-[#f04438]/10 dark:bg-danger/15 text-[#d92d20] dark:text-danger'
                   : 'bg-wash-4 text-[#777777] dark:text-ink-muted',
               )}
             >
               <CalendarClock className="size-3 shrink-0" strokeWidth={1.75} />
-              <span className="truncate">{deadline.overdue ? `Overdue ${deadline.label}` : deadline.label}</span>
+              <span className="truncate">{missedDeadline ? `Overdue ${deadline.label}` : deadline.label}</span>
             </span>
           ) : created ? (
             <span className="inline-flex h-6 min-w-0 items-center gap-1.5 rounded-full bg-wash-4 px-2 text-[11px] font-medium leading-none tabular-nums text-ink-muted">

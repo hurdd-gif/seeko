@@ -33,6 +33,32 @@ export const VEIL_STOPS: VeilStop[] = [
   { offset: 0.92, rgb: [0x1d, 0x33, 0xb4] },
 ];
 
+/**
+ * The same palette as CSS gradient stops, bottom → top.
+ *
+ * One palette, two materials. The veil renders VEIL_STOPS as halftone dots
+ * (color sampled per row); anything that wants the sunset as CONTINUOUS ink —
+ * the /404 numerals, GradientVeil — renders these stops instead. Deriving both
+ * from VEIL_STOPS is the point: the gradient can't drift out of sync with the
+ * dots, because there is only one list of colors in the codebase.
+ *
+ * `scale` compresses the stops into a fraction of the gradient's box, for the
+ * callers whose ink only reaches part way up their container (the veil's bloom
+ * tops out at BLOOM_RY_FRAC of its canvas, so its stops land at 0.833× their
+ * nominal height). Ink that fills its own box passes 1.
+ *
+ * Always interpolate these `in oklab`. sRGB blending between the saturated
+ * bands (orange ↔ cream ↔ sky) detours through desaturated middles that read as
+ * grey seams in continuous ink — the dots dodge this only because each row is a
+ * flat sample, never a blend.
+ */
+export function veilGradientStops(scale = 1): string {
+  return VEIL_STOPS.map(({ offset, rgb }) => {
+    const hex = rgb.map(c => c.toString(16).padStart(2, '0')).join('');
+    return `#${hex} ${+(offset * scale * 100).toFixed(1)}%`;
+  }).join(', ');
+}
+
 /** Piecewise-linear sample of the sunset palette at t ∈ [0, 1] (clamped). */
 export function sampleVeilGradient(t: number): [number, number, number] {
   const clamped = Math.min(1, Math.max(0, t));

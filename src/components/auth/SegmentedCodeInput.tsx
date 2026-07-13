@@ -191,9 +191,18 @@ export function SegmentedCodeInput({ value, onChange, disabled, light = false, i
     <div ref={containerRef} className="flex items-center justify-center gap-1 sm:gap-1.5 w-full max-w-sm mx-auto px-1.5">
       {digits.map((digit, i) => (
         <React.Fragment key={i}>
+          {/* The group separator. It used to carry `font-light`, which was the
+              one weight utility globals.css never remapped to 500 — so it fell
+              through to 300, and with only 400/500/600 loaded the browser drew
+              the nearest real file, 400. This dash was the sole sub-500 glyph in
+              the app, and it pulled down a whole font Inter otherwise never
+              needed here. The 20% opacity was always what made it recede.
+              (globals.css now covers thin/extralight/light too, so the hole is
+              closed at the source — but the class stays gone: it never meant
+              anything.) */}
           {i === 4 && (
             <div className={cn(
-              'w-2 sm:w-3 flex items-center justify-center text-base sm:text-lg font-light select-none',
+              'w-2 sm:w-3 flex items-center justify-center text-base sm:text-lg select-none',
               light ? 'text-black/20 dark:text-white/20' : 'text-muted-foreground/30',
             )}>
               &ndash;
@@ -233,8 +242,14 @@ export function SegmentedCodeInput({ value, onChange, disabled, light = false, i
               // old "complete" state ringed all 8 cells at once, which is the
               // main thing that read as noise; a full code now just settles
               // to the filled look and lets the CTA carry the affordance.
+              // `font-mono` was a no-op: globals.css aliases --font-mono to Inter,
+              // so these cells were always rendering in the body face. tabular-nums
+              // is what actually does the job — it holds every digit to one advance
+              // width, which is the only property a code cell needs. font-medium
+              // resolved to the inherited 500; both classes are gone, the render is
+              // byte-identical, and the intent no longer lies.
               className={cn(
-                'w-full aspect-square rounded-[10px] border text-center text-base sm:text-[17px] font-medium font-mono tabular-nums transition-[border-color,background-color] duration-150 ease-out',
+                'w-full aspect-square rounded-[10px] border text-center text-base sm:text-[17px] tabular-nums transition-[border-color,background-color] duration-150 ease-out',
                 'focus:outline-none caret-transparent disabled:opacity-50',
                 // `light` = the scheme-aware Paper kit (surface-1/wash tokens
                 // flip under .dark); the hardcoded light-only inks get dark:

@@ -1,5 +1,6 @@
 /* ─────────────────────────────────────────────────────────
- * TaskDetailRail — 416px right panel with stacked floating cards.
+ * TaskDetailRail — 452px right slot (400px card + the 52px page gutter) with
+ * stacked floating cards.
  *
  * Each section (Properties · Milestones · Progress · Activity)
  * is its OWN shadow-seeko rounded-xl card. Cards sit on the
@@ -216,9 +217,17 @@ export function TaskDetailRail({
   return (
     <aside
       aria-label={task ? 'Task details' : 'Project overview'}
-      className="flex h-full w-[416px] shrink-0 flex-col"
+      className="flex h-full w-[452px] shrink-0 flex-col"
     >
-      <div className="m-4 ml-0 flex h-[calc(100%-2rem)] min-h-0 flex-col overflow-hidden">
+      {/* mr-[52px] is the page gutter, not a margin: the card's right edge has to
+          land on the same line the header's account cluster ends on (viewport−52),
+          or the top bar reads as stopping short of the page. 452 − 52 keeps the
+          card at its designed 400px.
+          mb-4 only — the TOP gap is the board row's pt-6, shared with the columns.
+          This card used to carry my-4 and float 8px below the first column header,
+          which read as a mistake because it was one. mb-4 is what the 1rem in
+          h-[calc(100%-1rem)] pays for. */}
+      <div className="mb-4 mr-[52px] flex h-[calc(100%-1rem)] min-h-0 flex-col overflow-hidden">
         <AnimatePresence mode="wait" initial={false}>
           {task ? (
             <motion.div

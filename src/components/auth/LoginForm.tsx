@@ -179,8 +179,13 @@ const FADE = {
   spring: springs.smooth,
 };
 
+/* 16px on mobile, 14px from `sm` up. NOT a taste call: iOS Safari zooms the
+ * whole viewport whenever a focused input's text is under 16px, so a 14px email
+ * field jerks the page on every iPhone sign-in — on the one screen a user cannot
+ * skip. SegmentedCodeInput already sized its cells this way (text-base sm:…);
+ * the email form never got the same treatment. */
 const FIELD_INPUT = cn(
-  'h-11 w-full px-3 text-sm transition-[border-color,box-shadow] duration-150 focus-visible:outline-none',
+  'h-11 w-full px-3 text-base sm:text-sm transition-[border-color,box-shadow] duration-150 focus-visible:outline-none',
   LIGHT_INPUT,
 );
 
@@ -205,15 +210,21 @@ function shakeEl(el: HTMLElement | null, reduceMotion: boolean | null) {
 }
 
 /* Provider pill — reference geometry verbatim: 48px tall, #F1F1F1, 16px radius,
- * 8px icon–label gap, 24px icon + 16px/600 #3A3A3A label. Dark pins the
+ * 8px icon–label gap, 24px icon + 16px #3A3A3A label. Dark pins the
  * Figma LOGIN/DARK pair (#262626 fill, #b0b0b0 label) over the app's
- * control-fill/ink tokens; hover brightens instead of darkening. */
+ * control-fill/ink tokens; hover brightens instead of darkening.
+ *
+ * No weight utility: the label inherits body 500 (Tailwind's preflight gives form
+ * controls `font: inherit`). It used to carry `font-semibold`, which the remapped
+ * token rendered at 500 anyway — so the class was decoration on a lie. The h1 is
+ * the one element on this page that carries a real weight now, and a control label
+ * must not compete with the page's own title. */
 const PILL = cn(
   'flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-control-fill dark:bg-[#262626]',
   // No dark: override on the label — `text-ink` already inverts (#3a3a3a light,
   // #d9d9d9 dark). The old dark:text-[#b0b0b0] pinned it two tiers BELOW the ink
   // ramp, so the primary auth labels read dimmer than the muted copy under them.
-  'text-base font-semibold text-ink',
+  'text-base text-ink',
   'transition-[background-color,transform] duration-150 ease-out hover:bg-[#eaeaea] dark:hover:bg-[#2c2c2c] active:scale-[0.98]',
   'disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100',
   LIGHT_FOCUS_RING,
@@ -477,7 +488,7 @@ export function LoginForm({ initialError = null, skipEntrance = false }: LoginFo
     const trimmed = email.trim();
     if (!trimmed || !EMAIL_RE.test(trimmed)) {
       setFieldInvalid('email');
-      setError(trimmed ? "That doesn't look like an email address." : 'Enter your email address.');
+      setError(trimmed ? 'That doesn’t look like an email address.' : 'Enter your email address.');
       emailInputRef.current?.focus();
       shakeEl(emailInputRef.current, reduceMotion);
       trigger('error');
@@ -645,8 +656,6 @@ export function LoginForm({ initialError = null, skipEntrance = false }: LoginFo
           animate={{ opacity: stage >= 2 ? 1 : 0, y: stage >= 2 ? 0 : IDENTITY.offsetY }}
           transition={t(IDENTITY.spring)}
         >
-          {/* #454545 = the reference's #515151 darkened 15% (user-decided
-              2026-07-04); ~9.7:1 on white. */}
           {/* ink-STRONG, not ink-heading. On the ramp, ink-heading (L .390 light /
               .861 dark) sits BELOW plain ink (.348 / .885) — which is what the
               pill labels use. So "Continue with Google" was rendering darker on
@@ -659,8 +668,23 @@ export function LoginForm({ initialError = null, skipEntrance = false }: LoginFo
 
               Same as PILL: no dark: override. text-ink-strong inverts to #e4e4e4
               (10.7:1); the old dark:text-[#b2b2b2] sat at the MUTED tier, so the
-              page's H1 was dimmer in dark than its own body copy should be. */}
-          <h1 className="text-balance text-[22px] font-semibold tracking-[-0.02em] text-ink-strong">
+              page's H1 was dimmer in dark than its own body copy should be.
+
+              WEIGHT — `font-[600]`, not `font-semibold`. globals.css resolves
+              EVERY named weight utility to 500 ("single-weight dashboard
+              typography"), so the `font-semibold` that used to sit here rendered
+              at exactly the same weight as the body copy under it: a class that
+              claimed a hierarchy the CSS then erased. The whole colour argument
+              above exists because weight was unavailable to do the ranking.
+
+              That rule is scoped to the DASHBOARD. /login is the public front
+              door, and the Paper reference (27P-0) it was built from specified
+              600 here — Inter 600 is already in the index.html font request, so
+              this costs nothing. The arbitrary value bypasses the remapped token
+              deliberately; it is the only real weight on the page, which is the
+              point: one element outranks the rest by weight, everything else
+              inherits body 500 and stays quiet. */}
+          <h1 className="text-balance text-2xl font-[600] tracking-[-0.02em] text-ink-strong">
             Sign in to SEEKO
           </h1>
         </motion.div>
@@ -689,16 +713,35 @@ export function LoginForm({ initialError = null, skipEntrance = false }: LoginFo
             // #b4b4b4 (2.1:1) treated the page's one line of real copy as
             // decoration; the #767676 that replaced it was a hardcoded hex
             // hitting the same tier by hand — the token does it by reference.
-            className="text-balance text-center text-base leading-snug text-ink-muted-strong dark:text-ink-muted contrast-more:text-ink"
+            // text-PRETTY, not text-balance. balance equalises line lengths, and
+            // with the back half welded into one unbreakable run it could only
+            // buy that balance by pushing words off line 1 — it broke "runs / on"
+            // and, before the &nbsp; went in, opened line 2 with a naked em dash.
+            // Both are worse than a slightly uneven pair of lines. This is a
+            // description, not a heading: balance is for headings, pretty is for
+            // descriptions, and greedy filling puts the break exactly where the
+            // punctuation already says it goes.
+            className="text-pretty text-center text-base leading-snug text-ink-muted-strong dark:text-ink-muted contrast-more:text-ink"
             initial={{ opacity: 0 }}
             animate={{ opacity: stage >= 3 ? 1 : 0 }}
             transition={t(FADE.spring)}
           >
             {/* Public-facing page: never list what's inside the workspace
                 (feature names here leak product surface to visitors).
-                nowrap on the back half pins the wrap after the em dash —
-                text-balance alone broke mid-phrase ("runs / on"). */}
-            Everything the studio runs on —{' '}
+
+                WRAPPING: the em dash is bound to "on" with &nbsp;, and the back
+                half is nowrap. Those two together leave exactly ONE break
+                opportunity in the line — the space after the dash — which is the
+                only place it should ever break.
+
+                The nowrap span alone did NOT do this, despite the comment that
+                used to claim it: text-balance was breaking after "runs on" and
+                opening the second line with "— in one private workspace". A line
+                may not begin with an em dash. nowrap stopped the back half from
+                splitting, but it never said anything about where the dash goes,
+                and an ordinary space in front of it is a legal break. &nbsp; is
+                the thing that actually forbids it. */}
+            Everything the studio runs on&nbsp;—{' '}
             <span className="whitespace-nowrap">in one private workspace</span>
           </motion.p>
         </motion.div>
@@ -799,9 +842,13 @@ export function LoginForm({ initialError = null, skipEntrance = false }: LoginFo
                     }
                   >
                     {/* pb-2.5 = the caption's own 2px + the stack's 8px gap. */}
-                    {/* 12px is the smallest type on the page — it has the least
-                        margin for a thin contrast ratio, not the most. */}
-                    <p className="pb-2.5 pl-1 text-[12px] text-ink-muted-strong dark:text-ink-muted contrast-more:text-ink">
+                    {/* 13px, not 12: this card was carrying three caption sizes
+                        (12/13/13) doing one job, which reads as drift rather than
+                        hierarchy. 13px is the project's de-facto caption size
+                        (lightKit's BTN_BASE and CARD_DESC both use it), so the
+                        odd one out moves onto it, not the other way. It also has
+                        the least margin for a thin contrast ratio, not the most. */}
+                    <p className="pb-2.5 pl-1 text-[13px] text-ink-muted-strong dark:text-ink-muted contrast-more:text-ink">
                       You used {METHOD_LABEL[promotedMethod]} to sign in last time
                     </p>
                   </motion.div>
@@ -974,7 +1021,9 @@ export function LoginForm({ initialError = null, skipEntrance = false }: LoginFo
                     }
                   >
                     <div className="mb-2 flex items-center justify-between pl-1">
-                      <span className="text-[13px] font-medium text-ink-muted-strong">Sign in with email</span>
+                      {/* No font-medium: it resolved to the same 500 as everything
+                          else on the page. Colour carries this label's rank. */}
+                      <span className="text-[13px] text-ink-muted-strong">Sign in with email</span>
                       {/* The way back. With the other methods collapsed this is
                           the ONLY exit, so it carries more weight than a
                           dismiss X did: the label names the destination, and a
@@ -1140,7 +1189,10 @@ export function LoginForm({ initialError = null, skipEntrance = false }: LoginFo
                         className={cn(
                           BTN_PRIMARY,
                           LIGHT_FOCUS_RING,
-                          'flex h-11 w-full items-center justify-center rounded-lg text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50',
+                          // No font-semibold — it rendered at 500 like everything
+                          // else. The fill/label inversion is what makes this the
+                          // primary action, not a weight that never arrived.
+                          'flex h-11 w-full items-center justify-center rounded-lg text-sm disabled:cursor-not-allowed disabled:opacity-50',
                         )}
                         whileTap={{ scale: 0.985 }}
                       >

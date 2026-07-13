@@ -6,6 +6,8 @@
  * route still owns its own status-union alias (`ViewState<X>`) and its own
  * bespoke `RouteContent` switch/JSX.
  */
+import { takePrefetchedView } from '@/lib/route-prefetch';
+
 export type ViewState<T> =
   | { status: 'ready'; data: T }
   | { status: 'unauthorized' }
@@ -13,7 +15,10 @@ export type ViewState<T> =
   | { status: 'not_found' };
 
 export async function loadView<T>(url: string, errorMessage: string): Promise<ViewState<T>> {
-  const response = await fetch(url);
+  // A link may already have warmed this exact request on hover/focus (see
+  // route-prefetch.ts). Consuming it here is what turns a blocking ~300ms loader
+  // into a same-frame commit; with nothing warm this is a plain fetch, unchanged.
+  const response = (await takePrefetchedView(url)) ?? (await fetch(url));
   if (response.status === 401) return { status: 'unauthorized' };
   if (response.status === 403) return { status: 'forbidden' };
   if (response.status === 404) return { status: 'not_found' };

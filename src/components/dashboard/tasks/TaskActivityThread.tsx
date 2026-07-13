@@ -27,6 +27,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useReducedMotion } from 'motion/react';
 import { createClient } from '@/lib/supabase/client';
 import { subscribeToTable, type SupabaseLike } from '@/lib/realtime';
 import {
@@ -55,6 +56,53 @@ import {
 } from 'lucide-react';
 
 const REACTION_EMOJIS = ['👍', '👎', '🎉', '😂', '❓', '🔥', '❤️'];
+
+/* ── Hold-to-delete ───────────────────────────────────────
+ * Deleting a comment is the only irreversible action on the card, and it used
+ * to be the easiest one to hit: a bare onClick on a 28px target sitting 2px
+ * from "edit". Now it costs three seconds of sustained intent.
+ *
+ * INTERACTION STORYBOARD (pointer down on the trash icon)
+ *
+ *      0ms   THE VESSEL ARRIVES. The 28px square opens into a 124px pill, a red
+ *            frame draws around it, and "Hold to delete" fades up. Nothing
+ *            fills yet — first you are shown the thing that is going to fill.
+ *    180ms   THE CLOCK RUNS. A pale red fill sweeps left → right across a box
+ *            that is now standing still, and the frame deepens from soft to
+ *            solid red as it advances. Approaching the point of no return
+ *            looks like approaching the point of no return.
+ *   3000ms   the fill lands on the right edge, the frame is at full strength,
+ *            the comment is deleted — and the control HOLDS that filled frame
+ *            as its final state. It does not undo itself at the moment it
+ *            succeeds.
+ *
+ *   release, or drag off, at any point before 3000ms:
+ *    +200ms  fill retracts, frame fades, pill collapses — all on one duration
+ *            and one curve, so the retreat reads as a single motion instead of
+ *            three things leaving separately.
+ *
+ * WHY THE FILL WAITS FOR THE PILL. A clip-path inset is a percentage OF THE
+ * CURRENT BOX. Sweeping while the box is still growing 28px → 124px means the
+ * fill's right edge is chasing a right edge that is running away from it: it
+ * lurches out of the gate and its apparent rate has nothing to do with the
+ * timer, even though the timer is perfectly linear. Open first, sweep second,
+ * and the rate is honest. (This was the actual bug — not the colours.)
+ *
+ * The fill is still the clock: HOLD_OPEN_MS + HOLD_SWEEP_MS === HOLD_MS by
+ * construction, so what you see and what the timer does cannot drift apart.
+ * ───────────────────────────────────────────────────────── */
+const HOLD_MS = 3000;
+/** The pill's opening beat. The fill is delayed by exactly this much. */
+const HOLD_OPEN_MS = 180;
+const HOLD_SWEEP_MS = HOLD_MS - HOLD_OPEN_MS;
+/** Release is snappy where the press is deliberate — slow to decide, fast to respond. */
+const HOLD_RELEASE_MS = 200;
+/** Strong ease-out (easing.dev). CSS's built-in curve is too weak to make 180ms
+ *  read as a deliberate "the control is opening for you" beat. */
+const HOLD_OPEN_EASE = 'cubic-bezier(0.23, 1, 0.32, 1)';
+/** Resting size matches the sibling icon buttons; the pill fits the label. */
+const HOLD_REST_W = 'w-7';
+const HOLD_OPEN_W = 'w-[124px]';
 
 const TASK_COMMENT_SELECT =
   '*, profiles(id, display_name, avatar_url), task_comment_reactions(id, emoji, user_id), task_comment_attachments(id, file_url, file_name, file_type, file_size)';
@@ -232,6 +280,7 @@ export function TaskActivityThread({
                   isAdmin={isAdmin}
                   onUpdated={handleUpdated}
                   onDeleted={handleDeleted}
+                  onRestored={handlePosted}
                 />
               </li>
             ),
@@ -253,6 +302,7 @@ function CommentCard({
   isAdmin,
   onUpdated,
   onDeleted,
+  onRestored,
 }: {
   comment: TaskComment;
   taskId: string;
@@ -261,6 +311,8 @@ function CommentCard({
   isAdmin: boolean;
   onUpdated: (id: string, patch: Partial<TaskComment>) => void;
   onDeleted: (id: string) => void;
+  /** Puts an optimistically-removed comment back when the DELETE fails. */
+  onRestored: (comment: TaskComment) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(comment.content);
@@ -298,9 +350,15 @@ function CommentCard({
     if (!res.ok) onUpdated(comment.id, { content: prev });
   };
 
+  // Optimistic, like saveEdit and react — and, like them, it puts the comment
+  // back if the API rejects. It didn't before: a failed DELETE left the card
+  // gone from the feed until a reload, so you'd believe you had destroyed
+  // something you hadn't. buildFeed sorts by created_at, so restoring drops it
+  // back into its original slot rather than at the end.
   const remove = async () => {
     onDeleted(comment.id);
-    await deleteCommentApi(taskId, comment.id);
+    const res = await deleteCommentApi(taskId, comment.id);
+    if (!res.ok) onRestored(comment);
   };
 
   const react = async (emoji: string) => {
@@ -399,16 +457,7 @@ function CommentCard({
                 <Pencil className="size-3.5" />
               </button>
             )}
-            {(own || isAdmin) && (
-              <button
-                type="button"
-                aria-label="Delete comment"
-                onClick={() => void remove()}
-                className="flex size-7 items-center justify-center rounded-md text-ink-faint transition-[background-color,color,scale] duration-150 ease-out hover:bg-wash-4 hover:text-[#c04040] dark:hover:text-danger active:scale-[0.96]"
-              >
-                <Trash2 className="size-3.5" />
-              </button>
-            )}
+            {(own || isAdmin) && <HoldToDelete onCommit={() => void remove()} />}
         </div>
       </header>
 
@@ -514,6 +563,164 @@ function CommentCard({
   );
 }
 
+/* ── Hold-to-delete control ───────────────────────────────── */
+
+/* Exported for /tasks/hold-delete-qa — the control only appears on a comment you
+ * own, so the isolated preview is the only way to exercise the 3s hold without
+ * writing a throwaway comment to the live DB. */
+export function HoldToDelete({ onCommit }: { onCommit: () => void }) {
+  const [holding, setHolding] = useState(false);
+  const reduceMotion = useReducedMotion();
+  const timer = useRef<number | null>(null);
+  /* Once the hold lands, the control freezes in its filled state and stops
+     listening. The card is about to unmount, and a pointerup arriving in that
+     gap would otherwise retract the fill — the delete's own success animating
+     itself away. */
+  const committed = useRef(false);
+
+  /* Reduced motion keeps the fill (it is a progress READOUT, not decoration —
+     without it a 3-second hold gives no feedback at all) and drops the morph:
+     the pill snaps open. So the fill must not wait for a beat that never
+     happens. HOLD_MS is unchanged either way. */
+  const openMs = reduceMotion ? 0 : HOLD_OPEN_MS;
+  const sweepMs = HOLD_MS - openMs;
+  /* One duration and one curve per beat — the whole control moves together. */
+  const beatMs = holding ? openMs : HOLD_RELEASE_MS;
+  const beatEase = holding ? HOLD_OPEN_EASE : 'ease-out';
+
+  const cancel = useCallback(() => {
+    if (committed.current) return;
+    if (timer.current !== null) {
+      window.clearTimeout(timer.current);
+      timer.current = null;
+    }
+    setHolding(false);
+  }, []);
+
+  const start = useCallback(() => {
+    if (timer.current !== null || committed.current) return; // already counting
+    setHolding(true);
+    timer.current = window.setTimeout(() => {
+      timer.current = null;
+      committed.current = true;
+      // `holding` deliberately stays true: the last frame the user sees is a
+      // full pill inside a solid red frame, not a control snapping back to rest.
+      onCommit();
+    }, HOLD_MS);
+  }, [onCommit]);
+
+  // The card unmounts the instant the delete lands; don't leave a timer behind.
+  useEffect(() => () => {
+    if (timer.current !== null) window.clearTimeout(timer.current);
+  }, []);
+
+  return (
+    <button
+      type="button"
+      // The cost is part of the control's name. The visible "Hold to delete"
+      // label can't carry it — it only appears once you're already holding, and
+      // an aria-label overrides the button's contents anyway. Without this a
+      // screen-reader user presses, hears nothing, and moves on.
+      aria-label="Delete comment (hold for 3 seconds)"
+      title="Hold for 3 seconds to delete"
+      onPointerDown={start}
+      onPointerUp={cancel}
+      // Drag off to abort — the same escape hatch a native button press gives you.
+      onPointerLeave={cancel}
+      onPointerCancel={cancel}
+      // Focus lost mid-hold: Tab away, click elsewhere, Cmd-Tab out. keyup is
+      // delivered to whatever has focus NOW, so it never reaches this button and
+      // the timer would run to completion unwatched. Losing focus is a release.
+      onBlur={cancel}
+      onKeyDown={(e) => {
+        if (e.key !== ' ' && e.key !== 'Enter') return;
+        // Also suppresses Space's synthetic click, so the keyboard can't skip the hold.
+        e.preventDefault();
+        if (!e.repeat) start(); // keydown auto-repeats while held; only the first starts the clock
+      }}
+      onKeyUp={(e) => {
+        if (e.key === ' ' || e.key === 'Enter') cancel();
+      }}
+      className={`relative flex h-7 shrink-0 touch-none select-none items-center overflow-hidden rounded-md ${
+        holding
+          ? `${HOLD_OPEN_W} text-[#c04040] dark:text-danger`
+          : `${HOLD_REST_W} text-ink-faint hover:bg-wash-4 hover:text-[#c04040] dark:hover:text-danger`
+      }`}
+      style={{
+        // The press itself, at button speed — it must land long before the pill
+        // has finished opening, or the control feels like it heard you late.
+        transform: holding ? 'scale(0.98)' : 'scale(1)',
+        transitionProperty: 'width, color, transform',
+        transitionDuration: `${beatMs}ms, 150ms, 120ms`,
+        transitionTimingFunction: `${beatEase}, ease-out, ease-out`,
+      }}
+    >
+      {/* THE FRAME, soft. Draws in with the pill and holds at half strength —
+          the outline of the vessel, visible before anything is in it. */}
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-0 rounded-md ring-1 ring-inset ring-[#c04040]/45 dark:ring-danger/40"
+        style={{
+          opacity: holding ? 1 : 0,
+          transitionProperty: 'opacity',
+          transitionDuration: `${beatMs}ms`,
+          transitionTimingFunction: beatEase,
+        }}
+      />
+      {/* THE FRAME, solid. Rides the same clock as the fill, so the outline
+          deepens toward full red exactly as the fill approaches the edge. This
+          is the part that makes the last second feel like the last second. */}
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-0 rounded-md ring-1 ring-inset ring-[#c04040] dark:ring-danger"
+        style={{
+          opacity: holding ? 1 : 0,
+          transitionProperty: 'opacity',
+          transitionDelay: holding ? `${openMs}ms` : '0ms',
+          transitionDuration: `${holding ? sweepMs : HOLD_RELEASE_MS}ms`,
+          transitionTimingFunction: holding ? 'linear' : 'ease-out',
+        }}
+      />
+      {/* THE FILL — the clock made visible, in a red light enough to read as
+          "filling up" rather than "already done". One clip-path transition,
+          linear, delayed until the box has stopped moving (see the storyboard:
+          a clip inset is a % of the CURRENT box, so sweeping across a growing
+          box makes the rate a lie). A transition, not a keyframe, so releasing
+          retargets it from wherever it got to instead of restarting. */}
+      <span
+        aria-hidden
+        className="absolute inset-0 bg-[#c04040]/[0.16] dark:bg-danger/20"
+        style={{
+          clipPath: holding ? 'inset(0 0 0 0)' : 'inset(0 100% 0 0)',
+          transitionProperty: 'clip-path',
+          transitionDelay: holding ? `${openMs}ms` : '0ms',
+          transitionDuration: `${holding ? sweepMs : HOLD_RELEASE_MS}ms`,
+          transitionTimingFunction: holding ? 'linear' : 'ease-out',
+        }}
+      />
+      <span className="relative flex size-7 shrink-0 items-center justify-center">
+        <Trash2 className="size-3.5" />
+      </span>
+      {/* Says the consequence on the control. A silent 3s hold is undiscoverable:
+          you'd press, see nothing happen, and conclude delete was broken. It
+          arrives ON the pill's curve rather than a curve of its own — the label
+          is part of the pill opening, not a fourth thing happening at once. */}
+      <span
+        className="relative whitespace-nowrap pr-2.5 text-[12px] font-medium tracking-[-0.01em]"
+        style={{
+          opacity: holding ? 1 : 0,
+          transform: holding ? 'translateX(0)' : 'translateX(4px)',
+          transitionProperty: 'opacity, transform',
+          transitionDuration: `${beatMs}ms`,
+          transitionTimingFunction: beatEase,
+        }}
+      >
+        Hold to delete
+      </span>
+    </button>
+  );
+}
+
 /* ── Composer ─────────────────────────────────────────────── */
 
 function CommentComposer({
@@ -598,7 +805,22 @@ function CommentComposer({
   };
 
   return (
-    <div className="rounded-xl bg-surface-1 px-4 py-3 shadow-seeko">
+    // This is an INPUT, not a card, and it has to SINK rather than sit on top —
+    // hence --surface-sunken, not --surface-1. A field is somewhere you put
+    // something into; every raised tier on this page (the title card, the comments
+    // below) is something already put there. Reaching for surface-1 lifted the
+    // composer 0.025 ABOVE the canvas and made the emptiest box on the page also
+    // the most prominent one.
+    //
+    // Sinking looks opposite in the two schemes and the token absorbs that: on
+    // light it resolves to white (paper is brighter than the desk), so light is
+    // unchanged; on dark it goes below the canvas. See globals.css.
+    //
+    // The wash-6 hairline stays — it is the top lip of the well catching light, and
+    // it is what keeps the boundary legible once the fill stops doing that work. It
+    // is present-but-transparent in light so the box geometry is identical in both
+    // schemes: no 1px reflow when the theme flips.
+    <div className="rounded-xl border border-transparent bg-surface-sunken px-4 py-3 shadow-seeko dark:border-wash-6">
       <textarea
         ref={textareaRef}
         value={input}

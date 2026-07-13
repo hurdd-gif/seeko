@@ -162,16 +162,23 @@ export function rowEntrance(index: number, reduce: boolean | null) {
  * modal forms). SINGLE SOURCE OF TRUTH — backdrop + card coordinate
  * so the surface arrives as one piece, not two competing animations.
  *
- * Modal sizing principle: a modal is a larger surface than a popover,
- * so it earns a hair more weight (visualDuration .22 vs .19) but still
- * has to feel deliberate, not leisurely. Tighter scale (0.97) keeps
- * the card anchored — no "drop-in zoom" feel.
+ * Modal sizing principle: a modal is a larger surface than a popover, but size
+ * is NOT a licence to be slow. This entrance used to run a 180ms backdrop under
+ * a .22 card spring — the card was still settling ~300ms after the click, which
+ * read as a fade rather than an arrival, because a modal you SUMMONED (you hit
+ * Create; you know what's coming) has nothing to explain. It only has to get
+ * out of the way of typing. The open is now roughly half as long, while the
+ * CLOSE is untouched: a dismissal still wants a perceivable recede so the page
+ * beneath is revealed at the right moment, and shortening it there would just
+ * make the modal appear to blink out.
+ *
+ * Tighter scale (0.97) keeps the card anchored — no "drop-in zoom" feel.
  *
  * STORYBOARD (ms after open/close):
  *   OPEN
- *     0ms   BACKDROP  opacity 0→1 over 180ms ease-out
+ *     0ms   BACKDROP  opacity 0→1 over 110ms ease-out
  *           CARD      opacity 0→1 · scale .97→1 (no y — center anchor)
- *                     spring: visualDuration .22 · bounce .10
+ *                     spring: visualDuration .13 · bounce .12
  *   CLOSE — card LEADS, backdrop TRAILS (the inverse of open)
  *     0ms   CARD      scale 1→.94 · opacity 1→0, 160ms ease-in
  *                     (perceivable recede — surface "leaves the screen")
@@ -186,7 +193,7 @@ export const MODAL = {
     initial: { opacity: 0 },
     animate: { opacity: 1 },
     exit: { opacity: 0 },
-    enterTransition: { duration: 0.18, ease: 'easeOut' as const },
+    enterTransition: { duration: 0.11, ease: 'easeOut' as const },
     /** Exit TRAILS the card by 60ms — page reveal lands after card departs. */
     exitTransition: { duration: 0.16, delay: 0.06, ease: [0.4, 0, 1, 1] as const },
   },
@@ -196,8 +203,10 @@ export const MODAL = {
     /** Exit recedes meaningfully (~27px edge shift on a 448px surface) —
      *  no more barely-there scale .98 flicker. Backdrop trails this. */
     exit: { opacity: 0, scale: 0.94 },
-    /** Enter: damped spring, hair of life — modal-weight (slower than popover) */
-    spring: { type: 'spring' as const, visualDuration: 0.22, bounce: 0.1 },
+    /** Enter: fast and barely-sprung. The bounce is UP from .10 while the
+     *  duration is nearly halved — a short spring with a hair more life reads
+     *  as responsive, where a long one with none reads as sluggish. */
+    spring: { type: 'spring' as const, visualDuration: 0.13, bounce: 0.12 },
     /** Exit: accelerate-out, card leads the dismissal */
     exitTransition: { duration: 0.16, ease: [0.4, 0, 1, 1] as const },
     transformOrigin: 'center' as const,

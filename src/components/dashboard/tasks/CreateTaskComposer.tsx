@@ -158,11 +158,15 @@ export function CreateTaskComposer({
     setError(null);
   }, [open]);
 
-  // Focus title shortly after enter — avoids fighting the entrance anim.
+  // Focus on the next frame, not 80ms in. The old delay was there to avoid
+  // "fighting the entrance anim", but the caret is not in competition with a
+  // scale — it just has to exist by the time the first keystroke lands, and a
+  // composer you opened to type in should never make you wait to type. One rAF
+  // is enough for the input to be in the DOM and laid out.
   useEffect(() => {
     if (!open) return;
-    const t = window.setTimeout(() => titleRef.current?.focus(), 80);
-    return () => window.clearTimeout(t);
+    const raf = requestAnimationFrame(() => titleRef.current?.focus());
+    return () => cancelAnimationFrame(raf);
   }, [open]);
 
   // Keyboard: Esc closes, ⌘/Ctrl+Enter submits.

@@ -7,11 +7,9 @@
  * folded into the current month — pending money leaves now-or-later, so
  * scattering it across past created_at months would misread as history).
  *
- * Monochrome on white by design: the light palette reserves #0d7aff for the
- * online dot, and a money chart earns attention with height, not hue. Dark
- * mode is the exception — dark-on-dark bars vanish against the canvas, so the
- * dark palette lifts paid to a flat azure and keeps pending a quiet flat
- * slate-blue one rung below (see PALETTE.dark).
+ * Monochrome in BOTH schemes by design: #0d7aff is reserved for the online dot,
+ * and a money chart earns attention with height, not hue. Dark is the light
+ * palette inverted — white bars fading toward the baseline (see PALETTE).
  */
 
 import { useMemo } from 'react';
@@ -30,13 +28,22 @@ import type { Payment } from '@/lib/types';
 const MONTHS_SHOWN = 12;
 
 /* Loudness ladder: paid = real money left, pending = not yet, one rung
- * quieter — never louder than paid. Solid values anchor the tooltip dots. Light
- * keeps the ladder in lightness and the bars wear a vertical gradient (bklit's
- * gradient variant) with the loudest stop at the tip — the edge the eye reads
- * value from — softening toward the baseline (dark ~16:1 → mid-grey ~3.4:1,
- * clears the 3:1 graphics floor). Dark keeps the ladder in hue instead (lit
- * azure over quiet slate-blue) because dark-grey bars would disappear into the
- * canvas — and stays a single flat fill per bar (from === to), no gradient.
+ * quieter — never louder than paid. Solid values anchor the tooltip dots.
+ *
+ * The ladder lives in LIGHTNESS, not hue, in both schemes — dark is a straight
+ * inversion of light, not a different chart. The bars wear a vertical gradient
+ * (bklit's gradient variant) with the loudest stop at the tip — the edge the eye
+ * reads value from — softening toward the baseline. Light runs near-black→grey on
+ * white; dark runs near-white→grey on the canvas, at the same contrast rungs
+ * (paid ~16:1 → ~10:1, pending bottoming out at ~3.4:1, clearing the 3:1
+ * graphics floor for non-text).
+ *
+ * Dark was AZURE and is deliberately not any more: a money chart earns attention
+ * with height, not hue, and #0d7aff is spent elsewhere (the online dot). The old
+ * note here claimed grey bars "vanish against the canvas" — true of DARK grey,
+ * which is what an un-inverted light palette gives you. Inverted, the greys run
+ * above the canvas instead of below it and the problem doesn't exist.
+ *
  * Gradient ids are stable across themes; only the stops swap. */
 const PALETTE = {
   light: {
@@ -46,10 +53,10 @@ const PALETTE = {
     pending: { from: '#808080', to: '#9a9a9a' },
   },
   dark: {
-    paidFill: '#49a2fe',
-    pendingFill: '#7488a1',
-    paid: { from: '#49a2fe', to: '#49a2fe' },
-    pending: { from: '#7488a1', to: '#7488a1' },
+    paidFill: '#f2f2f2',
+    pendingFill: '#8a8a8a',
+    paid: { from: '#f2f2f2', to: '#c9c9c9' },
+    pending: { from: '#8a8a8a', to: '#757575' },
   },
 } as const;
 

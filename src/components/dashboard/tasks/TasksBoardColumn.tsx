@@ -12,7 +12,7 @@
 
 'use client';
 
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { memo, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { MoreHorizontal, Plus, EyeOff } from 'lucide-react';
@@ -42,7 +42,17 @@ function placeMenu(rect: DOMRect, menuHeight: number) {
   return { left, top };
 }
 
-export function TasksBoardColumn({
+/**
+ * memo, and it earns its keep. A column is the most expensive thing on the page
+ * — its whole card stack renders with it — and TasksBoard holds a pile of chrome
+ * state that has nothing to do with the cards (filter row open, composer open,
+ * rail open, undo toast). Unmemoized, opening the filter bar re-rendered every
+ * card on the board inside the frame the unfold animation started on: a measured
+ * 58ms stall, identical on open and close, which is exactly what "choppy" was.
+ * Every prop below is kept referentially stable on the TasksBoard side, so this
+ * bails out on chrome-only renders.
+ */
+export const TasksBoardColumn = memo(function TasksBoardColumn({
   status,
   tasks,
   onSelectTask,
@@ -237,4 +247,4 @@ export function TasksBoardColumn({
       {mounted ? createPortal(menu, document.body) : null}
     </motion.section>
   );
-}
+});

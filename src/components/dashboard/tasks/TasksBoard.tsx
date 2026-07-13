@@ -19,12 +19,21 @@ import { motion } from 'motion/react';
 import { toast } from 'sonner';
 
 /**
- * Rail open/close spring. Drives BOTH the outer slot width (0↔416) and the
- * inner panel translateX (0↔416) simultaneously — same spring, same React
+ * Rail open/close spring. Drives BOTH the outer slot width (0↔452) and the
+ * inner panel translateX (0↔452) simultaneously — same spring, same React
  * state flip, so the two motions are frame-locked.
  */
 const RAIL_SPRING = { type: 'spring' as const, stiffness: 320, damping: 34 };
-const RAIL_WIDTH = 416;
+
+/**
+ * 452 = the rail's 400px card + the 52px page gutter it now reserves on its
+ * right. It was 416 (card + a 16px margin), which put the card's right edge at
+ * viewport−16 while the header's account cluster ended at viewport−52 — the bar
+ * visibly stopped short of the content beneath it. The rail absorbs the gutter
+ * rather than the card shrinking into it, so the card keeps its designed width
+ * and the board (which scrolls anyway) gives up the 36px.
+ */
+const RAIL_WIDTH = 452;
 import { PanelRight, LayoutGrid, Rows3 } from 'lucide-react';
 import type {
   Area,
@@ -34,11 +43,17 @@ import type {
   TaskStatus,
   TaskWithAssignee,
 } from '@/lib/types';
-import { TASK_STATUSES } from '@/lib/types';
+import { TASK_STATUSES, isTerminalStatus } from '@/lib/types';
 import { TasksBoardColumn } from './TasksBoardColumn';
 import { HiddenColumnsStack } from './HiddenColumnsStack';
 import { TaskDetailRail } from './TaskDetailRail';
-import { BoardFilterPopover, EMPTY_FILTER, type BoardFilterState } from './BoardFilterPopover';
+import {
+  BoardFilterBar,
+  BoardFilterTrigger,
+  activeFilterCount,
+  EMPTY_FILTER,
+  type BoardFilterState,
+} from './BoardFilterBar';
 import { BoardDisplayPopover } from './BoardDisplayPopover';
 import { TaskDeleteUndoToastSlot, UNDO_WINDOW_MS } from './TaskDeleteUndoToast';
 import { CreateTaskComposer } from './CreateTaskComposer';
@@ -47,6 +62,7 @@ import { BoardScrollbar } from './BoardScrollbar';
 import { LightShell, type AccountPillProps } from '@/components/dashboard/LightShell';
 import { updateTask, deleteTask } from '@/lib/task-store';
 import { requestEkoSpotlight } from '@/lib/eko-bus';
+import { claimPendingCreateIssue, subscribeCreateIssue } from '@/lib/create-issue-bus';
 
 type ViewMode = 'board' | 'list';
 
@@ -297,6 +313,17 @@ export function TasksBoard({
 
   const closeComposer = useCallback(() => setComposerOpen(false), []);
 
+  /* The header's global "+ Create" pill lives in LightShell's account cluster —
+     a sibling subtree with no path to this state. It asks over the bus instead.
+     Two effects, because there are two ways the ask can arrive: live (already on
+     the board) and parked (pressed on /docs, which navigated us here). */
+  useEffect(() => subscribeCreateIssue(({ status }) => openComposer(status)), [openComposer]);
+
+  useEffect(() => {
+    const parked = claimPendingCreateIssue();
+    if (parked) openComposer(parked.status);
+  }, [openComposer]);
+
   const handleTaskCreated = useCallback(() => {
     // Server action already calls revalidatePath('/tasks'); a router.refresh()
     // pulls the new row into the RSC tree without a hard reload.
@@ -309,6 +336,13 @@ export function TasksBoard({
 
   /** Filter state (status / priority / department / assignee). */
   const [filter, setFilter] = useState<BoardFilterState>(EMPTY_FILTER);
+  /* Whether the chip row is UNFOLDED is deliberately not state here — it lives in
+     a store inside BoardFilterBar, which the trigger and the row subscribe to. It
+     is chrome, and holding it here re-rendered the whole board (cards, rail,
+     composer) on every unfold, which is what made the animation stutter. The
+     FILTER ITSELF stays here: the board genuinely depends on it. Folding the row
+     does NOT clear it — the trigger keeps a count badge, so an active filter is
+     never invisible. */
 
   /** View mode toggle: stacked-status board vs flat list. */
   const [viewMode, setViewMode] = useState<ViewMode>('board');
@@ -321,14 +355,13 @@ export function TasksBoard({
   // current user is bucketed there (and removed from its actual status column)
   // so the user sees their active work in one place. Terminal states
   // (Done/Canceled/Duplicate) keep their normal column even when assigned to me.
-  const TERMINAL: TaskStatus[] = ['Done', 'Canceled', 'Duplicate'];
   const tasksByStatus = useMemo(() => {
     const buckets = Object.fromEntries(
       TASK_STATUSES.map((s) => [s, [] as TaskWithAssignee[]]),
     ) as Record<TaskStatus, TaskWithAssignee[]>;
     for (const t of filteredTasks) {
       const isMine = currentUserId && t.assignee_id === currentUserId;
-      const promoteToTodo = isMine && !TERMINAL.includes(t.status) && t.status !== 'Todo';
+      const promoteToTodo = isMine && !isTerminalStatus(t.status) && t.status !== 'Todo';
       const bucket = promoteToTodo ? 'Todo' : t.status;
       if (buckets[bucket]) buckets[bucket].push(t);
     }
@@ -351,7 +384,10 @@ export function TasksBoard({
   );
   const hiddenStatuses = TASK_STATUSES.filter((s) => !visibleStatuses.includes(s));
 
-  function pinHiddenColumn(status: TaskStatus) {
+  // useCallback on the column handlers is load-bearing, not hygiene: they are
+  // props of a memo'd TasksBoardColumn, and a fresh closure each render would
+  // defeat the memo and put every card back in the re-render path.
+  const pinHiddenColumn = useCallback((status: TaskStatus) => {
     // Expanding a column from the hidden rollup: clear any explicit hide, and
     // pin it open so it stays visible even when empty.
     setPinnedHidden((prev) => {
@@ -365,9 +401,9 @@ export function TasksBoard({
       next.add(status);
       return next;
     });
-  }
+  }, []);
 
-  function hideColumn(status: TaskStatus) {
+  const hideColumn = useCallback((status: TaskStatus) => {
     // Hide from the column ⋯ menu: drop any "pinned visible" pin and force-hide.
     setPinnedVisible((prev) => {
       if (!prev.has(status)) return prev;
@@ -380,7 +416,12 @@ export function TasksBoard({
       next.add(status);
       return next;
     });
-  }
+  }, []);
+
+  const handleSelectTask = useCallback(
+    (task: TaskWithAssignee) => router.push(`/tasks/${task.id}`),
+    [router],
+  );
 
   function togglePinned(status: TaskStatus) {
     setPinnedVisible((prev) => {
@@ -396,7 +437,7 @@ export function TasksBoard({
   // "new issue"; per-column "+ add" stays for status-preselected creation.
   const boardControls = (
     <div className="flex items-center gap-1">
-      <BoardFilterPopover filter={filter} onChange={setFilter} team={team} />
+      <BoardFilterTrigger count={activeFilterCount(filter)} />
       <BoardDisplayPopover
         pinnedVisible={pinnedVisible}
         onTogglePinned={togglePinned}
@@ -439,9 +480,17 @@ export function TasksBoard({
       bordered
       account={account}
       actions={boardControls}
+      subBar={<BoardFilterBar filter={filter} onChange={setFilter} team={team} />}
     >
       {/* ── Board area + right rail ────────────────────────────── */}
-      <div className="flex min-h-0 flex-1">
+      {/* pt-6 lives HERE, on the row, not on either child. The board used to set
+          its own pt-2 and the rail its own my-4, so the columns started 8px under
+          the header hairline and the Milestones card 16px — two gutters, neither
+          deliberate, and the eye read the misalignment before it read either one.
+          One padding on the shared row gives them a single 24px shelf they cannot
+          drift off of, and because it sits OUTSIDE the board's scroller it stays
+          put while the board scrolls under it, instead of scrolling away. */}
+      <div className="flex min-h-0 flex-1 pt-6">
         {/* Relative wrapper so BoardScrollbar can overlay the scroller's
             bottom edge without riding along with the scrolled content. */}
         <div className="relative min-h-0 min-w-0 flex-1">
@@ -451,13 +500,18 @@ export function TasksBoard({
           className="scroll-mask-x scrollbar-none h-full w-full overflow-x-auto overflow-y-auto"
         >
           {viewMode === 'board' ? (
-            <div className="flex min-h-full w-max min-w-full items-start gap-4 px-6 pb-8 pt-2">
+            /* px-[52px], not px-6: this is the app's chrome gutter (LightShell's
+               header, /docs, /activity all sit on it). The board was the one page
+               whose content started at 24px, which left the persistent Issues/Docs
+               tabs floating 28px inside the first column — the tabs are the anchor
+               and they can't move per-route, so the board comes out to meet them. */
+            <div className="flex min-h-full w-max min-w-full items-start gap-4 px-[52px] pb-8">
               {visibleStatuses.map((status, i) => (
                 <TasksBoardColumn
                   key={status}
                   status={status}
                   tasks={tasksByStatus[status]}
-                  onSelectTask={(t) => router.push(`/tasks/${t.id}`)}
+                  onSelectTask={handleSelectTask}
                   onHide={hideColumn}
                   columnIndex={i}
                   isAdmin={isAdmin}
@@ -465,8 +519,11 @@ export function TasksBoard({
                   onAssign={handleAssign}
                   onStatusChange={isAdmin ? handleStatusChange : undefined}
                   onDeleteTask={isAdmin ? handleTaskDeleted : undefined}
-                  onAddTask={isAdmin ? () => openComposer(status) : undefined}
-                  muted={TERMINAL.includes(status)}
+                  /* openComposer already takes the status the column hands it —
+                     the old `() => openComposer(status)` minted a new function
+                     per column per render for no reason. */
+                  onAddTask={isAdmin ? openComposer : undefined}
+                  muted={isTerminalStatus(status)}
                 />
               ))}
 
@@ -480,7 +537,7 @@ export function TasksBoard({
               )}
             </div>
           ) : (
-            <div className="h-full overflow-y-auto px-6 pb-8 pt-2">
+            <div className="h-full overflow-y-auto px-[52px] pb-8">
               <TasksIssueList
                 tasks={filteredTasks}
                 team={team}
@@ -510,7 +567,7 @@ export function TasksBoard({
             initial={false}
             animate={{ x: railOpen ? 0 : RAIL_WIDTH }}
             transition={RAIL_SPRING}
-            className="h-full w-[416px]"
+            className="h-full w-[452px]"
           >
             <TaskDetailRail
               task={selectedTask}

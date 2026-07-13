@@ -2,6 +2,12 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { StudioHeaderActions } from '../StudioHeaderActions';
 import { LiveToastProvider } from '../notifications/LiveToastContext';
+import {
+  claimPendingCreateIssue,
+  clearPendingCreateIssue,
+  subscribeCreateIssue,
+  type CreateIssueRequest,
+} from '@/lib/create-issue-bus';
 
 /**
  * The "missing inbox": the migrated header should mount the LIVE realtime
@@ -45,6 +51,11 @@ function renderHeader(props: React.ComponentProps<typeof StudioHeaderActions>) {
 }
 
 describe('StudioHeaderActions — live inbox bell', () => {
+  // The create-issue bus is a module singleton (it has to be — it outlives the
+  // navigation it exists to survive), so a request parked by one test would
+  // otherwise be claimed by the next.
+  beforeEach(() => clearPendingCreateIssue());
+
   it('mounts the realtime NotificationBell when account carries a userId', async () => {
     renderHeader({
       email: 'ada@seeko.studio',
@@ -65,33 +76,37 @@ describe('StudioHeaderActions — live inbox bell', () => {
     expect(screen.queryByRole('button', { name: 'Open inbox' })).not.toBeInTheDocument();
   });
 
-  it('morphs the global Create button into quick add', async () => {
-    renderHeader({ email: 'ada@seeko.studio', initials: 'AL' });
+  /**
+   * Create used to morph the pill into an inline quick-add form. It now summons
+   * the full New-issue composer, which lives on the board — so the header's job
+   * is only to ASK for it. These two tests pin both halves of that contract,
+   * because the header renders on pages that have no board to answer.
+   */
+  it('asks the board for the New-issue composer when one is listening', () => {
+    const heard: CreateIssueRequest[] = [];
+    const unsubscribe = subscribeCreateIssue((request) => heard.push(request));
 
+    renderHeader({ email: 'ada@seeko.studio', initials: 'AL' });
     fireEvent.click(screen.getByRole('button', { name: 'Create' }));
 
-    expect(await screen.findByPlaceholderText('Issue title')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Status' })).toHaveTextContent('Todo');
-    expect(screen.getByRole('button', { name: 'Priority' })).toHaveTextContent('Medium');
-    expect(screen.getByRole('button', { name: 'Department' })).toHaveTextContent('Coding');
+    expect(heard).toHaveLength(1);
+    // No status: the header's Create is unscoped, so the composer opens on its
+    // own default. Only a column's "+" pre-selects a bucket.
+    expect(heard[0].status).toBeUndefined();
+    // Delivered live — nothing is left parked for a later board to claim.
+    expect(claimPendingCreateIssue()).toBeNull();
+
+    unsubscribe();
   });
 
-  it('lets quick add metadata be changed inline', async () => {
+  it('parks the request for the board to claim when no board is mounted', () => {
+    // /docs, /activity: the pill is still there, and must still work.
     renderHeader({ email: 'ada@seeko.studio', initials: 'AL' });
-
     fireEvent.click(screen.getByRole('button', { name: 'Create' }));
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Status' }));
-    fireEvent.click(await screen.findByRole('menuitemradio', { name: /In Progress/ }));
-
-    fireEvent.click(screen.getByRole('button', { name: 'Priority' }));
-    fireEvent.click(await screen.findByRole('menuitemradio', { name: /High/ }));
-
-    fireEvent.click(screen.getByRole('button', { name: 'Department' }));
-    fireEvent.click(await screen.findByRole('menuitemradio', { name: /UI\/UX/ }));
-
-    expect(screen.getByRole('button', { name: 'Status' })).toHaveTextContent('In Progress');
-    expect(screen.getByRole('button', { name: 'Priority' })).toHaveTextContent('High');
-    expect(screen.getByRole('button', { name: 'Department' })).toHaveTextContent('UI/UX');
+    expect(claimPendingCreateIssue()).toEqual({});
+    // Claimed once, and only once — a stale request must not re-open the
+    // composer on some unrelated later visit to the board.
+    expect(claimPendingCreateIssue()).toBeNull();
   });
 });

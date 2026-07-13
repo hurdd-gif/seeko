@@ -31,6 +31,7 @@ import { Link } from '@/lib/react-router-adapters';
 import { ChevronRight, ChevronLeft } from 'lucide-react';
 import type {
   Area,
+  LinkedTask,
   Milestone,
   PendingExtension,
   Profile,
@@ -44,6 +45,7 @@ import { PropertiesSection } from './PropertiesSection';
 import { MilestonesSection } from './MilestonesSection';
 import { ProgressSection } from './ProgressSection';
 import { TaskActivityThread } from './TaskActivityThread';
+import { TaskLinksSection } from './TaskLinksSection';
 import { TaskSyncBanner, TaskClosedBanner } from './TaskSyncBanner';
 import { ekoCreatedEvent } from './task-feed';
 import { TaskActionsMenu } from './TaskActionsMenu';
@@ -60,6 +62,8 @@ export function TaskDetailPage({
   currentUserId = '',
   isAdmin = false,
   pendingExtension = null,
+  links = [],
+  linkCandidates = [],
 }: {
   task: TaskWithAssignee;
   areas: Area[];
@@ -70,6 +74,8 @@ export function TaskDetailPage({
   currentUserId?: string;
   isAdmin?: boolean;
   pendingExtension?: PendingExtension | null;
+  links?: LinkedTask[];
+  linkCandidates?: LinkedTask[];
 }) {
   const router = useRouter();
 
@@ -137,7 +143,10 @@ export function TaskDetailPage({
       {/* ── Body: main content + right sidebar ─────────────────── */}
       <div className="flex min-h-0 flex-1 overflow-hidden">
         {/* Main content (scrollable) */}
-        <main className="min-h-0 flex-1 overflow-y-auto">
+        {/* scrollbar-paper, not the native bar: on "always show scrollbars" macOS
+            the default paints a 15px slab with a visible track between the column
+            and the rail, and it takes real layout width. The overlay pill doesn't. */}
+        <main className="scrollbar-paper min-h-0 flex-1 overflow-y-auto">
           <div className="mx-auto max-w-3xl px-8 py-8">
             {/* Closed-state pill reads the LIVE task mirror, so switching the
                 status in the Properties rail surfaces/retires it in place.
@@ -153,22 +162,50 @@ export function TaskDetailPage({
             )}
 
             <FadeRise y={6} delay={0.1}>
-              <section className="overflow-hidden rounded-2xl bg-surface-1 shadow-seeko">
-                <div className="px-8 pt-8 pb-6">
-                  <h1 className="text-[28px] font-medium leading-[1.2] tracking-[-0.02em] text-ink-title">
-                    {task.name}
-                  </h1>
-                  {task.description ? (
-                    <p className="mt-5 whitespace-pre-wrap text-[15px] leading-[1.6] text-ink">
-                      {task.description}
-                    </p>
-                  ) : (
-                    <p className="mt-5 text-[14px] leading-[1.6] text-ink-faintest">
-                      No description.
-                    </p>
-                  )}
-                </div>
-              </section>
+              {/* No card, and no horizontal inset either. The title and description are
+                  the SUBJECT of the page, not an entry in it — a frame around them made
+                  the page read as a stack of equal cards with no head. Everything below
+                  (Connected, the composer, the thread) stays framed, because those are
+                  entries.
+
+                  The inset went with the frame. Unframed text lines up against the CARD
+                  EDGES below it, not against the text inside those cards — a 16px inset
+                  here reads as an indent, not as a shared spine. Flush left is the same
+                  column edge the Activity heading uses. */}
+              <div className="pt-2 pb-6">
+                {/* -ml is an OPTICAL correction, not a layout one. Inter's glyphs carry a
+                    left side bearing of ~0.055em — empty space before the stroke that
+                    scales with font size. At 28px that's 1.54px; the 15px description
+                    below only has 0.83px. Flush boxes therefore render mismatched ink:
+                    the heading appears indented by the 0.7px difference. Pulling the
+                    heading back by that difference (0.055em × (28−15) ÷ 28 ≈ 0.026em)
+                    lines the two strokes up. Kept in em so it tracks a size change. */}
+                <h1 className="-ml-[0.026em] text-balance text-[28px] font-medium leading-[1.2] tracking-[-0.02em] text-ink-title">
+                  {task.name}
+                </h1>
+                {task.description ? (
+                  <p className="mt-5 whitespace-pre-wrap text-[15px] leading-[1.6] text-ink">
+                    {task.description}
+                  </p>
+                ) : (
+                  <p className="mt-5 text-[14px] leading-[1.6] text-ink-faintest">
+                    No description.
+                  </p>
+                )}
+              </div>
+            </FadeRise>
+
+            {/* Connections sit between the description and the thread: they are a
+                fact ABOUT the issue (like its title), not a thing that happened
+                TO it (like the activity below). */}
+            <FadeRise y={6} delay={0.14}>
+              <div className="mt-3">
+                <TaskLinksSection
+                  taskId={task.id}
+                  links={links}
+                  candidates={linkCandidates}
+                />
+              </div>
             </FadeRise>
 
             <FadeRise y={6} delay={0.18}>
@@ -189,11 +226,15 @@ export function TaskDetailPage({
         </main>
 
         {/* Right sidebar — Properties / Milestones / Progress */}
+        {/* No dividing rule. The rail's cards already carry `shadow-seeko`, so a
+            border here draws a second, competing edge right next to them —
+            shadows over borders. The rail reads as a column because its cards
+            stop, not because a line says so. */}
         <aside
           aria-label="Task properties"
-          className="hidden w-[380px] shrink-0 border-l border-wash-6 lg:flex lg:flex-col"
+          className="hidden w-[380px] shrink-0 lg:flex lg:flex-col"
         >
-          <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 py-6">
+          <div className="scrollbar-paper flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 py-6">
             <FadeRise y={6} delay={0.12}>
               <RailSection title="Properties" defaultOpen>
                 <PropertiesSection

@@ -8,9 +8,17 @@
  * Chrome paints autofilled inputs grey-blue regardless of scheme — pin the
  * input's color-scheme per theme and paint over the autofill tint with an
  * inset shadow + explicit text-fill via var(), so the hack follows the theme
- * (light values are the exact shipped hexes: surface-1=#fff, ink-strong=#2a2a2a). */
+ * (light values are the exact shipped hexes: surface-1=#fff, ink-strong=#2a2a2a).
+ *
+ * PLACEHOLDER: ink-muted (#808080, 3.5:1), not ink-faintest. The ramp annotates
+ * faintest as `2.0:1 — hints (decorative)`, and the Portal Light block says the
+ * faint tiers are for decorative text ONLY. A placeholder is neither decorative
+ * nor optional — "you@seeko.studio" is the field's own instructions, and at 2.0:1
+ * it was the least legible text on the sign-in page. Stopping at ink-muted rather
+ * than the 4.9:1 tier is deliberate: a placeholder that clears AA for body copy
+ * starts reading as a filled-in value. */
 export const LIGHT_INPUT =
-  'border border-wash-8 bg-surface-1 text-ink-strong placeholder:text-ink-faintest rounded-lg [color-scheme:light] dark:[color-scheme:dark] autofill:shadow-[inset_0_0_0_1000px_var(--surface-1)] autofill:[-webkit-text-fill-color:var(--ink-strong)] transition-[border-color] duration-150 ease-out focus-visible:ring-0 focus-visible:border-seeko-accent';
+  'border border-wash-8 bg-surface-1 text-ink-strong placeholder:text-ink-muted rounded-lg [color-scheme:light] dark:[color-scheme:dark] autofill:shadow-[inset_0_0_0_1000px_var(--surface-1)] autofill:[-webkit-text-fill-color:var(--ink-strong)] transition-[border-color] duration-150 ease-out focus-visible:ring-0 focus-visible:border-seeko-accent';
 export const BTN_BASE =
   'rounded-[14px] px-4 h-9 text-[13px] font-medium transition-[background-color,transform] duration-150 ease-out active:scale-[0.98]';
 /* Primary pill: ink-title fill + surface-1 label — the pair inverts cleanly in

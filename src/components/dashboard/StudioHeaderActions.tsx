@@ -41,7 +41,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import type { Notification } from '@/lib/types';
 import { getStoredTheme, setTheme, subscribeTheme, type Theme } from '@/lib/theme';
 import { springs, shellEntrance, DROPDOWN } from '@/lib/motion';
-import { QuickCreateMorph } from '@/components/dashboard/QuickCreateMorph';
+import { CreateIssueButton } from '@/components/dashboard/CreateIssueButton';
 
 const NotificationBell = dynamic(
   () => import('@/components/dashboard/NotificationBell').then((m) => m.NotificationBell),
@@ -162,7 +162,7 @@ export function StudioHeaderActions({
         )}
       </span>
 
-      <QuickCreateMorph onOpenChange={() => close()} />
+      <CreateIssueButton onOpen={close} />
 
       {/* ── Profile photo — the single menu (identity + nav + Sign out) ── */}
       <div ref={accountRef} className="relative">
