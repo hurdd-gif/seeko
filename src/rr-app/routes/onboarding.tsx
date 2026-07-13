@@ -62,7 +62,6 @@ export function OnboardingRouteContent({ data }: { data: OnboardingLoaderData })
         userId={index.currentUser.id}
         defaultName={index.profile.displayName ?? index.currentUser.email ?? ''}
         defaultAvatar={index.profile.avatarUrl ?? ''}
-        userEmail={index.currentUser.email ?? ''}
       />
     </LightAuthShell>
   );

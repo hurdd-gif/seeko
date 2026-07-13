@@ -149,5 +149,38 @@ export function createProfileRoutes(options: ProfileRoutesOptions = {}) {
     }
 
     return c.json({ success: true });
+  })
+  /* Clears the must-set-password flag after the user has actually set one.
+   *
+   * `must_set_password` is authorization state, not preference state: /profile/init
+   * raises it on invited users, and the app gates them into the set-password screen
+   * until it drops. So the browser must not own the column — a user who could clear
+   * it directly could skip the ceremony while keeping the invite's temporary
+   * credentials. Hence a route, and hence no request body: the row updated is the
+   * caller's, taken from the session. There is nothing here to point at someone else.
+   *
+   * We deliberately do NOT set the password here — supabase.auth.updateUser() already
+   * did that client-side against GoTrue, which is where passwords belong. This route
+   * only records that it happened. It is idempotent; calling it on a user who never
+   * had the flag is a no-op write. */
+  .post('/profile/password-complete', async (c) => {
+    const user = await authResolver(c);
+
+    if (!user?.email) {
+      return c.json({ error: 'unauthorized' }, 401);
+    }
+
+    const admin = getServiceClient();
+    const { error } = await admin
+      .from('profiles')
+      .update({ must_set_password: false } as never)
+      .eq('id', user.id);
+
+    if (error) {
+      console.error('[hono profile/password-complete] update failed:', error);
+      return c.json({ error: 'Failed to complete password setup.' }, 500);
+    }
+
+    return c.json({ ok: true });
   });
 }

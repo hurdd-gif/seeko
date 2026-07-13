@@ -55,10 +55,13 @@ export function SetPasswordForm() {
       return;
     }
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      await supabase.from('profiles').update({ must_set_password: false }).eq('id', user.id);
-    }
+    /* The password itself was just set against GoTrue above. This only records
+     * that the ceremony happened — and it goes through the API because
+     * `must_set_password` is the flag that gates this very screen: a client that
+     * can clear it can skip setting a password at all, and keep using the
+     * invite's temporary credentials. The route derives the row from the session,
+     * so there is no user id to send. */
+    await fetch('/api/profile/password-complete', { method: 'POST' });
 
     trigger('success');
     router.push('/onboarding');

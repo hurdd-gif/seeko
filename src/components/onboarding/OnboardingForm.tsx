@@ -87,16 +87,18 @@ function looksLikeEmail(s: string): boolean {
   return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(s.trim());
 }
 
+/* `userId` is here for the avatar upload path and the AvatarFallback seed only —
+ * it is NOT an identity claim. The profile write goes through /api/profile/onboarding,
+ * which reads the user from the session. There is deliberately no `userEmail` prop:
+ * the server takes the email from auth.users, the one authoritative source. */
 export function OnboardingForm({
   userId,
   defaultName,
   defaultAvatar,
-  userEmail,
 }: {
   userId: string;
   defaultName: string;
   defaultAvatar: string;
-  userEmail: string;
 }) {
   const router = useRouter();
   const { trigger } = useHaptics();
@@ -153,18 +155,23 @@ export function OnboardingForm({
     setSaving(true);
     setError('');
 
-    const { error: updateErr } = await supabase
-      .from('profiles')
-      .update({
-        display_name: name.trim(),
-        avatar_url: avatarUrl || null,
-        email: userEmail,
+    /* Goes through the API rather than writing `profiles` from the browser.
+     * Onboarding sets `onboarded` — the flag that decides whether this very
+     * screen is shown again — and used to set `email` from a prop, both of
+     * which are authorization state the client has no business owning. The
+     * route takes the identity from the session, so there is no user id or
+     * email in this body to tamper with. */
+    const response = await fetch('/api/profile/onboarding', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        displayName: name.trim(),
+        avatarUrl: avatarUrl || null,
         timezone,
-        onboarded: 1,
-      })
-      .eq('id', userId);
+      }),
+    });
 
-    if (updateErr) {
+    if (!response.ok) {
       setError('Failed to save profile. Please try again.');
       setSaving(false);
       trigger('error');
