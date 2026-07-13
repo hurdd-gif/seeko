@@ -81,13 +81,14 @@ next-env.d.ts
 .refine-relay.json
 .refine-relay.log
 
-# local QA screenshots
+# local QA screenshots — ephemeral, delete them when the QA pass is done.
+# The repo root has no legitimate .png, so ignore the lot: named one-offs
+# (desktop-full.png, denied-row.png…) kept getting committed by accident.
+# Real assets live in public/; kept design baselines live in docs/.
 .qa/
 .qa-screens/
 .qa-shots/
-/qa-*.png
-/login-redesign-*.png
-/404-*.png
+/*.png
 
 # documents
 *.pdf
