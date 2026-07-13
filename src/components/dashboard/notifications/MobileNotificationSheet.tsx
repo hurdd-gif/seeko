@@ -69,7 +69,7 @@ export const MobileNotificationSheet = forwardRef<HTMLDivElement, MobileNotifica
             >
               {/* Drag handle */}
               <div className="flex justify-center pt-2 pb-1">
-                <div className="w-9 h-1 rounded-full bg-[#0000001f]" />
+                <div className="w-9 h-1 rounded-full bg-[#0000001f] dark:bg-wash-10" />
               </div>
 
               {/* Header */}
@@ -103,7 +103,7 @@ export const MobileNotificationSheet = forwardRef<HTMLDivElement, MobileNotifica
               >
                 {isEmpty ? (
                   <div className="flex flex-col items-center justify-center py-16 text-center">
-                    <CheckCircle2 className="size-10 text-[#0000001f]" />
+                    <CheckCircle2 className="size-10 text-[#0000001f] dark:text-ink-ghost" />
                     <p className="mt-3 text-[13px] text-ink-muted">You&apos;re all caught up</p>
                   </div>
                 ) : (

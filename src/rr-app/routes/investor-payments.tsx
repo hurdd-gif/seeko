@@ -279,7 +279,7 @@ function InvestorPaymentsIndex({ index }: { index: InvestorPaymentsData }) {
               <div className="flex flex-col gap-0">
                 {topRecipients.map(([id, person], idx) => (
                   <div key={id} className="flex items-center gap-3 border-b border-wash-6 py-2.5 last:border-0">
-                    <span className="w-4 shrink-0 font-mono text-xs tabular-nums text-[#b0b0b0]">{idx + 1}</span>
+                    <span className="w-4 shrink-0 font-mono text-xs tabular-nums text-[#b0b0b0] dark:text-ink-faintest">{idx + 1}</span>
                     <Avatar className="size-7 shrink-0">
                       <AvatarImage src={person.avatar_url ?? undefined} />
                       <AvatarFallback className="bg-[var(--ov-chip-bg)] text-[10px] text-ink-body">

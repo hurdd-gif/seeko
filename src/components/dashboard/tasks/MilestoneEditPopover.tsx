@@ -464,7 +464,7 @@ export function MilestoneEditPopover({
             )}
           </div>
 
-          {error && <p className="mt-2 text-[11.5px] text-[#f87171]">{error}</p>}
+          {error && <p className="mt-2 text-[11.5px] text-[#f87171] dark:text-danger">{error}</p>}
 
           {/* Footer */}
           <div className="mt-3 flex items-center justify-between gap-2">
@@ -482,7 +482,7 @@ export function MilestoneEditPopover({
               <button
                 type="button"
                 onClick={() => setConfirmDelete(true)}
-                className="flex items-center gap-1.5 rounded-md px-2 py-1 text-[11.5px] text-ink-faint transition-colors hover:bg-wash-4 hover:text-[#f87171]"
+                className="flex items-center gap-1.5 rounded-md px-2 py-1 text-[11.5px] text-ink-faint transition-colors hover:bg-wash-4 hover:text-[#f87171] dark:hover:text-danger"
               >
                 <Trash2 className="size-3" />
                 Delete

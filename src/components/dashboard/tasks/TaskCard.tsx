@@ -196,7 +196,7 @@ export function TaskCard({
   // a dashed circle with a + icon, matching the popover's "No assignee" row.
   const emptyTrigger = (
     <span
-      className="flex size-5 shrink-0 items-center justify-center rounded-full border border-dashed border-[#cfcfcf] text-ink-faint transition-colors hover:border-ink-faint hover:text-ink-body"
+      className="flex size-5 shrink-0 items-center justify-center rounded-full border border-dashed border-[#cfcfcf] dark:border-wash-6 text-ink-faint transition-colors hover:border-ink-faint hover:text-ink-body"
       aria-hidden
     >
       <UserPlus className="size-3" strokeWidth={1.75} />
@@ -370,7 +370,7 @@ export function TaskCard({
               className={cn(
                 'inline-flex h-6 min-w-0 items-center gap-1.5 rounded-full px-2 text-[11px] font-medium leading-none tabular-nums',
                 deadline.overdue
-                  ? 'bg-[#f04438]/10 text-[#d92d20]'
+                  ? 'bg-[#f04438]/10 dark:bg-danger/15 text-[#d92d20] dark:text-danger'
                   : 'bg-wash-4 text-[#777777] dark:text-ink-muted',
               )}
             >

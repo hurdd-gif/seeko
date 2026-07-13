@@ -103,7 +103,7 @@ function LightEmptyRow({ icon: Icon, text }: {
 }) {
   return (
     <div className="flex items-center gap-2.5 py-3 px-1">
-      <Icon className="size-4 shrink-0 text-[#c8c8c8]" />
+      <Icon className="size-4 shrink-0 text-[#c8c8c8] dark:text-ink-ghost" />
       <p className="text-xs text-ink-faint">{text}</p>
     </div>
   );
@@ -452,7 +452,7 @@ export function PaymentsAdmin({ team, viewerMode = false }: PaymentsAdminProps) 
                 <span className="shrink-0 text-[#858585] dark:text-ink-muted">{signal.label}</span>
                 <span className={cn(
                   'shrink-0 font-semibold tabular-nums',
-                  signal.danger ? 'text-danger' : signal.active ? 'text-ink-title' : 'text-[#a0a0a0]'
+                  signal.danger ? 'text-danger' : signal.active ? 'text-ink-title' : 'text-[#a0a0a0] dark:text-ink-faint'
                 )}>
                   {signal.value}
                 </span>
@@ -539,13 +539,13 @@ export function PaymentsAdmin({ team, viewerMode = false }: PaymentsAdminProps) 
                 </div>
                 <div className="flex items-center gap-2 text-[11px] text-ink-muted">
                   <span className="tabular-nums">{openInvoiceCount} open</span>
-                  <span className="text-[#d0d0d0]">/</span>
+                  <span className="text-[#d0d0d0] dark:text-ink-ghost">/</span>
                   <span className="tabular-nums">{invoiceRequests.length} total</span>
                 </div>
               </div>
             </CardHeader>
             <CardContent className="px-5 py-0">
-              <div className="hidden grid-cols-[minmax(0,1fr)_92px_116px_112px] gap-3 border-b border-wash-6 px-3 py-2.5 text-[11px] font-medium text-[#a0a0a0] sm:grid">
+              <div className="hidden grid-cols-[minmax(0,1fr)_92px_116px_112px] gap-3 border-b border-wash-6 px-3 py-2.5 text-[11px] font-medium text-[#a0a0a0] dark:text-ink-muted sm:grid">
                 <span>Recipient</span>
                 <span className="text-left">Date</span>
                 <span className="text-right">Amount</span>
@@ -691,7 +691,7 @@ export function PaymentsAdmin({ team, viewerMode = false }: PaymentsAdminProps) 
                             Paid
                           </span>
                         ) : (
-                          <span className="text-xs text-[#c8c8c8]">No payments</span>
+                          <span className="text-xs text-[#c8c8c8] dark:text-ink-faint">No payments</span>
                         )}
                       </div>
                     </div>
@@ -908,7 +908,7 @@ function PaidPaymentRow({
           {hasRefund && (
             <Badge variant="outline" className={cn(
               'border-dept-wash-animation/30 bg-dept-wash-animation/10 text-[10px] text-dept-ink-animation',
-              fullyRefunded && 'border-danger/25 bg-danger/10 text-[#b8341f]'
+              fullyRefunded && 'border-danger/25 bg-danger/10 text-danger-strong'
             )}>
               {fullyRefunded ? 'Refunded' : 'Partial refund'}
             </Badge>
@@ -985,7 +985,7 @@ function PaidPaymentRow({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.12, ease: 'easeOut' }}
-              className="fixed inset-0 z-40 bg-wash-5"
+              className="fixed inset-0 z-40 bg-scrim"
               onMouseDown={() => setRefundMenu(null)}
             />
             <motion.div
@@ -1018,7 +1018,7 @@ function PaidPaymentRow({
               </button>
               <button
                 type="button"
-                className="flex w-full items-center gap-2.5 rounded-[10px] px-2.5 py-2 text-left text-xs font-medium text-[#c43f30] transition-[background-color,transform] hover:bg-danger/10 active:scale-[0.98] disabled:opacity-50"
+                className="flex w-full items-center gap-2.5 rounded-[10px] px-2.5 py-2 text-left text-xs font-medium text-[#c43f30] dark:text-danger transition-[background-color,transform] hover:bg-danger/10 active:scale-[0.98] disabled:opacity-50"
                 onClick={() => { setRefundMenu(null); updateRefund(amount, payment.refund_note ?? 'Full refund'); }}
                 disabled={refundLoading || fullyRefunded}
               >
@@ -1252,7 +1252,7 @@ function PendingRequestRow({ payment, onAction }: { payment: Payment; onAction: 
                 <Button
                   size="sm"
                   variant="ghost"
-                  className="gap-1.5 text-danger hover:text-[#b8341f] hover:bg-danger/10 h-8"
+                  className="gap-1.5 text-danger hover:text-danger-strong hover:bg-danger/10 h-8"
                   onClick={(e) => { e.stopPropagation(); handleAction('cancelled'); }}
                   disabled={acting}
                 >
@@ -1336,7 +1336,7 @@ function InvoiceRequestRow({ invite, index, onAction }: { invite: InvoiceRequest
             <span>{new Date(invite.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
             {prefilledTotal > 0 && (
               <>
-                <span className="text-[#c8c8c8]">·</span>
+                <span className="text-[#c8c8c8] dark:text-ink-ghost">·</span>
                 <span className="tabular-nums">{fmt(prefilledTotal)}</span>
               </>
             )}

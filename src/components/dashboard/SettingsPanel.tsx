@@ -496,7 +496,7 @@ export function SettingsPanel({ profile, isAdmin, team, revalidate, completedTas
                     <form action="/auth/signout" method="post" className="pt-4">
                       <button
                         type="submit"
-                        className="flex items-center gap-2 text-sm text-danger hover:text-[#b8402f] transition-colors"
+                        className="flex items-center gap-2 text-sm text-danger hover:text-[#b8402f] dark:hover:text-danger-strong transition-colors"
                       >
                         <LogOut className="size-4" />
                         Sign out
@@ -806,7 +806,7 @@ export function SettingsPanel({ profile, isAdmin, team, revalidate, completedTas
               </button>
               <button
                 type="button"
-                className={cn(BTN_BASE, 'flex-1 inline-flex items-center justify-center bg-danger text-white hover:bg-[#b8402f] disabled:opacity-50')}
+                className={cn(BTN_BASE, 'flex-1 inline-flex items-center justify-center bg-danger text-white hover:bg-[#b8402f] dark:hover:bg-danger-strong disabled:opacity-50')}
                 onClick={handleBoot}
                 disabled={bootLoading || !bootPassword}
               >

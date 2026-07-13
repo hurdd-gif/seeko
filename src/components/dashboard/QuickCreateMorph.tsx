@@ -254,7 +254,7 @@ export function QuickCreateMorph({
           <div className="mt-3 flex items-center justify-between gap-3">
             <div className="min-w-0">
               {error ? (
-                <p className="truncate text-[12px] leading-4 text-[#dc2626]" role="alert">
+                <p className="truncate text-[12px] leading-4 text-[#dc2626] dark:text-danger" role="alert">
                   {error}
                 </p>
               ) : (

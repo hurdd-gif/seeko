@@ -51,7 +51,7 @@ function AddActionStub({ label }: { label: string }) {
       disabled
       title={`${label} coming soon`}
       aria-label={label}
-      className="flex size-6 items-center justify-center rounded-md text-[#b0b0b0] opacity-70 cursor-not-allowed"
+      className="flex size-6 items-center justify-center rounded-md text-[#b0b0b0] dark:text-ink-faintest opacity-70 cursor-not-allowed"
     >
       <Plus className="size-3.5" strokeWidth={2.25} />
     </button>

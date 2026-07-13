@@ -268,7 +268,7 @@ export function MilestonePopover({
         >
           {showLinkList && (
             <>
-              <div className="px-2 pt-1 pb-0.5 text-[10.5px] font-medium uppercase tracking-[0.04em] text-[#b0b0b0]">
+              <div className="px-2 pt-1 pb-0.5 text-[10.5px] font-medium uppercase tracking-[0.04em] text-[#b0b0b0] dark:text-ink-faintest">
                 Link to task
               </div>
               <div className="max-h-[200px] overflow-y-auto [scrollbar-width:thin]">
@@ -337,7 +337,7 @@ export function MilestonePopover({
                 className="mt-1.5 block w-full rounded-md border border-wash-8 bg-surface-1 px-2 py-1.5 text-[12.5px] tabular-nums text-ink-title focus:border-seeko-accent focus:outline-none"
               />
               {error && (
-                <p className="mt-1.5 text-[11.5px] text-[#f87171]">{error}</p>
+                <p className="mt-1.5 text-[11.5px] text-[#f87171] dark:text-danger">{error}</p>
               )}
               <div className="mt-1.5 flex items-center justify-end gap-1.5">
                 <button
@@ -355,7 +355,7 @@ export function MilestonePopover({
                 <button
                   type="submit"
                   disabled={submitting || !name.trim()}
-                  className="rounded-md bg-seeko-accent px-2.5 py-1 text-[11.5px] font-medium text-white transition-colors hover:bg-[#0964d6] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-md bg-seeko-accent px-2.5 py-1 text-[11.5px] font-medium text-white transition-colors hover:bg-[#0964d6] dark:hover:bg-seeko-accent-strong disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {submitting ? 'Creating…' : taskId ? 'Create & link' : 'Create'}
                 </button>

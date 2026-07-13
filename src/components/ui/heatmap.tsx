@@ -31,9 +31,9 @@ export type HeatmapDatum = { date: string; count: number };
 /** SEEKO accent-blue ramp on white (level 0 matches the light icon-circle grey). */
 export const HEATMAP_LEVEL_STYLES = [
   'bg-wash-5',
-  'bg-[#cfe6ff]',
-  'bg-[#8ec4ff]',
-  'bg-[#3d95ff]',
+  'bg-heat-1',
+  'bg-heat-2',
+  'bg-heat-3',
   'bg-seeko-accent',
 ];
 
@@ -372,7 +372,7 @@ export function HeatmapLegend({
         </span>
       ) : (
         <span
-          className="rounded-full bg-gradient-to-r from-wash-5 via-[#8ec4ff] to-seeko-accent"
+          className="rounded-full bg-gradient-to-r from-wash-5 via-heat-2 to-seeko-accent"
           style={{ width: swatchSize * 5 + gap * 4, height: swatchSize }}
         />
       )}

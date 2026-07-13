@@ -130,10 +130,10 @@ const tabSlideTransition = {
    colors the glyph and `glow` tints the glass overlay when the row is hovered. */
 const DEPT_DOC_ICON: Record<string, { Icon: LucideIcon; ink: string; hoverInk: string; glow: string }> = {
   'Coding':         { Icon: Braces,       ink: 'text-seeko-accent', hoverInk: 'group-hover:text-seeko-accent group-focus-visible:text-seeko-accent', glow: '#0d7aff' },
-  'Visual Art':     { Icon: Palette,      ink: 'text-[#4757e6]', hoverInk: 'group-hover:text-[#4757e6] group-focus-visible:text-[#4757e6]', glow: '#4757e6' },
-  'UI/UX':          { Icon: PenTool,      ink: 'text-[#7c3aed]', hoverInk: 'group-hover:text-[#7c3aed] group-focus-visible:text-[#7c3aed]', glow: '#7c3aed' },
-  'Animation':      { Icon: Clapperboard, ink: 'text-[#b45309]', hoverInk: 'group-hover:text-[#b45309] group-focus-visible:text-[#b45309]', glow: '#f59e0b' },
-  'Asset Creation': { Icon: Package,      ink: 'text-[#e0447e]', hoverInk: 'group-hover:text-[#e0447e] group-focus-visible:text-[#e0447e]', glow: '#e0447e' },
+  'Visual Art':     { Icon: Palette,      ink: 'text-[#4757e6] dark:text-dept-ink-visual-art', hoverInk: 'group-hover:text-[#4757e6] group-focus-visible:text-[#4757e6] dark:group-hover:text-dept-ink-visual-art dark:group-focus-visible:text-dept-ink-visual-art', glow: '#4757e6' },
+  'UI/UX':          { Icon: PenTool,      ink: 'text-[#7c3aed] dark:text-dept-ink-ui-ux', hoverInk: 'group-hover:text-[#7c3aed] group-focus-visible:text-[#7c3aed] dark:group-hover:text-dept-ink-ui-ux dark:group-focus-visible:text-dept-ink-ui-ux', glow: '#7c3aed' },
+  'Animation':      { Icon: Clapperboard, ink: 'text-[#b45309] dark:text-dept-ink-animation', hoverInk: 'group-hover:text-[#b45309] group-focus-visible:text-[#b45309] dark:group-hover:text-dept-ink-animation dark:group-focus-visible:text-dept-ink-animation', glow: '#f59e0b' },
+  'Asset Creation': { Icon: Package,      ink: 'text-[#e0447e] dark:text-dept-ink-asset-creation', hoverInk: 'group-hover:text-[#e0447e] group-focus-visible:text-[#e0447e] dark:group-hover:text-dept-ink-asset-creation dark:group-focus-visible:text-dept-ink-asset-creation', glow: '#e0447e' },
 };
 
 /* Glass-chip icon tile. On a flat light canvas there is nothing behind the
@@ -491,19 +491,19 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, is
                 <span>{isDeck ? (doc.slides?.length ? `Deck · ${doc.slides.length} ${doc.slides.length === 1 ? 'slide' : 'slides'}` : 'Deck') : 'Document'}</span>
                 {locked ? (
                   <>
-                    <span className="text-[#d0d0d0]">·</span>
+                    <span className="text-[#d0d0d0] dark:text-ink-ghost">·</span>
                     <span>Restricted</span>
                   </>
                 ) : restrictedTo.length > 0 ? (
                   <>
-                    <span className="text-[#d0d0d0]">·</span>
+                    <span className="text-[#d0d0d0] dark:text-ink-ghost">·</span>
                     <span className="truncate">{restrictedTo[0]}</span>
                   </>
                 ) : null}
               </div>
             </div>
 
-            <span className="shrink-0 text-[12px] tabular-nums text-[#a0a0a0]">
+            <span className="shrink-0 text-[12px] tabular-nums text-[#a0a0a0] dark:text-ink-faint">
               {updated ? timeAgo(updated) : ''}
             </span>
 
@@ -538,7 +538,7 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, is
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     onClick={() => setDeletingId(doc.id)}
-                    className="text-[#b4432f] hover:bg-danger/[0.08] hover:text-[#b4432f] focus:bg-danger/[0.08] focus:text-[#b4432f]"
+                    className="text-[#b4432f] dark:text-danger hover:bg-danger/[0.08] hover:text-[#b4432f] dark:hover:text-danger focus:bg-danger/[0.08] focus:text-[#b4432f] dark:focus:text-danger"
                   >
                     <Trash2 className="size-3.5" />
                     Delete
@@ -884,7 +884,7 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, is
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={() => setDeletingId(readDoc.id)}
-                  className="text-[#b4432f] hover:bg-danger/[0.08] hover:text-[#b4432f] focus:bg-danger/[0.08] focus:text-[#b4432f]"
+                  className="text-[#b4432f] dark:text-danger hover:bg-danger/[0.08] hover:text-[#b4432f] dark:hover:text-danger focus:bg-danger/[0.08] focus:text-[#b4432f] dark:focus:text-danger"
                 >
                   <Trash2 className="size-3.5" />
                   Delete
@@ -924,7 +924,7 @@ export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, is
                     <button
                       type="button"
                       onClick={() => { setSelected(null); setEditingDoc(readDoc); }}
-                      className="mt-2 text-xs font-medium text-seeko-accent-ink hover:text-[#08509f] transition-colors"
+                      className="mt-2 text-xs font-medium text-seeko-accent-ink hover:text-[#08509f] dark:hover:text-seeko-accent-strong transition-colors"
                     >
                       Edit document
                     </button>

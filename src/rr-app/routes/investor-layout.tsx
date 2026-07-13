@@ -61,7 +61,7 @@ export function InvestorLayout() {
           </p>
           <a
             href="/login"
-            className="mt-4 inline-flex h-9 items-center rounded-full bg-ink-title px-4 text-sm font-medium text-surface-1 transition-colors hover:bg-[#000]"
+            className="mt-4 inline-flex h-9 items-center rounded-full bg-ink-title px-4 text-sm font-medium text-surface-1 transition-colors hover:bg-[#000] dark:hover:bg-white"
           >
             Back to sign in
           </a>
@@ -291,7 +291,7 @@ export function InvestorShell({
                 transition={SNAPPY}
                 className="relative z-[60] rounded-full"
               >
-                <span className="flex size-9 items-center justify-center overflow-hidden rounded-full bg-[#262626] text-[11px] font-medium leading-[13px] text-[#f0f0f0] ring-[0.5px] ring-inset ring-[#0000001f]">
+                <span className="flex size-9 items-center justify-center overflow-hidden rounded-full bg-[#262626] text-[11px] font-medium leading-[13px] text-[#f0f0f0] ring-[0.5px] ring-inset ring-[#0000001f] dark:ring-white/10">
                   {profile.avatarUrl ? (
                     <img src={profile.avatarUrl} alt="" className="size-full object-cover" />
                   ) : (
@@ -365,7 +365,7 @@ export function InvestorShell({
                                 <form action="/auth/signout" method="post">
                                   <button
                                     type="submit"
-                                    className="text-[14px] font-medium text-[#e5484d] transition-colors hover:text-[#d33b40]"
+                                    className="text-[14px] font-medium text-[#e5484d] dark:text-danger transition-colors hover:text-[#d33b40]"
                                   >
                                     Yes
                                   </button>
@@ -388,7 +388,7 @@ export function InvestorShell({
                               exit={{ opacity: 0, y: 8 }}
                               transition={{ ...SNAPPY, opacity: { duration: 0.12 } }}
                               onClick={() => setConfirmingSignOut(true)}
-                              className="flex w-full items-center justify-between rounded-2xl px-4 py-3 text-[14px] font-medium tracking-[-0.28px] text-ink-title transition-[color,background-color] hover:bg-[rgba(229,72,77,0.08)] hover:text-[#e5484d]"
+                              className="flex w-full items-center justify-between rounded-2xl px-4 py-3 text-[14px] font-medium tracking-[-0.28px] text-ink-title transition-[color,background-color] hover:bg-[rgba(229,72,77,0.08)] hover:text-[#e5484d] dark:hover:text-danger"
                             >
                               <span>Sign out</span>
                               <LogOut className="size-5" />

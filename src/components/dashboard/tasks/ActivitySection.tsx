@@ -194,8 +194,8 @@ export function ActivityEventRow({
           ) : null}
           {renderCopy(a, resolveName)}
         </span>
-        <span className="ml-1.5 text-[#a8a8a8]">·</span>
-        <span className="ml-1.5 text-[#a8a8a8]">{formatTimeAgo(a.created_at)}</span>
+        <span className="ml-1.5 text-[#a8a8a8] dark:text-ink-ghost">·</span>
+        <span className="ml-1.5 text-[#a8a8a8] dark:text-ink-muted">{formatTimeAgo(a.created_at)}</span>
       </div>
     </li>
   );

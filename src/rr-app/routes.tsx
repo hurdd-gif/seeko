@@ -349,7 +349,7 @@ function StudioHeaderCluster() {
           aria-label="Open account menu"
           aria-expanded={open === 'account'}
           onClick={() => setOpen((prev) => (prev === 'account' ? null : 'account'))}
-          className="relative z-[60] flex size-9 items-center justify-center rounded-full bg-[#262626] text-[11px] font-medium leading-[13px] text-[#f0f0f0] ring-[0.5px] ring-inset ring-[#0000001f] transition-transform duration-150 ease-out hover:scale-105 active:scale-95"
+          className="relative z-[60] flex size-9 items-center justify-center rounded-full bg-[#262626] text-[11px] font-medium leading-[13px] text-[#f0f0f0] ring-[0.5px] ring-inset ring-[#0000001f] dark:ring-white/10 transition-transform duration-150 ease-out hover:scale-105 active:scale-95"
         >
           SK
         </button>
@@ -367,7 +367,7 @@ function StudioHeaderCluster() {
             <div className="mx-4 h-px bg-wash-5" />
             <a
               href="/login"
-              className="flex w-full items-center justify-between rounded-2xl px-4 py-3 text-[14px] font-medium tracking-[-0.28px] text-ink-title transition-[color,background-color] duration-150 ease-out hover:bg-[rgba(229,72,77,0.08)] hover:text-[#e5484d]"
+              className="flex w-full items-center justify-between rounded-2xl px-4 py-3 text-[14px] font-medium tracking-[-0.28px] text-ink-title transition-[color,background-color] duration-150 ease-out hover:bg-[rgba(229,72,77,0.08)] hover:text-[#e5484d] dark:hover:text-danger"
             >
               <span>Sign out</span>
               <LogOut className="size-5" />

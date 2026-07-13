@@ -115,7 +115,7 @@ export function DeadlineExtensionBanner({ extension, onDecide }: DeadlineExtensi
             type="button"
             onClick={() => decide('approve')}
             disabled={deciding}
-            className="rounded-full bg-ink-title px-3.5 py-1.5 text-[12px] font-medium text-surface-1 transition-[transform,background-color] duration-150 ease-out hover:bg-[#000] active:scale-[0.97] disabled:opacity-50 motion-reduce:transition-none motion-reduce:active:scale-100"
+            className="rounded-full bg-ink-title px-3.5 py-1.5 text-[12px] font-medium text-surface-1 transition-[transform,background-color] duration-150 ease-out hover:bg-[#000] dark:hover:bg-white active:scale-[0.97] disabled:opacity-50 motion-reduce:transition-none motion-reduce:active:scale-100"
           >
             {deciding ? 'Approving…' : 'Approve'}
           </button>
@@ -129,7 +129,7 @@ export function DeadlineExtensionBanner({ extension, onDecide }: DeadlineExtensi
           </button>
         </div>
       )}
-      {error && <p className="mt-2 pl-[26px] text-[12px] text-[#c0392b]">Couldn’t save — try again.</p>}
+      {error && <p className="mt-2 pl-[26px] text-[12px] text-[#c0392b] dark:text-danger">Couldn’t save — try again.</p>}
     </section>
   );
 }

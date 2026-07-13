@@ -111,7 +111,7 @@ export function TaskDetailPage({
                 <ChevronLeft className="size-3.5" />
                 <span>Issues</span>
               </Link>
-              <ChevronRight className="size-3 text-[#c5c5c5]" />
+              <ChevronRight className="size-3 text-[#c5c5c5] dark:text-ink-ghost" />
               {idLabel && (
                 <span className="font-mono text-[12px] tabular-nums text-ink-muted">
                   {idLabel}

@@ -69,7 +69,7 @@ export function ContractorRouteContent({
           </p>
           <a
             href="/login"
-            className="mt-4 inline-flex h-9 items-center rounded-full bg-ink-title px-4 text-sm font-medium text-surface-1 transition-[transform,background-color] hover:bg-[#000] active:scale-[0.98]"
+            className="mt-4 inline-flex h-9 items-center rounded-full bg-ink-title px-4 text-sm font-medium text-surface-1 transition-[transform,background-color] hover:bg-[#000] dark:hover:bg-white active:scale-[0.98]"
           >
             Back to sign in
           </a>

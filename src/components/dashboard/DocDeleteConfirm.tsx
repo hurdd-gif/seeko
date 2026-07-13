@@ -47,7 +47,7 @@ export function DocDeleteConfirm({ docId, docTitle, onDelete, onCancel }: DocDel
         size="sm"
         onClick={handleConfirm}
         disabled={deleting}
-        className={cn('bg-danger text-white hover:bg-[#c04535]')}
+        className={cn('bg-danger text-white hover:bg-[#c04535] dark:hover:bg-danger-strong')}
       >
         {deleting ? 'Deleting…' : 'Delete'}
       </Button>

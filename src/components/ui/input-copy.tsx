@@ -292,7 +292,7 @@ const InputCopy = forwardRef<HTMLDivElement, InputCopyProps>(
       <span
         className={cn(
           "shrink-0 px-2 py-1.5 transition-colors duration-150",
-          "text-[#a0a0a0] group-hover:text-ink-title",
+          "text-[#a0a0a0] dark:text-ink-faint group-hover:text-ink-title",
           compact && "px-1 py-0.5",
         )}
       >

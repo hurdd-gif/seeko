@@ -89,7 +89,7 @@ export function BoardDisplayPopover({
               <div className="px-3 pt-1.5 pb-1 text-[11.5px] font-medium text-ink-faint">
                 Show columns
               </div>
-              <p className="px-3 pb-1.5 text-[11.5px] leading-[1.4] text-[#a8a8a8]">
+              <p className="px-3 pb-1.5 text-[11.5px] leading-[1.4] text-[#a8a8a8] dark:text-ink-muted">
                 Empty columns hide by default. Pin one to keep it visible.
               </p>
               {TASK_STATUSES.map((s) => {
@@ -115,7 +115,7 @@ export function BoardDisplayPopover({
                       <StatusDot status={s} size="sm" />
                     </span>
                     <span className="flex-1 truncate text-[13px]">{s}</span>
-                    <span className="text-[11px] tabular-nums text-[#a8a8a8]">
+                    <span className="text-[11px] tabular-nums text-[#a8a8a8] dark:text-ink-muted">
                       {countsByStatus[s] ?? 0}
                     </span>
                     <span

@@ -53,7 +53,7 @@ export const DesktopNotificationPanel = forwardRef<HTMLDivElement, DesktopNotifi
             <div className="max-h-[min(500px,70vh)] overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [mask-image:linear-gradient(to_bottom,#000_calc(100%_-_96px),transparent)]">
               {isEmpty ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
-                  <CheckCircle2 className="size-8 text-[#0000001f]" />
+                  <CheckCircle2 className="size-8 text-[#0000001f] dark:text-ink-ghost" />
                   <p className="mt-3 text-[13px] text-ink-muted">You&apos;re all caught up</p>
                 </div>
               ) : (

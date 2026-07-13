@@ -44,12 +44,25 @@
   --seeko-accent:      oklch(0.6037 0.2168 257.92);
 
   /* Accent as TEXT on white — the AA-passing azure (#0a63cc, 5.3:1).
-     Flips to the lighter #52acff family in .dark. */
+     Flips to a lighter, brand-hue azure in .dark. */
   --seeko-accent-ink:  oklch(0.5165 0.1797 257.30);
+
+  /* Accent EMPHASIS tier (#0964d6) — accent hover/active. Same inversion story
+     as --danger-strong: on light "hotter" means darker, on dark it must mean
+     lighter, so the hardcoded hover hexes (#0964d6/#0a6cdf/#08509f) all pushed
+     the wrong way in dark. */
+  --seeko-accent-strong: oklch(0.5263 0.1914 258.24);
 
   /* Destructive/danger ink on light surfaces (#d4503e — invoice overdue,
      LIGHT_INVOICE_STATUS, destructive dialog actions). */
   --danger:            oklch(0.6051 0.1700 30.44);
+
+  /* Danger EMPHASIS tier (#b8341f) — the "one step hotter" red: destructive
+     hover, the fully-refunded badge. On light that means DARKER than --danger;
+     in .dark it has to invert to LIGHTER, which is exactly the flip the
+     hardcoded #b8341f/#c43f30 hexes were getting wrong (a darker red on a dark
+     card = 2.1:1). Tokenised so emphasis follows the scheme. */
+  --danger-strong:     oklch(0.5231 0.1719 31.80);
 
   /* Success green (#15803d — external-signing signed state, 5.0:1 on white).
      Distinct from azure so azure keeps meaning "interactive", never success. */
@@ -69,6 +82,12 @@
   /* Paper redesign — glass surface + eyebrow gray */
   --glass:             oklch(0.2435 0 0 / 0.9); /* rgba(32,32,32,.9) */
   --eyebrow:           oklch(0.7364 0.0097 78.27); /* #ADA9A3 */
+
+  /* Activity heatmap ramp — exact conversions of the shipped light blues
+     (verified to round-trip byte-identical). Rebuilt ascending in .dark. */
+  --heat-1: oklch(0.9158 0.0421 250.49); /* #cfe6ff */
+  --heat-2: oklch(0.8050 0.1014 251.30); /* #8ec4ff */
+  --heat-3: oklch(0.6695 0.1780 255.17); /* #3d95ff */
 
   /* Status dots (used inline, not as badges) — exact conversions */
   --status-complete:   oklch(0.6037 0.2168 257.92); /* #0d7aff */
@@ -156,6 +175,15 @@
   --wash-8:  oklch(0 0 0 / 0.08);
   --wash-10: oklch(0 0 0 / 0.10);
 
+  /* SCRIM — the dismiss-layer behind a menu/popover. NOT a wash: a wash is a
+     surface tint (black-alpha on light, white-alpha on dark, because a fill has
+     to contrast its own ground), but a scrim's whole job is to RECEDE the page,
+     so it stays black-alpha in BOTH schemes. Reaching for --wash-5 here is the
+     trap: it flips to white-alpha in .dark and LIGHTENS the page. Alpha is
+     scheme-tuned for equal perceptual recede — 0.05 takes the light page
+     L 1.000 → 0.950; 0.25 takes the dark canvas L 0.218 → 0.164. */
+  --scrim:   oklch(0 0 0 / 0.05);
+
   /* Elevation */
   --sh-float: 0 10px 20px rgba(209, 209, 209, 0.15); /* ref #D1D1D126 0 10 20 */
   --sh-elevated:
@@ -234,10 +262,40 @@
   --border:    oklch(0.335 0 0); /* ~0.045 over the lifted card so edges read */
   --input:     oklch(0.335 0 0);
 
-  /* Chromatics — hold hue, lift L for dark-bg contrast (gamut-checked) */
-  --seeko-accent-ink: oklch(0.7260 0.1487 248.98); /* #52acff — 6.8:1 canvas / 5.8:1 card */
-  --danger:           oklch(0.6800 0.1700 30.44);  /* #ef6855 — 5.3:1 canvas / 4.5:1 card */
-  --success:          oklch(0.7200 0.1371 150.07); /* #5dbc75 — 7.0:1 canvas / 6.0:1 card */
+  /* Chromatics — rebuilt on one rule instead of three hand-picks: hold the
+     LIGHT hue exactly (zero drift), then set C to 92% of that hue's sRGB max
+     chroma at the chosen L. Same C%-of-max across hues = equal perceived
+     vividness (equal ABSOLUTE C does not — max chroma varies hugely by hue:
+     0.16 for blue vs 0.21 for red at these L values). L is picked so each
+     clears 4.5:1 on the LIGHTEST ground it lands on (the 0.332 popover tier),
+     which makes it AA on the card and canvas by construction.
+
+     What was wrong before:
+      · accent-ink sat at H 248.98 — 8.3° of drift off the brand azure (257.92),
+        so link/ink blue and the chart/fill blue were two different blues side
+        by side. It was also pinned at 100% of max chroma, i.e. exactly on the
+        sRGB gamut wall with no headroom.
+      · success carried the light theme's ABSOLUTE chroma (0.137) into dark,
+        which is only 69% of green's max — the dullest thing in the palette and
+        the reason dark mode read flat. 0.137 → 0.177 is a +29% vividness lift.
+      · danger sat at 81% and only just cleared AA on the card (4.55). */
+  --seeko-accent-ink: oklch(0.700 0.1460 257.92); /* #629ff8 — 92% max · 6.5:1 canvas / 5.3:1 card / 4.5:1 popover */
+  --danger:           oklch(0.720 0.1610 30.44);  /* #f97865 — 92% max · 6.6:1 canvas / 5.3:1 card / 4.6:1 popover */
+  --success:          oklch(0.700 0.1770 150.07); /* #2dbc5f — 92% max · 7.0:1 canvas / 5.7:1 card / 4.9:1 popover */
+
+  /* Emphasis tiers invert on dark: hotter = LIGHTER, not darker. */
+  --danger-strong:       oklch(0.790 0.1098 30.44);  /* #f99f90 — 7.0:1 card */
+  --seeko-accent-strong: oklch(0.680 0.1565 257.92); /* #5798f7 — 4.9:1 card */
+
+  /* Activity heatmap ramp. The light ramp (#cfe6ff → #8ec4ff → #3d95ff) gets
+     DARKER as activity rises — correct on white, but carried into dark it
+     inverts: #cfe6ff (level 1, the quietest day) is the BRIGHTEST cell on the
+     canvas and #3d95ff (level 3, the busiest) is the dimmest, so the chart
+     reads its own data backwards. Dark needs the ramp rebuilt ascending —
+     brand hue held, L climbing with the level. */
+  --heat-1: oklch(0.380 0.0773 257.92); /* #27436b */
+  --heat-2: oklch(0.520 0.1536 257.92); /* #2766bf */
+  --heat-3: oklch(0.660 0.1676 257.92); /* #4b91f7 */
 
   /* Dept inks flip to the shipped dept pastels (the original dark-chrome
      dept family — gamut-safe where a lifted-L purple would clip).
@@ -256,6 +314,9 @@
   --wash-6:  oklch(1 0 0 / 0.08);
   --wash-8:  oklch(1 0 0 / 0.11);
   --wash-10: oklch(1 0 0 / 0.13);
+
+  /* Scrim does NOT flip with the washes — it stays black and deepens. */
+  --scrim:   oklch(0 0 0 / 0.25);
 
   /* Shadow language relit. Two moves, same anatomy: the hairline ring flips
      to white-alpha (the ring draws the silhouette — a black ring vanishes on
@@ -436,9 +497,16 @@
   --color-hairline:         var(--hairline);
 
   /* Accent-as-text + danger/success inks — raw values in :root above */
-  --color-seeko-accent-ink: var(--seeko-accent-ink);
-  --color-danger:           var(--danger);
-  --color-success:          var(--success);
+  --color-seeko-accent-ink:    var(--seeko-accent-ink);
+  --color-seeko-accent-strong: var(--seeko-accent-strong);
+  --color-danger:              var(--danger);
+  --color-danger-strong:       var(--danger-strong);
+  --color-success:             var(--success);
+
+  /* Activity heatmap ramp — ascends with the level in BOTH schemes */
+  --color-heat-1: var(--heat-1);
+  --color-heat-2: var(--heat-2);
+  --color-heat-3: var(--heat-3);
 
   /* AA-on-white dept ink ladder (flips to the dept pastels in .dark) */
   --color-dept-ink-coding:         var(--dept-ink-coding);
@@ -457,6 +525,10 @@
   --color-wash-6:  var(--wash-6);
   --color-wash-8:  var(--wash-8);
   --color-wash-10: var(--wash-10);
+
+  /* Dismiss-layer behind menus/popovers. `bg-scrim` — never `bg-wash-*`, which
+     inverts to white-alpha in dark and lightens the page instead of receding it. */
+  --color-scrim:   var(--scrim);
 
   /* Radii. The reference's compact 420px card is 8px with 16px controls; at
    * SEEKO's list scale a sheet SCALES UP with its surface (large groups use

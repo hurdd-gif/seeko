@@ -193,7 +193,7 @@ export function StudioHeaderActions({
           transition={SNAPPY}
           className="relative z-[60] rounded-full"
         >
-          <Avatar className="size-9 ring-[0.5px] ring-inset ring-[#0000001f]">
+          <Avatar className="size-9 ring-[0.5px] ring-inset ring-[#0000001f] dark:ring-white/10">
             <AvatarImage src={avatarUrl} alt={displayName || email} />
             <AvatarFallback className="bg-[#262626] text-[11px] font-medium leading-[13px] text-[#f0f0f0]">
               {initials}
@@ -274,7 +274,7 @@ export function StudioHeaderActions({
                           <form action="/auth/signout" method="post">
                             <button
                               type="submit"
-                              className="text-[14px] font-medium text-[#e5484d] transition-colors hover:text-[#d33b40]"
+                              className="text-[14px] font-medium text-[#e5484d] dark:text-danger transition-colors hover:text-[#d33b40] dark:hover:text-danger-strong"
                             >
                               Yes
                             </button>
@@ -297,7 +297,7 @@ export function StudioHeaderActions({
                         exit={{ opacity: 0, y: 8 }}
                         transition={{ ...SNAPPY, opacity: { duration: 0.12 } }}
                         onClick={() => setConfirmingSignOut(true)}
-                        className="flex w-full items-center justify-between rounded-2xl px-4 py-3 text-[14px] font-medium tracking-[-0.28px] text-ink-title transition-[color,background-color] hover:bg-[rgba(229,72,77,0.08)] hover:text-[#e5484d]"
+                        className="flex w-full items-center justify-between rounded-2xl px-4 py-3 text-[14px] font-medium tracking-[-0.28px] text-ink-title transition-[color,background-color] hover:bg-[rgba(229,72,77,0.08)] hover:text-[#e5484d] dark:hover:text-danger"
                       >
                         <span>Sign out</span>
                         <LogOut className="size-5" />

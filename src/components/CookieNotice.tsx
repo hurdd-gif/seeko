@@ -70,7 +70,7 @@ export function CookieNotice() {
           // Placement: full-width bottom banner on mobile (a 360px corner card
           // sat on top of the login card's legal footnote below ~sm), corner
           // card from sm up where the two no longer collide.
-          className="fixed inset-x-4 bottom-4 z-50 rounded-2xl border border-black/[0.15] bg-white p-5 print:hidden sm:inset-x-auto sm:bottom-5 sm:right-5 sm:w-[min(360px,calc(100vw-40px))]"
+          className="fixed inset-x-4 bottom-4 z-50 rounded-2xl border border-black/[0.15] bg-white dark:border-hairline dark:bg-surface-1 p-5 print:hidden sm:inset-x-auto sm:bottom-5 sm:right-5 sm:w-[min(360px,calc(100vw-40px))]"
         >
           <h2 className="text-sm font-semibold text-ink-title">Cookies</h2>
           <p className="mt-1.5 text-[13px] leading-relaxed text-ink-muted-strong">

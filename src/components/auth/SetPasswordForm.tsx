@@ -65,7 +65,7 @@ export function SetPasswordForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4 rounded-2xl bg-white p-6 shadow-seeko">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-4 rounded-2xl bg-white dark:bg-surface-1 p-6 shadow-seeko">
       <div>
         <label htmlFor="password" className={FIELD_LABEL}>
           Password

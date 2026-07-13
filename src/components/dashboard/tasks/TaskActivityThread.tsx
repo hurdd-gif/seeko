@@ -358,7 +358,7 @@ function CommentCard({
         <span className="text-[13px] font-medium tracking-[-0.01em] text-ink-title">
           {authorName}
         </span>
-        <span className="text-[12px] text-[#a8a8a8]">{formatTimeAgo(comment.created_at)}</span>
+        <span className="text-[12px] text-[#a8a8a8] dark:text-ink-muted">{formatTimeAgo(comment.created_at)}</span>
         {edited && <span className="text-[12px] text-ink-faintest">(edited)</span>}
 
         <div className="ml-auto flex items-center gap-0.5 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100">
@@ -404,7 +404,7 @@ function CommentCard({
                 type="button"
                 aria-label="Delete comment"
                 onClick={() => void remove()}
-                className="flex size-7 items-center justify-center rounded-md text-ink-faint transition-[background-color,color,scale] duration-150 ease-out hover:bg-wash-4 hover:text-[#c04040] active:scale-[0.96]"
+                className="flex size-7 items-center justify-center rounded-md text-ink-faint transition-[background-color,color,scale] duration-150 ease-out hover:bg-wash-4 hover:text-[#c04040] dark:hover:text-danger active:scale-[0.96]"
               >
                 <Trash2 className="size-3.5" />
               </button>
@@ -640,7 +640,7 @@ function CommentComposer({
       )}
 
       <div className="mt-2 flex items-center justify-between">
-        <span className="text-[12px] text-[#c04040]">{error}</span>
+        <span className="text-[12px] text-[#c04040] dark:text-danger">{error}</span>
         <div className="flex items-center gap-1">
           <input
             ref={fileInputRef}

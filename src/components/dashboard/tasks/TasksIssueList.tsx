@@ -328,7 +328,7 @@ function IssueRow({
     </Avatar>
   ) : (
     <span
-      className="flex size-6 shrink-0 items-center justify-center rounded-full border border-dashed border-[#cfcfcf] text-ink-faint"
+      className="flex size-6 shrink-0 items-center justify-center rounded-full border border-dashed border-[#cfcfcf] dark:border-wash-6 text-ink-faint"
       aria-hidden
     >
       <UserPlus className="size-3.5" strokeWidth={1.75} />

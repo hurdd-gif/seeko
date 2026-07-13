@@ -51,7 +51,7 @@ export function RailSection({
             animate={{ rotate: open ? 0 : -90 }}
             initial={false}
             transition={shouldReduce ? { duration: 0 } : SPRING}
-            className="flex size-3.5 items-center justify-center text-[#b0b0b0]"
+            className="flex size-3.5 items-center justify-center text-[#b0b0b0] dark:text-ink-faintest"
           >
             <ChevronDown className="size-3.5" strokeWidth={2.25} />
           </motion.span>

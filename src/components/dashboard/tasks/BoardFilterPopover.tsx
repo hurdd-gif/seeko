@@ -96,7 +96,7 @@ export function BoardFilterPopover({
       >
         <Filter className="size-4" />
         {count > 0 && (
-          <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-seeko-accent px-1 text-[10px] font-medium leading-none text-white tabular-nums ring-2 ring-[#eeeeee]">
+          <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-seeko-accent px-1 text-[10px] font-medium leading-none text-white tabular-nums ring-2 ring-[#eeeeee] dark:ring-[oklch(0.240_0_0)]">
             {count}
           </span>
         )}

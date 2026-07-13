@@ -195,7 +195,7 @@ export function TaskActionsMenu({
               {/* Hold-fill — animates 0 → 100% over HOLD_MS, snaps back on release. */}
               <span
                 aria-hidden="true"
-                className="pointer-events-none absolute inset-y-0 left-0 bg-[#dc2626]/15"
+                className="pointer-events-none absolute inset-y-0 left-0 bg-[#dc2626]/15 dark:bg-danger/20"
                 style={{
                   width: holding ? '100%' : '0%',
                   transition: holding
@@ -213,7 +213,7 @@ export function TaskActionsMenu({
               type="button"
               role="menuitem"
               onClick={() => setConfirmDelete(true)}
-              className="flex w-full items-center gap-2 rounded-[10px] px-2.5 py-1.5 text-left text-[13px] text-ink-body transition-colors hover:bg-wash-4 hover:text-[#dc2626]"
+              className="flex w-full items-center gap-2 rounded-[10px] px-2.5 py-1.5 text-left text-[13px] text-ink-body transition-colors hover:bg-wash-4 hover:text-[#dc2626] dark:hover:text-danger"
             >
               <Trash2 className="size-3.5" />
               Delete task

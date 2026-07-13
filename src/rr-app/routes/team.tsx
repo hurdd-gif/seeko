@@ -94,7 +94,7 @@ export function TeamRouteContent({ data }: { data: TeamLoaderData }) {
                   </span>
                   {onlineCount > 0 && (
                     <>
-                      <span className="text-[#d0d0d0]">·</span>
+                      <span className="text-[#d0d0d0] dark:text-ink-ghost">·</span>
                       <span className="flex items-center gap-1.5 font-medium text-seeko-accent-ink">
                         <span className="size-1.5 rounded-full bg-seeko-accent" />
                         <span className="tabular-nums">{onlineCount} online</span>
@@ -268,7 +268,7 @@ function MemberCard({ member, isAdmin }: { member: TeamRosterMember; isAdmin: bo
           </Avatar>
           <span
             className={`absolute -bottom-0.5 -right-0.5 size-3 rounded-full ring-2 ring-white ${
-              online ? 'bg-seeko-accent' : 'bg-[#c8c8c8]'
+              online ? 'bg-seeko-accent' : 'bg-[#c8c8c8] dark:bg-ink-ghost'
             }`}
             title={presence}
           />
@@ -286,7 +286,7 @@ function MemberCard({ member, isAdmin }: { member: TeamRosterMember; isAdmin: bo
           {(member.role || member.timezone) && (
             <p className="mt-0.5 flex items-center gap-1.5 text-[12.5px] text-ink-muted">
               {member.role && <span className="truncate">{member.role}</span>}
-              {member.role && member.timezone && <span className="text-[#d0d0d0]">·</span>}
+              {member.role && member.timezone && <span className="text-[#d0d0d0] dark:text-ink-ghost">·</span>}
               {member.timezone && (
                 <span className="flex shrink-0 items-center gap-1 tabular-nums">
                   <Clock className="size-3" />

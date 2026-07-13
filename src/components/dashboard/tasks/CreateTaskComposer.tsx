@@ -328,7 +328,7 @@ export function CreateTaskComposer({
                   type="button"
                   aria-label="Expand"
                   disabled
-                  className="flex size-7 items-center justify-center rounded-full text-[#c5c5c5]"
+                  className="flex size-7 items-center justify-center rounded-full text-[#c5c5c5] dark:text-ink-ghost"
                 >
                   <Maximize2 className="size-3.5" />
                 </button>
@@ -471,7 +471,7 @@ export function CreateTaskComposer({
             <div className="flex items-center justify-between gap-3 px-4 py-3">
               <div className="min-w-0 flex-1">
                 {error && (
-                  <p className="truncate text-[12px] text-[#dc2626]" role="alert">
+                  <p className="truncate text-[12px] text-[#dc2626] dark:text-danger" role="alert">
                     {error}
                   </p>
                 )}
@@ -491,7 +491,7 @@ export function CreateTaskComposer({
                     }}
                     className={[
                       'relative inline-flex h-[14px] w-[24px] shrink-0 items-center rounded-full transition-colors',
-                      createMore ? 'bg-seeko-accent' : 'bg-[#d4d4d4]',
+                      createMore ? 'bg-seeko-accent' : 'bg-[#d4d4d4] dark:bg-wash-10',
                     ].join(' ')}
                   >
                     <span
@@ -510,7 +510,7 @@ export function CreateTaskComposer({
                   className={[
                     'inline-flex h-7 items-center rounded-full px-3 text-[12.5px] font-medium transition-colors',
                     canSubmit
-                      ? 'bg-seeko-accent text-white hover:bg-[#0a6cdf] active:bg-[#0860c8]'
+                      ? 'bg-seeko-accent text-white hover:bg-[#0a6cdf] dark:hover:bg-seeko-accent-strong active:bg-[#0860c8] dark:active:bg-seeko-accent-strong'
                       : 'cursor-not-allowed bg-[#e6e6e6] dark:bg-surface-4 text-ink-faint',
                   ].join(' ')}
                 >
