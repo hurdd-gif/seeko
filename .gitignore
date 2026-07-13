@@ -82,11 +82,12 @@ next-env.d.ts
 .refine-relay.log
 
 # local QA screenshots
+.qa/
 .qa-screens/
 .qa-shots/
 /qa-*.png
 /login-redesign-*.png
-/404-short-window-*.png
+/404-*.png
 
 # documents
 *.pdf
