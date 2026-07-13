@@ -96,6 +96,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^5.1.4",
+    "agentation": "^3.0.2",
     "jsdom": "^28.1.0",
     "tailwindcss": "^4",
     "tsx": "^4.22.4",

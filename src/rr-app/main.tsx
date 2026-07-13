@@ -6,6 +6,7 @@ import './globals.css';
 import './styles.css';
 import { CookieNotice } from '@/components/CookieNotice';
 import { LiveToastProvider } from '@/components/dashboard/notifications/LiveToastContext';
+import { DevAgentation } from '@/components/dev/agentation';
 import { setAppNavigate } from '@/lib/app-navigate';
 import { initScrollEdgeBlurDamper } from '@/lib/scroll-blur';
 import { initTheme } from '@/lib/theme';
@@ -49,6 +50,11 @@ createRoot(root).render(
           sonner toast (success + error feedback) silently vanishes. */}
       {/* No richColors — toasts follow the Delphi alert language (globals.css):
           success stays a neutral quiet card, only errors take the red tint. */}
+      {/* Dev-only annotation overlay. Mounts here rather than in RootLayout
+          because /tasks, /investor and the contractor portal all mount OUTSIDE
+          RootLayout — annotating them is the whole point, so it has to sit at
+          the root, beside the router. Compiles to nothing in a prod build. */}
+      <DevAgentation />
       <Toaster
         position="top-center"
         // --width matches the rich toast + live toast cards (400px) so mixed
