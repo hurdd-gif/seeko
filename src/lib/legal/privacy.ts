@@ -10,8 +10,6 @@ export const privacyPolicy: LegalDoc = {
   sections: [
     {
       heading: 'Who we are and what this covers',
-      summary:
-        'This policy covers the invite-only workspace itself — not Google’s or Telegram’s own handling of your accounts with them.',
       body: [
         {
           kind: 'p',
@@ -21,8 +19,6 @@ export const privacyPolicy: LegalDoc = {
     },
     {
       heading: 'Information we collect',
-      summary:
-        'We collect only what the workspace needs to run: your account, profile, work activity, payment records, and the security basics.',
       body: [
         {
           kind: 'p',
@@ -69,8 +65,6 @@ export const privacyPolicy: LegalDoc = {
     },
     {
       heading: 'Cookies',
-      summary:
-        'Three essential cookies keep you signed in — no analytics, no advertising, no trackers.',
       body: [
         {
           kind: 'p',
@@ -84,8 +78,6 @@ export const privacyPolicy: LegalDoc = {
     },
     {
       heading: 'How we use information',
-      summary:
-        'Your data runs the workspace, keeps it secure, evidences signatures, and tracks payments — never advertising or profiling.',
       body: [
         {
           kind: 'p',
@@ -109,8 +101,6 @@ export const privacyPolicy: LegalDoc = {
     },
     {
       heading: 'Legal bases for processing',
-      summary:
-        'We process data to work with you, keep the workspace secure, and meet legal record-keeping duties; where consent applies, you can decline.',
       body: [
         {
           kind: 'p',
@@ -120,8 +110,6 @@ export const privacyPolicy: LegalDoc = {
     },
     {
       heading: 'How we share information',
-      summary:
-        'We never sell or share data for advertising; it goes only to the handful of providers that run the workspace (Supabase, Render, Resend, Google, Telegram).',
       body: [
         {
           kind: 'p',
@@ -160,8 +148,6 @@ export const privacyPolicy: LegalDoc = {
     },
     {
       heading: 'How long we keep information',
-      summary:
-        'Most data goes when you do; NDA signatures and payment records are kept longer because the law expects them to outlast the relationship.',
       body: [
         {
           kind: 'p',
@@ -175,8 +161,6 @@ export const privacyPolicy: LegalDoc = {
     },
     {
       heading: 'How we protect information',
-      summary:
-        'Encryption in transit, hashed passwords, passkey-gated payments, and row-level database rules — a small workspace with a small attack surface.',
       body: [
         {
           kind: 'p',
@@ -186,8 +170,6 @@ export const privacyPolicy: LegalDoc = {
     },
     {
       heading: 'Your rights and choices',
-      summary:
-        'Email us to access, correct, export, or delete your data — with the honest caveat that signature and payment records may legally have to stay.',
       body: [
         {
           kind: 'p',
@@ -201,8 +183,6 @@ export const privacyPolicy: LegalDoc = {
     },
     {
       heading: 'International transfers',
-      summary:
-        'The workspace lives on U.S. servers, so using it from abroad transfers your data to the U.S. under our providers’ safeguards.',
       body: [
         {
           kind: 'p',
@@ -212,8 +192,6 @@ export const privacyPolicy: LegalDoc = {
     },
     {
       heading: 'Children',
-      summary:
-        'The workspace is adults-only; if a minor’s data ever ends up here, tell us and we delete it.',
       body: [
         {
           kind: 'p',
@@ -223,8 +201,6 @@ export const privacyPolicy: LegalDoc = {
     },
     {
       heading: 'Changes to this policy',
-      summary:
-        'Material changes update the date above and reach you directly by email or in-app notice before they take effect.',
       body: [
         {
           kind: 'p',

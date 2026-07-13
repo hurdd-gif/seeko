@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-import { Link, Navigate, useParams } from 'react-router';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { Navigate, useParams } from 'react-router';
 import { CircleHelp } from 'lucide-react';
 import { AnimatePresence, animate, motion, useMotionValue, useReducedMotion, useTransform } from 'motion/react';
 import { springs } from '@/lib/motion';
@@ -9,6 +9,8 @@ import { developerTerms } from '@/lib/legal/developer-terms';
 import { privacyPolicy } from '@/lib/legal/privacy';
 import type { LegalBlock, LegalDoc } from '@/lib/legal/types';
 import { useIsDark } from '@/lib/theme';
+import { usePublicViewTransition } from '@/lib/view-transitions';
+import { PublicLink, TOUCH_TARGET } from '@/components/public/PublicLink';
 import { cn } from '@/lib/utils';
 
 /**
@@ -44,8 +46,15 @@ const RISE = {
 /* Tick colors are Motion-animated JS hexes (backgroundColor springs between
  * the four engagement tiers), unreachable by dark: classes — the component
  * picks the map with useIsDark(). Dark mirrors the light hierarchy on the
- * #171717 canvas: active = the dark strong ink, resting = the same recessive
- * #3e3e3e the login header chrome pins on this canvas. */
+ * #171717 canvas: active = the dark strong ink, resting = a recessive #3e3e3e.
+ *
+ * That #3e3e3e used to be justified by "it's what the login header chrome pins
+ * to" — no longer true, the header labels were lifted to ink-faint because at
+ * 1.68:1 they failed WCAG. It stays here anyway, on different grounds: a RESTING
+ * tick carries no information (it's the unengaged state of a decorative scroll
+ * rail), so the 3:1 graphic floor doesn't bind it. The tiers that DO carry
+ * meaning — peeked/active — sit well above it. Don't "fix" this to match the
+ * header; they're answering different questions. */
 const TICK_COLORS = {
   light: { active: '#1c1c1c', peeked: '#8a8a8a', engaged: '#c9c9c9', rest: '#dcdcdc' },
   dark: { active: '#e4e4e4', peeked: '#959595', engaged: '#4f4f4f', rest: '#3e3e3e' },
@@ -104,6 +113,10 @@ function Block({ block }: { block: LegalBlock }) {
 export function LegalRoute() {
   const { slug } = useParams();
   const reduceMotion = useReducedMotion();
+  /* True when the browser is animating this arrival (from /login, from a
+     sibling document, or via the back button). It becomes the entrance, so the
+     mount-time rise stands down — see `rise()` below. */
+  const arrivedViaTransition = usePublicViewTransition();
   const isDark = useIsDark();
   const tick = TICK_COLORS[isDark ? 'dark' : 'light'];
   const doc = DOCS.find(d => d.slug === slug);
@@ -180,6 +193,24 @@ export function LegalRoute() {
     scroller.addEventListener('scroll', onScroll, { passive: true });
     return () => scroller.removeEventListener('scroll', onScroll);
   }, []);
+
+  /* Switching documents keeps this component mounted (same route, new param),
+     so the scroller kept its scrollTop — read to the bottom of the Terms, click
+     Privacy, and you landed halfway down Privacy. It went unnoticed while the
+     swap was an instant cut; a transition that lifts the new document into
+     place makes it obvious, and lifting it into a position nobody asked for is
+     worse than not lifting it at all.
+     LAYOUT effect, not passive: React Router commits the DOM swap inside the
+     view transition's callback, and the browser snapshots the result as soon as
+     that returns. A passive effect can land after the shutter. */
+  const settledSlug = useRef(slug);
+  useLayoutEffect(() => {
+    if (settledSlug.current === slug) return;
+    settledSlug.current = slug;
+    scrollerRef.current?.scrollTo({ top: 0 });
+    setActiveSection(0);
+  }, [slug]);
+
   useEffect(() => () => {
     scrubGlideRef.current?.stop();
     railShiftReturn.current?.stop();
@@ -471,8 +502,16 @@ export function LegalRoute() {
     }
   };
 
+  /* The staggered rise is the COLD-LOAD entrance — a deep link, a refresh, a
+     paste of the URL. It must stand down when the browser is view-transitioning
+     us in from /login or from a sibling document, and not because two
+     animations would fight: a view transition photographs the arriving page the
+     instant the DOM commits, so a column whose sections all start at opacity 0
+     gets captured blank, plays the whole transition blank, and pops in only
+     once the browser hands control back. Whichever mechanism owns the arrival
+     owns it alone. (globals.css defines what the transition does instead.) */
   const rise = (order: number) =>
-    reduceMotion
+    reduceMotion || arrivedViaTransition
       ? {}
       : {
           initial: { opacity: 0, y: RISE.y },
@@ -498,24 +537,47 @@ export function LegalRoute() {
       <header
         className={cn(
           'fixed inset-x-0 top-0 z-20 flex items-center justify-between px-6 py-6 pt-[max(1.5rem,env(safe-area-inset-top))] sm:px-10 sm:py-8',
+          // Same name as /login's bar. The two are pixel-identical, so across the
+          // boundary the browser has nothing to interpolate and the bar simply
+          // holds still while the page changes under it — one persistent frame
+          // around two pages, rather than two pages that happen to match.
+          '[view-transition-name:public-chrome]',
           'transition-[background-color,box-shadow] duration-200 ease-out',
           scrolledUnder
             ? 'bg-white/80 dark:bg-[#171717]/80 backdrop-blur-[20px] backdrop-saturate-150 shadow-seeko contrast-more:bg-white dark:contrast-more:bg-[#171717]'
             : 'bg-transparent',
         )}
       >
-        <Link
+        {/* The press dims PAST the hover (0.45 vs 0.70) so a click on an already-
+            hovered mark still reads as a change. Held through the lazy /login
+            chunk by `data-[pending]`, so the gesture doesn't go dead mid-fetch. */}
+        <PublicLink
           to="/login"
-          className="flex items-center gap-2.5 transition-opacity duration-150 hover:opacity-70"
+          className={cn(
+            'flex items-center gap-2.5',
+            TOUCH_TARGET,
+            'transition-opacity duration-150 ease-out hover:opacity-70 active:opacity-45 active:duration-[60ms] data-[pending]:opacity-45',
+          )}
         >
-          {/* Dark chrome mirrors /login: mark dimmed to ≈#3f3f3f, labels
-              pinned to the recessive #3e3e3e; hover still brightens via tokens. */}
-          <img src="/seeko-mark.svg" alt="SEEKO" className="size-6 dark:brightness-[.57]" />
-          <span className="text-base font-medium text-ink-muted-strong dark:text-[#3e3e3e]">Studio</span>
-        </Link>
+          {/* Dark chrome mirrors /login — including its fix. Both pages pinned
+              these labels to #3e3e3e from Figma LOGIN/DARK as "recessive chrome";
+              on the shared #171717 canvas that measures 1.68:1, under WCAG's 3:1
+              floor for a *graphic*, never mind the 4.5:1 a 16px label needs. Light
+              already resolved through the ramp (ink-muted-strong), so the pin only
+              ever sat on the dark half — a light lightness carried into dark.
+              ink-faint (#949494, 5.91:1) is the dimmest dark tier that still clears
+              AA, so the recessive intent survives. brightness() multiplies the sRGB
+              value directly: 110 × 1.35 ≈ 148, landing the mark on the same tier. */}
+          <img src="/seeko-mark.svg" alt="SEEKO" className="size-6 dark:brightness-[1.35]" />
+          <span className="text-base font-medium text-ink-muted-strong dark:text-ink-faint">Studio</span>
+        </PublicLink>
         <a
           href="mailto:legal@seekostudios.com?subject=SEEKO%20Studio%20legal%20question"
-          className="flex items-center gap-2 text-base text-ink-muted-strong dark:text-[#3e3e3e] transition-colors duration-150 hover:text-ink active:text-ink-title"
+          className={cn(
+            'flex items-center gap-2 text-base text-ink-muted-strong dark:text-ink-faint',
+            TOUCH_TARGET,
+            'transition-colors duration-150 hover:text-ink active:text-ink-title',
+          )}
         >
           <CircleHelp className="size-[18px]" strokeWidth={1.75} />
           Help &amp; Support
@@ -546,13 +608,16 @@ export function LegalRoute() {
           re-jump. */}
       <motion.nav
         aria-label="Sections"
-        className="fixed left-6 top-1/2 z-10 hidden -translate-y-1/2 print:hidden xl:block sm:left-10"
+        // Named so the rail belongs to the PAGE, not to the document: on a
+        // sibling swap it cross-fades in place (the tick count changes) instead
+        // of blinking out with the body it doesn't belong to.
+        className="fixed left-6 top-1/2 z-10 hidden -translate-y-1/2 print:hidden xl:block sm:left-10 [view-transition-name:legal-rail]"
         onMouseEnter={() => setRailHovered(true)}
         onMouseLeave={() => {
           setRailHovered(false);
           setPeekedSection(null);
         }}
-        {...(reduceMotion
+        {...(reduceMotion || arrivedViaTransition
           ? {}
           : {
               initial: { opacity: 0, x: -8 },
@@ -697,23 +762,64 @@ export function LegalRoute() {
       {/* Overscroll translate rides the whole document (transform-only, so
           scrollTop and the glide loop are untouched) — the dial's overshoot
           carries the page a little further past its end, then frame-locks. */}
-      <motion.main className="mx-auto w-full max-w-[680px] pb-24 pt-32 sm:pt-36" style={{ y: pageShift }}>
-        {/* Document switcher — pill per document, current one filled */}
-        <motion.nav aria-label="Legal documents" className="flex flex-wrap gap-1.5" {...rise(0)}>
+      {/* `legal-doc` — the document column, one name across all three docs. On a
+          sibling swap the old body sinks out while the new one rises in; on the
+          way to /login it sinks and the sign-in panel comes forward. Same name
+          on both sides is safe here precisely because the column's width and top
+          edge are fixed and only its height differs (see globals.css). */}
+      <motion.main
+        className="mx-auto w-full max-w-[680px] pb-24 pt-32 sm:pt-36 [view-transition-name:legal-doc]"
+        style={{ y: pageShift }}
+      >
+        {/* Document switcher — pill per document, current one filled. Named, so
+            it's lifted out of the column's snapshot and holds its position
+            through a sibling swap: a tab strip that jumps when you press it is a
+            tab strip that feels broken. */}
+        {/* gap-y is 12px, not 6px, and that is load-bearing rather than taste.
+            The pills are 32px tall and their hit areas are extended to the 44px
+            touch minimum — 6px past each edge. On a phone this row WRAPS (the
+            three pills measure 438px; every iPhone is narrower), and at the old
+            6px row gap the two rows' extended areas would have overlapped by
+            exactly 6px: a thumb landing in that band hits whichever pill happens
+            to paint last. 12px is the smallest gap at which they tile without
+            colliding. It only ever applies when wrapped, so the desktop row is
+            unchanged to the pixel. */}
+        <motion.nav
+          aria-label="Legal documents"
+          className="flex flex-wrap gap-x-1.5 gap-y-3 [view-transition-name:legal-switcher]"
+          {...rise(0)}
+        >
           {DOCS.map(d => (
-            <Link
+            <PublicLink
               key={d.slug}
               to={`/legal/${d.slug}`}
               aria-current={d.slug === doc.slug ? 'page' : undefined}
               className={cn(
-                'rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-colors duration-150',
+                // These ARE buttons, so they get the house press: scale(0.96),
+                // fast in / gentle out. Unlike the footnote's text links they're
+                // their own block, so a transform costs no layout. The sibling
+                // swap is same-chunk and instant, so `data-[pending]` will
+                // effectively never light up here — it's carried anyway so the
+                // pills don't become the one public link that can go dead if the
+                // legal route is ever split further.
+                'inline-block rounded-full px-3.5 py-1.5 text-[13px] font-medium',
+                TOUCH_TARGET,
+                'transition-[color,background-color,transform,opacity] duration-150 ease-out',
+                'active:scale-[0.96] active:duration-[60ms] data-[pending]:opacity-70',
                 d.slug === doc.slug
                   ? 'bg-control-fill text-ink'
-                  : 'text-[#909090] hover:bg-surface-3 hover:text-[#5f5f5f] dark:hover:text-[#b0b0b0]',
+                  // dark:text-ink-faint is not cosmetic: without it the LIGHT
+                  // #909090 leaked into dark and only *happened* to land near
+                  // the dark faint tier (L .653 vs .668). Anchored, the two
+                  // schemes stop being coupled — retuning light can no longer
+                  // silently break dark. (Its light 3.5:1 on white is below
+                  // this project's own #767676 AA floor for an interactive
+                  // label — flagged, not changed: that's an extracted value.)
+                  : 'text-[#909090] dark:text-ink-faint hover:bg-surface-3 hover:text-[#5f5f5f] dark:hover:text-[#b0b0b0]',
               )}
             >
               {d.shortTitle}
-            </Link>
+            </PublicLink>
           ))}
         </motion.nav>
 
@@ -742,7 +848,12 @@ export function LegalRoute() {
                   href={`#${sectionId(i, section.heading)}`}
                   className="flex gap-2 py-[3px] text-[13.5px] leading-snug text-ink-muted-strong transition-colors duration-150 hover:text-ink-title"
                 >
-                  <span className="w-5 shrink-0 tabular-nums text-[#b0b0b0] dark:text-[#5c5c5c]">{i + 1}</span>
+                  {/* Light #b0b0b0 IS the faintest tier (#b3b3b3). Its dark
+                      counterpart was #5c5c5c — L .475, a tier BELOW ink-ghost
+                      (.520), which is the ramp's graphic-only floor. A list
+                      ordinal you're meant to read cannot live under the floor.
+                      Light is untouched; dark now resolves the same tier. */}
+                  <span className="w-5 shrink-0 tabular-nums text-[#b0b0b0] dark:text-ink-faintest">{i + 1}</span>
                   {section.heading}
                 </a>
               </li>
@@ -754,17 +865,16 @@ export function LegalRoute() {
           {doc.sections.map((section, i) => (
             <section key={i} id={sectionId(i, section.heading)} className="scroll-mt-28">
               <h2 className="flex gap-3 text-[16px] font-semibold text-[#1c1c1c] dark:text-[#e4e4e4]">
-                <span className="tabular-nums text-[#c0c0c0] dark:text-[#525252]">{i + 1}</span>
+                {/* Section count. Light #c0c0c0 is the ink-ghost tier (#c4c4c4)
+                    — "graphic only: counts, chevrons", exactly this. Dark was
+                    #525252 (L .439), well under the ghost floor (.520). */}
+                <span className="tabular-nums text-[#c0c0c0] dark:text-ink-ghost">{i + 1}</span>
                 {section.heading}
               </h2>
-              {/* Plain-language gist — the one sentence to read if you read
-                  nothing else. Styled as an aside (hairline, not a card) so it
-                  can't be mistaken for the operative text below it. */}
-              {section.summary && (
-                <p className="ml-[30px] mt-2.5 border-l-2 border-[#e4e4e4] dark:border-[#333333] pl-3 text-[14px] leading-relaxed text-[#767676] dark:text-[#959595] contrast-more:text-ink">
-                  <span className="font-medium text-ink">In short</span> — {section.summary}
-                </p>
-              )}
+              {/* The per-section "In short" gist that used to sit here was
+                  REMOVED by user order (2026-07-12), along with the `summary`
+                  field that fed it. The doc-level `intro` under the title is a
+                  separate thing and stays. */}
               <div className="mt-3 space-y-3 pl-[30px]">
                 {section.body.map((block, j) => (
                   <Block key={j} block={block} />
@@ -779,12 +889,16 @@ export function LegalRoute() {
           {...rise(4)}
         >
           <p className="text-[13px] text-[#767676] dark:text-[#959595] contrast-more:text-ink">SEEKO Studio</p>
-          <Link
+          <PublicLink
             to="/login"
-            className="text-[13px] font-medium text-ink-muted-strong transition-colors duration-150 hover:text-ink-title"
+            className={cn(
+              'text-[13px] font-medium text-ink-muted-strong',
+              TOUCH_TARGET,
+              'transition-[color,opacity] duration-150 ease-out hover:text-ink-title active:opacity-55 active:duration-[60ms] data-[pending]:opacity-55',
+            )}
           >
             Back to sign in
-          </Link>
+          </PublicLink>
         </motion.footer>
       </motion.main>
       </div>

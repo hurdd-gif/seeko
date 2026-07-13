@@ -1917,3 +1917,221 @@ body.tour-cmd-k-active #command-palette-container * {
   --chart-scale-05:        oklch(0.68 0.07 270);
   --chart-scale-pattern-color:        oklch(0.145 0 0);
 }
+
+/* ── Public-route view transitions: /login ⇄ /legal/* ───────────────────────
+ *
+ * The two public pages are separate top-level routes with no shared parent, so
+ * React can't give the outgoing one an exit — it just unmounts. The browser
+ * can: `<Link viewTransition>` snapshots the old page, swaps the DOM, and
+ * animates between the snapshots from outside React entirely. See
+ * `src/lib/view-transitions.ts` for the one thing that has to be reconciled on
+ * the React side (a snapshot freezes the arriving page at its FIRST frame, so
+ * mount-time storyboards must stand down while a transition is running).
+ *
+ * There are two different journeys here and they want different motion:
+ *
+ *   login ⇄ legal   HIERARCHICAL. You're stepping out of the app into a
+ *                   document and back. The sign-in panel recedes (scale 0.97 +
+ *                   fade) and the document rises over it from below.
+ *   legal ⇄ legal   LATERAL. Sibling documents. Only the body swaps.
+ *
+ * Both fall out of ONE set of rules, with no direction flag anywhere — because
+ * the motion is a property of each SURFACE, not of the navigation. The auth
+ * panel always recedes when it leaves and always comes forward when it returns;
+ * the document always rises in and sinks out. Whichever way you travel, each
+ * element enters along the path it exited by (Apple, Designing Fluid
+ * Interfaces). It also means the back button is correct for free: no click
+ * handler ran to tell us the direction, and none needed to.
+ *
+ * What is NAMED is what should hold still or move on its own; everything left
+ * unnamed rides the default `root` cross-fade:
+ *
+ *   public-chrome    The top bar. Pixel-identical on both pages (that parity is
+ *                    what makes this work — same geometry, same tokens, same
+ *                    `fixed`), so the group has nothing to interpolate and the
+ *                    bar simply DOESN'T MOVE while the page changes underneath
+ *                    it. Naming it also lifts it out of the root fade, so it
+ *                    never dips in opacity. It reads as one persistent frame
+ *                    around two pages instead of two pages that happen to look
+ *                    alike.
+ *   auth-panel       /login's form + legal footnote.
+ *   legal-doc        The whole legal column (title, contents, article, footer).
+ *   legal-switcher   The document pills. Same name across all three docs, so on
+ *                    a lateral swap the row you just clicked holds its position
+ *                    while the body changes under it — a tab strip that jumps
+ *                    when you press it is a tab strip that feels broken.
+ *   legal-rail       The tick navigator, same deal: it belongs to the page, not
+ *                    to the document, so it cross-fades in place rather than
+ *                    blinking out with the body.
+ *
+ * Everything else — the canvas, /login's halftone field — stays in `root` and
+ * takes the UA cross-fade, which is what you want for a background.
+ *
+ * `legal-doc` deliberately keeps ONE name across all three documents rather
+ * than a per-slug name. Same name on both sides of a lateral swap means the
+ * group interpolates old→new geometry, which is safe here precisely because
+ * the column's width and top edge are fixed (680px, pt-32) and only its height
+ * differs — the UA sizes snapshots at `inline-size: 100%; block-size: auto`, so
+ * a same-width pair can't squash. A per-slug name would have worked too, at the
+ * cost of hard-coding the doc list into this stylesheet and silently degrading
+ * the day a fourth document is added. */
+@media (prefers-reduced-motion: no-preference) {
+  /* FADE-THROUGH, not cross-fade: the outgoing surface is GONE before the
+   * incoming one starts. Exit runs 0→120ms; entrance is delayed 140ms and runs
+   * to 380ms. The delay is deliberately LONGER than the exit's duration, so
+   * there is a real 20ms gap and the two snapshots never coexist.
+   *
+   * That last sentence is the whole rule, and it is easy to get wrong: an
+   * earlier cut used a 100ms delay against a 140ms exit, on the theory that an
+   * ease-IN curve would have the outgoing snapshot near zero by the time the
+   * entrance began. It does not — cubic-bezier(0.4, 0, 1, 1) is still around 45%
+   * at that point, so the two overlapped for 40ms and every lateral swap laid the
+   * old document's heading and body copy directly over the new one's. Caught by
+   * freezing the transition at 110ms and screenshotting the actual frame, which
+   * is the only way to see it; sampling after the exit's end time shows a page
+   * that looks perfectly clean. If you shorten the exit, shorten the delay with
+   * it — the invariant is delay > exit duration, not the specific numbers.
+   *
+   * The offset is not a stylistic preference, it's forced by the geometry. Every
+   * surface here — the sign-in panel, all three legal documents — occupies the
+   * same centre gutter, so any overlap is text on text.
+   *
+   * The persistent chrome is what pays for the empty beat. Because the top bar
+   * never moves or dips, the moment where the column is empty doesn't read as a
+   * blank page — it reads as the page clearing, inside a frame that stayed put.
+   *
+   * Nothing scales from 0 and nothing overshoots: 0.97 is a recession, not a
+   * zoom. Exits are shorter and quicker than entrances (120ms/10px out vs
+   * 240ms/14px in) — leaving should cost less than arriving. */
+  @keyframes seeko-vt-panel-in {
+    from { opacity: 0; transform: scale(0.97); }
+  }
+  @keyframes seeko-vt-panel-out {
+    to { opacity: 0; transform: scale(0.97); }
+  }
+  @keyframes seeko-vt-doc-in {
+    from { opacity: 0; transform: translateY(14px); }
+  }
+  @keyframes seeko-vt-doc-out {
+    to { opacity: 0; transform: translateY(10px); }
+  }
+
+  ::view-transition-old(auth-panel) {
+    animation: seeko-vt-panel-out 120ms cubic-bezier(0.4, 0, 1, 1) both;
+  }
+  ::view-transition-new(auth-panel) {
+    animation: seeko-vt-panel-in 240ms cubic-bezier(0.2, 0, 0, 1) 140ms both;
+  }
+
+  ::view-transition-old(legal-doc) {
+    animation: seeko-vt-doc-out 120ms cubic-bezier(0.4, 0, 1, 1) both;
+  }
+  ::view-transition-new(legal-doc) {
+    animation: seeko-vt-doc-in 240ms cubic-bezier(0.2, 0, 0, 1) 140ms both;
+  }
+
+  /* The pill row and the tick rail want OPPOSITE motion in the two journeys, and
+   * `[data-vt]` (stamped on the root by lib/view-transitions.ts) is what tells
+   * them apart — CSS has no selector for "does this group have both an old and a
+   * new snapshot", which is the actual distinction.
+   *
+   * CROSSING (login ⇄ legal) — they exist on one side only, and they are part of
+   * the legal surface, not of the persistent chrome. So they ride the document's
+   * own keyframes and the document's own schedule: the whole surface — rail,
+   * pills, column — rises in as one thing and sinks out as one thing. Left on the
+   * simultaneous cross-fade below they landed 100ms BEFORE the document and hung
+   * on 80ms AFTER it, which put legal chrome on screen over the sign-in panel. */
+  ::view-transition-old(legal-switcher),
+  ::view-transition-old(legal-rail) {
+    animation: seeko-vt-doc-out 120ms cubic-bezier(0.4, 0, 1, 1) both;
+  }
+  ::view-transition-new(legal-switcher),
+  ::view-transition-new(legal-rail) {
+    animation: seeko-vt-doc-in 240ms cubic-bezier(0.2, 0, 0, 1) 140ms both;
+  }
+
+  /* LATERAL (legal → legal) — now they persist, in place, and only their contents
+   * differ (which pill is active; which sections the rail lists). A persistent
+   * element must cross-fade SIMULTANEOUSLY: stagger it and it dips out in the gap
+   * between exit and entrance, and a tab strip that blinks when you press it reads
+   * as broken. Same duration on both halves, no delay on either, so the two
+   * snapshots trade places without the composite ever dropping out.
+   *
+   * `plus-lighter` is what makes that true rather than approximately true. The UA
+   * normally applies it to every old/new pseudo via its own
+   * `-ua-mix-blend-mode-plus-lighter` animation — and the `animation` SHORTHAND
+   * above replaces the entire animation list, so declaring our own silently drops
+   * it. Two 50%-opacity snapshots under normal blending composite to 75%, not
+   * 100%: a visible sag in the middle of the fade. Additive blending is the only
+   * way two complementary opacities sum back to the original image. The staggered
+   * rules don't need it — with a real gap, nothing ever overlaps. */
+  :root[data-vt='lateral']::view-transition-old(legal-switcher),
+  :root[data-vt='lateral']::view-transition-old(legal-rail) {
+    animation: seeko-vt-fade-out 220ms cubic-bezier(0.4, 0, 0.2, 1) both;
+    mix-blend-mode: plus-lighter;
+  }
+  :root[data-vt='lateral']::view-transition-new(legal-switcher),
+  :root[data-vt='lateral']::view-transition-new(legal-rail) {
+    animation: seeko-vt-fade-in 220ms cubic-bezier(0.4, 0, 0.2, 1) both;
+    mix-blend-mode: plus-lighter;
+  }
+
+}
+
+/* Declared OUTSIDE the queries: both motion modes need them, and a @keyframes
+ * block animates nothing on its own. */
+@keyframes seeko-vt-fade-in {
+  from { opacity: 0; }
+}
+@keyframes seeko-vt-fade-out {
+  to { opacity: 0; }
+}
+
+/* ── Reduced motion ─────────────────────────────────────────────────────────
+ * Reduced motion means no vestibular triggers — no travel, no scale — NOT no
+ * feedback, and emphatically not a hard cut. But it must not be left to the UA
+ * default either, which is the trap this block exists to close: with the rules
+ * above absent, the browser runs its own `-ua-view-transition-fade-out`/`-in`
+ * pair, and those are SIMULTANEOUS. Two dense text documents cross-fading in the
+ * same centre gutter is the exact double-exposure the staggered timing above was
+ * built to eliminate — so the naive fallback served the mud to the users least
+ * able to tolerate it, and did it silently.
+ *
+ * The objection to a cross-fade was never vestibular, it was LEGIBILITY. So the
+ * reduced-motion answer is not "drop the stagger", it's "keep the stagger, drop
+ * the travel": the same fade-through, opacity only, on a shorter clock. The gap
+ * still exceeds the exit, so the two documents still never coexist. */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(auth-panel),
+  ::view-transition-old(legal-doc),
+  ::view-transition-old(legal-switcher),
+  ::view-transition-old(legal-rail) {
+    animation: seeko-vt-fade-out 100ms linear both;
+  }
+  ::view-transition-new(auth-panel),
+  ::view-transition-new(legal-doc),
+  ::view-transition-new(legal-switcher),
+  ::view-transition-new(legal-rail) {
+    animation: seeko-vt-fade-in 180ms linear 120ms both;
+  }
+
+  /* The lateral pair still persists in place, so it still cross-fades rather than
+   * fading through — same reasoning, and the same `plus-lighter` requirement, as
+   * the full-motion rule. A stationary element blinking is not "reduced" motion,
+   * it's worse motion. */
+  :root[data-vt='lateral']::view-transition-old(legal-switcher),
+  :root[data-vt='lateral']::view-transition-old(legal-rail) {
+    animation: seeko-vt-fade-out 180ms linear both;
+    mix-blend-mode: plus-lighter;
+  }
+  :root[data-vt='lateral']::view-transition-new(legal-switcher),
+  :root[data-vt='lateral']::view-transition-new(legal-rail) {
+    animation: seeko-vt-fade-in 180ms linear both;
+    mix-blend-mode: plus-lighter;
+  }
+}
+
+/* The `view-transition-name`s themselves stay declared outside both queries on
+ * purpose: the persistent top bar is a layout fact, not an animation, and it
+ * should hold still in either mode. */
+

@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { LoginRouteContent } from '../login';
@@ -52,8 +52,10 @@ describe('LoginRouteContent', () => {
       screen.getAllByRole('button', { name: 'Sign in' }).some((button) => button.getAttribute('type') === 'submit')
     ).toBe(true);
 
-    // The close affordance collapses it back to the pill.
-    fireEvent.click(screen.getByRole('button', { name: 'Close email sign-in' }));
+    // The close affordance collapses it back to the pill. With the other
+    // methods collapsed it's the only way out, so it names its destination
+    // ("Back to sign-in options") rather than the thing it dismisses.
+    fireEvent.click(screen.getByRole('button', { name: 'Back to sign-in options' }));
     expect(screen.getByRole('button', { name: /Continue with email/ })).toHaveAttribute(
       'aria-expanded',
       'false'
@@ -82,6 +84,39 @@ describe('LoginRouteContent', () => {
     expect(
       await screen.findByText('Enter the 8-digit code from your invite email')
     ).toBeInTheDocument();
+  });
+
+  // The code cells auto-focus their first digit on mount, which used to win the
+  // race and land the caret BELOW the email field — the one field the user has
+  // to fill first. They'd then have to click their way back up the form.
+  // Both views label their field "Email", and popLayout keeps the outgoing page
+  // mounted through its exit — so the two fields are briefly on screen at once.
+  // Their placeholders differ; that's what tells them apart unambiguously.
+  const SIGNIN_EMAIL = 'you@seeko.studio';
+  const INVITE_EMAIL = 'you@example.com';
+
+  it('lands focus on the email field when the invite view opens', async () => {
+    renderLogin();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Have an invite code?' }));
+
+    await waitFor(() => expect(screen.getByPlaceholderText(INVITE_EMAIL)).toHaveFocus());
+  });
+
+  it('carries the email across the sign-in ⇄ invite swap', async () => {
+    renderLogin();
+
+    fireEvent.click(screen.getByRole('button', { name: /Continue with email/ }));
+    fireEvent.change(screen.getByPlaceholderText(SIGNIN_EMAIL), {
+      target: { value: 'crew@seeko.studio' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Have an invite code?' }));
+
+    // Same value, not a second blank field — the pill literally morphs into this
+    // input (shared layoutId), so resetting it would make the animation lie.
+    await waitFor(() =>
+      expect(screen.getByPlaceholderText(INVITE_EMAIL)).toHaveValue('crew@seeko.studio'),
+    );
   });
 
   it('surfaces a failed OAuth callback redirect as an inline error', () => {

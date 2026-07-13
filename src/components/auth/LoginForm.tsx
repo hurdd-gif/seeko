@@ -88,6 +88,11 @@ const TIMING = {
  * bounce back to /login makes the page feel slower than it is. */
 const ENTRANCE_PLAYED_KEY = 'seeko-login-entrance-played';
 
+/* Deliberately loose — this only decides whether a field is DONE enough to skip
+ * the caret past it. Real verification is the server's job; a stricter pattern
+ * here would just strand people with unusual addresses. */
+const EMAIL_RE = /^\S+@\S+\.\S+$/;
+
 /* ─── View swap (transitions.dev page side-by-side) ───────
  * Sign-in is page 1 (rests/exits left), invite is page 2 (right).
  * Both pages animate SIMULTANEOUSLY (popLayout, not mode="wait"):
@@ -109,6 +114,14 @@ const PAGE = {
 /* ─── Email surface morph (transitions.dev grammar) ──────── */
 const MORPH = {
   open:   { type: 'spring', duration: 0.5, bounce: 0.2 } as const,  // ≈ cubic-bezier(.34,1.25,.64,1)
+  // HEIGHT is the one property that must not bounce. The card is centre-aligned,
+  // so its height is the page's layout spine: every pixel the panel overshoots
+  // lifts the heading and the tagline above it and drops them back — measured as
+  // a 4.1px bob, reversing over ~15 frames. Bounce belongs to motion that
+  // carried momentum (a flick, a drag release); a click carries none, and a
+  // surface that DRIVES OTHER LAYOUT has no business overshooting at all.
+  // Radius and tint keep MORPH.open — they bounce against nothing.
+  grow:   { type: 'spring', duration: 0.5, bounce: 0 } as const,
   close:  { type: 'spring', duration: 0.35, bounce: 0 } as const,   // calmer settle
   fade:   { duration: 0.2, ease: 'easeOut' } as const,              // face cross-fade
   slide:  12,     // px each face travels (vertical morph → vertical slide)
@@ -122,6 +135,28 @@ const MORPH = {
   // dark pills (#262626); open settles toward the #1c1c1c card, the same
   // closer-to-card direction the light pair travels.
   tintDark: { closed: '#262626', open: '#212121' },
+};
+
+/* ─── Method-stack collapse ──────────────────────────────────
+ * Opening email REPLACES the method list; it doesn't append to it. The panel
+ * is 227px tall — grown *underneath* two 48px pills it pushed the footnote
+ * 96px down, out of the sparse top of the dot field and into the bloom, where
+ * the legal links stopped being readable (measured 6% → 49% depth at 917px).
+ *
+ * Linear and Clerk both trade the whole stack for the email step and offer one
+ * way back (the panel's X here). So the OAuth pills and the "last used"
+ * caption collapse out of flow while the panel grows into the room they leave.
+ *
+ * Timings mirror MORPH.open/close so the card reads as ONE reshape, not two
+ * animations racing. Bounce is dropped: a surface may overshoot its target
+ * height, but a collapse cannot overshoot below zero — the browser clamps it
+ * and the spring's tail lands as a stall. */
+const STACK = {
+  out:  { type: 'spring', duration: 0.5, bounce: 0 } as const,   // pills clearing
+  in:   { type: 'spring', duration: 0.35, bounce: 0 } as const,  // pills returning
+  // Fade well ahead of the collapse: a pill sliding shut at full opacity draws
+  // the eye to what's leaving instead of to the panel that's opening.
+  fade: { duration: 0.16, ease: 'easeOut' } as const,
 };
 
 /* ─── Element configs ────────────────────────────────────── */
@@ -175,16 +210,27 @@ function shakeEl(el: HTMLElement | null, reduceMotion: boolean | null) {
  * control-fill/ink tokens; hover brightens instead of darkening. */
 const PILL = cn(
   'flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-control-fill dark:bg-[#262626]',
-  'text-base font-semibold text-ink dark:text-[#b0b0b0]',
+  // No dark: override on the label — `text-ink` already inverts (#3a3a3a light,
+  // #d9d9d9 dark). The old dark:text-[#b0b0b0] pinned it two tiers BELOW the ink
+  // ramp, so the primary auth labels read dimmer than the muted copy under them.
+  'text-base font-semibold text-ink',
   'transition-[background-color,transform] duration-150 ease-out hover:bg-[#eaeaea] dark:hover:bg-[#2c2c2c] active:scale-[0.98]',
   'disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100',
   LIGHT_FOCUS_RING,
 );
 
-/* #767676 is the AA floor on white (4.54:1) — the old #9a9a9a read as
- * decorative but carried real actions. contrast-more darkens further. */
+/* #767676 was picked as "the AA floor on white" (4.54:1) — but it was only ever
+ * checked against white. "Forgot password?" renders INSIDE the email panel, whose
+ * fill is #f7f7f7, and on that backdrop the same hex measures 4.24:1 — under AA.
+ * A contrast target is a property of a PAIR, not of a colour; pinning a hex to one
+ * backdrop and then reusing it on another silently voids the target.
+ *
+ * ink-muted-strong is the tier the light ramp already annotates as its AA floor
+ * (#686868). It clears 4.5:1 on BOTH backdrops this link lands on — 5.57:1 on the
+ * canvas, 5.20:1 on the panel — so one token is correct everywhere instead of one
+ * hex being correct in one place. Dark is untouched (7.36:1 / 6.61:1, both fine). */
 const SUBTLE_LINK =
-  'text-[13px] text-[#767676] transition-colors hover:text-ink active:text-ink-title contrast-more:text-ink';
+  'text-[13px] text-ink-muted-strong dark:text-ink-muted transition-colors hover:text-ink active:text-ink-title contrast-more:text-ink';
 
 /* Busy-state content crossfade (never hard-swap a label/icon): tiny
  * opacity + scale + blur bridge, 150ms ease-out. */
@@ -209,9 +255,18 @@ function GoogleGlyph() {
 type LoginFormProps = {
   /** Pre-populated error, e.g. a failed OAuth callback redirect. */
   initialError?: string | null;
+  /**
+   * Rest the storyboard at its final frame from the very first render — the
+   * route sets this when the browser is view-transitioning us in from /legal.
+   * It has to land on the FIRST render, not in an effect: a view transition
+   * captures the arriving page as a still image the moment the DOM commits, so
+   * a stage-0 form would be photographed invisible and the whole transition
+   * would play against a blank column.
+   */
+  skipEntrance?: boolean;
 };
 
-export function LoginForm({ initialError = null }: LoginFormProps) {
+export function LoginForm({ initialError = null, skipEntrance = false }: LoginFormProps) {
   const router = useRouter();
   const { trigger } = useHaptics();
   const reduceMotion = useReducedMotion();
@@ -230,7 +285,7 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
   const [passkeyBusy, setPasskeyBusy] = useState(false);
   const [resetBusy, setResetBusy] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [stage, setStage] = useState(0);
+  const [stage, setStage] = useState(skipEntrance ? 5 : 0);
   // The method that last signed in on this browser — read once at mount.
   const [lastMethod] = useState<AuthMethod | null>(() =>
     typeof window === 'undefined' ? null : recallAuthMethod(),
@@ -336,8 +391,19 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
 
   function openEmail() {
     setEmailOpen(true);
-    // Focus once the panel is interactive (inert lifts on the state flip).
-    setTimeout(() => emailInputRef.current?.focus({ preventScroll: true }), 60);
+    // Focus once the panel is interactive (inert lifts on the state flip), and
+    // land on the first field that's actually still empty. The email survives a
+    // trip through the invite view (and a close/reopen of this panel), so
+    // re-focusing it would put the caret in a field the user already filled and
+    // make them tab past their own answer.
+    setTimeout(() => {
+      // Skip ahead only when the address is actually USABLE. A half-typed one
+      // is unfinished business, and jumping past it would hide the very field
+      // the user still has to fix.
+      const done = EMAIL_RE.test(email.trim());
+      const target = done ? passwordInputRef.current : emailInputRef.current;
+      target?.focus({ preventScroll: true });
+    }, 60);
   }
 
   function closeEmail() {
@@ -367,6 +433,13 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
   // Reduced motion and same-session return visits skip the storyboard —
   // everything rests immediately. First play flags the session.
   useEffect(() => {
+    // Arriving under a view transition: the stage already rests at 5 (see the
+    // useState initializer — it MUST be right on the first render, an effect is
+    // a frame too late for the snapshot). Return without flagging the session,
+    // so a later cold load still gets its storyboard: we skipped it, we didn't
+    // play it.
+    if (skipEntrance) return;
+
     let alreadyPlayed = false;
     try {
       alreadyPlayed = sessionStorage.getItem(ENTRANCE_PLAYED_KEY) !== null;
@@ -389,7 +462,7 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
     timers.push(setTimeout(() => setStage(4), TIMING.providers));
     timers.push(setTimeout(() => setStage(5), TIMING.footer));
     return () => timers.forEach(clearTimeout);
-  }, [reduceMotion]);
+  }, [reduceMotion, skipEntrance]);
 
   // Wraps any transition so prefers-reduced-motion collapses it to instant.
   const t = <T,>(transition: T) => (reduceMotion ? { duration: 0 } : transition);
@@ -402,7 +475,7 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
     // In-design validation (form is noValidate): the native browser bubble
     // clashed with the card. Errors use the shared slot + red field + shake.
     const trimmed = email.trim();
-    if (!trimmed || !/^\S+@\S+\.\S+$/.test(trimmed)) {
+    if (!trimmed || !EMAIL_RE.test(trimmed)) {
       setFieldInvalid('email');
       setError(trimmed ? "That doesn't look like an email address." : 'Enter your email address.');
       emailInputRef.current?.focus();
@@ -444,7 +517,7 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
    * email field filled first, and says so with the same shake grammar. */
   async function handleForgotPassword() {
     const trimmed = email.trim();
-    if (!trimmed || !/^\S+@\S+\.\S+$/.test(trimmed)) {
+    if (!trimmed || !EMAIL_RE.test(trimmed)) {
       setFieldInvalid('email');
       setNotice(null);
       setError('Enter your email above first — the reset link goes there.');
@@ -549,70 +622,85 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
       {/* Layered elevation (contact + soft + ambient) so the card reads as a
           real surface above the white canvas, not paint on it. Still quiet. */}
       <motion.div
-        className="relative rounded-[20px] border border-[#E8E8E8]/75 bg-white px-6 py-10 shadow-[0_1px_2px_rgba(17,17,17,0.02),0_8px_16px_rgba(17,17,17,0.035),0_24px_48px_-16px_rgba(17,17,17,0.05)] dark:border-[rgba(60,60,60,0.75)] dark:bg-[#1c1c1c] dark:shadow-[0_1px_2px_rgba(0,0,0,0.2),0_8px_16px_rgba(0,0,0,0.25),0_24px_48px_-16px_rgba(0,0,0,0.35)] contrast-more:border-black/30 dark:contrast-more:border-white/40"
+        // Frameless (user call): no border, no fill, no shadow — the form sits
+        // directly on the canvas and the dot field reads as one continuous
+        // surface behind it. rounded-[20px] and the padding stay so the focus
+        // rings and the contrast-more frame still have the card's geometry.
+        //
+        // contrast-more KEEPS the border: an invisible container is a stylistic
+        // choice, and the one group of users who cannot afford it are the ones
+        // who asked the OS for more contrast. They get the frame back.
+        className="relative rounded-[20px] px-6 py-10 contrast-more:border contrast-more:border-black/30 dark:contrast-more:border-white/40"
         initial={{ opacity: 0, y: CARD.offsetY }}
         animate={{ opacity: stage >= 1 ? 1 : 0, y: stage >= 1 ? 0 : CARD.offsetY }}
         transition={t(CARD.spring)}
       >
-        {/* Badge + heading — reference rhythm: 24px badge→heading, 8px
-            heading→subtitle (the subtitle block below owns the 40px drop
-            into the pills). */}
+        {/* Heading. The S-mark disc that used to sit above it was REMOVED by
+            user order (2026-07-12) — the wordmark already sits in the top bar,
+            so the badge was the second brand mark on a page with one job. The
+            wrapper stays: it owns the heading's entrance beat (stage 2). */}
         <motion.div
-          className="mb-2 flex flex-col items-center gap-6"
+          className="mb-2 flex flex-col items-center"
           initial={{ opacity: 0, y: IDENTITY.offsetY }}
           animate={{ opacity: stage >= 2 ? 1 : 0, y: stage >= 2 ? 0 : IDENTITY.offsetY }}
           transition={t(IDENTITY.spring)}
         >
-          {/* White S-mark on the reference's #525252 disc — the dark-canvas
-              asset finally has a home on the light card. Dark PINS #525252:
-              the ink-mark token flips to #bebebe there, but the Figma
-              LOGIN/DARK badge keeps the same mid-grey disc as light. */}
-          <div className="flex size-16 shrink-0 items-center justify-center rounded-full bg-ink-mark dark:bg-[#525252]">
-            {/* 40px, not 32 — the PNG carries internal whitespace, so the
-                glyph needs the larger box to fill the disc like the reference. */}
-            <img src="/seeko-s.png" alt="" width={40} height={40} className="h-10 w-auto object-contain" />
-          </div>
           {/* #454545 = the reference's #515151 darkened 15% (user-decided
               2026-07-04); ~9.7:1 on white. */}
-          <h1 className="text-balance text-[22px] font-semibold tracking-[-0.02em] text-ink-heading dark:text-[#b2b2b2]">
+          {/* ink-STRONG, not ink-heading. On the ramp, ink-heading (L .390 light /
+              .861 dark) sits BELOW plain ink (.348 / .885) — which is what the
+              pill labels use. So "Continue with Google" was rendering darker on
+              white and brighter on black than "Sign in to SEEKO": a button label
+              outranking the page's own title, in both schemes. Size and the 40px
+              of air below carry hierarchy too, but colour must not *contradict*
+              them. ink-strong (.285 / .920) puts the h1 one clean tier above the
+              pills without going near-black, which would over-assert now that the
+              card has no frame.
+
+              Same as PILL: no dark: override. text-ink-strong inverts to #e4e4e4
+              (10.7:1); the old dark:text-[#b2b2b2] sat at the MUTED tier, so the
+              page's H1 was dimmer in dark than its own body copy should be. */}
+          <h1 className="text-balance text-[22px] font-semibold tracking-[-0.02em] text-ink-strong">
             Sign in to SEEKO
           </h1>
         </motion.div>
 
-        {/* Subtitle — crossfade between views. Grid-stacked so both taglines
-            occupy the same cell and crossfade SIMULTANEOUSLY on the page-swap
-            curve (mode="wait" made the swap feel sequential). */}
+        {/* Subtitle — sign-in only. The invite view's line ("Enter the invite
+            code from your email to join the studio") was REMOVED by user order
+            (2026-07-12): the field's own label and the button already said it.
+
+            It cannot simply stop rendering, though. This was a grid cell with a
+            40px bottom margin, so unmounting it drops everything below by ~62px
+            on the frame the exit lands. The SLOT animates shut instead, on the
+            same curve as the view swap — one reshape, not a cut. marginBottom
+            lives in the animation rather than as `mb-10` on the text, because a
+            class cannot collapse. */}
         <motion.div
-          // #767676 = AA floor on white; the old #b4b4b4 (2.1:1) treated the
-          // page's one line of real copy as decoration.
-          className="mb-10 grid justify-items-center text-balance text-center text-base leading-snug text-[#767676] contrast-more:text-ink"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: stage >= 3 ? 1 : 0 }}
-          transition={t(FADE.spring)}
+          className="overflow-hidden"
+          initial={false}
+          animate={{
+            height: view === 'invite' ? 0 : 'auto',
+            marginBottom: view === 'invite' ? 0 : 40,
+          }}
+          transition={t(PAGE.t)}
         >
-          <AnimatePresence initial={false}>
-            <motion.p
-              key={view}
-              className="col-start-1 row-start-1"
-              initial={{ opacity: 0, filter: 'blur(4px)', y: 2 }}
-              animate={{ opacity: 1, filter: 'blur(0px)', y: 0 }}
-              exit={{ opacity: 0, filter: 'blur(4px)', y: -2 }}
-              transition={t(PAGE.t)}
-            >
-              {/* Public-facing page: never list what's inside the workspace
-                  (feature names here leak product surface to visitors). */}
-              {view === 'signin' ? (
-                // nowrap on the back half pins the wrap after the em dash —
-                // text-balance alone broke mid-phrase ("runs / on").
-                <>
-                  Everything the studio runs on —{' '}
-                  <span className="whitespace-nowrap">in one private workspace</span>
-                </>
-              ) : (
-                'Enter the invite code from your email to join the studio'
-              )}
-            </motion.p>
-          </AnimatePresence>
+          <motion.p
+            // ink-muted-strong = the ramp's own AA floor (5.57:1 here). The old
+            // #b4b4b4 (2.1:1) treated the page's one line of real copy as
+            // decoration; the #767676 that replaced it was a hardcoded hex
+            // hitting the same tier by hand — the token does it by reference.
+            className="text-balance text-center text-base leading-snug text-ink-muted-strong dark:text-ink-muted contrast-more:text-ink"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: stage >= 3 ? 1 : 0 }}
+            transition={t(FADE.spring)}
+          >
+            {/* Public-facing page: never list what's inside the workspace
+                (feature names here leak product surface to visitors).
+                nowrap on the back half pins the wrap after the em dash —
+                text-balance alone broke mid-phrase ("runs / on"). */}
+            Everything the studio runs on —{' '}
+            <span className="whitespace-nowrap">in one private workspace</span>
+          </motion.p>
         </motion.div>
 
         {/* Shared error slot — covers all methods. Height animates both
@@ -681,22 +769,65 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
               exit={{ opacity: 0, x: -PAGE.slide, filter: `blur(${PAGE.blur}px)`, transition: t(PAGE.out) }}
             >
               {/* Provider pills — rendered in method-memory order: the pill
-                  that signed you in last time sits on top with a caption. */}
+                  that signed you in last time sits on top with a caption.
+
+                  No `space-y-2` here, deliberately. The 8px gap lives INSIDE
+                  each slot instead, because these slots collapse: a margin
+                  *between* siblings survives its neighbour's exit and the stack
+                  snaps 16px shut on the last frame. Padding inside a clipped
+                  box goes down with the box, in the same animation. */}
               <motion.div
-                className="space-y-2"
                 initial={{ opacity: 0, y: FIELD.offsetY }}
                 animate={{ opacity: stage >= 4 ? 1 : 0, y: stage >= 4 ? 0 : FIELD.offsetY }}
                 transition={t(FIELD.spring)}
               >
                 {/* Linear-pattern recall: name the remembered method so the
-                    promoted pill reads as deliberate, not reshuffled. */}
+                    promoted pill reads as deliberate, not reshuffled. It's a
+                    caption about *choosing* a method, so it leaves with the
+                    choice — including when the promoted method is email
+                    itself, where the open panel's own header supersedes it. */}
                 {promotedMethod && (
-                  <p className="pb-0.5 pl-1 text-[12px] text-[#767676] contrast-more:text-ink">
-                    You used {METHOD_LABEL[promotedMethod]} to sign in last time
-                  </p>
+                  <motion.div
+                    className={cn((emailOpen || emailClosing) && 'overflow-hidden')}
+                    inert={emailOpen}
+                    initial={false}
+                    animate={{ height: emailOpen ? 0 : 'auto', opacity: emailOpen ? 0 : 1 }}
+                    transition={
+                      reduceMotion
+                        ? { duration: 0 }
+                        : { height: emailOpen ? STACK.out : STACK.in, opacity: STACK.fade }
+                    }
+                  >
+                    {/* pb-2.5 = the caption's own 2px + the stack's 8px gap. */}
+                    {/* 12px is the smallest type on the page — it has the least
+                        margin for a thin contrast ratio, not the most. */}
+                    <p className="pb-2.5 pl-1 text-[12px] text-ink-muted-strong dark:text-ink-muted contrast-more:text-ink">
+                      You used {METHOD_LABEL[promotedMethod]} to sign in last time
+                    </p>
+                  </motion.div>
                 )}
-                {methodOrder.map(method => (
+                {methodOrder.map((method, i) => {
+                // Email is always first or last in the order (orderAuthMethods
+                // promotes one method, never inserts), so "not last" is all the
+                // gap logic needs.
+                const gapped = i < methodOrder.length - 1;
+                return (
                 <Fragment key={method}>
+                {(method === 'google' || (method === 'passkey' && passkeySupported)) && (
+                /* Collapsing slot. Clips only while open/closing so the pill's
+                   focus ring isn't cut off at rest. */
+                <motion.div
+                  className={cn((emailOpen || emailClosing) && 'overflow-hidden')}
+                  inert={emailOpen}
+                  initial={false}
+                  animate={{ height: emailOpen ? 0 : 'auto', opacity: emailOpen ? 0 : 1 }}
+                  transition={
+                    reduceMotion
+                      ? { duration: 0 }
+                      : { height: emailOpen ? STACK.out : STACK.in, opacity: STACK.fade }
+                  }
+                >
+                <div className={cn(gapped && 'pb-2')}>
                 {method === 'google' && (
                 <button
                   type="button"
@@ -717,7 +848,7 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
                   </AnimatePresence>
                 </button>
                 )}
-                {method === 'passkey' && passkeySupported && (
+                {method === 'passkey' && (
                   <button
                     type="button"
                     onClick={handlePasskey}
@@ -739,11 +870,28 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
                     </AnimatePresence>
                   </button>
                 )}
+                </div>
+                </motion.div>
+                )}
 
                 {/* Email surface morph — the pill IS the form's closed state.
                     The surface animates height/radius/tint; the two faces
-                    cross-fade with slide + scale + blur (transitions.dev). */}
+                    cross-fade with slide + scale + blur (transitions.dev).
+
+                    The gap is an animated paddingBottom rather than a class:
+                    when email is the PROMOTED method it sits first, and once
+                    the pills below it collapse its 8px would be left holding
+                    open a gap under nothing. */}
                 {method === 'email' && (
+                <motion.div
+                  initial={false}
+                  animate={{ paddingBottom: gapped && !emailOpen ? 8 : 0 }}
+                  transition={
+                    reduceMotion
+                      ? { duration: 0 }
+                      : emailOpen ? STACK.out : STACK.in
+                  }
+                >
                 <motion.div
                   className={cn('relative', (emailOpen || emailClosing) && 'overflow-hidden')}
                   initial={false}
@@ -752,7 +900,16 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
                     borderRadius: emailOpen ? MORPH.radius.open : MORPH.radius.closed,
                     backgroundColor: emailOpen ? morphTint.open : morphTint.closed,
                   }}
-                  transition={reduceMotion ? { duration: 0 } : emailOpen ? MORPH.open : MORPH.close}
+                  transition={
+                    reduceMotion
+                      ? { duration: 0 }
+                      : emailOpen
+                        // Per-value override: radius/tint ride MORPH.open's
+                        // bounce, height rides the flat spring so the heading
+                        // above the card doesn't get bobbed by the overshoot.
+                        ? { ...MORPH.open, height: MORPH.grow }
+                        : MORPH.close
+                  }
                   onAnimationComplete={() => setEmailClosing(false)}
                 >
                   {/* Closed face — the pill (transparent; the surface paints the
@@ -818,12 +975,28 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
                   >
                     <div className="mb-2 flex items-center justify-between pl-1">
                       <span className="text-[13px] font-medium text-ink-muted-strong">Sign in with email</span>
+                      {/* The way back. With the other methods collapsed this is
+                          the ONLY exit, so it carries more weight than a
+                          dismiss X did: the label names the destination, and a
+                          pseudo-element takes the 28px disc to a 40px target
+                          without changing what's drawn. */}
                       <button
                         type="button"
                         onClick={closeEmail}
-                        aria-label="Close email sign-in"
+                        aria-label="Back to sign-in options"
                         className={cn(
-                          'grid size-7 place-items-center rounded-full text-ink-muted',
+                          // ink-muted put this at 3.69:1 on the #f7f7f7 panel —
+                          // scraping WCAG's 3:1 graphic floor, and the weakest
+                          // element on the page. It's the ONLY way back out of
+                          // the email view. Dark rendered the same token at
+                          // 6.61:1, nearly double: the light half was the one
+                          // being under-served, not both. ink-muted-strong lands
+                          // it on 5.20:1 / 7.94:1 — exactly the panel title's
+                          // pair of numbers, which is right: the title and the
+                          // exit are this panel's two chrome elements and should
+                          // read as a set, not as heading-plus-afterthought.
+                          'relative grid size-7 place-items-center rounded-full text-ink-muted-strong',
+                          'before:absolute before:-inset-1.5 before:content-[""]',
                           'transition-[background-color,color,transform] duration-150 ease-out',
                           'hover:bg-wash-6 hover:text-ink active:scale-95',
                           LIGHT_FOCUS_RING,
@@ -888,11 +1061,28 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
                             password field. Icons cross-fade (never hard-swap). */}
                         <button
                           type="button"
-                          onClick={() => setShowPassword(v => !v)}
+                          /* The eye is a detour, not a destination: the user is
+                             mid-password and only wants to look at it. Clicking
+                             it parked focus on the button and left them to click
+                             back into the field to keep typing. Focus returns to
+                             the password, caret exactly where they left it —
+                             swapping the input's `type` is what drops the
+                             selection, so it's restored by hand. */
+                          onClick={() => {
+                            const field = passwordInputRef.current;
+                            const caret = field?.selectionStart ?? null;
+                            setShowPassword(v => !v);
+                            requestAnimationFrame(() => {
+                              if (!field) return;
+                              field.focus({ preventScroll: true });
+                              const at = caret ?? field.value.length;
+                              field.setSelectionRange(at, at);
+                            });
+                          }}
                           aria-label={showPassword ? 'Hide password' : 'Show password'}
                           aria-pressed={showPassword}
                           className={cn(
-                            'absolute right-0.5 top-1/2 grid size-10 -translate-y-1/2 place-items-center rounded-md text-[#767676]',
+                            'absolute right-0.5 top-1/2 grid size-10 -translate-y-1/2 place-items-center rounded-md text-ink-muted-strong dark:text-ink-muted',
                             'transition-[background-color,color,transform] duration-150 ease-out',
                             'hover:bg-wash-5 hover:text-ink active:scale-95',
                             LIGHT_FOCUS_RING,
@@ -969,9 +1159,11 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
                     </form>
                   </motion.div>
                 </motion.div>
+                </motion.div>
                 )}
                 </Fragment>
-                ))}
+                );
+                })}
               </motion.div>
             </motion.div>
           ) : (
@@ -982,7 +1174,10 @@ export function LoginForm({ initialError = null }: LoginFormProps) {
               animate={{ opacity: 1, x: 0, filter: 'blur(0px)', transition: t(PAGE.t) }}
               exit={{ opacity: 0, x: PAGE.slide, filter: `blur(${PAGE.blur}px)`, transition: t(PAGE.out) }}
             >
-              <InviteCodeForm />
+              {/* One email across both views — the same value the pill morphs
+                  into (shared layoutId), so the shared-element animation and
+                  the data finally agree. */}
+              <InviteCodeForm email={email} onEmailChange={setEmail} />
             </motion.div>
           )}
         </AnimatePresence>

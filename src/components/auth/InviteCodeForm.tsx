@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from '@/lib/react-router-adapters';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { Loader2 } from 'lucide-react';
@@ -54,20 +54,64 @@ function shake(el: HTMLElement | null, reduceMotion: boolean | null) {
   el.animate(ERR.shake.keyframes, ERR.shake.options);
 }
 
-export function InviteCodeForm() {
+/* Deliberately loose — gates the red border, and decides whether a field is DONE
+ * enough to skip the caret past it. Real verification is verifyOtp's job. */
+const EMAIL_RE = /^\S+@\S+\.\S+$/;
+
+type InviteCodeFormProps = {
+  /**
+   * Lift the email out of this form. The login card's email pill and this
+   * field already share a `layoutId` — the pill physically travels and
+   * reshapes into this input on the view swap, which tells the user they are
+   * ONE field. Then the value reset called that a lie and made them retype an
+   * address they'd already given. Controlled, the animation is telling the
+   * truth. Omit both props and the form owns its own email (standalone use).
+   */
+  email?: string;
+  onEmailChange?: (value: string) => void;
+};
+
+export function InviteCodeForm({ email: emailProp, onEmailChange }: InviteCodeFormProps = {}) {
   const router = useRouter();
   const { trigger } = useHaptics();
   const reduceMotion = useReducedMotion();
   const isDark = useIsDark();
   const cta = CTA_COLORS[isDark ? 'dark' : 'light'];
-  const [email, setEmail] = useState('');
+  const [ownEmail, setOwnEmail] = useState('');
+  const controlled = emailProp !== undefined;
+  const email = controlled ? emailProp : ownEmail;
+  const setEmail = (value: string) => (controlled ? onEmailChange?.(value) : setOwnEmail(value));
   const [token, setToken] = useState('');
   const [error, setError] = useState<string | null>(null);
   // Which control caused the error — drives the red highlight (field vs cells).
   const [emailInvalid, setEmailInvalid] = useState(false);
   const [codeInvalid, setCodeInvalid] = useState(false);
   const [loading, setLoading] = useState(false);
+  const emailRef = useRef<HTMLInputElement>(null);
   const cellsRef = useRef<HTMLDivElement>(null);
+
+  /** The code cell the user should be typing into: the first empty one. */
+  function focusCode() {
+    const cells = cellsRef.current?.querySelectorAll('input');
+    cells?.[Math.min(token.length, cells.length - 1)]?.focus({ preventScroll: true });
+  }
+
+  /* Land the caret in the first field that still needs something.
+   *
+   * This form is only ever reached by pressing "Have an invite code?", so
+   * mounting IS the press — no separate handler needed. Focus lands on email
+   * when it's blank, and skips straight to the code when the address already
+   * came across from the sign-in view: the seamless thing to do with an answer
+   * you already have is not ask for it again. */
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (EMAIL_RE.test(email.trim())) focusCode();
+      else emailRef.current?.focus({ preventScroll: true });
+    }, 60);
+    return () => clearTimeout(timer);
+    // Mount only — re-running would yank the caret out from under the typist.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -76,16 +120,15 @@ export function InviteCodeForm() {
     // In-design validation (form is noValidate): the native browser bubble +
     // blue focus ring clashed with the card — errors render red, in place.
     const trimmed = email.trim();
-    if (!trimmed || !/^\S+@\S+\.\S+$/.test(trimmed)) {
+    if (!trimmed || !EMAIL_RE.test(trimmed)) {
       setEmailInvalid(true);
       setError(
         trimmed
           ? "That doesn't look like an email address."
           : 'Enter the email your invite was sent to.',
       );
-      const field = document.getElementById('invite-email');
-      field?.focus();
-      shake(field, reduceMotion);
+      emailRef.current?.focus();
+      shake(emailRef.current, reduceMotion);
       trigger('error');
       return;
     }
@@ -127,11 +170,13 @@ export function InviteCodeForm() {
             (shared-element travel). Standalone mounts (no pill on screen)
             render with no morph, so other hosts are unaffected. */}
         <motion.input
+          ref={emailRef}
           layoutId="auth-email-morph"
           style={{ borderRadius: 8 }}
           transition={{ layout: reduceMotion ? { duration: 0 } : { duration: 0.25, ease: [0.22, 1, 0.36, 1] } }}
           id="invite-email"
           type="email"
+          autoComplete="email"
           value={email}
           onChange={e => {
             setEmail(e.target.value);
@@ -139,6 +184,16 @@ export function InviteCodeForm() {
               setEmailInvalid(false);
               setError(null);
             }
+          }}
+          /* Enter here was a dead key. The form's default button is disabled
+             until all 8 digits land, and HTML blocks implicit submission when
+             the default button is disabled — so the one gesture that means
+             "done, next" did literally nothing, and the only way forward was
+             the mouse. It now means what it looks like it means: advance. */
+          onKeyDown={e => {
+            if (e.key !== 'Enter') return;
+            e.preventDefault();
+            focusCode();
           }}
           required
           aria-invalid={emailInvalid || undefined}
@@ -187,6 +242,9 @@ export function InviteCodeForm() {
           disabled={loading}
           light
           invalid={codeInvalid}
+          // Email is the field ABOVE this one — the cells must not grab the
+          // caret past it on mount. This form decides where focus lands.
+          autoFocus={false}
         />
         {/* Code errors stay with the code cells; the pill glides open (height,
             not a pop) so the layout shift rides the same curve as the cells

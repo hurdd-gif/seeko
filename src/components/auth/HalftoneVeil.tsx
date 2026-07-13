@@ -28,7 +28,6 @@ import {
   lensDisplacement,
   sampleVeilGradient,
 } from '@/lib/halftone-field';
-import { subscribeTheme } from '@/lib/theme';
 
 /** Same key LoginForm uses — one "has seen the entrance" signal per tab. */
 const ENTRANCE_PLAYED_KEY = 'seeko-login-entrance-played';
@@ -62,13 +61,6 @@ const DOT_EASE = 0.18;
 
 const RISE = { delay: 0.15, type: 'spring', duration: 1.1, bounce: 0 } as const;
 
-/** Dark-scheme dot ink (Figma LOGIN/DARK node 1:2): the sunset bands read as
- *  glare on the near-black canvas, so dark re-tints every dot to one quiet
- *  grey and lets CORE_GLOW — layered OVER the field in dark (dark:z-10) —
- *  supply the warmth at the bottom edge, matching the reference's
- *  grey-dots-with-orange-bloom read. */
-const DARK_DOT_RGB = '90,90,90';
-
 /** Soft sunset wash under the dot field's dense core: the same palette and
  *  bottom-center ellipse as the bloom (echoing its 1.33 aspect) so glow and
  *  ink read as one object, at low alpha so the dots stay the subject and the
@@ -76,6 +68,25 @@ const DARK_DOT_RGB = '90,90,90';
  *  card, never competing with the frost halo above. */
 const CORE_GLOW =
   'radial-gradient(ellipse 62% 46% at 50% 100%, rgba(228,88,29,0.20), rgba(238,138,47,0.13) 38%, rgba(242,227,194,0.07) 68%, rgba(242,227,194,0) 88%)';
+
+/** Dark's glow — same ellipse and warm core, different tail. Two things break
+ *  CORE_GLOW on a near-black ground:
+ *
+ *  1. Its outer stops are CREAM (242,227,194). Against white that reads as
+ *     nothing, which is exactly why it works in light; against near-black it is
+ *     a pale grey fog, so the glow ends in a visible haze ring instead of
+ *     dissolving. Dark holds the warm hue all the way out — the wash fades to
+ *     transparent orange, never to grey.
+ *  2. Its four stops fall off linearly, which Mach-bands into a soft edge you
+ *     can see. Dark eases instead: a fast drop out of the core, then a long low
+ *     tail that reaches zero well inside the container, so there is no boundary
+ *     to catch.
+ *
+ *  Peak alpha is half of light's (0.10 vs 0.20) — the same wash reads far
+ *  hotter on black than on white — and the mid/outer stops are cut harder still
+ *  so the edges go dark first and the core keeps its heat. */
+const CORE_GLOW_DARK =
+  'radial-gradient(ellipse 62% 46% at 50% 100%, rgba(228,88,29,0.10), rgba(231,101,34,0.072) 22%, rgba(233,113,40,0.042) 42%, rgba(235,124,45,0.020) 60%, rgba(237,132,49,0.007) 76%, rgba(238,138,47,0) 90%)';
 
 /** GradientVeil: the same field as continuous ink instead of halftone dots.
  *  Color = the sunset bands (VEIL_STOPS offsets × BLOOM_RY_FRAC of the 60vh
@@ -127,8 +138,17 @@ type Dot = { x: number; y: number; r: number; fill: string; ox: number; oy: numb
 
 /** Precompute the resting field once per size — the rAF loop only repaints.
  *  Geometry is Delphi's elliptical bloom (intensity drives radius + alpha);
- *  color is a pure function of height (flat vertical sunset bands). */
-function buildDots(w: number, h: number, dark: boolean): Dot[] {
+ *  color is a pure function of height (flat vertical sunset bands).
+ *
+ *  The palette is scheme-INDEPENDENT. Dark used to flatten every dot to one
+ *  grey on the theory that the sunset bands would read as glare on a near-black
+ *  canvas. The Figma dark reference (LOGIN/DARK node 1:2) says otherwise, and
+ *  it was measured, not eyeballed: the brightest dot at the bottom edge samples
+ *  to #e4581d — VEIL_STOPS[0] exactly, unattenuated — and the field climbs
+ *  through amber → cream → steel blue just as it does in light. The bloom's own
+ *  alpha ramp is what keeps the pale cream band from glaring; no re-tint needed.
+ *  Grey dots were the bug this function used to encode. */
+function buildDots(w: number, h: number): Dot[] {
   const dots: Dot[] = [];
   const cx = w / 2;
   const ry = h * BLOOM_RY_FRAC;
@@ -140,12 +160,8 @@ function buildDots(w: number, h: number, dark: boolean): Dot[] {
     // One color per row — bands stay perfectly horizontal like the mark.
     // Normalized to the bloom's vertical reach (not the canvas) so the full
     // palette lands on rows that actually have ink; above ry nothing draws.
-    // Dark flattens the palette to one grey (see DARK_DOT_RGB).
-    let rowFill = DARK_DOT_RGB;
-    if (!dark) {
-      const [red, green, blue] = sampleVeilGradient((1 - y / h) / BLOOM_RY_FRAC);
-      rowFill = `${Math.round(red)},${Math.round(green)},${Math.round(blue)}`;
-    }
+    const [red, green, blue] = sampleVeilGradient((1 - y / h) / BLOOM_RY_FRAC);
+    const rowFill = `${Math.round(red)},${Math.round(green)},${Math.round(blue)}`;
     for (let i = 0; i < cols; i++) {
       const x = i * PITCH + PITCH / 2;
       const n = bloomIntensity(x - cx, y - h, rx, ry);
@@ -330,7 +346,7 @@ export function HalftoneVeil() {
       canvas.width = Math.round(w * dpr);
       canvas.height = Math.round(h * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      dots = buildDots(w, h, document.documentElement.classList.contains('dark'));
+      dots = buildDots(w, h);
       paint();
     }
 
@@ -342,10 +358,6 @@ export function HalftoneVeil() {
       resizeRaf = requestAnimationFrame(resize);
     };
     window.addEventListener('resize', onResize);
-
-    // The dot ink is scheme-dependent — rebuild + repaint on preference flips
-    // (the login can mount already-dark via client-side nav from the app).
-    const unsubscribeTheme = subscribeTheme(() => resize());
 
     // The canvas is pointer-transparent, so the lens listens on the window.
     // Mouse-driven only: on touch there is no hover to trail, and reduced
@@ -386,7 +398,6 @@ export function HalftoneVeil() {
     return () => {
       cancelAnimationFrame(raf);
       cancelAnimationFrame(resizeRaf);
-      unsubscribeTheme();
       window.removeEventListener('resize', onResize);
       window.removeEventListener('pointermove', onMove);
       document.documentElement.removeEventListener('pointerleave', onLeave);
@@ -404,10 +415,22 @@ export function HalftoneVeil() {
       animate={{ opacity: 1, y: 0 }}
       transition={RISE}
     >
-      {/* Light: the glow sits UNDER the dots (sunset ink carries the color).
-          Dark: dark:z-10 lifts it OVER the grey field, per the Figma
-          reference's glow-over-dots layering — same gradient, new role. */}
-      <div aria-hidden className="absolute inset-0 dark:z-10" style={{ background: CORE_GLOW }} />
+      {/* The glow sits UNDER the dots in BOTH schemes — the sunset ink carries
+          the color, the glow only warms the ground it sits on. Dark used to lift
+          it OVER the field (dark:z-10) to compensate for grey dots; with the
+          dots colored again that would only haze them. The reference confirms
+          the under-layering: its dot cores sample to the pure stop color
+          (#e4581d, no wash on top) while the GAPS between them run warm
+          (r−b climbing to +147 against a neutral r−b = 0 canvas). */}
+      {/* One glow per scheme rather than one gradient dimmed twice: light's wash
+          is tuned against white and is finalized, so it renders untouched, and
+          dark gets a tail that actually fades on black (see CORE_GLOW_DARK). */}
+      <div aria-hidden className="absolute inset-0 dark:hidden" style={{ background: CORE_GLOW }} />
+      <div
+        aria-hidden
+        className="absolute inset-0 hidden dark:block"
+        style={{ background: CORE_GLOW_DARK }}
+      />
       <canvas ref={canvasRef} className="relative size-full" />
     </motion.div>
   );
