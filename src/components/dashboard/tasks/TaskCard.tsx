@@ -196,7 +196,7 @@ export function TaskCard({
   const avatarVisual = assignee ? (
     <Avatar className="size-5 shrink-0 ring-1 ring-wash-4">
       <AvatarImage src={assignee.avatar_url ?? undefined} alt={assignee.display_name ?? ''} />
-      <AvatarFallback hash={assignee.id} className="text-[8px] font-medium text-ink-body">
+      <AvatarFallback seed={assignee.id} className="text-[8px] font-medium text-ink-body">
         {initials(assignee.display_name)}
       </AvatarFallback>
     </Avatar>

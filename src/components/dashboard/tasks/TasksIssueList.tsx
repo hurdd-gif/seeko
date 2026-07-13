@@ -322,7 +322,7 @@ function IssueRow({
   const avatarVisual = assignee ? (
     <Avatar className="size-6 shrink-0 ring-1 ring-wash-4">
       <AvatarImage src={assignee.avatar_url ?? undefined} alt={assignee.display_name ?? ''} />
-      <AvatarFallback className="bg-[#e5e5e5] dark:bg-surface-6 text-[10px] font-medium text-ink-body">
+      <AvatarFallback seed={assignee.id} className="bg-[#e5e5e5] dark:bg-surface-6 text-[10px] font-medium text-ink-body">
         {initials(assignee.display_name)}
       </AvatarFallback>
     </Avatar>

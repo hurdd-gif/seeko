@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { cn } from '@/lib/utils';
-import { GradientAvatar } from './gradient-avatar';
+import { GradientAvatar, UNATTRIBUTED } from './gradient-avatar';
 
 const Avatar = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => (
@@ -33,32 +33,31 @@ AvatarImage.displayName = 'AvatarImage';
 
 interface AvatarFallbackProps extends React.HTMLAttributes<HTMLDivElement> {
   /**
-   * Stable per-user seed (a profile id or display name). When present — or when
-   * the children resolve to a plain string (e.g. initials) — the fallback
-   * renders a deterministic gradient instead of grey initials. Pass an explicit
-   * `hash` on identity surfaces so people with the same initials don't collide.
+   * What identifies this person, app-wide. `profile.id` wherever a profile
+   * exists; for people who have no row (external payees) the one stable string
+   * that names them, e.g. their email.
+   *
+   * REQUIRED on purpose. This used to be optional and fell back to whatever the
+   * caller happened to render as children — so the same person was seeded from
+   * a UUID on the board, from "K" in the header, and from an activity-row id in
+   * the feed, and wore three different faces. The seed is the identity, not a
+   * styling detail: if a call site can't say who this is, it shouldn't be
+   * drawing their avatar.
    */
-  hash?: string;
+  seed: string;
 }
 
 const AvatarFallback = React.forwardRef<HTMLDivElement, AvatarFallbackProps>(
-  ({ className, hash, children, ...props }, ref) => {
-    const seed = hash ?? (typeof children === 'string' ? children : undefined);
-    if (seed) {
-      const label = typeof children === 'string' ? children : undefined;
-      return <GradientAvatar seed={seed} label={label} className={cn('rounded-full', className)} />;
-    }
-    return (
-      <div
-        ref={ref}
-        className={cn('flex h-full w-full items-center justify-center rounded-full bg-secondary text-secondary-foreground text-xs font-medium', className)}
-        {...props}
-      >
-        {children}
-      </div>
-    );
-  }
+  ({ className, seed, children }, _ref) => (
+    // Children stay meaningful as the accessible name (the initials are never
+    // painted — the gradient covers them).
+    <GradientAvatar
+      seed={seed}
+      label={typeof children === 'string' ? children : undefined}
+      className={cn('rounded-full', className)}
+    />
+  )
 );
 AvatarFallback.displayName = 'AvatarFallback';
 
-export { Avatar, AvatarImage, AvatarFallback };
+export { Avatar, AvatarImage, AvatarFallback, UNATTRIBUTED };

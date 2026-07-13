@@ -35,13 +35,15 @@ function getInitials(name: string): string {
 }
 
 interface InvestorSidebarProps {
+  /** The investor's profile id — the seed their avatar is drawn from everywhere. */
+  userId: string;
   email: string;
   displayName?: string;
   avatarUrl?: string;
   isAdmin?: boolean;
 }
 
-export function InvestorSidebar({ email, displayName, avatarUrl, isAdmin = false }: InvestorSidebarProps) {
+export function InvestorSidebar({ userId, email, displayName, avatarUrl, isAdmin = false }: InvestorSidebarProps) {
   const pathname = usePathname();
   const { trigger } = useHaptics();
   const label = displayName || email;
@@ -213,7 +215,7 @@ export function InvestorSidebar({ email, displayName, avatarUrl, isAdmin = false
           <div className="flex items-center gap-2.5 rounded-lg bg-white/[0.06] px-2.5 py-2 mb-2">
             <Avatar className="size-8 shrink-0">
               <AvatarImage src={avatarUrl} alt={label} />
-              <AvatarFallback className="bg-secondary text-foreground text-[10px]">
+              <AvatarFallback seed={userId} className="bg-secondary text-foreground text-[10px]">
                 {getInitials(label)}
               </AvatarFallback>
             </Avatar>
@@ -273,7 +275,7 @@ export function InvestorSidebar({ email, displayName, avatarUrl, isAdmin = false
                 <Link href="/investor/settings" className="shrink-0" onClick={() => trigger('selection')}>
                   <Avatar className="size-10">
                     <AvatarImage src={avatarUrl} alt={label} />
-                    <AvatarFallback className="bg-secondary text-foreground text-[10px]">
+                    <AvatarFallback seed={userId} className="bg-secondary text-foreground text-[10px]">
                       {getInitials(label)}
                     </AvatarFallback>
                   </Avatar>

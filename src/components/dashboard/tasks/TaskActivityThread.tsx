@@ -407,7 +407,7 @@ function CommentCard({
         <Avatar className="size-[18px] ring-1 ring-wash-4">
           <AvatarImage src={comment.profiles?.avatar_url ?? undefined} alt={authorName} />
           <AvatarFallback
-            hash={comment.user_id}
+            seed={comment.user_id}
             className="text-[7px] font-medium text-ink-body"
           >
             {initials(authorName)}

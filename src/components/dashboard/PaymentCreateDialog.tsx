@@ -636,7 +636,7 @@ export function PaymentCreateDialog({
                         <div className="flex items-center gap-3 rounded-lg bg-surface-3 p-3">
                           <Avatar className="size-9 outline outline-1 -outline-offset-1 outline-wash-6">
                             <AvatarImage src={recipient.avatar_url ?? undefined} />
-                            <AvatarFallback className="bg-surface-4 text-ink-body text-[10px]">
+                            <AvatarFallback seed={recipient.id} className="bg-surface-4 text-ink-body text-[10px]">
                               {getInitials(recipient.display_name ?? '?')}
                             </AvatarFallback>
                           </Avatar>

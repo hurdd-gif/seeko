@@ -341,7 +341,7 @@ export function SettingsPanel({ profile, isAdmin, team, revalidate, completedTas
                         {avatarUrl ? (
                           <AvatarImage src={avatarUrl} alt={displayName} />
                         ) : (
-                          <AvatarFallback className="text-lg bg-surface-5 text-ink-body">
+                          <AvatarFallback seed={profile.id} className="text-lg bg-surface-5 text-ink-body">
                             {getInitials(displayName)}
                           </AvatarFallback>
                         )}
@@ -733,7 +733,7 @@ export function SettingsPanel({ profile, isAdmin, team, revalidate, completedTas
                             <div className="flex items-center gap-3 min-w-0">
                               <Avatar className="size-8 shrink-0 outline outline-1 -outline-offset-1 outline-black/10">
                                 {member.avatar_url && <AvatarImage src={member.avatar_url} alt={member.display_name ?? ''} />}
-                                <AvatarFallback className="text-xs bg-surface-5 text-ink-body">
+                                <AvatarFallback seed={member.id} className="text-xs bg-surface-5 text-ink-body">
                                   {getInitials(member.display_name ?? '?')}
                                 </AvatarFallback>
                               </Avatar>

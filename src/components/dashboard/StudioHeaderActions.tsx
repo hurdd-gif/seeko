@@ -97,7 +97,10 @@ interface StudioHeaderActionsProps {
   initials: string;
   displayName?: string;
   avatarUrl?: string;
-  userId?: string;
+  /** The signed-in user's profile id — the seed their avatar is drawn from,
+   *  here and on every other surface. Required: optional meant a caller could
+   *  omit it and quietly get an email-seeded face instead. */
+  userId: string;
   isAdmin?: boolean;
   unreadCount?: number;
   notifications?: Notification[];
@@ -178,7 +181,7 @@ export function StudioHeaderActions({
         >
           <Avatar className="size-9 ring-[0.5px] ring-inset ring-[#0000001f] dark:ring-white/10">
             <AvatarImage src={avatarUrl} alt={displayName || email} />
-            <AvatarFallback className="bg-[#262626] text-[11px] font-medium leading-[13px] text-[#f0f0f0]">
+            <AvatarFallback seed={userId} className="bg-[#262626] text-[11px] font-medium leading-[13px] text-[#f0f0f0]">
               {initials}
             </AvatarFallback>
           </Avatar>

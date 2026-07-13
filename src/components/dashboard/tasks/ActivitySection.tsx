@@ -17,7 +17,7 @@ import {
   Sparkles,
   Activity as ActivityIcon,
 } from 'lucide-react';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarImage, AvatarFallback, UNATTRIBUTED } from '@/components/ui/avatar';
 import type { TaskActivity, TaskActivityKind, Profile } from '@/lib/types';
 
 export function initials(name?: string | null): string {
@@ -177,7 +177,7 @@ export function ActivityEventRow({
         >
           <AvatarImage src={a.profiles?.avatar_url ?? undefined} alt={actorName ?? 'Teammate'} />
           <AvatarFallback
-            hash={a.user_id ?? a.id}
+            seed={a.user_id ?? UNATTRIBUTED}
             className="text-[8px] font-medium text-ink-body"
           >
             {initials(actorName)}

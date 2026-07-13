@@ -92,7 +92,7 @@ function FilterPill({
             {opt.avatarUrl !== undefined && (
               <Avatar className="size-5 shrink-0">
                 <AvatarImage src={opt.avatarUrl ?? undefined} alt={opt.label} />
-                <AvatarFallback className="text-[7px] bg-secondary">
+                <AvatarFallback seed={opt.value} className="text-[7px] bg-secondary">
                   {opt.label.slice(0, 2).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
@@ -536,7 +536,7 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
             {assignee ? (
               <Avatar className="size-8" style={{ outline: '1px solid rgba(255,255,255,0.1)', outlineOffset: '-1px' }}>
                 <AvatarImage src={assignee.avatar_url ?? undefined} alt={assignee.display_name ?? ''} />
-                <AvatarFallback className="text-[10px] bg-secondary">
+                <AvatarFallback seed={assignee.id} className="text-[10px] bg-secondary">
                   {getInitials(assignee.display_name ?? '?')}
                 </AvatarFallback>
               </Avatar>
@@ -621,7 +621,7 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
                     <DropdownMenuItem key={member.id} onClick={() => handleAssign(task.id, member.id)} className="flex items-center gap-2">
                       <Avatar className="size-5">
                         <AvatarImage src={member.avatar_url ?? undefined} alt={member.display_name ?? ''} />
-                        <AvatarFallback className="text-[7px] bg-secondary">{getInitials(member.display_name ?? '?')}</AvatarFallback>
+                        <AvatarFallback seed={member.id} className="text-[7px] bg-secondary">{getInitials(member.display_name ?? '?')}</AvatarFallback>
                       </Avatar>
                       <span className="text-xs truncate">{member.display_name ?? 'Unnamed'}</span>
                       {assignee?.id === member.id && <CheckCircle2 className="size-3 text-seeko-accent ml-auto" />}
@@ -748,7 +748,7 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
                           <DropdownMenuItem key={member.id} onClick={() => handleAssign(task.id, member.id)} className="flex items-center gap-2">
                             <Avatar className="size-5">
                               <AvatarImage src={member.avatar_url ?? undefined} alt={member.display_name ?? ''} />
-                              <AvatarFallback className="text-[7px] bg-secondary">{getInitials(member.display_name ?? '?')}</AvatarFallback>
+                              <AvatarFallback seed={member.id} className="text-[7px] bg-secondary">{getInitials(member.display_name ?? '?')}</AvatarFallback>
                             </Avatar>
                             <span className="text-xs truncate">{member.display_name ?? 'Unnamed'}</span>
                             {assignee?.id === member.id && <CheckCircle2 className="size-3 text-seeko-accent ml-auto" />}
@@ -804,7 +804,7 @@ export function TaskList({ tasks: initialTasks, isAdmin = false, team = [], docs
               <div className="flex items-center gap-1.5 ml-auto">
                 <Avatar className="size-5" style={{ outline: '1px solid rgba(255,255,255,0.1)', outlineOffset: '-1px' }}>
                   <AvatarImage src={assignee.avatar_url ?? undefined} alt={assignee.display_name ?? ''} />
-                  <AvatarFallback className="text-[7px] bg-secondary">
+                  <AvatarFallback seed={assignee.id} className="text-[7px] bg-secondary">
                     {getInitials(assignee.display_name ?? '?')}
                   </AvatarFallback>
                 </Avatar>

@@ -193,7 +193,7 @@ export function OnboardingForm({
                 {avatarUrl ? (
                   <img src={avatarUrl} alt="Avatar" className="size-full object-cover rounded-full" />
                 ) : (
-                  <AvatarFallback className="text-lg">
+                  <AvatarFallback seed={userId} className="text-lg">
                     {getInitials(name)}
                   </AvatarFallback>
                 )}

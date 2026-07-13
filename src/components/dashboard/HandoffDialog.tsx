@@ -138,7 +138,7 @@ export function HandoffDialog({
                   >
                     <Avatar className="size-7 shrink-0">
                       <AvatarImage src={member.avatar_url ?? undefined} alt={member.display_name ?? ''} />
-                      <AvatarFallback className="text-[8px] bg-secondary">
+                      <AvatarFallback seed={member.id} className="text-[8px] bg-secondary">
                         {getInitials(member.display_name ?? '?')}
                       </AvatarFallback>
                     </Avatar>

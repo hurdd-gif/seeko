@@ -123,7 +123,7 @@ export function MobileNav({
             <Link href="/settings" onClick={() => trigger('selection')}>
               <Avatar className="size-10">
                 <AvatarImage src={avatarUrl} alt={label} />
-                <AvatarFallback className="bg-secondary text-foreground text-[10px]">
+                <AvatarFallback seed={userId ?? email} className="bg-secondary text-foreground text-[10px]">
                   {getInitials(label)}
                 </AvatarFallback>
               </Avatar>

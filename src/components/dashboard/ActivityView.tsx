@@ -16,7 +16,7 @@
 
 import { Fragment, type ReactNode } from 'react';
 import { Sparkles } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage, UNATTRIBUTED } from '@/components/ui/avatar';
 import {
   HeatmapChart,
   HeatmapCells,
@@ -202,7 +202,7 @@ function ActivityRow({
       ) : (
         <Avatar className="size-6 shrink-0 outline outline-1 -outline-offset-1 outline-wash-6">
           <AvatarImage src={a.profiles?.avatar_url ?? undefined} alt="" />
-          <AvatarFallback className="bg-surface-4 text-[9px] text-ink-body">
+          <AvatarFallback seed={a.user_id ?? UNATTRIBUTED} className="bg-surface-4 text-[9px] text-ink-body">
             {actorName ? getInitials(actorName) : '?'}
           </AvatarFallback>
         </Avatar>

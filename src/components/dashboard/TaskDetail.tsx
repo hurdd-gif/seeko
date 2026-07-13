@@ -272,7 +272,7 @@ function CommentItem({
       {!isGrouped && (
         <Avatar className="size-8 shrink-0 mt-0.5">
           <AvatarImage src={avatar ?? undefined} alt={name} />
-          <AvatarFallback className="text-[9px] bg-secondary">{getInitials(name)}</AvatarFallback>
+          <AvatarFallback seed={comment.user_id} className="text-[9px] bg-secondary">{getInitials(name)}</AvatarFallback>
         </Avatar>
       )}
       <div className="flex-1 min-w-0">
@@ -1715,7 +1715,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
                               <div className="flex items-center gap-1.5 min-w-0">
                                 <Avatar className="size-5 shrink-0">
                                   <AvatarImage src={h.from_profile?.avatar_url ?? undefined} />
-                                  <AvatarFallback className="text-[7px] bg-secondary">{getInitials(fromName)}</AvatarFallback>
+                                  <AvatarFallback seed={h.from_profile?.id ?? fromName} className="text-[7px] bg-secondary">{getInitials(fromName)}</AvatarFallback>
                                 </Avatar>
                                 <span className="text-xs font-medium text-foreground truncate">{fromName}</span>
                               </div>
@@ -1723,7 +1723,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
                               <div className="flex items-center gap-1.5 min-w-0">
                                 <Avatar className="size-5 shrink-0">
                                   <AvatarImage src={h.to_profile?.avatar_url ?? undefined} />
-                                  <AvatarFallback className="text-[7px] bg-secondary">{getInitials(toName)}</AvatarFallback>
+                                  <AvatarFallback seed={h.to_profile?.id ?? toName} className="text-[7px] bg-secondary">{getInitials(toName)}</AvatarFallback>
                                 </Avatar>
                                 <span className="text-xs font-medium text-foreground truncate">{toName}</span>
                               </div>
@@ -1923,7 +1923,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
                   ) : candidate.icon === 'user' ? (
                     <Avatar className="size-5">
                       <AvatarImage src={candidate.avatar ?? undefined} />
-                      <AvatarFallback className="text-[7px] bg-secondary">{getInitials(candidate.label)}</AvatarFallback>
+                      <AvatarFallback seed={candidate.id} className="text-[7px] bg-secondary">{getInitials(candidate.label)}</AvatarFallback>
                     </Avatar>
                   ) : candidate.icon === 'deck' ? (
                     <Presentation className="size-4 text-amber-400" />
@@ -2106,7 +2106,7 @@ export function TaskDetail({ task, open, onOpenChange, team, docs, currentUserId
                     <div className="flex items-center gap-1.5 mt-1.5">
                       <Avatar className="size-5">
                         <AvatarImage src={assignee.avatar_url ?? undefined} />
-                        <AvatarFallback className="text-[7px] bg-secondary">{getInitials(assignee.display_name ?? '?')}</AvatarFallback>
+                        <AvatarFallback seed={assignee.id} className="text-[7px] bg-secondary">{getInitials(assignee.display_name ?? '?')}</AvatarFallback>
                       </Avatar>
                       <span className="text-xs text-muted-foreground">{assignee.display_name}</span>
                     </div>

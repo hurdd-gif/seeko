@@ -172,7 +172,7 @@ export function AssigneePopover({
                 >
                   <Avatar className="size-5 shrink-0 ring-1 ring-wash-4">
                     <AvatarImage src={p.avatar_url ?? undefined} alt={p.display_name ?? ''} />
-                    <AvatarFallback className="bg-[#e5e5e5] dark:bg-surface-6 text-[8px] font-medium text-ink-body">
+                    <AvatarFallback seed={p.id} className="bg-[#e5e5e5] dark:bg-surface-6 text-[8px] font-medium text-ink-body">
                       {initials(p.display_name)}
                     </AvatarFallback>
                   </Avatar>

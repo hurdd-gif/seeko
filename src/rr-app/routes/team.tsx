@@ -262,7 +262,7 @@ function MemberCard({ member, isAdmin }: { member: TeamRosterMember; isAdmin: bo
         <div className="relative shrink-0">
           <Avatar className="size-11 outline outline-1 -outline-offset-1 outline-wash-6">
             <AvatarImage src={member.avatar_url} alt={member.display_name ?? ''} />
-            <AvatarFallback hash={member.id} className="text-sm">
+            <AvatarFallback seed={member.id} className="text-sm">
               {getInitials(member.display_name ?? '?')}
             </AvatarFallback>
           </Avatar>

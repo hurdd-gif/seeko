@@ -288,7 +288,7 @@ export function PaymentsInvestor({ payments, stats, lastMonthTotal, monthCount =
                       <span className="text-xs text-muted-foreground/60 font-mono w-4 shrink-0">{idx + 1}</span>
                       <Avatar className="size-7 shrink-0">
                         <AvatarImage src={person.avatar_url ?? undefined} />
-                        <AvatarFallback className="bg-secondary text-foreground text-[10px]">
+                        <AvatarFallback seed={id} className="bg-secondary text-foreground text-[10px]">
                           {getInitials(person.name)}
                         </AvatarFallback>
                       </Avatar>
@@ -342,7 +342,7 @@ export function PaymentsInvestor({ payments, stats, lastMonthTotal, monthCount =
                           <div className="flex items-center gap-3 min-w-0">
                             <Avatar className="size-8 shrink-0">
                               <AvatarImage src={payment.recipient?.avatar_url ?? undefined} />
-                              <AvatarFallback className="bg-secondary text-foreground text-[10px]">
+                              <AvatarFallback seed={payment.recipient_id ?? payment.id} className="bg-secondary text-foreground text-[10px]">
                                 {getInitials(payment.recipient?.display_name ?? '?')}
                               </AvatarFallback>
                             </Avatar>

@@ -51,7 +51,7 @@ export function PaperPageHeader({
   initials: string;
   displayName?: string;
   avatarUrl?: string;
-  userId?: string;
+  userId: string;
   isAdmin?: boolean;
   unreadCount?: number;
   notifications?: Notification[];

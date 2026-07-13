@@ -249,7 +249,7 @@ export function CreateTaskComposer({
         leading: (
           <Avatar className="size-3.5">
             <AvatarImage src={p.avatar_url ?? undefined} alt={p.display_name ?? ''} />
-            <AvatarFallback className="bg-[#e5e5e5] dark:bg-surface-6 text-[7px] font-medium text-ink-body">
+            <AvatarFallback seed={p.id} className="bg-[#e5e5e5] dark:bg-surface-6 text-[7px] font-medium text-ink-body">
               {initial(p.display_name)}
             </AvatarFallback>
           </Avatar>
@@ -415,7 +415,7 @@ export function CreateTaskComposer({
                         src={assignee.avatar_url ?? undefined}
                         alt={assignee.display_name ?? ''}
                       />
-                      <AvatarFallback className="bg-[#e5e5e5] dark:bg-surface-6 text-[7px] font-medium text-ink-body">
+                      <AvatarFallback seed={assignee.id} className="bg-[#e5e5e5] dark:bg-surface-6 text-[7px] font-medium text-ink-body">
                         {initial(assignee.display_name)}
                       </AvatarFallback>
                     </Avatar>

@@ -34,7 +34,7 @@ export type JourneyRailProps = {
   active: ContractorStepDeliverable[];
   /** Count of delivered deliverables in the history below the cards. */
   deliveredCount: number;
-  profile: { displayName: string | null; email: string | null; avatarUrl: string | null };
+  profile: { id: string; displayName: string | null; email: string | null; avatarUrl: string | null };
   now: Date;
 };
 
@@ -250,7 +250,7 @@ export function JourneyRail({ active, deliveredCount, profile, now }: JourneyRai
       <div className="mt-auto flex items-center gap-2.5 pt-6">
         <span className="size-8 shrink-0 overflow-hidden rounded-full outline outline-1 -outline-offset-1 outline-wash-6">
           {/* Everyone renders the deterministic gradient avatar, not a photo. */}
-          <GradientAvatar seed={profile.displayName ?? profile.email ?? 'contractor'} />
+          <GradientAvatar seed={profile.id} label={profile.displayName ?? undefined} />
         </span>
         <span className="min-w-0">
           <span className="flex items-center gap-1.5">

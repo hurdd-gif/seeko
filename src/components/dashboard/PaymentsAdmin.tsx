@@ -661,7 +661,7 @@ export function PaymentsAdmin({ team, viewerMode = false }: PaymentsAdminProps) 
                       <div className="flex items-center gap-3 min-w-0">
                         <Avatar className="size-9 outline outline-1 -outline-offset-1 outline-wash-6">
                           <AvatarImage src={person.avatar_url ?? undefined} alt={person.display_name ?? ''} />
-                          <AvatarFallback className="bg-surface-4 text-ink-body text-[10px]">
+                          <AvatarFallback seed={person.id} className="bg-surface-4 text-ink-body text-[10px]">
                             {getInitials(person.display_name ?? '?')}
                           </AvatarFallback>
                         </Avatar>
@@ -868,7 +868,7 @@ function PaidPaymentRow({
           {hasTeamRecipient ? (
             <Avatar className="size-8 outline outline-1 -outline-offset-1 outline-wash-6">
               <AvatarImage src={payment.recipient?.avatar_url ?? undefined} />
-              <AvatarFallback className="bg-surface-4 text-ink-body text-[10px]">
+              <AvatarFallback seed={payment.recipient_id ?? payment.recipient_email ?? payment.payee_name ?? payment.id} className="bg-surface-4 text-ink-body text-[10px]">
                 {fallbackInitials}
               </AvatarFallback>
             </Avatar>
@@ -1182,7 +1182,7 @@ function PendingRequestRow({ payment, onAction }: { payment: Payment; onAction: 
         <div className="flex items-center gap-3 min-w-0">
           <Avatar className="size-8 outline outline-1 -outline-offset-1 outline-dept-wash-animation/25">
             <AvatarImage src={payment.recipient?.avatar_url ?? undefined} />
-            <AvatarFallback className="bg-dept-wash-animation/10 text-dept-ink-animation text-[10px]">
+            <AvatarFallback seed={payment.recipient_id ?? payment.recipient_email ?? payment.payee_name ?? payment.id} className="bg-dept-wash-animation/10 text-dept-ink-animation text-[10px]">
               {(payment.recipient?.display_name ?? payment.payee_name ?? payment.recipient_email ?? '?').split(' ').map(p => p[0]).join('').toUpperCase().slice(0, 2)}
             </AvatarFallback>
           </Avatar>

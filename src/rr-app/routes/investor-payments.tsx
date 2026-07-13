@@ -282,7 +282,7 @@ function InvestorPaymentsIndex({ index }: { index: InvestorPaymentsData }) {
                     <span className="w-4 shrink-0 font-mono text-xs tabular-nums text-[#b0b0b0] dark:text-ink-faintest">{idx + 1}</span>
                     <Avatar className="size-7 shrink-0">
                       <AvatarImage src={person.avatar_url ?? undefined} />
-                      <AvatarFallback className="bg-[var(--ov-chip-bg)] text-[10px] text-ink-body">
+                      <AvatarFallback seed={id} className="bg-[var(--ov-chip-bg)] text-[10px] text-ink-body">
                         {getInitials(person.name)}
                       </AvatarFallback>
                     </Avatar>
@@ -360,7 +360,7 @@ function RecentPaymentRow({
           <div className="flex min-w-0 items-center gap-3">
             <Avatar className="size-8 shrink-0">
               <AvatarImage src={payment.recipientAvatarUrl ?? undefined} />
-              <AvatarFallback className="bg-[var(--ov-chip-bg)] text-[10px] text-ink-body">
+              <AvatarFallback seed={payment.recipientId ?? payment.id} className="bg-[var(--ov-chip-bg)] text-[10px] text-ink-body">
                 {getInitials(name)}
               </AvatarFallback>
             </Avatar>
