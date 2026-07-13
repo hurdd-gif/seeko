@@ -4,11 +4,19 @@ import { createTasksRoutes } from '../tasks';
 
 const mocks = vi.hoisted(() => ({
   getServiceClient: vi.fn(),
+  getServiceClientAs: vi.fn(),
   upload: vi.fn(),
 }));
 
 vi.mock('@/lib/supabase/service', () => ({
   getServiceClient: mocks.getServiceClient,
+  // Records WHO the write was attributed to, then hands back the same fake as
+  // getServiceClient — the actor rides in a request header the fake has no use
+  // for, so the only thing worth asserting is the name it was called with.
+  getServiceClientAs: (...args: unknown[]) => {
+    mocks.getServiceClientAs(...args);
+    return mocks.getServiceClient();
+  },
 }));
 
 function createQuery(table: string, isAdmin = false) {
@@ -34,6 +42,7 @@ function createQuery(table: string, isAdmin = false) {
 describe('task attachment security', () => {
   beforeEach(() => {
     mocks.upload.mockReset();
+    mocks.getServiceClientAs.mockReset();
     mocks.getServiceClient.mockReturnValue({
       from: vi.fn((table: string) => createQuery(table)),
       storage: {
@@ -124,7 +133,11 @@ describe('DELETE /tasks/:id admin gate (requireAdminVia)', () => {
 
     expect(response.status).toBe(200);
     expect(body).toEqual({ ok: true });
-    expect(deleteTaskFn).toHaveBeenCalledWith('task-1');
+    expect(deleteTaskFn).toHaveBeenCalledWith('task-1', expect.anything());
+    // A delete is the one write the row itself can never account for afterwards:
+    // once it is gone, only the request knew who did it. The client the route
+    // hands the repo must therefore name the admin who asked.
+    expect(mocks.getServiceClientAs).toHaveBeenCalledWith('user-1');
   });
 });
 

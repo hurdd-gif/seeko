@@ -1,8 +1,10 @@
+import { attributedOnly } from '@/lib/activity-log';
 import { getServiceClient } from '@/lib/supabase/service';
 import { getInitials } from '@/lib/utils';
 import { AccessError } from '@/lib/access-error';
 import type {
   Area,
+  LinkedTask,
   Milestone,
   Notification,
   PendingExtension,
@@ -110,9 +112,7 @@ export async function loadTasksBoard(currentUser: {
       .order('name', { ascending: true }),
     // milestones isn't in the generated Database types yet — same cast as data.ts.
     (service as any).from('milestones').select(MILESTONE_SELECT).order('sort_order', { ascending: true }),
-    service
-      .from('activity_log')
-      .select('*, profiles(display_name, avatar_url)')
+    attributedOnly(service.from('activity_log').select('*, profiles(display_name, avatar_url)'))
       .order('created_at', { ascending: false })
       .limit(15),
     service
@@ -183,7 +183,53 @@ export type TaskDetailFullData = {
   currentUserId: string;
   isAdmin: boolean;
   pendingExtension: PendingExtension | null;
+  /** The tasks this task is connected to (symmetric — see fetchTaskLinks). */
+  links: LinkedTask[];
+  /**
+   * Every OTHER task, for the link picker — minus this task and minus anything
+   * already linked. Ordered newest-first (task_number desc) so the picker's
+   * default list is useful before the user types a single character.
+   */
+  linkCandidates: LinkedTask[];
 };
+
+type ServiceClient = ReturnType<typeof getServiceClient>;
+
+const LINKED_TASK_SELECT = 'id, task_number, name, status' as const;
+// Two FKs from task_links → tasks, so each embed must name its constraint or
+// PostgREST can't tell which one to follow.
+const TASK_LINK_SELECT =
+  `task_a:tasks!task_links_task_a_fkey(${LINKED_TASK_SELECT}), task_b:tasks!task_links_task_b_fkey(${LINKED_TASK_SELECT})` as const;
+
+/**
+ * The ONE place the LinkedTask[] shape is produced. Used by loadTaskDetailFull
+ * AND by both link-write routes (which return the full list after the write), so
+ * the shape cannot drift between the initial load and a post-write replacement.
+ *
+ * Links are symmetric and stored canonically (smaller uuid in task_a — see
+ * 20260713120000_task_links.sql), so "what is X connected to?" must read BOTH
+ * columns and then take whichever side ISN'T X. Which side that is depends on the
+ * uuids, not on who asked — hence the per-row id comparison rather than a fixed
+ * column.
+ */
+export async function fetchTaskLinks(
+  service: ServiceClient,
+  taskId: string,
+): Promise<LinkedTask[]> {
+  // task_links isn't in the generated Database types yet — same cast as
+  // task_milestone below.
+  const { data, error } = await (service as any)
+    .from('task_links')
+    .select(TASK_LINK_SELECT)
+    .or(`task_a.eq.${taskId},task_b.eq.${taskId}`);
+  if (error) throw error;
+
+  const rows = (data ?? []) as { task_a: LinkedTask | null; task_b: LinkedTask | null }[];
+  return rows
+    .map((row) => (row.task_a?.id === taskId ? row.task_b : row.task_a))
+    .filter((linked): linked is LinkedTask => Boolean(linked))
+    .sort((a, b) => (b.task_number ?? 0) - (a.task_number ?? 0));
+}
 
 const TASK_ACTIVITY_SELECT =
   'id, user_id, action, target, task_id, doc_id, kind, before_value, after_value, source, created_at, profiles(display_name, avatar_url)' as const;
@@ -231,7 +277,16 @@ export async function loadTaskDetailFull(
     throw new AccessError('forbidden');
   }
 
-  const [teamResult, areasResult, milestonesResult, activityResult, commentsResult, extResult] = await Promise.all([
+  const [
+    teamResult,
+    areasResult,
+    milestonesResult,
+    activityResult,
+    commentsResult,
+    extResult,
+    links,
+    candidatesResult,
+  ] = await Promise.all([
     service.from('profiles').select(TEAM_SELECT).order('display_name', { ascending: true }),
     service
       .from('areas')
@@ -240,10 +295,12 @@ export async function loadTaskDetailFull(
       .order('name', { ascending: true }),
     // task_milestone isn't in the generated Database types yet — same cast as data.ts.
     (service as any).from('task_milestone').select('milestone:milestones(*)').eq('task_id', taskId),
-    service
-      .from('activity_log')
-      .select(TASK_ACTIVITY_SELECT)
-      .eq('task_id', taskId)
+    attributedOnly(
+      service
+        .from('activity_log')
+        .select(TASK_ACTIVITY_SELECT)
+        .eq('task_id', taskId),
+    )
       .order('created_at', { ascending: false })
       .limit(50),
     service
@@ -258,6 +315,15 @@ export async function loadTaskDetailFull(
       .eq('status', 'pending')
       .limit(1)
       .maybeSingle(),
+    fetchTaskLinks(service, taskId),
+    // Picker candidates: every task but this one. The "already linked" exclusion
+    // is applied in memory below — it depends on `links`, and folding it into the
+    // query would cost a round trip by serialising two independent reads.
+    service
+      .from('tasks')
+      .select(LINKED_TASK_SELECT)
+      .neq('id', taskId)
+      .order('task_number', { ascending: false, nullsFirst: false }),
   ]);
 
   // Investors are not shown on the roster (discreet), matching fetchTeam().
@@ -292,6 +358,11 @@ export async function loadTaskDetailFull(
       }
     : null;
 
+  const linkedIds = new Set(links.map((linked) => linked.id));
+  const linkCandidates = ((candidatesResult.data ?? []) as unknown as LinkedTask[]).filter(
+    (candidate) => !linkedIds.has(candidate.id),
+  );
+
   return {
     task,
     areas,
@@ -302,5 +373,7 @@ export async function loadTaskDetailFull(
     currentUserId: currentUser.id,
     isAdmin,
     pendingExtension,
+    links,
+    linkCandidates,
   };
 }

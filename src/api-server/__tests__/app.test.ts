@@ -1,6 +1,17 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { app, createApiApp } from '../app';
 
+/** The actor the route bound its service client to. supabase-js puts global
+ *  headers on every request the client builds; postgrest-js holds them in a
+ *  `Headers` instance, which JSON.stringify()s to `{}` — read them via entries()
+ *  or the assertion passes without checking anything. */
+function actorOf(service: unknown): string | undefined {
+  const builder = (service as { from: (t: string) => { select: (c: string) => { headers: Headers } } })
+    .from('tasks')
+    .select('id');
+  return Object.fromEntries(builder.headers.entries())['x-seeko-actor'];
+}
+
 describe('API server', () => {
   afterEach(() => {
     vi.unstubAllEnvs();
@@ -798,7 +809,7 @@ describe('API server', () => {
   });
 
   it('creates a task and returns the created row', async () => {
-    const createTaskFn = vi.fn(async (fields: Record<string, unknown>) => ({
+    const createTaskFn = vi.fn(async (fields: Record<string, unknown>, _service?: unknown) => ({
       task: { id: 'task-9', name: fields.name, status: 'Todo' },
     }));
     const testApp = createApiApp({
@@ -815,7 +826,8 @@ describe('API server', () => {
 
     expect(response.status).toBe(200);
     expect(body).toEqual({ task: { id: 'task-9', name: 'New task', status: 'Todo' } });
-    expect(createTaskFn).toHaveBeenCalledWith({ name: 'New task', status: 'Todo' });
+    expect(createTaskFn).toHaveBeenCalledWith({ name: 'New task', status: 'Todo' }, expect.anything());
+    expect(actorOf(createTaskFn.mock.calls[0][1])).toBe('user-1');
   });
 
   it('requires auth before updating a task', async () => {
@@ -834,7 +846,7 @@ describe('API server', () => {
   });
 
   it('updates a task with the sanitized patch', async () => {
-    const updateTaskFn = vi.fn(async () => ({ ok: true as const }));
+    const updateTaskFn = vi.fn(async (_id: string, _patch: unknown, _service?: unknown) => ({ ok: true as const }));
     const testApp = createApiApp({
       tasksAuthResolver: async () => ({ id: 'user-1', email: 'member@example.invalid' }),
       updateTaskFn,
@@ -849,7 +861,8 @@ describe('API server', () => {
 
     expect(response.status).toBe(200);
     expect(body).toEqual({ ok: true });
-    expect(updateTaskFn).toHaveBeenCalledWith('task-1', { status: 'Done' });
+    expect(updateTaskFn).toHaveBeenCalledWith('task-1', { status: 'Done' }, expect.anything());
+    expect(actorOf(updateTaskFn.mock.calls[0][2])).toBe('user-1');
   });
 
   it('rejects a task patch that only contains unknown keys', async () => {

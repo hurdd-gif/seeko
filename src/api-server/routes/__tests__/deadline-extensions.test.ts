@@ -3,7 +3,10 @@ import { describe, expect, it, vi } from 'vitest';
 import { createWorkflowRoutes } from '../workflow';
 
 const mocks = vi.hoisted(() => ({ getServiceClient: vi.fn() }));
-vi.mock('@/lib/supabase/service', () => ({ getServiceClient: mocks.getServiceClient }));
+vi.mock('@/lib/supabase/service', () => ({
+  getServiceClient: mocks.getServiceClient,
+  getServiceClientAs: mocks.getServiceClient,
+}));
 
 // A Promise that also answers .eq() (chainably) — models `.update(...).eq(...).eq(...)`
 // and `.update(...).eq(...)` both resolving to the same result.

@@ -5,6 +5,11 @@ import '@testing-library/jest-dom';
 // off the Node env. jsdom/Node has no Supabase config loaded, and
 // createBrowserClient throws on an empty URL — so seed syntactically-valid
 // placeholders (no network is made; the values only satisfy URL/key validation).
+//
+// The service-role key is here for the same reason on the server side: the task
+// routes build an actor-bound service client (getServiceClientAs) to name who
+// performed a write, even when the repo function itself is injected, so a route
+// test that never touches Supabase still constructs one.
 {
   const proc = (globalThis as Record<string, unknown>)['process'] as
     | { env?: Record<string, string | undefined> }
@@ -13,6 +18,7 @@ import '@testing-library/jest-dom';
   if (e) {
     e['NEXT_PUBLIC_SUPABASE_URL'] ||= 'https://placeholder.supabase.co';
     e['NEXT_PUBLIC_SUPABASE_ANON_KEY'] ||= 'placeholder-anon-key';
+    e['SUPABASE_SERVICE_ROLE_KEY'] ||= 'placeholder-service-role-key';
   }
 }
 

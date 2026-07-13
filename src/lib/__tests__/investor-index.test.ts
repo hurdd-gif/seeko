@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@/lib/supabase/service', () => ({
   getServiceClient: mocks.getServiceClient,
+  getServiceClientAs: mocks.getServiceClient,
 }));
 
 function createQuery(table: string) {

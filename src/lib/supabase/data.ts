@@ -1,3 +1,4 @@
+import { attributedOnly } from '@/lib/activity-log';
 import { cache } from 'react';
 import { createClient } from './server';
 import type { Task, Area, Profile, Doc, TaskHandoff, Note, NoteSource, Priority, Milestone, TaskActivity } from '../types';
@@ -109,9 +110,9 @@ export const fetchDocsForPalette = cache(async (): Promise<PaletteDoc[]> => {
 export const fetchActivity = cache(async (limit = 20): Promise<ActivityItem[]> => {
   const supabase = await createClient();
 
-  const { data, error } = await supabase
-    .from('activity_log')
-    .select('*, profiles(display_name, avatar_url)')
+  const { data, error } = await attributedOnly(
+    supabase.from('activity_log').select('*, profiles(display_name, avatar_url)'),
+  )
     .order('created_at', { ascending: false })
     .limit(limit);
 
@@ -149,12 +150,14 @@ export const fetchTaskActivity = cache(async (
 ): Promise<TaskActivity[]> => {
   const supabase = await createClient();
 
-  const { data, error } = await (supabase as any)
-    .from('activity_log')
-    .select(
-      'id, user_id, action, target, task_id, doc_id, kind, before_value, after_value, source, created_at, profiles(display_name, avatar_url)',
-    )
-    .eq('task_id', taskId)
+  const { data, error } = await attributedOnly(
+    (supabase as any)
+      .from('activity_log')
+      .select(
+        'id, user_id, action, target, task_id, doc_id, kind, before_value, after_value, source, created_at, profiles(display_name, avatar_url)',
+      )
+      .eq('task_id', taskId),
+  )
     .order('created_at', { ascending: false })
     .limit(limit);
 

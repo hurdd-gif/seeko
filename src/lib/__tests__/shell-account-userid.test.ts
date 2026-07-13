@@ -13,7 +13,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
  */
 
 let service: { from: (table: string) => unknown };
-vi.mock('@/lib/supabase/service', () => ({ getServiceClient: () => service }));
+vi.mock('@/lib/supabase/service', () => ({
+  getServiceClient: () => service,
+  getServiceClientAs: () => service,
+}));
 
 import { loadTasksBoard } from '@/lib/tasks-board';
 import { loadActivityView } from '@/lib/dashboard-views';

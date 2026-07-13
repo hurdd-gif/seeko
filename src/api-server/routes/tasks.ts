@@ -6,6 +6,7 @@ import {
   type TasksIndexData,
 } from '@/lib/tasks-index';
 import {
+  fetchTaskLinks,
   loadTasksBoard,
   loadTaskDetailFull,
   type TasksBoardData,
@@ -13,12 +14,13 @@ import {
 } from '@/lib/tasks-board';
 import { AccessError, accessErrorStatus } from '@/lib/access-error';
 import { fetchMilestones, fetchTaskActivity } from '@/lib/supabase/data';
-import { getServiceClient } from '@/lib/supabase/service';
+import { getServiceClient, getServiceClientAs } from '@/lib/supabase/service';
 import {
   createTask as createTaskRepo,
   updateTask as updateTaskRepo,
   deleteTask as deleteTaskRepo,
   sanitizeTaskPatch,
+  type ServiceClient,
   type TaskPatch,
   type TaskRow,
 } from '@/lib/tasks-repo';
@@ -30,9 +32,18 @@ type TaskDetailLoader = (user: AuthenticatedUser, taskId: string) => Promise<Tas
 type TaskDetailFullLoader = (user: AuthenticatedUser, taskId: string) => Promise<TaskDetailFullData>;
 type TasksBoardLoader = (user: AuthenticatedUser) => Promise<TasksBoardData>;
 type AuthResolver = (c: Context) => Promise<AuthenticatedUser | null>;
-type CreateTaskFn = (fields: TaskPatch & { name: string }) => Promise<{ task: TaskRow } | { error: string }>;
-type UpdateTaskFn = (id: string, patch: TaskPatch) => Promise<{ ok: true } | { error: string }>;
-type DeleteTaskFn = (id: string) => Promise<{ ok: true; deleted?: boolean } | { error: string }>;
+// Each takes the client to write through, because that is how the ACTOR travels:
+// getServiceClientAs(user.id) stamps an x-seeko-actor header the audit triggers
+// read (see 20260713140000_activity_actor.sql). The route is the only layer that
+// knows who is asking, so the route is where the client is chosen — the repo has
+// no auth opinion and shouldn't grow one. Optional, so the injected test doubles
+// (which ignore it) still satisfy these types.
+type CreateTaskFn = (fields: TaskPatch & { name: string }, service?: ServiceClient) => Promise<{ task: TaskRow } | { error: string }>;
+type UpdateTaskFn = (id: string, patch: TaskPatch, service?: ServiceClient) => Promise<{ ok: true } | { error: string }>;
+type DeleteTaskFn = (id: string, service?: ServiceClient) => Promise<{ ok: true; deleted?: boolean } | { error: string }>;
+
+/** The service-role client that names `userId` as the actor behind the write. */
+const asActor = (userId: string) => getServiceClientAs(userId) as unknown as ServiceClient;
 
 type TasksRoutesOptions = {
   authResolver?: AuthResolver;
@@ -49,6 +60,7 @@ type TasksRoutesOptions = {
 const attachmentHits = new Map<string, { count: number; resetAt: number }>();
 const commentHits = new Map<string, { count: number; resetAt: number }>();
 const deliverableHits = new Map<string, { count: number; resetAt: number }>();
+const linkHits = new Map<string, { count: number; resetAt: number }>();
 const ALLOWED_MIME_PREFIXES = ['image/', 'video/', 'audio/', 'application/pdf', 'application/zip', 'application/x-zip', 'text/plain', 'application/octet-stream'];
 const BLOCKED_EXTENSIONS = ['.html', '.htm', '.svg', '.js', '.exe', '.bat', '.sh', '.cmd', '.msi', '.php'];
 const LONG_SIGNED_URL_EXPIRY_SEC = 365 * 24 * 60 * 60;
@@ -78,7 +90,7 @@ export function createTasksRoutes(options: TasksRoutesOptions = {}) {
       }
 
       const fields = { ...sanitizeTaskPatch(body), name: body.name.trim() };
-      const result = await createTaskFn(fields);
+      const result = await createTaskFn(fields, asActor(user.id));
       if ('error' in result) return c.json({ error: result.error }, 500);
       return c.json({ task: result.task });
     })
@@ -90,7 +102,7 @@ export function createTasksRoutes(options: TasksRoutesOptions = {}) {
       const patch = body ? sanitizeTaskPatch(body) : {};
       if (!Object.keys(patch).length) return c.json({ error: 'empty_patch' }, 400);
 
-      const result = await updateTaskFn(c.req.param('id'), patch);
+      const result = await updateTaskFn(c.req.param('id'), patch, asActor(user.id));
       if ('error' in result) return c.json({ error: result.error }, 500);
       return c.json({ ok: true });
     })
@@ -98,7 +110,7 @@ export function createTasksRoutes(options: TasksRoutesOptions = {}) {
       const guard = await requireAdminVia(c, authResolver);
       if (!guard.ok) return c.json({ error: guard.error }, guard.status);
 
-      const result = await deleteTaskFn(c.req.param('id'));
+      const result = await deleteTaskFn(c.req.param('id'), asActor(guard.user.id));
       if ('error' in result) return c.json({ error: result.error }, 500);
       return c.json({ ok: true });
     })
@@ -587,7 +599,9 @@ export function createTasksRoutes(options: TasksRoutesOptions = {}) {
         note: body.note?.trim() || null,
       } as never);
       if (insertError) return c.json({ error: 'Failed to record handoff' }, 500);
-      const { error: updateError } = await service.from('tasks').update({ assignee_id: body.toUserId } as never).eq('id', taskId);
+      // Actor-bound: this trips tasks_audit_update → an 'assignee_changed' row, and
+      // the person who handed the task off is the one who changed the assignee.
+      const { error: updateError } = await getServiceClientAs(user.id).from('tasks').update({ assignee_id: body.toUserId } as never).eq('id', taskId);
       if (updateError) return c.json({ error: 'Failed to reassign task' }, 500);
 
       await service.from('notifications').insert({
@@ -599,7 +613,115 @@ export function createTasksRoutes(options: TasksRoutesOptions = {}) {
         read: false,
       } as never);
       return c.json({ success: true });
+    })
+    // Connected tasks — symmetric, untyped links between two tasks.
+    //
+    // ANY signed-in user may link/unlink (the same rule as POST/PATCH /tasks), so
+    // these gate on authResolver, NOT requireAdminVia. The table has no
+    // authenticated write policy; the write rides the service role, as with every
+    // other task write.
+    //
+    // Both handlers return the task's FULL link list after the write, so the
+    // client replaces state outright instead of reconciling a delta.
+    .post('/tasks/:taskId/links', async (c) => {
+      const user = await authResolver(c);
+      if (!user) return c.json({ error: 'unauthorized' }, 401);
+      if (isRateLimited(linkHits, user.id, { max: 120, windowMs: 60 * 60 * 1000 })) {
+        return c.json({ error: 'Too many link changes. Try again later.' }, 429);
+      }
+
+      const taskId = normalizeTaskId(c.req.param('taskId'));
+      const body = await c.req.json().catch(() => null);
+      const linkedTaskId =
+        typeof body?.linkedTaskId === 'string' ? normalizeTaskId(body.linkedTaskId) : '';
+      if (!linkedTaskId) return c.json({ error: 'invalid_body' }, 400);
+      if (linkedTaskId === taskId) return c.json({ error: 'cannot_link_to_self' }, 400);
+
+      const service = getServiceClient();
+      if (!(await bothTasksExist(service, taskId, linkedTaskId))) {
+        return c.json({ error: 'Task not found' }, 404);
+      }
+
+      const [a, b] = canonicalPair(taskId, linkedTaskId);
+      // Idempotent by design: re-linking an already-linked pair must not blow up
+      // on the PK conflict. ignoreDuplicates turns the insert into a no-op and we
+      // return the (unchanged) list either way.
+      // task_links isn't in the generated Database types yet — same cast as
+      // tasks-board.ts uses for task_milestone.
+      const { error } = await (service as any)
+        .from('task_links')
+        .upsert(
+          { task_a: a, task_b: b, created_by: user.id },
+          { onConflict: 'task_a,task_b', ignoreDuplicates: true },
+        );
+      if (error) return c.json({ error: 'Failed to link task' }, 500);
+
+      return c.json({ links: await fetchTaskLinks(service, taskId) });
+    })
+    .delete('/tasks/:taskId/links/:linkedId', async (c) => {
+      const user = await authResolver(c);
+      if (!user) return c.json({ error: 'unauthorized' }, 401);
+      if (isRateLimited(linkHits, user.id, { max: 120, windowMs: 60 * 60 * 1000 })) {
+        return c.json({ error: 'Too many link changes. Try again later.' }, 429);
+      }
+
+      const taskId = normalizeTaskId(c.req.param('taskId'));
+      const linkedId = normalizeTaskId(c.req.param('linkedId'));
+      if (!linkedId) return c.json({ error: 'invalid_body' }, 400);
+      if (linkedId === taskId) return c.json({ error: 'cannot_link_to_self' }, 400);
+
+      const service = getServiceClient();
+      // A deleted task cascade-deletes its links, so a live link row can never
+      // point at a missing task — this 404 only ever catches a bad id, it never
+      // blocks a legitimate unlink.
+      if (!(await bothTasksExist(service, taskId, linkedId))) {
+        return c.json({ error: 'Task not found' }, 404);
+      }
+
+      const [a, b] = canonicalPair(taskId, linkedId);
+      const { error } = await (service as any)
+        .from('task_links')
+        .delete()
+        .eq('task_a', a)
+        .eq('task_b', b);
+      if (error) return c.json({ error: 'Failed to unlink task' }, 500);
+
+      return c.json({ links: await fetchTaskLinks(service, taskId) });
     });
+}
+
+/**
+ * Canonical ordering, per 20260713120000_task_links.sql: the smaller uuid is
+ * ALWAYS task_a. Sorting here is the whole mechanism by which (A,B) and (B,A) are
+ * the same row.
+ *
+ * Get it wrong and the failure is asymmetric and nasty: the INSERT trips the
+ * CHECK constraint loudly, but the DELETE just matches zero rows — no error, no
+ * unlink, a button that does nothing.
+ */
+function canonicalPair(idA: string, idB: string): [string, string] {
+  const [a, b] = [idA, idB].sort();
+  return [a, b];
+}
+
+/**
+ * Postgres stores uuids lowercase, so every id the client holds came back
+ * lowercase — but a hand-rolled or hand-edited uppercase id would sort
+ * differently in JS than it compares in Postgres, silently breaking the canonical
+ * pairing above. Normalising first keeps the JS sort and the SQL CHECK agreeing.
+ */
+function normalizeTaskId(id: string): string {
+  return id.trim().toLowerCase();
+}
+
+/** One round trip, not two: a pair of ids is either both present or it isn't. */
+async function bothTasksExist(
+  service: ReturnType<typeof getServiceClient>,
+  idA: string,
+  idB: string,
+): Promise<boolean> {
+  const { data } = await service.from('tasks').select('id').in('id', [idA, idB]);
+  return (data ?? []).length === 2;
 }
 
 function sanitizeFileName(name: string) {

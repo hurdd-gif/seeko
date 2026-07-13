@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({ getServiceClient: vi.fn() }));
-vi.mock('@/lib/supabase/service', () => ({ getServiceClient: mocks.getServiceClient }));
+vi.mock('@/lib/supabase/service', () => ({
+  getServiceClient: mocks.getServiceClient,
+  getServiceClientAs: mocks.getServiceClient,
+}));
 
 import { loadTaskDetailFull } from '../tasks-board';
 
@@ -47,6 +50,19 @@ const TEAM = [
 const AREAS: unknown[] = [];
 const MILESTONE_ROWS: unknown[] = [];
 const ACTIVITY_ROWS: unknown[] = [];
+
+// Connected tasks. TASK_ROW ('task-1') is linked to 'task-2'; 'task-3' is the
+// only remaining candidate for the picker.
+const LINKED_TASK_2 = { id: 'task-2', task_number: 8, name: 'Wire the API', status: 'Todo' };
+const LINKED_TASK_3 = { id: 'task-3', task_number: 9, name: 'Write the docs', status: 'Backlog' };
+// task_links rows arrive in canonical storage order (smaller uuid in task_a) with
+// both sides joined — fetchTaskLinks picks whichever side ISN'T the task we asked about.
+const LINK_ROWS = [
+  { task_a: { id: 'task-1', task_number: 7, name: 'Ship banner', status: 'In Progress' }, task_b: LINKED_TASK_2 },
+];
+// The candidates query is `tasks.select(...).neq('id', taskId)` — every task but
+// this one. The already-linked exclusion happens in memory, so task-2 is here.
+const CANDIDATE_ROWS = [LINKED_TASK_3, LINKED_TASK_2];
 const COMMENT_ROWS: Record<string, unknown>[] = [
   {
     id: 'comment-1',
@@ -82,7 +98,23 @@ function serviceMock(extRow: Record<string, unknown> | null) {
       }
       if (table === 'tasks') {
         return {
-          select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: TASK_ROW, error: null }) }) }),
+          select: () => ({
+            // The task itself: .select(...).eq('id', ...).maybeSingle()
+            eq: () => ({ maybeSingle: async () => ({ data: TASK_ROW, error: null }) }),
+            // Link-picker candidates: .select(...).neq('id', taskId).order('task_number', ...)
+            neq: () => ({
+              order: () => ({
+                then: (resolve: (v: unknown) => unknown) =>
+                  Promise.resolve({ data: CANDIDATE_ROWS, error: null }).then(resolve),
+              }),
+            }),
+          }),
+        };
+      }
+      if (table === 'task_links') {
+        // Symmetric read: .select(<both sides joined>).or('task_a.eq.X,task_b.eq.X')
+        return {
+          select: () => ({ or: async () => ({ data: LINK_ROWS, error: null }) }),
         };
       }
       if (table === 'areas') {
@@ -110,11 +142,15 @@ function serviceMock(extRow: Record<string, unknown> | null) {
       if (table === 'activity_log') {
         return {
           select: () => ({
+            // .not() is attributedOnly (lib/activity-log.ts) — the feed only
+            // renders events it can attribute to a person.
             eq: () => ({
-              order: () => ({
-                limit: () => ({
-                  then: (resolve: (v: unknown) => unknown) =>
-                    Promise.resolve({ data: ACTIVITY_ROWS, error: null }).then(resolve),
+              not: () => ({
+                order: () => ({
+                  limit: () => ({
+                    then: (resolve: (v: unknown) => unknown) =>
+                      Promise.resolve({ data: ACTIVITY_ROWS, error: null }).then(resolve),
+                  }),
                 }),
               }),
             }),
@@ -199,5 +235,21 @@ describe('loadTaskDetailFull pendingExtension', () => {
       reactions: [{ id: 'r-1', emoji: '👍', user_id: 'admin-1' }],
       attachments: [],
     });
+  });
+
+  it('resolves each link row to the OTHER task, and excludes self + linked from the picker', async () => {
+    mocks.getServiceClient.mockReturnValue(serviceMock(null));
+
+    const data = await loadTaskDetailFull({ id: 'admin-1' }, 'task-1');
+
+    // The link row holds task-1 on one side and task-2 on the other; the list is
+    // "what task-1 is connected to", so only task-2 comes back.
+    expect(data.links).toEqual([
+      { id: 'task-2', task_number: 8, name: 'Wire the API', status: 'Todo' },
+    ]);
+    // task-1 is excluded by the query, task-2 by the already-linked filter.
+    expect(data.linkCandidates).toEqual([
+      { id: 'task-3', task_number: 9, name: 'Write the docs', status: 'Backlog' },
+    ]);
   });
 });

@@ -53,7 +53,10 @@ function makeFakeService(seed: Row[] = []) {
 }
 
 const fake = makeFakeService();
-vi.mock('@/lib/supabase/service', () => ({ getServiceClient: () => fake }));
+vi.mock('@/lib/supabase/service', () => ({
+  getServiceClient: () => fake,
+  getServiceClientAs: () => fake,
+}));
 
 import {
   stagePendingAction,

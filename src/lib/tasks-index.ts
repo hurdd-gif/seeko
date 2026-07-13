@@ -1,3 +1,4 @@
+import { attributedOnly } from '@/lib/activity-log';
 import { getServiceClient } from '@/lib/supabase/service';
 import { AccessError } from '@/lib/access-error';
 import type { Database } from '@/lib/supabase/database.types';
@@ -161,10 +162,12 @@ export async function loadTaskDetail(
     throw new AccessError('forbidden');
   }
 
-  const { data: activity } = await service
-    .from('activity_log')
-    .select('id, action, target, created_at')
-    .eq('task_id', taskId)
+  const { data: activity } = await attributedOnly(
+    service
+      .from('activity_log')
+      .select('id, action, target, created_at')
+      .eq('task_id', taskId),
+  )
     .order('created_at', { ascending: false })
     .limit(50);
 

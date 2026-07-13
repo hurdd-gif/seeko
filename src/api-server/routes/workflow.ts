@@ -7,7 +7,7 @@ import { isValidNotificationKind } from '@/lib/notification-kinds';
 import { buildFallbackPDF } from '@/lib/investor-fallback-pdf';
 import type { InvestorSummaryPDFData } from '@/lib/investor-summary-pdf-data';
 import { fetchActivity, fetchAllTasksWithAssignees, fetchAreas, fetchProfile, fetchTeam } from '@/lib/supabase/data';
-import { getServiceClient } from '@/lib/supabase/service';
+import { getServiceClient, getServiceClientAs } from '@/lib/supabase/service';
 import type { Area, NotificationKind } from '@/lib/types';
 import { getAuthenticatedUser } from '../supabase';
 import { getClientIp, isRateLimited, requireAdmin, requireUser, type AuthGuard } from '../auth-utils';
@@ -225,7 +225,11 @@ export function createWorkflowRoutes(options: WorkflowRoutesOptions = {}) {
         .eq('status', 'pending');
       if (error) return c.json({ error: 'Failed to update extension request' }, 500);
       if (body.action === 'approve') {
-        const { error: taskError } = await service.from('tasks').update({ deadline: ext.requested_deadline } as never).eq('id', ext.task_id);
+        // Actor-bound. `deadline` has no audit branch today, so this writes no
+        // activity row — but the actor rides along anyway, so that the day someone
+        // adds a deadline_changed branch to tasks_audit_update it is already
+        // attributed instead of quietly producing the next generation of orphans.
+        const { error: taskError } = await getServiceClientAs(admin.user.id).from('tasks').update({ deadline: ext.requested_deadline } as never).eq('id', ext.task_id);
         if (taskError) {
           await service.from('deadline_extensions').update({ status: 'pending', decided_by: null, decided_at: null } as never).eq('id', c.req.param('id'));
           return c.json({ error: 'Failed to update task deadline' }, 500);

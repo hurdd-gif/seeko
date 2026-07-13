@@ -1,3 +1,4 @@
+import { attributedOnly } from '@/lib/activity-log';
 import { getServiceClient } from '@/lib/supabase/service';
 import { AccessError } from '@/lib/access-error';
 import type { Database } from '@/lib/supabase/database.types';
@@ -163,9 +164,7 @@ export async function loadInvestorOverview(currentUser: { id: string }): Promise
       .select(AREA_SELECT)
       .order('sort_order', { ascending: true })
       .order('name', { ascending: true }),
-    service
-      .from('activity_log')
-      .select('id, action, target, created_at, task_id, doc_id')
+    attributedOnly(service.from('activity_log').select('id, action, target, created_at, task_id, doc_id'))
       .order('created_at', { ascending: false })
       .limit(30),
     // milestones/task_milestone aren't in the generated database types yet —

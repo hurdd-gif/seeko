@@ -13,6 +13,9 @@ beforeEach(() => {
 
 vi.mock('@/lib/supabase/service', () => ({
   getServiceClient: mocks.getServiceClient,
+  // An actor-bound client differs from the plain one only by a request header
+  // the DB reads; to a fake with no DB behind it they are the same client.
+  getServiceClientAs: mocks.getServiceClient,
 }));
 
 vi.mock('../supabase', async (importOriginal) => {

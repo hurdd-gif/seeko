@@ -1,3 +1,4 @@
+import { attributedOnly } from '@/lib/activity-log';
 import { getServiceClient } from '@/lib/supabase/service';
 import { AccessError } from '@/lib/access-error';
 import type { Database } from '@/lib/supabase/database.types';
@@ -113,9 +114,11 @@ export type ProgressIndexData = {
 export async function loadActivityIndex(currentUser: { id: string }): Promise<ActivityIndexData> {
   const { profile } = await loadDashboardProfile(currentUser.id);
   const service = getServiceClient();
-  const { data, error } = await service
-    .from('activity_log')
-    .select('id, user_id, action, target, created_at, task_id, doc_id, profiles(display_name, avatar_url)')
+  const { data, error } = await attributedOnly(
+    service
+      .from('activity_log')
+      .select('id, user_id, action, target, created_at, task_id, doc_id, profiles(display_name, avatar_url)'),
+  )
     .order('created_at', { ascending: false })
     .limit(50);
 

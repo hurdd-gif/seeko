@@ -1,3 +1,4 @@
+import { attributedOnly } from '@/lib/activity-log';
 import { getServiceClient } from '@/lib/supabase/service';
 import { getInitials } from '@/lib/utils';
 import { AccessError } from '@/lib/access-error';
@@ -188,9 +189,7 @@ export async function loadActivityView(currentUser: {
   const heatmapStart = new Date(Date.now() - HEATMAP_DAYS * 24 * 60 * 60 * 1000);
 
   const [feedRes, heatmapRes, teamRes] = await Promise.all([
-    service
-      .from('activity_log')
-      .select(ACTIVITY_SELECT)
+    attributedOnly(service.from('activity_log').select(ACTIVITY_SELECT))
       .order('created_at', { ascending: false })
       .limit(50),
     // Timestamps only — bucketed into daily counts below (supabase-js has no

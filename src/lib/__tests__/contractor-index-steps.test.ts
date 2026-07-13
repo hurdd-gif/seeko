@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({ getServiceClient: vi.fn() }));
-vi.mock('@/lib/supabase/service', () => ({ getServiceClient: mocks.getServiceClient }));
+vi.mock('@/lib/supabase/service', () => ({
+  getServiceClient: mocks.getServiceClient,
+  getServiceClientAs: mocks.getServiceClient,
+}));
 
 import { loadContractorOverview } from '../contractor-index';
 

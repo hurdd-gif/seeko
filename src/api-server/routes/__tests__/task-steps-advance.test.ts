@@ -3,7 +3,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createTasksRoutes } from '../tasks';
 
 const mocks = vi.hoisted(() => ({ getServiceClient: vi.fn() }));
-vi.mock('@/lib/supabase/service', () => ({ getServiceClient: mocks.getServiceClient }));
+vi.mock('@/lib/supabase/service', () => ({
+  getServiceClient: mocks.getServiceClient,
+  getServiceClientAs: mocks.getServiceClient,
+}));
 
 type Step = { id: string; state: 'pending' | 'in_review' | 'done'; sort_order: number };
 

@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { requireAdmin, getAdminProfile, getClientIp, isRateLimited } from '../auth-utils';
-import { getServiceClient } from '@/lib/supabase/service';
+import { getServiceClient, getServiceClientAs } from '@/lib/supabase/service';
 import { sendInviteEmail } from '@/lib/email';
 import type { Department } from '@/lib/types';
 
@@ -107,7 +107,11 @@ export function createAdminRoutes() {
       if (authError) return c.json({ error: 'Incorrect password' }, 403);
 
       const service = getServiceClient();
-      await service.from('tasks').update({ assignee_id: null }).eq('assignee_id', userId);
+      // Actor-bound: unassigning the departing user's tasks trips tasks_audit_update
+      // → 'assignee_changed' rows. The admin running the deletion is who did that;
+      // without the actor these land as the anonymous rows this whole seam exists to
+      // stop. (The departing user obviously cannot be the actor — they are the object.)
+      await getServiceClientAs(admin.user.id).from('tasks').update({ assignee_id: null }).eq('assignee_id', userId);
       await service.from('task_comment_reactions').delete().eq('user_id', userId);
       await service.from('task_comments').delete().eq('user_id', userId);
       await service.from('task_handoffs').delete().eq('from_user_id', userId);

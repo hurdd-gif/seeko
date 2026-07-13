@@ -1,5 +1,5 @@
 import type { WriteTool, ToolContext, StageResult, CommitResult } from '../tool-contract';
-import { getServiceClient } from '@/lib/supabase/service';
+import { getServiceClientAs } from '@/lib/supabase/service';
 import {
   createTask as createTaskRepo,
   updateTask as updateTaskRepo,
@@ -13,14 +13,24 @@ import {
   resolveStaffRef,
 } from '../entity-index';
 import { AgentActionError } from '../errors';
-import {
-  normalizeDueDate,
-  markLatestTaskActivityAsEko,
-  hideLatestHumanAssignedEcho,
-  markLatestDeletedTaskActivityAsEko,
-} from '../eko-activity';
+import { normalizeDueDate } from '../eko-activity';
+import type { ServiceClient } from '@/lib/tasks-repo';
 
 const PRIORITIES: readonly Priority[] = ['Urgent', 'High', 'Medium', 'Low'];
+
+/**
+ * The service-role client every EKO write goes through: it names the approving
+ * admin as the actor and brands the write 'eko'. The audit triggers read both
+ * off the request and stamp them onto activity_log in the same statement that
+ * creates the row.
+ *
+ * This replaces three retro-patch helpers that used to run AFTER the write —
+ * SELECT the newest activity row for this task, then UPDATE source and user_id
+ * onto it. That was a read-modify-write against a row they never saw created:
+ * two writes to one task in the same moment and the brand landed on the wrong
+ * event. Attribution belongs in the write, not in a follow-up query.
+ */
+const asEko = (userId: string) => getServiceClientAs(userId, 'eko') as unknown as ServiceClient;
 
 function asString(input: Record<string, unknown>, key: string): string {
   const value = input[key];
@@ -75,10 +85,9 @@ const createTask: WriteTool = {
       priority: args.priority,
       deadline: (args.deadline as string | null) ?? null,
       description: null,
-    });
+    }, asEko(user.id));
     if ('error' in result) throw new AgentActionError('EKO could not create the issue.', 500);
     const created = result.task as unknown as { id: string; task_number?: number | null } | null;
-    if (created) await markLatestTaskActivityAsEko({ taskId: created.id, kind: 'created', userId: user.id });
     return {
       reply: `Created issue "${args.name}" in ${args.status}.`,
       target: created
@@ -115,9 +124,8 @@ const setTaskStatus: WriteTool = {
     };
   },
   async commit(args, user): Promise<CommitResult> {
-    const result = await updateTaskRepo(String(args.taskId), { status: args.status as TaskStatus });
+    const result = await updateTaskRepo(String(args.taskId), { status: args.status as TaskStatus }, asEko(user.id));
     if ('error' in result) throw new AgentActionError('EKO could not update the issue status.', 500);
-    await markLatestTaskActivityAsEko({ taskId: String(args.taskId), kind: 'status_changed', userId: user.id });
     return {
       reply: `Moved "${args.taskName}" to ${args.status}.`,
       target: { kind: 'task', taskId: String(args.taskId), taskNumber: (args.taskNumber as number | null) ?? null, name: String(args.taskName), action: 'status' },
@@ -155,10 +163,12 @@ const setTaskAssignee: WriteTool = {
     };
   },
   async commit(args, user): Promise<CommitResult> {
-    const result = await updateTaskRepo(String(args.taskId), { assignee_id: args.assigneeId });
+    // The trigger writes both a typed `assignee_changed` row and a legacy
+    // `Assigned` echo. EKO used to delete the echo behind itself; it no longer
+    // needs to — ActivityView drops any legacy echo that has a typed twin, for
+    // human and agent writes alike.
+    const result = await updateTaskRepo(String(args.taskId), { assignee_id: args.assigneeId }, asEko(user.id));
     if ('error' in result) throw new AgentActionError('EKO could not assign the issue.', 500);
-    await markLatestTaskActivityAsEko({ taskId: String(args.taskId), kind: 'assignee_changed', userId: user.id });
-    await hideLatestHumanAssignedEcho({ taskId: String(args.taskId), taskName: String(args.taskName), userId: user.id });
     return {
       reply: `Assigned "${args.taskName}" to ${args.assigneeName}.`,
       target: { kind: 'task', taskId: String(args.taskId), taskNumber: (args.taskNumber as number | null) ?? null, name: String(args.taskName), action: 'assignee' },
@@ -190,9 +200,8 @@ const setTaskPriority: WriteTool = {
     };
   },
   async commit(args, user): Promise<CommitResult> {
-    const result = await updateTaskRepo(String(args.taskId), { priority: args.priority as Priority });
+    const result = await updateTaskRepo(String(args.taskId), { priority: args.priority as Priority }, asEko(user.id));
     if ('error' in result) throw new AgentActionError('EKO could not update the issue priority.', 500);
-    await markLatestTaskActivityAsEko({ taskId: String(args.taskId), action: 'Changed priority', userId: user.id });
     return {
       reply: `Set "${args.taskName}" to ${args.priority} priority.`,
       target: { kind: 'task', taskId: String(args.taskId), taskNumber: (args.taskNumber as number | null) ?? null, name: String(args.taskName), action: 'priority' },
@@ -227,11 +236,13 @@ const setTaskDue: WriteTool = {
     };
   },
   async commit(args, user): Promise<CommitResult> {
-    const service = getServiceClient();
     const deadline = (args.deadline as string | null) ?? null;
-    const result = await updateTaskRepo(String(args.taskId), { deadline });
+    const result = await updateTaskRepo(String(args.taskId), { deadline }, asEko(user.id));
     if ('error' in result) throw new AgentActionError('EKO could not update the issue due date.', 500);
-    await service.from('activity_log').insert({
+    // The only activity row EKO still writes by hand: `deadline` has no audit
+    // trigger, so nothing else would record it. It carries its own actor and
+    // brand rather than reading them back off the request.
+    await getServiceClientAs(user.id, 'eko').from('activity_log').insert({
       user_id: user.id,
       action: 'Due date changed',
       target: deadline ? `task: ${args.taskName} → ${deadline}` : `task: ${args.taskName} → no date`,
@@ -269,12 +280,11 @@ const deleteTask: WriteTool = {
     };
   },
   async commit(args, user): Promise<CommitResult> {
-    const result = await deleteTaskRepo(String(args.taskId));
+    const result = await deleteTaskRepo(String(args.taskId), asEko(user.id));
     if ('error' in result) throw new AgentActionError('EKO could not delete the issue.', 500);
     if (!result.deleted) {
       return { reply: `"${args.taskName}" was already removed. No changes were made.` };
     }
-    await markLatestDeletedTaskActivityAsEko({ taskName: String(args.taskName), userId: user.id });
     return { reply: `Deleted "${args.taskName}" from Issues.` };
   },
 };
