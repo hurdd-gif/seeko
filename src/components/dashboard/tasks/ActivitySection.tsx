@@ -121,10 +121,14 @@ export function ActivitySection({
   // gap-1.5 (6px), not gap-2.5: the rows are only 22px tall, so 10px of air
   // between them was ~45% of a row — the feed read as five separate things
   // rather than one list, and it cost 40px of rail height.
+  // showActorName: the rail was rendering the avatar but not the name, so a human
+  // row read "moved from Todo to Done" — actorless — while EKO's rows right next
+  // to it read "EKO moved from…". Who did it is the first thing you want from a
+  // feed, and the asymmetry made EKO look like the only one working.
   return (
     <ol className="flex flex-col gap-1.5">
       {visible.map((a) => (
-        <ActivityEventRow key={a.id} activity={a} resolveName={resolveName} />
+        <ActivityEventRow key={a.id} activity={a} resolveName={resolveName} showActorName />
       ))}
     </ol>
   );
