@@ -237,6 +237,11 @@ export type Payment = {
   payee_name?: string | null;
   recipient?: Pick<Profile, 'id' | 'display_name' | 'avatar_url' | 'department' | 'paypal_email'>;
   items?: PaymentItem[];
+  /**
+   * Superseded amounts, newest first once sorted. The payment's own `amount` is
+   * always the current one — these are history, and are never summed.
+   */
+  adjustments?: PaymentAdjustment[];
 };
 
 export type PaymentItem = {
@@ -245,6 +250,16 @@ export type PaymentItem = {
   task_id?: string;
   label: string;
   amount: number;
+};
+
+export type PaymentAdjustment = {
+  id: string;
+  payment_id: string;
+  previous_amount: number;
+  new_amount: number;
+  note?: string | null;
+  adjusted_by: string;
+  created_at: string;
 };
 
 export type NotificationKind =
