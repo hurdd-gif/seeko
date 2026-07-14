@@ -36,6 +36,7 @@ const verifyAttempts = new Map<string, number[]>();
 const MAX_PAYMENT_AMOUNT = 50_000;
 const ALLOWED_TRANSPORTS = new Set(['usb', 'nfc', 'ble', 'internal', 'hybrid']);
 const REFUND_ERROR = 'Refund amount must be between $0.00 and the payment amount';
+const ADJUST_ERROR = 'Enter a different amount between $0.01 and $50,000.00';
 
 export function createPaymentsRoutes(options: PaymentsRoutesOptions = {}) {
   const paymentsAuthResolver = options.paymentsAuthResolver ?? requireHonoPaymentsAdminToken;
@@ -60,7 +61,7 @@ export function createPaymentsRoutes(options: PaymentsRoutesOptions = {}) {
       const { supabase, isAdmin, isInvestor } = guard.auth;
       let query = supabase
         .from('payments')
-        .select('*, recipient:profiles!payments_recipient_id_fkey(id, display_name, avatar_url, department, paypal_email), items:payment_items(*)')
+        .select('*, recipient:profiles!payments_recipient_id_fkey(id, display_name, avatar_url, department, paypal_email), items:payment_items(*), adjustments:payment_adjustments(*)')
         .order('created_at', { ascending: false });
 
       if (isInvestor && !isAdmin) query = query.eq('status', 'paid');
@@ -138,16 +139,54 @@ export function createPaymentsRoutes(options: PaymentsRoutesOptions = {}) {
         status?: 'paid' | 'cancelled';
         refund_amount?: number;
         refund_note?: string | null;
+        amount?: number;
+        adjustment_note?: string | null;
       } | null;
       if (!body) return c.json({ error: 'Invalid JSON' }, 400);
 
       const id = c.req.param('id');
       const { data: current } = await guard.auth.supabase
         .from('payments')
-        .select('id, status, amount, recipient_id')
+        .select('id, status, amount, recipient_id, refund_amount')
         .eq('id', id)
         .single();
       if (!current) return c.json({ error: 'Payment not found' }, 404);
+
+      // Amount adjustment — a restatement, not a second payout. adjust_payment
+      // appends the history row and moves payments.amount inside one transaction,
+      // so the ledger can never half-update. These checks exist for the message;
+      // the function re-checks every one of them for the guarantee.
+      if (body.amount !== undefined) {
+        if (current.status !== 'paid') {
+          return c.json({ error: 'Only paid payments can be adjusted' }, 409);
+        }
+        if (Number(current.refund_amount ?? 0) > 0) {
+          return c.json({ error: 'Remove the refund before adjusting' }, 409);
+        }
+
+        const nextAmount = Number(body.amount);
+        if (
+          !Number.isFinite(nextAmount) ||
+          nextAmount <= 0 ||
+          nextAmount > MAX_PAYMENT_AMOUNT ||
+          nextAmount === Number(current.amount)
+        ) {
+          return c.json({ error: ADJUST_ERROR }, 400);
+        }
+
+        const { data, error } = await guard.auth.supabase.rpc('adjust_payment', {
+          p_payment_id: id,
+          p_amount: nextAmount,
+          p_note: body.adjustment_note?.trim() || null,
+          p_actor: guard.auth.user.id,
+        } as never);
+
+        if (error || !data) {
+          console.error('[hono payments/:id] adjust failed:', error);
+          return c.json({ error: 'Failed to adjust payment' }, 500);
+        }
+        return c.json(data);
+      }
 
       if (body.refund_amount !== undefined) {
         if (current.status !== 'paid') {
