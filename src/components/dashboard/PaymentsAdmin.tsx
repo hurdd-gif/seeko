@@ -18,7 +18,7 @@ import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import {
   Users, CheckCircle2,
   CreditCard, Plus, ChevronDown, ChevronUp, ChevronLeft, Check, X as XIcon,
-  FileText, RotateCw, Ban, Loader2,
+  FileText, RotateCw, Ban, Loader2, Pencil,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -784,6 +784,8 @@ export function PaidPaymentRow({
   const [refundLoading, setRefundLoading] = useState(false);
   const [refundOpen, setRefundOpen] = useState(false);
   const [refundMenu, setRefundMenu] = useState<{ x: number; y: number } | null>(null);
+  const [adjustLoading, setAdjustLoading] = useState(false);
+  const [adjustOpen, setAdjustOpen] = useState(false);
   const paypalEmail = payment.recipient?.paypal_email ?? externalPaypalEmail;
   const showPaypalEmail = Boolean(paypalEmail) && !readOnly;
   const firstItemLabel = payment.items?.[0]?.label?.trim();
@@ -835,6 +837,30 @@ export function PaidPaymentRow({
       return false;
     } finally {
       setRefundLoading(false);
+    }
+  }
+
+  async function updateAmount(amount: number, adjustment_note: string | null): Promise<boolean> {
+    setAdjustLoading(true);
+    try {
+      const res = await fetch(`/api/payments/${payment.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount, adjustment_note }),
+      });
+      if (res.ok) {
+        toast.success('Amount adjusted');
+        onAction();
+        return true;
+      }
+      const data = await res.json();
+      toast.error(data.error ?? 'Failed to adjust amount');
+      return false;
+    } catch {
+      toast.error('Network error');
+      return false;
+    } finally {
+      setAdjustLoading(false);
     }
   }
 
@@ -1059,11 +1085,28 @@ export function PaidPaymentRow({
               onClick={(e) => e.stopPropagation()}
             >
               <div className="px-2.5 py-2">
-                <p className="text-xs font-medium text-ink-body">Refund status</p>
+                <p className="text-xs font-medium text-ink-body tabular-nums">{fmt(amount)}</p>
                 <p className="mt-0.5 truncate text-xs text-ink-muted">
-                  {hasRefund ? `${fmt(refundAmount)} recorded` : 'No refund recorded'}
+                  {hasRefund
+                    ? `${fmt(refundAmount)} refunded`
+                    : isAdjusted
+                      ? `Adjusted ${adjustments.length}×`
+                      : 'No refund recorded'}
                 </p>
               </div>
+              {/* The corrective action leads; the destructive ones follow. */}
+              <button
+                type="button"
+                className="flex w-full items-center gap-2.5 rounded-[10px] px-2.5 py-2 text-left text-xs font-medium text-seeko-accent-ink transition-[background-color,transform] hover:bg-seeko-accent/10 active:scale-[0.98] disabled:opacity-50"
+                onClick={() => { setRefundMenu(null); setAdjustOpen(true); }}
+                disabled={adjustLoading || hasRefund}
+                title={hasRefund ? 'Remove the refund before adjusting' : undefined}
+              >
+                <span className="flex size-6 shrink-0 items-center justify-center rounded-[9px] bg-seeko-accent/10">
+                  <Pencil className="size-3.5" />
+                </span>
+                Adjust amount
+              </button>
               <button
                 type="button"
                 className="flex w-full items-center gap-2.5 rounded-[10px] px-2.5 py-2 text-left text-xs font-medium text-[#7a5a00] dark:text-dept-ink-animation transition-[background-color,transform] hover:bg-dept-wash-animation/10 active:scale-[0.98] disabled:opacity-50"
@@ -1111,6 +1154,13 @@ export function PaidPaymentRow({
         initialNote={payment.refund_note ?? ''}
         loading={refundLoading}
         onSubmit={updateRefund}
+      />
+      <AdjustDialog
+        open={adjustOpen}
+        onOpenChange={setAdjustOpen}
+        current={amount}
+        loading={adjustLoading}
+        onSubmit={updateAmount}
       />
     </div>
   );
@@ -1195,6 +1245,97 @@ function RefundDialog({ open, onOpenChange, max, initialAmount, initialNote, loa
           <Button type="submit" className={cn('gap-1.5', DIALOG_SAVE)} disabled={loading}>
             {loading && <Loader2 className="size-3.5 animate-spin" />}
             Refund
+          </Button>
+        </div>
+      </form>
+    </Dialog>
+  );
+}
+
+/* ── Adjust Dialog (correct a recorded amount; the old one stays on the ledger) ──
+   Mirrors RefundDialog's shape deliberately: the two sit in the same menu, and
+   siblings that behave differently read as two different products. */
+function AdjustDialog({ open, onOpenChange, current, loading, onSubmit }: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  current: number;
+  loading: boolean;
+  onSubmit: (amount: number, note: string | null) => Promise<boolean>;
+}) {
+  const [amount, setAmount] = useState('');
+  const [note, setNote] = useState('');
+  const [error, setError] = useState<string | null>(null);
+
+  // Re-seed each time it opens — `current` moves as adjustments land.
+  useEffect(() => {
+    if (open) {
+      setAmount(String(current));
+      setNote('');
+      setError(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const parsed = Number(amount);
+    if (!amount.trim() || !Number.isFinite(parsed) || parsed <= 0 || parsed > 50_000) {
+      setError('Enter an amount between $0.01 and $50,000.00.');
+      return;
+    }
+    if (parsed === current) {
+      setError('Enter a different amount — this is the current one.');
+      return;
+    }
+    const ok = await onSubmit(parsed, note.trim() || null);
+    if (ok) onOpenChange(false);
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange} contentClassName="max-w-sm" light>
+      <DialogHeader>
+        <DialogTitle>Adjust amount</DialogTitle>
+        <p className="text-[13px] text-ink-muted">
+          {fmt(current)} stays on the ledger as a superseded entry. Totals count only the new amount.
+        </p>
+      </DialogHeader>
+      <DialogClose onClose={() => onOpenChange(false)} />
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <label className="flex flex-col gap-1.5">
+          <span className="text-xs font-medium text-ink-body">New amount</span>
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-ink-faint">$</span>
+            <input
+              type="number"
+              min={0}
+              step="0.01"
+              value={amount}
+              onChange={(e) => { setAmount(e.target.value); setError(null); }}
+              autoFocus
+              className={`flex h-9 w-full pl-7 pr-3 text-sm tabular-nums focus-visible:outline-none ${LIGHT_INPUT} ${error ? 'border-danger focus-visible:ring-danger/30' : ''}`}
+            />
+          </div>
+          {error && <span className="text-[11px] text-danger">{error}</span>}
+        </label>
+        <label className="flex flex-col gap-1.5">
+          <span className="text-xs font-medium text-ink-body">
+            Reason <span className="font-normal text-ink-faint">(optional)</span>
+          </span>
+          <input
+            type="text"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Why the amount changed"
+            className={`flex h-9 w-full px-3 text-sm focus-visible:outline-none ${LIGHT_INPUT}`}
+          />
+        </label>
+        <div className="flex justify-end gap-2 pt-1">
+          <Button type="button" variant="ghost" className={DIALOG_CANCEL} onClick={() => onOpenChange(false)} disabled={loading}>
+            Cancel
+          </Button>
+          <Button type="submit" className={cn('gap-1.5', DIALOG_SAVE)} disabled={loading}>
+            {loading && <Loader2 className="size-3.5 animate-spin" />}
+            Save adjustment
           </Button>
         </div>
       </form>
