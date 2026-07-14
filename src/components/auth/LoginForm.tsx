@@ -67,6 +67,7 @@ import {
 } from '@/lib/auth-method-memory';
 import { InviteCodeForm } from '@/components/auth/InviteCodeForm';
 import { useHaptics } from '@/components/HapticsProvider';
+import { ENTRANCE_KEYS, hasPlayedEntrance, markEntrancePlayed } from '@/lib/entrance-once';
 import { springs } from '@/lib/motion';
 import { resolvePostLoginDestination, type MinimalSupabase } from '@/lib/post-login-destination';
 import { cn } from '@/lib/utils';
@@ -85,8 +86,11 @@ const TIMING = {
 };
 
 /* One storyboard per browser session: replaying the entrance on every
- * bounce back to /login makes the page feel slower than it is. */
-const ENTRANCE_PLAYED_KEY = 'seeko-login-entrance-played';
+ * bounce back to /login makes the page feel slower than it is. The card can't
+ * use the useEntranceOnce hook — it deliberately does NOT flag the session when
+ * it arrives under a view transition (see the effect below) — so it drives the
+ * same storage with the raw helpers. */
+const ENTRANCE_PLAYED_KEY = ENTRANCE_KEYS.loginCard;
 
 /* Deliberately loose — this only decides whether a field is DONE enough to skip
  * the caret past it. Real verification is the server's job; a stricter pattern
@@ -451,21 +455,12 @@ export function LoginForm({ initialError = null, skipEntrance = false }: LoginFo
     // play it.
     if (skipEntrance) return;
 
-    let alreadyPlayed = false;
-    try {
-      alreadyPlayed = sessionStorage.getItem(ENTRANCE_PLAYED_KEY) !== null;
-    } catch {
-      // Storage blocked: play the entrance, it just won't be remembered.
-    }
-    if (reduceMotion || alreadyPlayed) {
+    // Storage blocked: play the entrance, it just won't be remembered.
+    if (reduceMotion || hasPlayedEntrance(ENTRANCE_PLAYED_KEY)) {
       setStage(5);
       return;
     }
-    try {
-      sessionStorage.setItem(ENTRANCE_PLAYED_KEY, '1');
-    } catch {
-      // Non-fatal.
-    }
+    markEntrancePlayed(ENTRANCE_PLAYED_KEY);
     const timers: ReturnType<typeof setTimeout>[] = [];
     timers.push(setTimeout(() => setStage(1), TIMING.card));
     timers.push(setTimeout(() => setStage(2), TIMING.identity));

@@ -1,4 +1,12 @@
-import { useEffect, useRef, useState, type ElementType, type ReactNode } from 'react';
+import {
+  lazy,
+  Suspense,
+  useEffect,
+  useRef,
+  useState,
+  type ElementType,
+  type ReactNode,
+} from 'react';
 import {
   createBrowserRouter,
   isRouteErrorResponse,
@@ -22,6 +30,7 @@ import {
   Users,
 } from 'lucide-react';
 import { BTN_PRIMARY, BTN_SECONDARY, LIGHT_FOCUS_RING } from '@/components/dashboard/lightKit';
+import { TOUCH_TARGET } from '@/components/public/PublicLink';
 import { INVESTOR_LAYOUT_ROUTE_ID } from './route-ids';
 
 export const routeInventory = [
@@ -411,12 +420,67 @@ function RootLayout() {
   );
 }
 
+// For the IN-SHELL error state, which has no numeral above it. There, "500
+// Internal Server Error" is the only thing on screen that names the failure, so
+// the status line earns its place.
 function getRouteErrorDetail(error: unknown) {
   if (isRouteErrorResponse(error)) {
     return [error.status, error.statusText].filter(Boolean).join(' ') || String(error.status);
   }
   if (error instanceof Error) return error.message;
   return 'Unknown error';
+}
+
+// For the SUNSET 500, which has a 500 six inches tall above it — and a copy
+// button beside it. Different rules apply.
+//
+//   The mono line's whole job is to hand you the one thing you cannot retype:
+//   what actually broke, quotable into a bug report. `statusText` is not that.
+//   It is the canonical HTTP reason phrase — "Internal Server Error" — which the
+//   mark already says, in bigger type. Putting it in the pill would offer a copy
+//   button for the word you are looking at: the same mistake as the 404's old
+//   "This page doesn't exist" headline, wearing a different element.
+//
+//   So: whatever the route actually WROTE (`data` on a thrown Response, or a
+//   real Error message) — and otherwise nothing at all, pill included. A status
+//   that ISN'T 500 still gets said, because there the mark is generic and the
+//   number is news.
+function getSunsetErrorDetail(error: unknown): string | null {
+  if (isRouteErrorResponse(error)) {
+    const written = typeof error.data === 'string' ? error.data.trim() : '';
+    if (error.status === 500) return written || null;
+    return [error.status, written || error.statusText].filter(Boolean).join(' ');
+  }
+  if (error instanceof Error && error.message.trim()) return error.message;
+  return null;
+}
+
+// LAZY, and it has to stay that way. This module builds the router, so it is in
+// the eager entry chunk — it is the one file in the app with no `motion/react`
+// import, which is not an accident (motion was deliberately pulled out of the
+// entry bundle). <ServerErrorContent> drags in motion AND the veil's canvas
+// field; importing it here at the top would put both in front of every first
+// paint, to serve a page almost nobody ever sees. An error boundary is exactly
+// the right place to pay a chunk fetch.
+const ServerErrorContent = lazy(async () => {
+  const route = await import('./routes/server-error');
+  return { default: route.ServerErrorContent };
+});
+
+// The Paper canvas the 500 renders on, held during that fetch. Not a spinner:
+// the page it is standing in for is itself the "nothing loaded" state, and a
+// spinner would promise content that is not coming. Just the right-colored
+// ground, so the scheme doesn't flash.
+function ServerErrorPage({ detail }: { detail: string | null }) {
+  return (
+    <Suspense
+      fallback={
+        <div className="overview-light min-h-dvh bg-white [color-scheme:light] dark:bg-[#171717] dark:[color-scheme:dark]" />
+      }
+    >
+      <ServerErrorContent detail={detail} />
+    </Suspense>
+  );
 }
 
 // Bare-canvas error composition (Midday / Threads / Tines pattern): quiet text
@@ -440,12 +504,21 @@ function PaperErrorState({
       <p className="mt-1.5 max-w-[44ch] text-pretty text-[13px] leading-relaxed text-ink-muted">
         {description}
       </p>
-      <p className="mt-4 max-w-full truncate font-mono text-[11px] text-ink-faintest">{detail}</p>
+      {/* It WRAPS. This was `truncate`, which on the one line of the card that
+          carries real information is self-defeating: a thrown Error's message
+          ellipsizes long before it has said anything useful, so the debug detail
+          you kept a mono tier for was unreadable exactly when it mattered. Two
+          lines of 11px mono cost nothing here. */}
+      <p className="mt-4 max-w-full break-words font-mono text-[11px] leading-relaxed text-ink-faintest">
+        {detail}
+      </p>
       <div className="mt-7 flex items-center justify-center gap-2">
+        {/* TOUCH_TARGET on both: BTN_BASE is h-9 (36px), under the 40px desktop
+            floor and well under 44px for touch. */}
         <button
           type="button"
           onClick={() => window.location.reload()}
-          className={`${BTN_PRIMARY} ${LIGHT_FOCUS_RING} inline-flex items-center gap-1.5 pl-3.5`}
+          className={`${BTN_PRIMARY} ${LIGHT_FOCUS_RING} ${TOUCH_TARGET} inline-flex items-center gap-1.5 pl-3.5`}
         >
           <RotateCw className="size-3.5" />
           Refresh
@@ -453,7 +526,7 @@ function PaperErrorState({
         <button
           type="button"
           onClick={() => window.history.back()}
-          className={`${BTN_SECONDARY} ${LIGHT_FOCUS_RING} inline-flex items-center`}
+          className={`${BTN_SECONDARY} ${LIGHT_FOCUS_RING} ${TOUCH_TARGET} inline-flex items-center`}
         >
           Go back
         </button>
@@ -467,6 +540,14 @@ function PaperErrorState({
 // raw developer error page — wiping the chrome and reading as a broken site.
 // Re-render the Paper shell with a calm error card instead, so EVERY route
 // degrades into the light design rather than out of it.
+//
+// THIS ONE STAYS QUIET, and its sibling below does not. That asymmetry is the
+// point. Here the shell SURVIVES: the nav still works, the user is mid-session,
+// and exactly one region failed. The full sunset 500 dropped into a working
+// chrome would make a local failure the loudest object in an app that is
+// otherwise fine — the same mistake as the elevated card + tinted icon this
+// composition replaced. StandaloneErrorBoundary has no chrome to survive, so
+// there the failure IS the page and gets to look like one.
 function RootErrorBoundary() {
   const error = useRouteError();
   const detail = getRouteErrorDetail(error);
@@ -481,22 +562,16 @@ function RootErrorBoundary() {
   );
 }
 
-// Standalone routes (onboarding, agreement, invoice, sign, shared) render OUTSIDE
-// RootLayout, so RootErrorBoundary can't catch their loader failures. They have
-// no chrome to preserve, so degrade to a centered Paper card on the bare canvas —
-// same calm language, still inside the light design rather than RR's raw 500 page.
+// Standalone routes (issues, task detail, contractor, the investor cluster,
+// onboarding, agreement, invoice, sign, shared) render OUTSIDE RootLayout, so
+// RootErrorBoundary can't catch their loader failures — and they have no chrome
+// to preserve. The boundary owns the ENTIRE viewport here, which is what makes
+// the full 500 page right: it isn't competing with surrounding content, because
+// on these routes there is none. This is the surface people actually mean when
+// they say "the 500 page" — /500 itself is only where you go to look at it.
 function StandaloneErrorBoundary() {
   const error = useRouteError();
-  const detail = getRouteErrorDetail(error);
-  return (
-    <div className="overview-light min-h-screen bg-[var(--ov-bg)] antialiased">
-      <PaperErrorState
-        title="This page didn’t load"
-        description="The studio service didn’t respond. Refresh to try again. If it keeps happening, the service may be offline."
-        detail={detail}
-      />
-    </div>
-  );
+  return <ServerErrorPage detail={getSunsetErrorDetail(error)} />;
 }
 
 export const router = createBrowserRouter([
@@ -963,7 +1038,24 @@ export const router = createBrowserRouter([
     },
   },
   {
-    // Catch-all 404 — the scroll-drawn "off the map" page on the Paper canvas.
+    // The 500, as a page you can actually open. It is NOT how a 500 normally
+    // reaches anyone — that is StandaloneErrorBoundary, above, which renders the
+    // same component off a thrown loader — but a page that only exists inside a
+    // failure is a page nobody can look at without causing one. Same reasoning as
+    // /toast-qa and /payments-chart-qa, except this one is also a real, linkable
+    // destination. No loader, no gate: an auth check on the error page is one more
+    // thing that can fail while you are already failing.
+    path: '/500',
+    lazy: async () => {
+      const route = await import('./routes/server-error');
+      return {
+        Component: route.ServerErrorRoute,
+      };
+    },
+  },
+  {
+    // Catch-all 404 — the sunset mark on the Paper canvas. Sibling of /500 above;
+    // they share <SunsetErrorPage> and differ in one line of copy and one button.
     path: '*',
     lazy: async () => {
       const route = await import('./routes/not-found');

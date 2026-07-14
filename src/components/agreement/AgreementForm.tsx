@@ -513,7 +513,11 @@ export function AgreementForm({
                               key={section.number}
                               className="grid grid-cols-[1.5rem_1fr] items-start gap-x-3"
                             >
-                              <span className="select-none text-right text-[18px] font-normal leading-[1.5] tabular-nums text-ink-faint">
+                              {/* Selectable: this is a legal agreement, and the clause
+                                  numbers are how a quoted passage is cited. Styled as a
+                                  gutter, but it is content — select-all-and-copy used to
+                                  silently drop the numbering out of the pasted text. */}
+                              <span className="select-text text-right text-[18px] font-normal leading-[1.5] tabular-nums text-ink-faint">
                                 {section.number}
                               </span>
                               <div className="min-w-0">

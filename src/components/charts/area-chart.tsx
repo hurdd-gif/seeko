@@ -227,7 +227,11 @@ export function AreaChart({
 
   return (
     <div
-      className={cn("relative w-full", className)}
+      /* select-none on the shell, not on each label. The chart starts a horizontal
+         drag-brush on mousedown, and the axis ticks are real HTML spans layered in
+         this same box — so brushing a range highlighted the dates as it went. One
+         guard here covers axes, legend and loading labels. */
+      className={cn("relative w-full select-none", className)}
       ref={containerRef}
       style={{ aspectRatio, touchAction: "none", ...style }}
     >

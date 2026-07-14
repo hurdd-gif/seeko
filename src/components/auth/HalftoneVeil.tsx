@@ -15,12 +15,14 @@
  *  idle    static — the rAF loop stops once every dot settles,
  *          so at rest nothing runs
  *
- *  Repeat visits (same sessionStorage key as the card entrance)
- *  and prefers-reduced-motion render it already-settled; reduced
- *  motion also disables the lens entirely.
+ *  The rise happens ONCE PER TAB (ENTRANCE_KEYS.veil) — the veil
+ *  is one object mounted by both /login and the 404, so it owns
+ *  and writes that flag itself rather than reading the login
+ *  card's. prefers-reduced-motion renders it already-settled and
+ *  disables the lens entirely.
  * ───────────────────────────────────────────────────────── */
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { motion, useReducedMotion, useSpring } from 'motion/react';
 import {
   bloomAlpha,
@@ -28,9 +30,7 @@ import {
   lensDisplacement,
   sampleVeilGradient,
 } from '@/lib/halftone-field';
-
-/** Same key LoginForm uses — one "has seen the entrance" signal per tab. */
-const ENTRANCE_PLAYED_KEY = 'seeko-login-entrance-played';
+import { ENTRANCE_KEYS, useEntranceOnce } from '@/lib/entrance-once';
 
 /** Dot-grid pitch in CSS px (Delphi ships 10). */
 const PITCH = 10;
@@ -195,13 +195,7 @@ export function GradientVeil() {
   const reduceMotion = useReducedMotion();
   const driftX = useSpring(0, DRIFT_SPRING);
   const driftY = useSpring(0, DRIFT_SPRING);
-  const [skipEntrance] = useState(() => {
-    try {
-      return sessionStorage.getItem(ENTRANCE_PLAYED_KEY) !== null;
-    } catch {
-      return false;
-    }
-  });
+  const playEntrance = useEntranceOnce(ENTRANCE_KEYS.veil);
 
   useEffect(() => {
     const finePointer = window.matchMedia('(pointer: fine)').matches;
@@ -243,7 +237,7 @@ export function GradientVeil() {
         x: driftX,
         y: driftY,
       }}
-      initial={reduceMotion || skipEntrance ? false : { opacity: 0, scaleY: 0 }}
+      initial={reduceMotion || !playEntrance ? false : { opacity: 0, scaleY: 0 }}
       animate={{ opacity: 1, scaleY: 1 }}
       transition={RISE}
     />
@@ -261,15 +255,11 @@ export function GradientVeil() {
 export function HalftoneVeil() {
   const reduceMotion = useReducedMotion();
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  // Read during render (before any effect can write the key) so the veil and
-  // the card agree on whether this is a first visit.
-  const [skipEntrance] = useState(() => {
-    try {
-      return sessionStorage.getItem(ENTRANCE_PLAYED_KEY) !== null;
-    } catch {
-      return false;
-    }
-  });
+  // The veil now owns the flag for its OWN rise, and writes it. It used to only
+  // READ login's key, which meant the rise skipped on a second /login and
+  // replayed forever anywhere else the veil is mounted — every refresh of the
+  // 404 got a fresh sunrise. See lib/entrance-once.
+  const playEntrance = useEntranceOnce(ENTRANCE_KEYS.veil);
 
   useEffect(() => {
     const el = canvasRef.current;
@@ -411,7 +401,7 @@ export function HalftoneVeil() {
       // Slide, not scaleY: scaling the container stretches the painted dots
       // mid-rise and zeroes the measured height the dot grid is built from.
       className="pointer-events-none fixed inset-x-0 bottom-0 h-[24vh] print:hidden contrast-more:hidden"
-      initial={reduceMotion || skipEntrance ? false : { opacity: 0, y: '100%' }}
+      initial={reduceMotion || !playEntrance ? false : { opacity: 0, y: '100%' }}
       animate={{ opacity: 1, y: 0 }}
       transition={RISE}
     >

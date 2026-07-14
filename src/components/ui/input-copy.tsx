@@ -303,7 +303,14 @@ const InputCopy = forwardRef<HTMLDivElement, InputCopyProps>(
     const valueElement = (
       <span
         className={cn(
-          "flex-1 min-w-0 text-left text-[12px] text-ink-strong py-1.5 select-none truncate",
+          // select-text, even though this sits inside the copy <button>. The button
+          // is the affordance, but its clipboard write can fail (non-secure origin,
+          // denied permission) and this component's "Failed" state offers nowhere to
+          // go — so the value it exists to hand you becomes unreachable. Selection is
+          // the floor under the button. It also restores PARTIAL selection: these are
+          // PayPal addresses in the payments admin, and copying just the domain is a
+          // real thing someone does.
+          "flex-1 min-w-0 text-left text-[12px] text-ink-strong py-1.5 select-text truncate",
           monospace ? "font-mono" : "font-sans",
           align === "left" ? "pl-1" : "pl-0",
           compact && "py-0.5 text-[11px]",

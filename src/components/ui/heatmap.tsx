@@ -152,7 +152,11 @@ export function HeatmapChart({
     >
       <div
         className={cn(
-          'relative grid',
+          // select-none: the month labels and the M/W/F ticks are aria-hidden — the
+          // component already calls them decoration — but they are HTML spans in the
+          // same box as the hover grid, so dragging across the heatmap highlighted
+          // them. Nothing in here is content anyone copies.
+          'relative grid select-none',
           layout === 'fluid' && 'w-full',
           className,
         )}
@@ -358,7 +362,8 @@ export function HeatmapLegend({
   const labelCls = cn('leading-none text-ink-faint', labelClassName);
 
   return (
-    <div className={cn('flex items-center gap-1.5', justify, className)} style={{ fontSize }}>
+    /* select-none: "Less"/"More" are a scale key, not content. */
+    <div className={cn('flex select-none items-center gap-1.5', justify, className)} style={{ fontSize }}>
       <span className={labelCls}>{lessLabel}</span>
       {variant === 'levels' ? (
         <span className="flex" style={{ gap }}>

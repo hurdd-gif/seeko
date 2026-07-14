@@ -19,8 +19,12 @@
  * starts reading as a filled-in value. */
 export const LIGHT_INPUT =
   'border border-wash-8 bg-surface-1 text-ink-strong placeholder:text-ink-muted rounded-lg [color-scheme:light] dark:[color-scheme:dark] autofill:shadow-[inset_0_0_0_1000px_var(--surface-1)] autofill:[-webkit-text-fill-color:var(--ink-strong)] transition-[border-color] duration-150 ease-out focus-visible:ring-0 focus-visible:border-seeko-accent';
+/* 0.96 is the house press, not 0.98. At 0.98 a 36px-tall pill moves less than a
+ * pixel on press — the transition fires but nothing legible happens, so the
+ * button reads as unresponsive. 0.96 is the floor that still registers; below
+ * 0.95 it starts to feel exaggerated. */
 export const BTN_BASE =
-  'rounded-[14px] px-4 h-9 text-[13px] font-medium transition-[background-color,transform] duration-150 ease-out active:scale-[0.98]';
+  'rounded-[14px] px-4 h-9 text-[13px] font-medium transition-[background-color,transform] duration-150 ease-out active:scale-[0.96]';
 /* Primary pill: ink-title fill + surface-1 label — the pair inverts cleanly in
  * .dark (near-white pill, card-dark label) without a dedicated foreground token. */
 export const BTN_PRIMARY = `${BTN_BASE} bg-ink-title text-surface-1 hover:bg-ink-strong`;

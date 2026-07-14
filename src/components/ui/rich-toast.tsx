@@ -188,7 +188,10 @@ function RichToastCard({
             onDragEnd={handleDragEnd}
             onMouseEnter={pauseTimer}
             onMouseLeave={startTimer}
-            className={reduce ? '' : 'touch-none'}
+            /* touch-none stops the TOUCH scroll from stealing the swipe; it says
+               nothing about the mouse. Without select-none, dragging a toast to
+               dismiss it on desktop sweeps a selection across its own message. */
+            className={reduce ? '' : 'touch-none select-none'}
           >
             <div
               role="status"

@@ -137,7 +137,9 @@ export function LiveToastCard({
       onMouseLeave={handleMouseLeave}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
-      className="w-full max-w-[400px] mx-auto touch-none"
+      /* select-none pairs with touch-none: the first guards the touch swipe, the
+         second guards the mouse drag from selecting the toast's own text. */
+      className="w-full max-w-[400px] mx-auto touch-none select-none"
     >
       <motion.div style={{ opacity: dragOpacity, scale: dragScale }}>
       <button

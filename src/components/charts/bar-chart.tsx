@@ -710,7 +710,9 @@ export function BarChart({
 
   return (
     <div
-      className={cn("relative w-full overflow-visible", className)}
+      /* select-none: same reason as area-chart — the drag-brush and the HTML axis
+         labels share a box, so a brush used to paint a selection across the ticks. */
+      className={cn("relative w-full select-none overflow-visible", className)}
       ref={containerRef}
       style={{ aspectRatio }}
     >

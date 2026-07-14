@@ -339,7 +339,11 @@ export function TaskCard({
         {/* Header row — id label · assignee trigger */}
         <div className="flex items-start justify-between gap-2">
           {idLabel ? (
-            <span className="font-mono text-[11px] leading-none tabular-nums text-ink-muted">
+            /* select-text inside the card's select-none. The card is a click
+               target, so its body shouldn't select — but the task number is the
+               one thing on it anyone copies (into a commit message, into Slack),
+               and until now you had to open the detail page to get it. */
+            <span className="select-text font-mono text-[11px] leading-none tabular-nums text-ink-muted">
               {idLabel}
             </span>
           ) : (
