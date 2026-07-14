@@ -24,6 +24,7 @@ import {
 } from '../agent/pending-actions';
 
 type AuthResolver = (c: Context) => Promise<AuthenticatedUser | null>;
+type AdminCheck = (userId: string) => Promise<void>;
 type AgentMode = 'chat' | 'approval';
 type AgentDecision = 'approve' | 'reject';
 
@@ -56,20 +57,33 @@ export type AgentChatResult = {
 
 type AgentRunner = (input: AgentChatInput, user: AuthenticatedUser) => Promise<AgentChatResult>;
 
-type AgentRoutesOptions = { authResolver?: AuthResolver; agentRunner?: AgentRunner };
+type AgentRoutesOptions = { authResolver?: AuthResolver; agentRunner?: AgentRunner; adminCheck?: AdminCheck };
 
 export function createAgentRoutes(options: AgentRoutesOptions = {}) {
   const authResolver = options.authResolver ?? getAuthenticatedUser;
   const agentRunner = options.agentRunner ?? runAgentChat;
+  // Secure by default: the ENTIRE agent surface is admin-only. This is the
+  // single earliest gate — it runs after auth but before payload parsing and
+  // before any mode branch, so it covers chat, approval-approve, and
+  // approval-reject uniformly. Without it a non-admin could (a) drive the model,
+  // which in chat mode stages writes via the SERVICE ROLE and so bypasses
+  // eko_pending_actions' admin-only RLS, or (b) reject/cancel someone else's
+  // staged action by UUID. assertAdmin throws AgentActionError(403) (and 500 on
+  // a verify failure); the catch below maps error.status to the response. The
+  // default is the real check so production stays gated even if a caller wires
+  // the routes without passing adminCheck; the option exists only as a test seam.
+  const adminCheck = options.adminCheck ?? assertAdmin;
 
   return new Hono().post('/agent/chat', async (c) => {
     const user = await authResolver(c);
     if (!user) return c.json({ error: 'unauthorized' }, 401);
 
-    const input = await parseAgentInput(c);
-    if ('error' in input) return c.json({ error: input.error }, 400);
-
     try {
+      await adminCheck(user.id);
+
+      const input = await parseAgentInput(c);
+      if ('error' in input) return c.json({ error: input.error }, 400);
+
       return c.json(await agentRunner(input, user));
     } catch (error) {
       if (error instanceof AgentActionError) {

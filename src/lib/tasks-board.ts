@@ -186,9 +186,12 @@ export type TaskDetailFullData = {
   /** The tasks this task is connected to (symmetric — see fetchTaskLinks). */
   links: LinkedTask[];
   /**
-   * Every OTHER task, for the link picker — minus this task and minus anything
+   * Candidate tasks for the link picker — minus this task and minus anything
    * already linked. Ordered newest-first (task_number desc) so the picker's
-   * default list is useful before the user types a single character.
+   * default list is useful before the user types a single character. SCOPED to
+   * the caller's visibility: admins get every other task; non-admins get only
+   * their own assigned tasks (same rule as the board/index), so the picker never
+   * discloses tasks the caller can't otherwise see.
    */
   linkCandidates: LinkedTask[];
 };
@@ -277,6 +280,24 @@ export async function loadTaskDetailFull(
     throw new AccessError('forbidden');
   }
 
+  // Picker candidates: every OTHER task the caller may legitimately see. Admins
+  // see every task; NON-admins are scoped to their OWN assigned tasks — the SAME
+  // visibility as loadTasksBoard (above) and loadTasksIndex (tasks-index.ts), and
+  // as the own-task gate on this very detail page. Without the scope the picker
+  // returned id/task_number/name/status for EVERY task in the studio to any
+  // non-admin assignee, leaking the whole task list through a link picker. The
+  // already-linked exclusion is still applied in memory below (it depends on
+  // `links`; folding it into the query would cost a second round trip). Mirrors
+  // loadTasksBoard's build-then-conditionally-scope shape.
+  let candidatesQuery = service
+    .from('tasks')
+    .select(LINKED_TASK_SELECT)
+    .neq('id', taskId)
+    .order('task_number', { ascending: false, nullsFirst: false });
+  if (!isAdmin) {
+    candidatesQuery = candidatesQuery.eq('assignee_id', currentUser.id);
+  }
+
   const [
     teamResult,
     areasResult,
@@ -316,14 +337,11 @@ export async function loadTaskDetailFull(
       .limit(1)
       .maybeSingle(),
     fetchTaskLinks(service, taskId),
-    // Picker candidates: every task but this one. The "already linked" exclusion
-    // is applied in memory below — it depends on `links`, and folding it into the
-    // query would cost a round trip by serialising two independent reads.
-    service
-      .from('tasks')
-      .select(LINKED_TASK_SELECT)
-      .neq('id', taskId)
-      .order('task_number', { ascending: false, nullsFirst: false }),
+    // Scoped above (admins: all tasks; non-admins: only their own). The
+    // "already linked" exclusion is applied in memory below — it depends on
+    // `links`, and folding it into the query would cost a round trip by
+    // serialising two independent reads.
+    candidatesQuery,
   ]);
 
   // Investors are not shown on the roster (discreet), matching fetchTeam().

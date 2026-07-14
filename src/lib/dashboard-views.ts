@@ -24,6 +24,11 @@ const TEAM_SELECT =
 // and — unlike the discreet team roster — does NOT drop investors).
 const PAYMENTS_TEAM_SELECT =
   'id, display_name, department, role, avatar_url, is_admin, is_contractor, is_investor, onboarded, tour_completed, paypal_email, created_at' as const;
+// Investor-viewer roster — the same roster WITHOUT paypal_email (payout PII).
+// Investors read the roster only to label recipients, never to see anyone's
+// payout contact, so the column is dropped for the less-trusted role.
+const PAYMENTS_TEAM_SELECT_INVESTOR =
+  'id, display_name, department, role, avatar_url, is_admin, is_contractor, is_investor, onboarded, tour_completed, created_at' as const;
 const AREA_SELECT =
   'id, name, status, progress, description, phase, created_at, sort_order, target_date' as const;
 const MILESTONE_SELECT =
@@ -315,15 +320,20 @@ export async function loadPaymentsView(currentUser: {
   if (!profile) throw new AccessError('profile_not_found');
   if (!profile.is_admin && !profile.is_investor) throw new AccessError('forbidden', 'not_admin');
 
+  const isAdmin = Boolean(profile.is_admin);
+
+  // Investors (non-admin) get the paypal_email-free roster; admins keep the full
+  // roster with payout contacts. Role comes from the caller's own profile row
+  // this loader already fetched — no signature change needed.
   const { data, error } = await service
     .from('profiles')
-    .select(PAYMENTS_TEAM_SELECT)
+    .select(isAdmin ? PAYMENTS_TEAM_SELECT : PAYMENTS_TEAM_SELECT_INVESTOR)
     .order('display_name', { ascending: true });
   if (error) throw error;
 
   return {
     team: (data ?? []) as unknown as (Profile & { paypal_email?: string })[],
-    isAdmin: Boolean(profile.is_admin),
+    isAdmin,
     isInvestor: Boolean(profile.is_investor),
   };
 }

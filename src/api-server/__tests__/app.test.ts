@@ -48,6 +48,7 @@ describe('API server', () => {
   it('validates EKO chat payloads', async () => {
     const testApp = createApiApp({
       agentAuthResolver: async () => ({ id: 'user-1', email: 'member@example.invalid' }),
+      agentAdminCheck: async () => {},
     });
 
     const response = await testApp.request('/api/agent/chat', {
@@ -63,6 +64,7 @@ describe('API server', () => {
   it('requires an approval decision in approval mode', async () => {
     const testApp = createApiApp({
       agentAuthResolver: async () => ({ id: 'user-1', email: 'member@example.invalid' }),
+      agentAdminCheck: async () => {},
     });
 
     const response = await testApp.request('/api/agent/chat', {
@@ -78,6 +80,7 @@ describe('API server', () => {
   it('never creates a new approval from a bare confirmation chat message', async () => {
     const testApp = createApiApp({
       agentAuthResolver: async () => ({ id: 'user-1', email: 'member@example.invalid' }),
+      agentAdminCheck: async () => {},
     });
 
     for (const message of ['Yes', 'go ahead', 'do it', 'Okay!', 'approve it', 'yep.']) {
@@ -99,6 +102,7 @@ describe('API server', () => {
   it('runs EKO through an injected agent runner', async () => {
     const testApp = createApiApp({
       agentAuthResolver: async () => ({ id: 'user-1', email: 'member@example.invalid' }),
+      agentAdminCheck: async () => {},
       agentRunner: async (input, user) => ({
         reply: `Handled ${input.mode ?? 'chat'} for ${user.email}: ${input.message}`,
         provider: 'anthropic',
@@ -124,6 +128,7 @@ describe('API server', () => {
     vi.stubEnv('ANTHROPIC_API_KEY', '');
     const testApp = createApiApp({
       agentAuthResolver: async () => ({ id: 'user-1', email: 'member@example.invalid' }),
+      agentAdminCheck: async () => {},
     });
     const response = await testApp.request('/api/agent/chat', {
       method: 'POST',
@@ -137,6 +142,7 @@ describe('API server', () => {
   it('requires pendingActionIds to approve', async () => {
     const testApp = createApiApp({
       agentAuthResolver: async () => ({ id: 'user-1', email: 'member@example.invalid' }),
+      agentAdminCheck: async () => {},
     });
     const response = await testApp.request('/api/agent/chat', {
       method: 'POST',

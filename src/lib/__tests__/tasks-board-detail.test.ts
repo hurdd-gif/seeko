@@ -80,14 +80,28 @@ const COMMENT_ROWS: Record<string, unknown>[] = [
  * idiom already used by `contractor-index-steps.test.ts` — one literal chain
  * per query shape rather than a generic builder, matching this codebase's
  * established style for these mocks. */
-function serviceMock(extRow: Record<string, unknown> | null) {
+function serviceMock(
+  extRow: Record<string, unknown> | null,
+  opts: {
+    profile?: Record<string, unknown>;
+    /** What an UNSCOPED candidate query surfaces (admin path). */
+    fullCandidates?: unknown[];
+    /** What the DB returns once the loader appends .eq('assignee_id', id) (non-admin path). */
+    scopedCandidates?: unknown[];
+    /** Spy invoked with the (column, value) the non-admin scope .eq() actually receives. */
+    captureScopeEq?: (column: unknown, value: unknown) => void;
+  } = {},
+) {
+  const profile = opts.profile ?? ADMIN_PROFILE;
+  const fullCandidates = opts.fullCandidates ?? CANDIDATE_ROWS;
+  const scopedCandidates = opts.scopedCandidates ?? CANDIDATE_ROWS;
   return {
     from: vi.fn((table: string) => {
       if (table === 'profiles') {
         return {
           select: () => ({
             // Single-profile lookup: .select(...).eq('id', ...).maybeSingle()
-            eq: () => ({ maybeSingle: async () => ({ data: ADMIN_PROFILE, error: null }) }),
+            eq: () => ({ maybeSingle: async () => ({ data: profile, error: null }) }),
             // Team fetch (inside Promise.all): .select(...).order('display_name', ...)
             order: () => ({
               then: (resolve: (v: unknown) => unknown) =>
@@ -101,11 +115,21 @@ function serviceMock(extRow: Record<string, unknown> | null) {
           select: () => ({
             // The task itself: .select(...).eq('id', ...).maybeSingle()
             eq: () => ({ maybeSingle: async () => ({ data: TASK_ROW, error: null }) }),
-            // Link-picker candidates: .select(...).neq('id', taskId).order('task_number', ...)
+            // Link-picker candidates. Admin chain ends at
+            //   .neq('id', taskId).order('task_number', ...)                → full list.
+            // Non-admin chain appends the assignee scope
+            //   .neq('id', taskId).order('task_number', ...).eq('assignee_id', id) → scoped.
             neq: () => ({
               order: () => ({
                 then: (resolve: (v: unknown) => unknown) =>
-                  Promise.resolve({ data: CANDIDATE_ROWS, error: null }).then(resolve),
+                  Promise.resolve({ data: fullCandidates, error: null }).then(resolve),
+                eq: (column: unknown, value: unknown) => {
+                  opts.captureScopeEq?.(column, value);
+                  return {
+                    then: (resolve: (v: unknown) => unknown) =>
+                      Promise.resolve({ data: scopedCandidates, error: null }).then(resolve),
+                  };
+                },
               }),
             }),
           }),
@@ -251,5 +275,70 @@ describe('loadTaskDetailFull pendingExtension', () => {
     expect(data.linkCandidates).toEqual([
       { id: 'task-3', task_number: 9, name: 'Write the docs', status: 'Backlog' },
     ]);
+  });
+});
+
+// The link picker's candidate list is a tenant-isolation surface: it must never
+// hand a non-admin the id/number/name/status of tasks they can't otherwise see.
+// Admins keep the full list; non-admins are scoped to their own assigned tasks —
+// the same rule every other non-admin read path in tasks-board.ts follows.
+describe('loadTaskDetailFull linkCandidates scoping', () => {
+  const NON_ADMIN_ASSIGNEE = {
+    id: 'user-1',
+    display_name: 'Riley',
+    department: 'Coding',
+    avatar_url: null,
+    is_admin: false,
+    is_investor: false,
+  };
+  // TASK_ROW.assignee_id === 'user-1', so this caller clears the own-task gate.
+  const OWN_TASK = { id: 'task-3', task_number: 9, name: 'Write the docs', status: 'Backlog' };
+  const OTHER_USER_TASK = { id: 'task-4', task_number: 10, name: 'Balance pass', status: 'Todo' };
+
+  beforeEach(() => {
+    mocks.getServiceClient.mockReset();
+  });
+
+  it("scopes linkCandidates to the caller's own assigned tasks for a non-admin assignee", async () => {
+    const scopeEq = vi.fn();
+    mocks.getServiceClient.mockReturnValue(
+      serviceMock(null, {
+        profile: NON_ADMIN_ASSIGNEE,
+        // fullCandidates = what an UNSCOPED query would surface (every other task);
+        // scopedCandidates = what the DB returns once the loader appends
+        // .eq('assignee_id', 'user-1'). Only OWN_TASK belongs to this caller.
+        fullCandidates: [OWN_TASK, LINKED_TASK_2, OTHER_USER_TASK],
+        scopedCandidates: [OWN_TASK],
+        captureScopeEq: scopeEq,
+      }),
+    );
+
+    const data = await loadTaskDetailFull({ id: 'user-1' }, 'task-1');
+
+    // Only their own other task — NOT task-4 (another user's) and NOT task-2,
+    // proving the picker no longer leaks the studio's whole task list to a
+    // non-admin.
+    expect(data.linkCandidates).toEqual([OWN_TASK]);
+    expect(data.linkCandidates.some((c) => c.id === 'task-4')).toBe(false);
+    expect(data.linkCandidates.some((c) => c.id === 'task-2')).toBe(false);
+    // The scope filtered on the caller's OWN id — not some other column/value.
+    // (A bug scoping to the wrong id would still return [OWN_TASK] from the mock,
+    // so assert the actual argument, not just that the branch was taken.)
+    expect(scopeEq).toHaveBeenCalledWith('assignee_id', 'user-1');
+  });
+
+  it('gives an admin the full candidate list (every other task)', async () => {
+    mocks.getServiceClient.mockReturnValue(
+      serviceMock(null, {
+        profile: ADMIN_PROFILE,
+        fullCandidates: [OWN_TASK, LINKED_TASK_2, OTHER_USER_TASK],
+      }),
+    );
+
+    const data = await loadTaskDetailFull({ id: 'admin-1' }, 'task-1');
+
+    // task-2 is already linked (LINK_ROWS) → excluded in memory. Everything else,
+    // including another user's task-4, stays available to the admin.
+    expect(data.linkCandidates).toEqual([OWN_TASK, OTHER_USER_TASK]);
   });
 });

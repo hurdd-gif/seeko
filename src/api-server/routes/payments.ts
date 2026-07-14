@@ -59,12 +59,23 @@ export function createPaymentsRoutes(options: PaymentsRoutesOptions = {}) {
       if (!guard.ok) return c.json({ error: guard.error }, guard.status);
 
       const { supabase, isAdmin, isInvestor } = guard.auth;
+      // Investors (non-admin) are the less-trusted payments viewer. Narrow the
+      // payload to the investor-safe shape (mirroring loadInvestorPayments): every
+      // column is enumerated explicitly — never `*`, not on the payments row and
+      // not on the nested joins — so payout PII (recipient_email, payee_name,
+      // recipient.paypal_email) can't leak and no future column added to payments,
+      // payment_items, or payment_adjustments silently reaches investors either.
+      // Admins keep the full control-surface shape.
+      const isInvestorViewer = isInvestor && !isAdmin;
+      const select = isInvestorViewer
+        ? 'id, recipient_id, amount, currency, description, status, paid_at, created_at, created_by, refund_amount, refund_note, refunded_at, recipient:profiles!payments_recipient_id_fkey(id, display_name, avatar_url, department), items:payment_items(id, payment_id, task_id, label, amount), adjustments:payment_adjustments(id, payment_id, previous_amount, new_amount, note, adjusted_by, created_at)'
+        : '*, recipient:profiles!payments_recipient_id_fkey(id, display_name, avatar_url, department, paypal_email), items:payment_items(*), adjustments:payment_adjustments(*)';
       let query = supabase
         .from('payments')
-        .select('*, recipient:profiles!payments_recipient_id_fkey(id, display_name, avatar_url, department, paypal_email), items:payment_items(*), adjustments:payment_adjustments(*)')
+        .select(select)
         .order('created_at', { ascending: false });
 
-      if (isInvestor && !isAdmin) query = query.eq('status', 'paid');
+      if (isInvestorViewer) query = query.eq('status', 'paid');
 
       const { data, error } = await query;
       if (error) {
