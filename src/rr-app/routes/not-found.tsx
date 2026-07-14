@@ -1,6 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router';
-import { motion, useMotionTemplate, useReducedMotion, useSpring } from 'motion/react';
+import { Check, Copy } from 'lucide-react';
+import {
+  AnimatePresence,
+  motion,
+  useMotionTemplate,
+  useReducedMotion,
+  useSpring,
+} from 'motion/react';
 import { cn } from '@/lib/utils';
 import { veilGradientStops } from '@/lib/halftone-field';
 import { BTN_PRIMARY, LIGHT_FOCUS_RING } from '@/components/dashboard/lightKit';
@@ -91,9 +98,18 @@ const NUMERAL_FALLBACK = cn(
 const GHOST_ACTION = cn(
   'text-[13px] font-medium text-ink-body',
   TOUCH_TARGET,
-  'transition-[color,opacity] duration-150 ease-out hover:text-ink-title',
-  'active:opacity-55 active:duration-[60ms]',
+  // transform is IN the transition list on purpose: `active:scale-[0.96]` with a
+  // transition that only names color and opacity snaps to the pressed size and
+  // snaps back, which reads as a glitch rather than as a press.
+  'transition-[color,opacity,transform] duration-150 ease-out hover:text-ink-title',
+  'active:scale-[0.96] active:opacity-55 active:duration-[60ms]',
 );
+
+/** The 24px copy button's own hit area, grown to 44px in BOTH axes. TOUCH_TARGET
+ *  only stretches vertically (inset-x-0), which is right for a full-width row and
+ *  useless for a small square. Nothing else in the pill is interactive, so there
+ *  is nothing for the grown box to collide with. */
+const ICON_HIT_AREA = "after:absolute after:-inset-[10px] after:content-['']";
 
 export function NotFoundRoute() {
   return <NotFoundContent />;
@@ -146,7 +162,43 @@ export function NotFoundContent() {
     setCanGoBack(window.history.length > 1);
   }, []);
 
+  /* Copying the attempted path. The clipboard write can genuinely fail — a
+     non-secure origin, a denied permission — and the honest answer to that is
+     not a "Failed" label with nowhere to go: it's that the path itself stays
+     SELECTABLE (see select-text below), so the keyboard route always works. The
+     button is the affordance; selection is the floor under it. */
+  const [copied, setCopied] = useState(false);
+  useEffect(() => {
+    if (!copied) return;
+    const t = window.setTimeout(() => setCopied(false), 1600);
+    return () => window.clearTimeout(t);
+  }, [copied]);
+
+  const copyPath = useCallback(() => {
+    navigator.clipboard?.writeText(pathname).then(
+      () => setCopied(true),
+      () => setCopied(false),
+    );
+  }, [pathname]);
+
   const stagger = { hidden: {}, show: { transition: { staggerChildren: 0.08, delayChildren: 0.05 } } };
+
+  /* Icon swap, per the house rule: scale 0.25 → 1, opacity 0 → 1, blur 4px → 0,
+     on a spring with bounce 0 — never a visibility toggle. Under reduced motion
+     the geometry is dropped and only the crossfade survives. */
+  const iconSwap = reduce
+    ? {
+        initial: { opacity: 0 },
+        animate: { opacity: 1 },
+        exit: { opacity: 0 },
+        transition: { duration: 0.12 },
+      }
+    : {
+        initial: { opacity: 0, scale: 0.25, filter: 'blur(4px)' },
+        animate: { opacity: 1, scale: 1, filter: 'blur(0px)' },
+        exit: { opacity: 0, scale: 0.25, filter: 'blur(4px)' },
+        transition: { type: 'spring' as const, duration: 0.3, bounce: 0 },
+      };
   const item = reduce
     ? { hidden: {}, show: {} }
     : {
@@ -163,7 +215,18 @@ export function NotFoundContent() {
     // The Paper canvas, identical to /login's — including the color-scheme
     // override, without which the scrollbar renders as a dark track on the
     // white page (the app body declares dark).
-    <div className="overview-light relative flex min-h-dvh flex-col bg-white px-6 antialiased [color-scheme:light] dark:bg-[#171717] dark:[color-scheme:dark]">
+    //
+    // select-none is NOT cosmetic here. The numerals are a gradient clipped to
+    // the type with a TRANSPARENT fill, so a drag-select paints the selection
+    // rectangle behind glyphs that have no ink of their own: the mark collapses
+    // into a solid blue slab and the "404" stops being readable at all.
+    //
+    // The guard is on the whole canvas, with exactly ONE hole: the attempted path
+    // keeps `select-text`. That is not an inconsistency, it is the rule — the
+    // chrome is interface and the path is content, and the only text on this page
+    // anyone has a reason to copy is the path. Cmd+A now grabs the path and
+    // nothing else, which is precisely what a select-all should hand you.
+    <div className="overview-light relative flex min-h-dvh select-none flex-col bg-white px-6 antialiased [color-scheme:light] dark:bg-[#171717] dark:[color-scheme:dark]">
       <PublicTopBar />
 
       {/* The login gradient, verbatim: the same halftone bloom, pinned to the
@@ -191,7 +254,11 @@ export function NotFoundContent() {
             backgroundPosition: reduce || !finePointer ? `50% ${INK_REST}%` : inkPosition,
           }}
           className={cn(
-            'bg-clip-text text-[clamp(104px,17vw,196px)] font-medium leading-[0.85] tracking-[-0.04em] tabular-nums',
+            // No tabular-nums. "404" never changes, so there is no layout shift to
+            // prevent — and tabular figures force every digit into one width, which
+            // at 196px hands the 0 more sidebearing than Inter's proportional cut is
+            // drawn for. The mark is type, not a readout; it gets the designed fit.
+            'bg-clip-text text-[clamp(104px,17vw,196px)] font-medium leading-[0.85] tracking-[-0.04em]',
             '[-webkit-text-fill-color:transparent]',
             NUMERAL_FALLBACK,
           )}
@@ -199,32 +266,73 @@ export function NotFoundContent() {
           404
         </motion.div>
 
+        {/* One line, not two. This used to be a headline ("This page doesn't exist")
+            over a subhead, and the subhead was the only one of them with a voice —
+            the headline was just the mark spelled out in words, and the mark is
+            already six inches tall directly above it. Saying it twice made the page
+            read like a form letter. The subhead was promoted and the headline cut.
+
+            Plain and first-person, on purpose. Two wittier drafts died here: calling
+            the page a *skybox* (a joke you have to work in games to get — a wink at
+            ourselves, not a line for someone who is lost) and "pardon the empty lot"
+            (borrowed signage, but that idiom promises a building is coming, and none
+            is). The stock sentence — "the link may be broken, or the page may have
+            moved," which Assembly, SeatGeek, Quartz, Unsplash and HODINKEE all ship
+            near word for word — was never in the running. "We" is what makes this
+            ours: someone is on the other side of the error, telling you they haven't
+            gotten to it. text-balance keeps the rag even if it ever wraps. */}
         <motion.h1
           variants={item}
-          className="mt-9 text-balance text-[22px] font-medium leading-tight text-ink-title"
+          className="mt-9 text-balance text-2xl font-medium leading-[1.15] text-ink-title"
         >
-          This page doesn’t exist
+          We haven’t built this one yet.
         </motion.h1>
-
-        <motion.p
-          variants={item}
-          className="mt-3 max-w-[340px] text-pretty text-sm leading-normal text-ink-muted-strong dark:text-ink-muted"
-        >
-          The link may be broken, or the page may have moved.
-        </motion.p>
 
         {/* The path you actually asked for. The error boundary already prints its
             failure detail in mono; this is the same courtesy for a wrong URL —
             enough to spot your own typo, and enough to paste into a bug report.
             ink-muted-strong (4.9:1), not the faint tier the error card uses: a
-            path is information, not decoration. */}
+            path is information, not decoration.
+
+            It WRAPS (break-all), it does not truncate. Truncation on the one piece
+            of content the page exists to hand you is self-defeating: a long path
+            ellipsizes exactly where the typo usually is. Two lines of mono cost
+            nothing on a page that is otherwise air. */}
         {pathname && pathname !== '/' ? (
-          <motion.p
+          <motion.div
             variants={item}
-            className="mt-5 max-w-full truncate rounded-full bg-wash-4 px-3 py-1 font-mono text-[12px] text-ink-muted-strong"
+            className="mt-5 flex max-w-full items-center gap-1 rounded-full bg-wash-4 py-1 pl-3 pr-1"
           >
-            {pathname}
-          </motion.p>
+            <span className="select-text break-all text-left font-mono text-xs leading-normal text-ink-muted-strong">
+              {pathname}
+            </span>
+            <button
+              type="button"
+              onClick={copyPath}
+              aria-label={copied ? 'Path copied' : 'Copy path'}
+              className={cn(
+                'relative grid size-6 shrink-0 place-items-center rounded-full text-ink-muted',
+                ICON_HIT_AREA,
+                'transition-[color,background-color,transform] duration-150 ease-out',
+                'hover:bg-wash-6 hover:text-ink-title active:scale-[0.96]',
+                LIGHT_FOCUS_RING,
+              )}
+            >
+              {/* Both icons live in the same grid cell so the swap is a crossfade in
+                  place — the button never reflows and never resizes under the cursor. */}
+              <AnimatePresence initial={false}>
+                {copied ? (
+                  <motion.span key="check" {...iconSwap} className="col-start-1 row-start-1">
+                    <Check className="size-3.5" strokeWidth={2.25} aria-hidden />
+                  </motion.span>
+                ) : (
+                  <motion.span key="copy" {...iconSwap} className="col-start-1 row-start-1">
+                    <Copy className="size-3.5" strokeWidth={2} aria-hidden />
+                  </motion.span>
+                )}
+              </AnimatePresence>
+            </button>
+          </motion.div>
         ) : null}
 
         {/* ONE primary. The old page offered "Back to tasks" and "Open docs" as
@@ -232,7 +340,14 @@ export function NotFoundContent() {
             not a recovery path, and /tasks is only a redirect to /issues, so the
             label was speaking a word the product retired. */}
         <motion.div variants={item} className="mt-8 flex items-center gap-5">
-          <Link to="/issues" className={cn(BTN_PRIMARY, LIGHT_FOCUS_RING, 'inline-flex items-center')}>
+          {/* TOUCH_TARGET on the PRIMARY. BTN_BASE is h-9 (36px), under the 40px
+              desktop floor and well under 44px for touch — and without this the
+              page's most important control had a smaller hit area than the ghost
+              beside it, which already carried the guard. */}
+          <Link
+            to="/issues"
+            className={cn(BTN_PRIMARY, LIGHT_FOCUS_RING, TOUCH_TARGET, 'inline-flex items-center')}
+          >
             Back to Issues
           </Link>
           {canGoBack ? (
