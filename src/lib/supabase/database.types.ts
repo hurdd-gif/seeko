@@ -1096,6 +1096,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      adjust_payment: {
+        Args: { p_payment_id: string; p_amount: number; p_note: string | null; p_actor: string }
+        Returns: Database["public"]["Tables"]["payments"]["Row"]
+      }
       increment_verification_attempt: {
         Args: { p_max_attempts: number; p_purpose: string; p_token: string }
         Returns: {

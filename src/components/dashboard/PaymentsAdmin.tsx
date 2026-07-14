@@ -1079,12 +1079,14 @@ export function PaidPaymentRow({
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.98, y: -2 }}
               transition={{ type: 'spring', duration: 0.18, bounce: 0 }}
-              className="fixed z-50 w-[228px] rounded-[14px] bg-overlay p-1 shadow-seeko-pop"
+              // Frame padding 6px, item radius 8px — concentric with the 14px
+              // outer corner (14 − 6 = 8), so the items nest instead of fighting it.
+              className="fixed z-50 w-[228px] rounded-[14px] bg-overlay p-1.5 shadow-seeko-pop"
               style={{ left: refundMenu.x, top: refundMenu.y, transformOrigin: 'top left' }}
               onMouseDown={(e) => e.stopPropagation()}
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="px-2.5 py-2">
+              <div className="px-3 pb-2 pt-2.5">
                 <p className="text-xs font-medium text-ink-body tabular-nums">{fmt(amount)}</p>
                 <p className="mt-0.5 truncate text-xs text-ink-muted">
                   {hasRefund
@@ -1097,7 +1099,7 @@ export function PaidPaymentRow({
               {/* The corrective action leads; the destructive ones follow. */}
               <button
                 type="button"
-                className="flex w-full items-center gap-2.5 rounded-[10px] px-2.5 py-2 text-left text-xs font-medium text-seeko-accent-ink transition-[background-color,transform] hover:bg-seeko-accent/10 active:scale-[0.98] disabled:opacity-50"
+                className="flex w-full items-center gap-2.5 rounded-[8px] px-3 py-2 text-left text-xs font-medium text-seeko-accent-ink transition-[background-color,transform] hover:bg-seeko-accent/10 active:scale-[0.98] disabled:opacity-50"
                 onClick={() => { setRefundMenu(null); setAdjustOpen(true); }}
                 disabled={adjustLoading || hasRefund}
                 title={hasRefund ? 'Remove the refund before adjusting' : undefined}
@@ -1109,7 +1111,7 @@ export function PaidPaymentRow({
               </button>
               <button
                 type="button"
-                className="flex w-full items-center gap-2.5 rounded-[10px] px-2.5 py-2 text-left text-xs font-medium text-[#7a5a00] dark:text-dept-ink-animation transition-[background-color,transform] hover:bg-dept-wash-animation/10 active:scale-[0.98] disabled:opacity-50"
+                className="flex w-full items-center gap-2.5 rounded-[8px] px-3 py-2 text-left text-xs font-medium text-[#7a5a00] dark:text-dept-ink-animation transition-[background-color,transform] hover:bg-dept-wash-animation/10 active:scale-[0.98] disabled:opacity-50"
                 onClick={() => { setRefundMenu(null); setRefundOpen(true); }}
                 disabled={refundLoading}
               >
@@ -1120,7 +1122,7 @@ export function PaidPaymentRow({
               </button>
               <button
                 type="button"
-                className="flex w-full items-center gap-2.5 rounded-[10px] px-2.5 py-2 text-left text-xs font-medium text-[#c43f30] dark:text-danger transition-[background-color,transform] hover:bg-danger/10 active:scale-[0.98] disabled:opacity-50"
+                className="flex w-full items-center gap-2.5 rounded-[8px] px-3 py-2 text-left text-xs font-medium text-[#c43f30] dark:text-danger transition-[background-color,transform] hover:bg-danger/10 active:scale-[0.98] disabled:opacity-50"
                 onClick={() => { setRefundMenu(null); updateRefund(amount, payment.refund_note ?? 'Full refund'); }}
                 disabled={refundLoading || fullyRefunded}
               >
@@ -1132,7 +1134,7 @@ export function PaidPaymentRow({
               {hasRefund && (
                 <button
                   type="button"
-                  className="flex w-full items-center gap-2.5 rounded-[10px] px-2.5 py-2 text-left text-xs font-medium text-[#707070] dark:text-ink-muted transition-[background-color,transform] hover:bg-wash-4 hover:text-ink-title active:scale-[0.98] disabled:opacity-50"
+                  className="flex w-full items-center gap-2.5 rounded-[8px] px-3 py-2 text-left text-xs font-medium text-[#707070] dark:text-ink-muted transition-[background-color,transform] hover:bg-wash-4 hover:text-ink-title active:scale-[0.98] disabled:opacity-50"
                   onClick={() => { setRefundMenu(null); updateRefund(0, null); }}
                   disabled={refundLoading}
                 >
