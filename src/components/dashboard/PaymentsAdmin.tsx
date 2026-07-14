@@ -489,7 +489,7 @@ export function PaymentsAdmin({ team, viewerMode = false }: PaymentsAdminProps) 
             exit={{ opacity: 0, y: -10, scale: 0.98 }}
             transition={{ ...springs.smooth, delay: d(TIMING.pending) }}
           >
-            <Card className={cn(PAYMENT_MAIN_SURFACE, 'shadow-[0_1px_2px_rgba(0,0,0,0.035),0_0_0_1px_rgba(184,128,26,0.22)]')}>
+            <Card className={cn(PAYMENT_MAIN_SURFACE, 'overflow-hidden shadow-[0_1px_2px_rgba(0,0,0,0.035),0_0_0_1px_rgba(184,128,26,0.22)]')}>
               <CardHeader className={PAYMENT_SECTION_HEAD}>
                 <div className="flex items-center justify-between gap-4">
                   <div>
@@ -506,7 +506,7 @@ export function PaymentsAdmin({ team, viewerMode = false }: PaymentsAdminProps) 
                 </div>
               </CardHeader>
               <CardContent className="px-5 py-0">
-                <div className="divide-y divide-wash-6">
+                <div className="-mx-5 divide-y divide-wash-6">
                   {pendingRequests.map((payment, i) => (
                     <motion.div
                       key={payment.id}
@@ -530,7 +530,7 @@ export function PaymentsAdmin({ team, viewerMode = false }: PaymentsAdminProps) 
       {/* ── Invoice Requests ── */}
       {!viewerMode && invoiceRequests.length > 0 && (
         <FadeRise delay={d(TIMING.invoiceRequests)}>
-          <Card className={PAYMENT_MAIN_SURFACE}>
+          <Card className={cn(PAYMENT_MAIN_SURFACE, 'overflow-hidden')}>
             <CardHeader className={PAYMENT_SECTION_HEAD}>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
@@ -545,15 +545,15 @@ export function PaymentsAdmin({ team, viewerMode = false }: PaymentsAdminProps) 
               </div>
             </CardHeader>
             <CardContent className="px-5 py-0">
-              <div className="hidden grid-cols-[minmax(0,1fr)_92px_116px_112px] gap-3 border-b border-wash-6 px-3 py-2.5 text-[11px] font-medium text-[#a0a0a0] dark:text-ink-muted sm:grid">
+              <div className="-mx-5 hidden grid-cols-[minmax(0,1fr)_92px_116px_112px] gap-3 border-b border-wash-6 px-5 py-2.5 text-[11px] font-medium text-[#a0a0a0] dark:text-ink-muted sm:grid">
                 <span>Recipient</span>
                 <span className="text-left">Date</span>
                 <span className="text-right">Amount</span>
                 <span className="text-right">Status</span>
               </div>
               {invoiceQueueScrollable ? (
-                <div className="relative">
-                  <ScrollArea className="h-[min(560px,calc(100vh-360px))] rounded-b-[16px]" viewportClassName="pr-3 pb-14">
+                <div className="relative -mx-5">
+                  <ScrollArea className="h-[min(560px,calc(100vh-360px))]" viewportClassName="pb-14">
                     <div className="divide-y divide-wash-6">
                       {visibleInvoiceRequests.map((inv, i) => (
                         <InvoiceRequestRow key={inv.id} invite={inv} index={i} onAction={fetchData} />
@@ -563,7 +563,7 @@ export function PaymentsAdmin({ team, viewerMode = false }: PaymentsAdminProps) 
                   <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-surface-1/80 via-surface-1/35 to-transparent" />
                 </div>
               ) : (
-                <div className="divide-y divide-wash-6">
+                <div className="-mx-5 divide-y divide-wash-6">
                   {visibleInvoiceRequests.map((inv, i) => (
                     <InvoiceRequestRow key={inv.id} invite={inv} index={i} onAction={fetchData} />
                   ))}
@@ -592,7 +592,7 @@ export function PaymentsAdmin({ team, viewerMode = false }: PaymentsAdminProps) 
       {/* ── People ── */}
       {!viewerMode && (
       <FadeRise delay={d(TIMING.people)}>
-        <Card className={PAYMENT_RAIL_SURFACE}>
+        <Card className={cn(PAYMENT_RAIL_SURFACE, 'overflow-hidden')}>
           <CardHeader className={PAYMENT_SECTION_HEAD}>
             <div className="space-y-3">
               <div className="flex items-start justify-between gap-3">
@@ -654,10 +654,10 @@ export function PaymentsAdmin({ team, viewerMode = false }: PaymentsAdminProps) 
             ) : filteredPeople.length === 0 ? (
               <LightEmpty icon={Users} title="No results" description="No team members match this filter." />
             ) : (
-              <Stagger className="divide-y divide-wash-6" staggerMs={d(TIMING.peopleStagger)}>
+              <Stagger className="-mx-5 divide-y divide-wash-6" staggerMs={d(TIMING.peopleStagger)}>
                 {filteredPeople.map(person => (
                   <StaggerItem key={person.id}>
-                    <div className="flex items-center justify-between py-3 px-1 hover:bg-wash-3 transition-colors rounded-md -mx-1">
+                    <div className="flex items-center justify-between py-3 px-5 hover:bg-wash-3 transition-colors">
                       <div className="flex items-center gap-3 min-w-0">
                         <Avatar className="size-9 outline outline-1 -outline-offset-1 outline-wash-6">
                           <AvatarImage src={person.avatar_url ?? undefined} alt={person.display_name ?? ''} />
@@ -720,8 +720,8 @@ export function PaymentsAdmin({ team, viewerMode = false }: PaymentsAdminProps) 
             {recentPaid.length === 0 ? (
               <LightEmptyRow icon={CreditCard} text="No completed payments yet." />
             ) : (
-              <div className="relative">
-                <ScrollArea className="h-[clamp(340px,calc(100vh-500px),650px)]" viewportClassName="pr-2 pb-12">
+              <div className="relative -mx-5">
+                <ScrollArea className="h-[clamp(340px,calc(100vh-500px),650px)]" viewportClassName="pb-12">
                   <div className="divide-y divide-wash-6">
                     {recentPaid.map(payment => (
                       <PaidPaymentRow
@@ -767,7 +767,7 @@ export function PaymentsAdmin({ team, viewerMode = false }: PaymentsAdminProps) 
 }
 
 /* ── Paid Payment Row (expandable) ── */
-function PaidPaymentRow({
+export function PaidPaymentRow({
   payment,
   externalPaypalEmail,
   onAction,
@@ -805,6 +805,14 @@ function PaidPaymentRow({
   const hasRefund = refundAmount > 0;
   const fullyRefunded = refundAmount >= amount;
   const netAmount = Math.max(amount - refundAmount, 0);
+
+  // Newest first. The payment's own `amount` is the current one; every
+  // `previous_amount` here is a superseded reading — rendered, never summed.
+  const adjustments = [...(payment.adjustments ?? [])].sort(
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
+  const isAdjusted = adjustments.length > 0;
+  const latestAdjustmentNote = adjustments[0]?.note?.trim() || null;
 
   async function updateRefund(refund_amount: number, refund_note?: string | null): Promise<boolean> {
     setRefundLoading(true);
@@ -862,7 +870,12 @@ function PaidPaymentRow({
         tabIndex={0}
         onClick={() => setExpanded(!expanded)}
         onKeyDown={e => { if (e.key === 'Enter') setExpanded(!expanded); }}
-        className="flex items-center justify-between py-3 px-1 w-full text-left hover:bg-wash-3 transition-colors cursor-pointer rounded-[14px] -mx-1"
+        // Resting and hover colours move together — a bare hover:bg-wash-3 would
+        // wash the accent tint straight back out on hover.
+        className={cn(
+          'flex items-center justify-between py-3 px-5 w-full text-left transition-colors cursor-pointer',
+          isAdjusted ? 'bg-seeko-accent/[0.05] hover:bg-seeko-accent/[0.09]' : 'hover:bg-wash-3'
+        )}
       >
         <div className="flex items-center gap-3 min-w-0">
           {hasTeamRecipient ? (
@@ -905,6 +918,14 @@ function PaidPaymentRow({
               </span>
             )}
           </div>
+          {isAdjusted && (
+            <Badge
+              variant="outline"
+              className="border-seeko-accent/25 bg-seeko-accent/10 text-[10px] font-medium text-seeko-accent-ink"
+            >
+              ADJ
+            </Badge>
+          )}
           {hasRefund && (
             <Badge variant="outline" className={cn(
               'border-dept-wash-animation/30 bg-dept-wash-animation/10 text-[10px] text-dept-ink-animation',
@@ -924,6 +945,32 @@ function PaidPaymentRow({
           </motion.div>
         </div>
       </span>
+      {/* One ghost per superseded amount. Render-only: no chevron, no menu, and
+          no place in any array that gets summed. Dimmed and struck through
+          because a ghost styled like a live row reads as a second payout — the
+          exact misreading the restatement model exists to prevent. The date is
+          the adjustment's, i.e. when this amount stopped being true; paid_at
+          never moves and would print the same day on every row in the stack. */}
+      {adjustments.map(adj => (
+        <div
+          key={adj.id}
+          data-testid="adjustment-ghost"
+          className="flex items-center justify-between gap-3 border-t border-wash-6 bg-surface-2 py-2.5 pl-16 pr-5"
+        >
+          <div className="min-w-0">
+            <p className="truncate text-xs text-ink-faint">{compactTitle}</p>
+            <p className="text-[11px] text-ink-faintest">Superseded</p>
+          </div>
+          <div className="flex shrink-0 items-center gap-3">
+            <span className="text-xs font-medium tabular-nums text-ink-faint line-through">
+              {fmt(Number(adj.previous_amount))}
+            </span>
+            <span className="text-[11px] tabular-nums text-ink-faintest">
+              {new Date(adj.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+            </span>
+          </div>
+        </div>
+      ))}
       <AnimatePresence>
         {expanded && (
           <motion.div
@@ -933,46 +980,58 @@ function PaidPaymentRow({
             transition={{ duration: 0.2, ease: 'easeInOut' }}
             className="overflow-hidden"
           >
-            <div className="pb-3 px-1 pt-1 space-y-2">
-              {hasRefund && (
-                <div className="rounded-[14px] bg-[#fff7eb] dark:bg-dept-wash-animation/[0.08] px-3 py-2 text-xs text-dept-ink-animation">
-                  <div className="flex items-center justify-between gap-3">
-                    <span>{fullyRefunded ? 'Fully refunded' : 'Partially refunded'}</span>
-                    <span className="font-medium tabular-nums">{fmt(refundAmount)} of {fmt(amount)}</span>
+            {/* Detail reads as a drawer inside the row's frame — a full-width
+                band, not a floating box. Nesting a rounded slab under the
+                square, full-bleed row put two shapes in one card. */}
+            {(hasRefund || showPaypalEmail || latestAdjustmentNote || (payment.items && payment.items.length > 0)) && (
+              <div className="border-t border-wash-6 bg-surface-3 text-xs">
+                {latestAdjustmentNote && (
+                  <div className="bg-seeko-accent/[0.06] px-5 py-2.5 text-seeko-accent-ink">
+                    <div className="flex items-center justify-between gap-3">
+                      <span>Amount adjusted</span>
+                      <span className="font-medium tabular-nums">
+                        {fmt(Number(adjustments[0].previous_amount))} → {fmt(amount)}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-[11px] text-seeko-accent-ink/75">{latestAdjustmentNote}</p>
                   </div>
-                  {payment.refund_note && (
-                    <p className="mt-1 text-[11px] text-dept-ink-animation/75">{payment.refund_note}</p>
-                  )}
-                </div>
-              )}
-              {(showPaypalEmail || (payment.items && payment.items.length > 0)) && (
-                <div className="overflow-hidden rounded-[14px] bg-surface-3 text-xs">
-                  {payment.items && payment.items.length > 0 && (
-                    <div className="space-y-2 px-3 py-2">
-                      {payment.items.map(item => (
-                        <div key={item.id} className="flex items-center justify-between gap-3">
-                          <span className="min-w-0 truncate text-ink-muted">{item.label}</span>
-                          <span className="font-medium tabular-nums text-ink-title">{fmt(Number(item.amount))}</span>
-                        </div>
-                      ))}
+                )}
+                {hasRefund && (
+                  <div className="bg-[#fff7eb] dark:bg-dept-wash-animation/[0.08] px-5 py-2.5 text-dept-ink-animation">
+                    <div className="flex items-center justify-between gap-3">
+                      <span>{fullyRefunded ? 'Fully refunded' : 'Partially refunded'}</span>
+                      <span className="font-medium tabular-nums">{fmt(refundAmount)} of {fmt(amount)}</span>
                     </div>
-                  )}
-                  {showPaypalEmail && (
-                    <div className={cn('px-3 py-2', payment.items && payment.items.length > 0 && 'border-t border-wash-4')}>
-                      <InputCopy
-                        value={paypalEmail}
-                        variant="icon"
-                        showTooltip={false}
-                        monospace={false}
-                        className="min-w-0 max-w-full flex-1"
-                        onClick={(e) => e.stopPropagation()}
-                        onCopy={() => toast.success('PayPal email copied')}
-                      />
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+                    {payment.refund_note && (
+                      <p className="mt-1 text-[11px] text-dept-ink-animation/75">{payment.refund_note}</p>
+                    )}
+                  </div>
+                )}
+                {payment.items && payment.items.length > 0 && (
+                  <div className="space-y-2 px-5 py-2.5">
+                    {payment.items.map(item => (
+                      <div key={item.id} className="flex items-center justify-between gap-3">
+                        <span className="min-w-0 truncate text-ink-muted">{item.label}</span>
+                        <span className="font-medium tabular-nums text-ink-title">{fmt(Number(item.amount))}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {showPaypalEmail && (
+                  <div className={cn('px-5 py-2.5', payment.items && payment.items.length > 0 && 'border-t border-wash-4')}>
+                    <InputCopy
+                      value={paypalEmail}
+                      variant="icon"
+                      showTooltip={false}
+                      monospace={false}
+                      className="min-w-0 max-w-full flex-1"
+                      onClick={(e) => e.stopPropagation()}
+                      onCopy={() => toast.success('PayPal email copied')}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
@@ -1177,7 +1236,7 @@ function PendingRequestRow({ payment, onAction }: { payment: Payment; onAction: 
         tabIndex={0}
         onClick={() => setExpanded(!expanded)}
         onKeyDown={e => { if (e.key === 'Enter') setExpanded(!expanded); }}
-        className="flex items-center justify-between py-3 px-1 w-full text-left hover:bg-wash-3 transition-colors cursor-pointer rounded-md -mx-1"
+        className="flex items-center justify-between py-3 px-5 w-full text-left hover:bg-wash-3 transition-colors cursor-pointer"
       >
         <div className="flex items-center gap-3 min-w-0">
           <Avatar className="size-8 outline outline-1 -outline-offset-1 outline-dept-wash-animation/25">
@@ -1225,12 +1284,12 @@ function PendingRequestRow({ payment, onAction }: { payment: Payment; onAction: 
             transition={{ duration: 0.2, ease: 'easeInOut' }}
             className="overflow-hidden"
           >
-            <div className="pb-3 px-1 pt-1 space-y-3">
+            <div className="space-y-3 border-t border-wash-6 bg-surface-3 px-5 py-3">
               {payment.description && (
                 <p className="text-xs text-ink-muted">{payment.description}</p>
               )}
               {payment.items && payment.items.length > 0 && (
-                <div className="rounded-lg bg-surface-3 p-3 space-y-2">
+                <div className="space-y-2">
                   {payment.items.map(item => (
                     <div key={item.id} className="flex items-center justify-between text-xs">
                       <span className="text-ink-muted">{item.label}</span>
@@ -1324,7 +1383,7 @@ function InvoiceRequestRow({ invite, index, onAction }: { invite: InvoiceRequest
       initial={{ opacity: 0, x: -8 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ type: 'spring', visualDuration: 0.3, bounce: 0.1, delay: Math.min(index, 8) * 0.04 }}
-      className="grid min-w-0 gap-3 rounded-[12px] px-3 py-3.5 transition-colors hover:bg-wash-3 sm:grid-cols-[minmax(0,1fr)_92px_116px_112px] sm:items-center"
+      className="grid min-w-0 gap-3 px-5 py-3.5 transition-colors hover:bg-wash-3 sm:grid-cols-[minmax(0,1fr)_92px_116px_112px] sm:items-center"
     >
       <div className="flex min-w-0 items-center gap-3">
         <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-surface-4 outline outline-1 -outline-offset-1 outline-wash-6">
