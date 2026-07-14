@@ -17,7 +17,7 @@ import { Link, useRouter, useSearchParams, usePathname } from '@/lib/react-route
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import {
   Users, CheckCircle2,
-  CreditCard, Plus, ChevronDown, ChevronUp, ChevronLeft, Check, X as XIcon,
+  CreditCard, Plus, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Check, X as XIcon,
   FileText, RotateCw, Ban, Loader2, Pencil,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -921,7 +921,20 @@ export function PaidPaymentRow({
             </div>
           )}
           <div className="min-w-0">
-            <p className="text-sm font-medium text-ink-title truncate">{compactTitle}</p>
+            {/* ADJ rides with the name, not with the amount: parked in the right
+                cluster it displaced the amount and broke the column every other
+                row shares. */}
+            <div className="flex items-center gap-1.5 min-w-0">
+              <p className="text-sm font-medium text-ink-title truncate">{compactTitle}</p>
+              {isAdjusted && (
+                <Badge
+                  variant="outline"
+                  className="shrink-0 border-seeko-accent/25 bg-seeko-accent/10 text-[10px] font-medium text-seeko-accent-ink"
+                >
+                  ADJ
+                </Badge>
+              )}
+            </div>
             <p className="text-[11px] text-ink-muted truncate">
               {compactContext ?? `${payment.items?.length ?? 0} item${(payment.items?.length ?? 0) !== 1 ? 's' : ''}`}
               <span className="ml-1.5 text-ink-faint">
@@ -944,14 +957,6 @@ export function PaidPaymentRow({
               </span>
             )}
           </div>
-          {isAdjusted && (
-            <Badge
-              variant="outline"
-              className="border-seeko-accent/25 bg-seeko-accent/10 text-[10px] font-medium text-seeko-accent-ink"
-            >
-              ADJ
-            </Badge>
-          )}
           {hasRefund && (
             <Badge variant="outline" className={cn(
               'border-dept-wash-animation/30 bg-dept-wash-animation/10 text-[10px] text-dept-ink-animation',
@@ -960,7 +965,10 @@ export function PaidPaymentRow({
               {fullyRefunded ? 'Refunded' : 'Partial refund'}
             </Badge>
           )}
-          <span className="text-[11px] text-ink-faint tabular-nums">
+          {/* Fixed-width, right-aligned: a fluid date column is why the amounts
+              never lined up — "Jul 4" is narrower than "Jul 12", so every row
+              pushed its amount to a different x. */}
+          <span className="w-12 shrink-0 text-right text-[11px] text-ink-faint tabular-nums">
             {new Date(payment.paid_at!).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
           </span>
           <motion.div
@@ -971,32 +979,6 @@ export function PaidPaymentRow({
           </motion.div>
         </div>
       </span>
-      {/* One ghost per superseded amount. Render-only: no chevron, no menu, and
-          no place in any array that gets summed. Dimmed and struck through
-          because a ghost styled like a live row reads as a second payout — the
-          exact misreading the restatement model exists to prevent. The date is
-          the adjustment's, i.e. when this amount stopped being true; paid_at
-          never moves and would print the same day on every row in the stack. */}
-      {adjustments.map(adj => (
-        <div
-          key={adj.id}
-          data-testid="adjustment-ghost"
-          className="flex items-center justify-between gap-3 border-t border-wash-6 bg-surface-2 py-2.5 pl-16 pr-5"
-        >
-          <div className="min-w-0">
-            <p className="truncate text-xs text-ink-faint">{compactTitle}</p>
-            <p className="text-[11px] text-ink-faintest">Superseded</p>
-          </div>
-          <div className="flex shrink-0 items-center gap-3">
-            <span className="text-xs font-medium tabular-nums text-ink-faint line-through">
-              {fmt(Number(adj.previous_amount))}
-            </span>
-            <span className="text-[11px] tabular-nums text-ink-faintest">
-              {new Date(adj.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-            </span>
-          </div>
-        </div>
-      ))}
       <AnimatePresence>
         {expanded && (
           <motion.div
@@ -1006,6 +988,39 @@ export function PaidPaymentRow({
             transition={{ duration: 0.2, ease: 'easeInOut' }}
             className="overflow-hidden"
           >
+            {/* One ghost per superseded amount. History, not a payout: it lives
+                inside the drawer, so a collapsed list shows one row per payment
+                and no struck-through numbers. The ADJ badge is what advertises
+                that there is history to open. Render-only — no chevron, no menu,
+                and no place in any array that gets summed. The date is the
+                adjustment's, i.e. when this amount stopped being true; paid_at
+                never moves and would print the same day on every row. */}
+            {isAdjusted && (
+              <div className="border-t border-wash-6 bg-surface-2">
+                {adjustments.map(adj => (
+                  <div
+                    key={adj.id}
+                    data-testid="adjustment-ghost"
+                    className="flex items-center justify-between gap-3 py-2.5 pl-16 pr-5"
+                  >
+                    <p className="truncate text-[11px] text-ink-faintest">Superseded</p>
+                    <div className="flex shrink-0 items-center gap-3">
+                      {/* Same size and weight as the live amount so the digits
+                          land in the same column, only dimmed and struck. */}
+                      <span className="text-sm font-medium tabular-nums text-ink-faint line-through">
+                        {fmt(Number(adj.previous_amount))}
+                      </span>
+                      <span className="w-12 shrink-0 text-right text-[11px] tabular-nums text-ink-faintest">
+                        {new Date(adj.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </span>
+                      {/* Stands in for the live row's chevron — without it the
+                          ghost's columns drift 28px right of every row above. */}
+                      <span aria-hidden className="size-4" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
             {/* Detail reads as a drawer inside the row's frame — a full-width
                 band, not a floating box. Nesting a rounded slab under the
                 square, full-bleed row put two shapes in one card. */}
@@ -1015,8 +1030,14 @@ export function PaidPaymentRow({
                   <div className="bg-seeko-accent/[0.06] px-5 py-2.5 text-seeko-accent-ink">
                     <div className="flex items-center justify-between gap-3">
                       <span>Amount adjusted</span>
-                      <span className="font-medium tabular-nums">
-                        {fmt(Number(adjustments[0].previous_amount))} → {fmt(amount)}
+                      {/* An arrowhead, not "→": the glyph inherits the 12px text
+                          size and renders as a hairline at that scale, so it's a
+                          drawn icon sized on its own terms. */}
+                      <span className="flex items-center gap-1.5 font-medium tabular-nums">
+                        {fmt(Number(adjustments[0].previous_amount))}
+                        <span className="sr-only">to</span>
+                        <ChevronRight aria-hidden strokeWidth={2.25} className="size-4 shrink-0 text-seeko-accent-ink/70" />
+                        {fmt(amount)}
                       </span>
                     </div>
                     <p className="mt-1 text-[11px] text-seeko-accent-ink/75">{latestAdjustmentNote}</p>

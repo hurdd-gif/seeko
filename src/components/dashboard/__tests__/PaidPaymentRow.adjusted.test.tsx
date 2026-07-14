@@ -32,6 +32,12 @@ function row(payment: Payment) {
   );
 }
 
+// The superseded amounts live in the drawer, so a test that wants to see them
+// has to open it — same as a person does.
+function expand(container: HTMLElement) {
+  fireEvent.click(container.querySelector('[role="button"]')!);
+}
+
 describe('PaidPaymentRow — adjusted payments', () => {
   it('marks an adjusted payment with ADJ and shows the current amount', () => {
     row(adjusted);
@@ -39,8 +45,15 @@ describe('PaidPaymentRow — adjusted payments', () => {
     expect(screen.getByText('$70.00')).toBeInTheDocument();
   });
 
-  it('renders one ghost row per superseded amount, newest first', () => {
+  it('hides the superseded amounts until the row is expanded', () => {
     row(adjusted);
+    expect(screen.queryAllByTestId('adjustment-ghost')).toHaveLength(0);
+    expect(screen.queryByText('$62.00')).toBeNull();
+  });
+
+  it('renders one ghost row per superseded amount, newest first', () => {
+    const { container } = row(adjusted);
+    expand(container);
     const ghosts = screen.getAllByTestId('adjustment-ghost');
     expect(ghosts).toHaveLength(2);
     expect(within(ghosts[0]).getByText('$62.00')).toBeInTheDocument();
@@ -48,13 +61,15 @@ describe('PaidPaymentRow — adjusted payments', () => {
   });
 
   it('gives ghost rows no expander and no context menu', () => {
-    row(adjusted);
+    const { container } = row(adjusted);
+    expand(container);
     const ghost = screen.getAllByTestId('adjustment-ghost')[0];
     expect(within(ghost).queryByRole('button')).toBeNull();
   });
 
   it('leaves an unadjusted payment unmarked and ghost-free', () => {
-    row(base);
+    const { container } = row(base);
+    expand(container);
     expect(screen.queryByText('ADJ')).toBeNull();
     expect(screen.queryAllByTestId('adjustment-ghost')).toHaveLength(0);
   });
