@@ -27,6 +27,7 @@
     "@supabase/ssr": "^0.9.0",
     "@supabase/supabase-js": "^2.98.0",
     "@tabler/icons-react": "^3.44.0",
+    "@tailwindcss/postcss": "^4",
     "@tailwindcss/typography": "^0.5.19",
     "@tiptap/core": "^3.20.1",
     "@tiptap/extension-image": "^3.20.1",
@@ -53,6 +54,7 @@
     "@visx/responsive": "^4.0.1-alpha.0",
     "@visx/scale": "^4.0.1-alpha.0",
     "@visx/shape": "^4.0.1-alpha.0",
+    "@vitejs/plugin-react": "^5.1.4",
     "bcryptjs": "^3.0.3",
     "boneyard-js": "1.8.1",
     "canvas-confetti": "^1.9.4",
@@ -80,11 +82,13 @@
     "resend": "^6.12.3",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.5.0",
+    "tailwindcss": "^4",
     "tippy.js": "^6.3.7",
+    "tsx": "^4.22.4",
+    "vite": "^7.3.2",
     "web-haptics": "^0.0.6"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4",
     "@testing-library/dom": "^10.0.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
@@ -96,12 +100,9 @@
     "@types/opentype.js": "^1.3.9",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "@vitejs/plugin-react": "^5.1.4",
     "agentation": "^3.0.2",
     "jsdom": "^28.1.0",
     "react-doctor": "^0.7.7",
-    "tailwindcss": "^4",
-    "tsx": "^4.22.4",
     "typescript": "5.9.3",
     "vitest": "^4.0.18"
   }
