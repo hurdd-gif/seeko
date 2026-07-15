@@ -157,8 +157,11 @@ describe('LightShell', () => {
     expect(screen.getByText('Suggestions')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /draft investor update/i }));
     expect(screen.getByText(/thinking through permissions and context/i)).toBeInTheDocument();
-    expect(await screen.findByText('Approval required')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^approve$/i })).toBeInTheDocument();
+    /* The decision ROW is the contract, not a status string. The redesign folded the
+       old "Approval required" strip into the capsule, whose copy is now the specific
+       request ("Move X to In Review") — so asserting that literal again would only
+       re-test chrome that no longer exists. */
+    expect(await screen.findByRole('button', { name: /^approve$/i })).toBeInTheDocument();
   });
 
   it('supports demo suggestion, approval, and composer interactions', async () => {
@@ -192,15 +195,46 @@ describe('LightShell', () => {
     await user.type(screen.getByRole('textbox', { name: /ask eko/i }), 'simulate fail');
     await user.click(screen.getByRole('button', { name: /send message/i }));
 
-    expect((await screen.findAllByText('EKO could not answer')).length).toBeGreaterThanOrEqual(2);
+    /* ONCE, in the capsule — and nowhere else. The failure is a state, not something EKO
+       said, so it must not also land in the transcript: Retry re-runs the same path, and
+       the old chat-bubble copy stacked one identical bubble per attempt. "Could not
+       answer", not "EKO could not answer" — the capsule already names EKO. */
+    expect((await screen.findAllByText('Could not answer')).length).toBe(1);
     expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /dismiss/i }));
 
     expect(screen.getByRole('textbox', { name: /ask eko/i })).toBeInTheDocument();
-    expect(screen.queryByText('Suggestions')).not.toBeInTheDocument();
-    expect(screen.queryByText('Approval required')).not.toBeInTheDocument();
+    /* waitFor, because the redesign gave the suggestion sheet an EXIT animation — it is
+       still mounted for the length of that exit, so a synchronous query right after the
+       click catches it mid-leave. The assertion is unchanged (dismiss must not dump you
+       back on the suggestion sheet); it just has to outlast the animation now. */
+    await waitFor(() => {
+      expect(screen.queryByText('Suggestions')).not.toBeInTheDocument();
+    });
     expect(screen.queryByRole('button', { name: /^approve$/i })).not.toBeInTheDocument();
+  });
+
+  it('does not stack a chat bubble per failed retry', async () => {
+    // Regression: failAgent used to append the error title to the chat, and Retry
+    // re-enters failAgent — so five attempts left five identical "Approval could not
+    // run" bubbles in the transcript, each one restating the capsule directly above it.
+    const user = userEvent.setup();
+    render(<LightShell>body</LightShell>);
+
+    await user.click(screen.getByRole('button', { name: /open eko/i }));
+    await user.type(screen.getByRole('textbox', { name: /ask eko/i }), 'simulate fail');
+    await user.click(screen.getByRole('button', { name: /send message/i }));
+    expect((await screen.findAllByText('Could not answer')).length).toBe(1);
+
+    // Retry, fail, retry, fail. The capsule keeps saying it; the transcript stays quiet.
+    await user.click(screen.getByRole('button', { name: /retry/i }));
+    await waitFor(() => expect(screen.getAllByText('Could not answer').length).toBe(1));
+    await user.click(screen.getByRole('button', { name: /retry/i }));
+    await waitFor(() => expect(screen.getAllByText('Could not answer').length).toBe(1));
+
+    // The prompt itself is still in the transcript — only the failure was never "said".
+    expect(screen.getByText('simulate fail')).toBeInTheDocument();
   });
 
   it('keeps the previous edit when editing a saved revision again', async () => {
@@ -209,7 +243,7 @@ describe('LightShell', () => {
 
     await user.click(screen.getByRole('button', { name: /open eko/i }));
     await user.click(screen.getByRole('button', { name: /draft investor update/i }));
-    expect(await screen.findByText('Approval required')).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /^edit$/i })).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /^edit$/i }));
     await user.type(screen.getByRole('textbox', { name: /edit eko request/i }), 'Make it shorter');
@@ -227,7 +261,7 @@ describe('LightShell', () => {
 
     await user.click(screen.getByRole('button', { name: /open eko/i }));
     await user.click(screen.getByRole('button', { name: /draft investor update/i }));
-    expect(await screen.findByText('Approval required')).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /^approve$/i })).toBeInTheDocument();
 
     await user.type(screen.getByRole('textbox', { name: /ask eko/i }), 'I already approved it');
     await user.click(screen.getByRole('button', { name: /send message/i }));
@@ -247,8 +281,10 @@ describe('LightShell', () => {
     await user.click(screen.getByRole('button', { name: /send message/i }));
     expect(await screen.findByText(/prepared a safe answer/i)).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: /close eko/i }));
-    await user.click(screen.getByRole('button', { name: /open eko/i }));
+    /* Escape, not a close button. The redesign deleted the header `×` — the only `×`
+       left in the tray is Deny — so Escape and an outside click ARE the exit now. */
+    await user.keyboard('{Escape}');
+    await user.click(await screen.findByRole('button', { name: /open eko/i }));
 
     expect(screen.getByRole('button', { name: /review next/i })).toBeInTheDocument();
   });
@@ -264,7 +300,6 @@ describe('LightShell', () => {
 
     expect(await screen.findByText(/prepared a safe answer/i)).toBeInTheDocument();
     expect(screen.queryByText('You asked: What tasks are currently in progress?')).not.toBeInTheDocument();
-    expect(screen.queryByText('Approval required')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^approve$/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^edit$/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^reject$/i })).not.toBeInTheDocument();
@@ -323,7 +358,6 @@ describe('LightShell', () => {
 
     expect(await screen.findByText(/please specify what you would like resent/i)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^approve$/i })).not.toBeInTheDocument();
-    expect(screen.queryByText('Approval required')).not.toBeInTheDocument();
   });
 
   it('collects missing issue approval details in a bottom drawer', async () => {
@@ -413,7 +447,6 @@ describe('LightShell', () => {
       expect(screen.queryByRole('form', { name: /issue details drawer/i })).not.toBeInTheDocument(),
     );
     expect(screen.queryByRole('button', { name: /^approve$/i })).not.toBeInTheDocument();
-    expect(screen.queryByText('Approval required')).not.toBeInTheDocument();
   });
 
   it('keeps EKO chat history visible after closing and reopening', async () => {
@@ -425,7 +458,7 @@ describe('LightShell', () => {
     await user.click(screen.getByRole('button', { name: /send message/i }));
     expect(await screen.findByText(/prepared a safe answer/i)).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: /close eko/i }));
+    await user.keyboard('{Escape}');
     await waitFor(() =>
       expect(screen.queryByRole('dialog', { name: /eko/i })).not.toBeInTheDocument(),
     );
@@ -468,8 +501,7 @@ describe('LightShell', () => {
     render(<LightShell>body</LightShell>);
     await user.click(screen.getByRole('button', { name: /open eko/i }));
     await user.click(screen.getByRole('button', { name: /draft investor update/i }));
-    expect(await screen.findByText('Approval required')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: /^approve$/i }));
+    await user.click(await screen.findByRole('button', { name: /^approve$/i }));
 
     const receipt = await screen.findByRole('button', {
       name: /view game mechanics on the board/i,

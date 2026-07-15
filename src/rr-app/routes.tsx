@@ -989,6 +989,15 @@ export const router = createBrowserRouter([
     },
   },
   {
+    path: '/eko-preview',
+    lazy: async () => {
+      const route = await import('./routes/eko-preview');
+      return {
+        Component: route.EkoPreviewRoute,
+      };
+    },
+  },
+  {
     path: '/investor-preview/docs',
     lazy: async () => {
       const route = await import('./routes/investor-preview');
