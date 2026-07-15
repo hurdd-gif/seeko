@@ -25,3 +25,16 @@ services:
         sync: false
       - key: ANTHROPIC_API_KEY
         sync: false
+
+  # Always-on page Render serves under www.seekostudios.com while the main
+  # service (above) is in Maintenance Mode. Kept a SEPARATE service on purpose:
+  # it must stay up when seeko-studio is down. No build — it publishes the
+  # self-contained public/maintenance.html as-is. Wiring: paste this service's
+  # URL (…/maintenance.html) into seeko-studio → Settings → Maintenance Mode →
+  # Custom Maintenance Page URL. Render proxies that content under the app's own
+  # domain, so the source URL is never user-visible. See public/maintenance.README.md.
+  - type: web
+    name: seeko-maintenance
+    runtime: static
+    staticPublishPath: ./public
+    buildCommand: echo "no build — publishes public/maintenance.html as-is"
