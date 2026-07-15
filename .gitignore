@@ -91,6 +91,17 @@ next-env.d.ts
 .screenshots/
 /*.png
 
+# Internal working docs — never publish to GitHub, kept locally only.
+# Agent protocol, seam glossary, design context and leftover PR scaffolding
+# expose internal architecture/security notes; the repo-root README/CLAUDE
+# are working files, not a public landing page. Root-anchored on purpose so
+# nested README.md / *.md under src/, docs/, public/, supabase/ stay tracked.
+/CLAUDE.md
+/CONTEXT.md
+/README.md
+/PR_DESCRIPTION.md
+/.impeccable.md
+
 # documents
 *.pdf
 *.doc
