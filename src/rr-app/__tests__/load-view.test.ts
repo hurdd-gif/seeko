@@ -21,12 +21,23 @@ describe('loadView', () => {
     expect(result).toEqual({ status: 'ready', data: { board: [1, 2, 3] } });
   });
 
-  it('returns an unauthorized state on 401', async () => {
+  it('redirects to /login with a return path on 401', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(401, { error: 'unauthorized' })));
+    // jsdom starts at http://localhost/ — pushState moves the path without a real
+    // navigation, so loadView reads /issues as "where the user was headed".
+    window.history.pushState({}, '', '/issues?q=1');
 
-    const result = await loadView('/api/tasks-board', 'Unable to load tasks');
-
-    expect(result).toEqual({ status: 'unauthorized' });
+    try {
+      await loadView('/api/tasks-board', 'Unable to load tasks');
+      expect.unreachable('loadView should have thrown a redirect');
+    } catch (err) {
+      expect(err).toBeInstanceOf(Response);
+      const response = err as Response;
+      expect(response.status).toBe(302);
+      expect(response.headers.get('location')).toBe(`/login?next=${encodeURIComponent('/issues?q=1')}`);
+    } finally {
+      window.history.pushState({}, '', '/');
+    }
   });
 
   it('returns a forbidden state on 403', async () => {

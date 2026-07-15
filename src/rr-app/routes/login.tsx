@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { CircleHelp } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { sanitizeNextPath } from '@/lib/next-path';
 import { useSearchParams } from '@/lib/react-router-adapters';
 import { usePublicViewTransition } from '@/lib/view-transitions';
 import { PublicLink, TOUCH_TARGET } from '@/components/public/PublicLink';
@@ -78,6 +79,10 @@ export function LoginRouteContent() {
   const searchParams = useSearchParams();
   const errorCode = searchParams.get('error');
   const callbackError = errorCode ? CALLBACK_ERROR_MESSAGES[errorCode] ?? 'Sign-in failed. Please try again.' : null;
+  // A protected route bounced an anonymous visitor here with ?next=<their path>;
+  // sanitize it (open-redirect guard) and hand it to the form so a successful
+  // sign-in returns them where they were headed.
+  const nextPath = sanitizeNextPath(searchParams.get('next'));
 
   /* True when we got here from /legal (or the back button out of it) and the
      browser is mid-transition. The transition IS the entrance in that case. */
@@ -204,7 +209,7 @@ export function LoginRouteContent() {
             captured — and played — as an empty column. When the browser is
             animating the arrival, it owns the entrance; the storyboard stands
             down and the form renders at rest. See lib/view-transitions.ts. */}
-        <LoginForm initialError={callbackError} skipEntrance={arrivedViaTransition} />
+        <LoginForm initialError={callbackError} skipEntrance={arrivedViaTransition} nextPath={nextPath} />
 
         {/* Legal footnote — reference geometry (14px, max 300px, 32px below
             card), lifted off the reference's #969696 (2.7:1, unreadable at 14px).

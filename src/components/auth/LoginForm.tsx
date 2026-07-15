@@ -279,9 +279,17 @@ type LoginFormProps = {
    * would play against a blank column.
    */
   skipEntrance?: boolean;
+  /**
+   * Where to land after a successful sign-in, from the `?next=` param the
+   * protected-route loaders attach when they bounce an anonymous visitor here
+   * (see load-view.ts). Already sanitized by the route (sanitizeNextPath), so
+   * it is a trusted same-origin path or null. When set it overrides the
+   * role-based default; when null we fall back to resolvePostLoginDestination.
+   */
+  nextPath?: string | null;
 };
 
-export function LoginForm({ initialError = null, skipEntrance = false }: LoginFormProps) {
+export function LoginForm({ initialError = null, skipEntrance = false, nextPath = null }: LoginFormProps) {
   const router = useRouter();
   const { trigger } = useHaptics();
   const reduceMotion = useReducedMotion();
@@ -512,7 +520,7 @@ export function LoginForm({ initialError = null, skipEntrance = false }: LoginFo
 
     rememberAuthMethod('email');
     trigger('success');
-    const dest = await resolvePostLoginDestination(supabase as unknown as MinimalSupabase);
+    const dest = nextPath ?? (await resolvePostLoginDestination(supabase as unknown as MinimalSupabase));
     router.push(dest);
     router.refresh();
   }
@@ -560,7 +568,9 @@ export function LoginForm({ initialError = null, skipEntrance = false }: LoginFo
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/api/auth/callback?next=/tasks` },
+      options: {
+        redirectTo: `${window.location.origin}/api/auth/callback?next=${encodeURIComponent(nextPath ?? '/tasks')}`,
+      },
     });
 
     // On success the browser navigates away; we only regain control on failure.
@@ -603,7 +613,7 @@ export function LoginForm({ initialError = null, skipEntrance = false }: LoginFo
       rememberAuthMethod('passkey');
       trigger('success');
       const supabase = createClient();
-      const dest = await resolvePostLoginDestination(supabase as unknown as MinimalSupabase);
+      const dest = nextPath ?? (await resolvePostLoginDestination(supabase as unknown as MinimalSupabase));
       router.push(dest);
       router.refresh();
     } catch (err) {
