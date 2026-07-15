@@ -29,7 +29,11 @@ export async function loadView<T>(url: string, errorMessage: string): Promise<Vi
     // state as a fallback for any non-browser caller (there is none today).
     if (typeof window !== 'undefined') {
       const here = window.location.pathname + window.location.search;
-      throw redirect(`/login?next=${encodeURIComponent(here)}`);
+      // The root is already the default post-login landing, and role-based
+      // routing (contractor/investor/staff) resolves it — so a next=/ would be
+      // redundant at best and would override that landing at worst. Only carry a
+      // return path when the user was actually headed to a specific deep route.
+      throw redirect(here === '/' ? '/login' : `/login?next=${encodeURIComponent(here)}`);
     }
     return { status: 'unauthorized' };
   }

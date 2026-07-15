@@ -40,6 +40,23 @@ describe('loadView', () => {
     }
   });
 
+  it('redirects to a bare /login (no next) when the user was on the root', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(401, { error: 'unauthorized' })));
+    // next=/ is pointless — the root is the default landing and role-based
+    // routing resolves it, so carrying it would only override that landing.
+    window.history.pushState({}, '', '/');
+
+    try {
+      await loadView('/api/tasks-board', 'Unable to load tasks');
+      expect.unreachable('loadView should have thrown a redirect');
+    } catch (err) {
+      expect(err).toBeInstanceOf(Response);
+      const response = err as Response;
+      expect(response.status).toBe(302);
+      expect(response.headers.get('location')).toBe('/login');
+    }
+  });
+
   it('returns a forbidden state on 403', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(403, { error: 'forbidden' })));
 
