@@ -77,10 +77,17 @@ export function createDocusignPrivateKey(raw: string): KeyObject {
 }
 
 function stripTags(html: string): string {
-  return sanitizeEmailHtml(html)
+  let text = sanitizeEmailHtml(html)
     .replace(/<\/?(p|div|br)\s*\/?>/gi, '\n')
-    .replace(/<li>/gi, '\n<li>')
-    .replace(/<[^>]+>/g, '')
+    .replace(/<li>/gi, '\n<li>');
+  // Strip any remaining tags, looping until stable so a removal can't splice two
+  // fragments into a fresh "<...>" (js/incomplete-multi-character-sanitization).
+  let prev: string;
+  do {
+    prev = text;
+    text = text.replace(/<[^>]+>/g, '');
+  } while (text !== prev);
+  return text
     .replace(/\n{3,}/g, '\n\n')
     .trim();
 }

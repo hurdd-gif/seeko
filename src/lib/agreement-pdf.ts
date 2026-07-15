@@ -75,13 +75,19 @@ export function buildCertificateRows(f: CertificateFields): { label: string; val
 
 /** Strip HTML tags for plain-text PDF rendering */
 function stripHtml(html: string): string {
-  return html
+  let text = html
     .replace(/<\/?(p|div|br)\s*\/?>/gi, '\n')
     .replace(/<li>/gi, '\n      (a) ')
-    .replace(/<\/li>/gi, '')
-    .replace(/<[^>]+>/g, '')
+    .replace(/<\/li>/gi, '');
+  // Strip any remaining tags, looping until stable so a removal can't splice two
+  // fragments into a fresh "<...>" (js/incomplete-multi-character-sanitization).
+  let prev: string;
+  do {
+    prev = text;
+    text = text.replace(/<[^>]+>/g, '');
+  } while (text !== prev);
+  return text
     .replace(/&middot;/g, '\u00B7')
-    .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')
@@ -92,6 +98,9 @@ function stripHtml(html: string): string {
     .replace(/&ldquo;/g, '"')
     .replace(/&mdash;/g, ' -- ')
     .replace(/&ndash;/g, '-')
+    // Decode &amp; last so "&amp;lt;" resolves to the literal "&lt;", not "<"
+    // (js/double-escaping).
+    .replace(/&amp;/g, '&')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
 }
