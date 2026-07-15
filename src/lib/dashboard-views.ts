@@ -2,6 +2,7 @@ import { attributedOnly } from '@/lib/activity-log';
 import { getServiceClient } from '@/lib/supabase/service';
 import { getInitials } from '@/lib/utils';
 import { AccessError } from '@/lib/access-error';
+import { isDocLocked } from '@/lib/docs-index';
 import type { TasksBoardAccount } from '@/lib/tasks-board';
 import type { Area, Doc, Milestone, Profile, Task, TaskActivity } from '@/lib/types';
 
@@ -174,9 +175,55 @@ export async function loadDocsView(currentUser: {
     .order('sort_order', { ascending: true });
   if (error) throw error;
 
+  // Confidentiality allowlist — the staff/contractor twin of loadInvestorDocs.
+  // This loader admits every non-investor (contractors, staff outside the doc's
+  // restricted_department), and the shared <DocList> only *hides* a locked doc's
+  // body in the UI, so anything shipped here is readable straight off the network
+  // response. Rebuild each row from an explicit field allowlist rather than
+  // spreading the raw doc, so a column later added to DOC_SELECT can't silently
+  // reach an unauthorized reader.
+  //   - content / slides: the confidential body — blanked for any doc locked FOR
+  //     THIS caller (grants/department/admin still win via isDocLocked).
+  //   - granted_user_ids: the doc's access-control list. Admins keep the FULL list
+  //     — only they open the grant editor (<DocList> gates every edit affordance on
+  //     isAdmin, and DocEditor/DeckEditor seed their grant state from this row), and
+  //     they are already fully trusted. For every other caller it is reduced to
+  //     minimal disclosure — the caller's own id iff they are on it, else empty —
+  //     which keeps <DocList>'s client isLocked() exact (it only asks "am I
+  //     granted?") while never revealing which OTHER people can see a restricted doc.
+  const rawDocs = (data ?? []) as unknown as Doc[];
+  const docs: Doc[] = rawDocs.map((doc) => {
+    const grantedIds = doc.granted_user_ids ?? [];
+    const locked = isDocLocked({
+      restrictedDepartments: doc.restricted_department ?? [],
+      grantedUserIds: grantedIds,
+      currentUserId: currentUser.id,
+      userDepartment: department,
+      isAdmin,
+    });
+    return {
+      id: doc.id,
+      title: doc.title,
+      parent_id: doc.parent_id,
+      sort_order: doc.sort_order,
+      type: doc.type,
+      deck_orientation: doc.deck_orientation,
+      restricted_department: doc.restricted_department,
+      created_at: doc.created_at,
+      updated_at: doc.updated_at,
+      content: locked ? '' : doc.content,
+      slides: locked ? [] : doc.slides,
+      granted_user_ids: isAdmin
+        ? grantedIds
+        : grantedIds.includes(currentUser.id)
+          ? [currentUser.id]
+          : [],
+    };
+  });
+
   return {
     account,
-    docs: (data ?? []) as unknown as Doc[],
+    docs,
     team,
     userDepartment: department,
     isAdmin,

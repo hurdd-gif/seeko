@@ -43,6 +43,27 @@ create policy "task_links_select_authenticated"
   to authenticated
   using (public.is_staff_for_rls(auth.uid()));
 
+-- task_handoffs (20260306000001) shipped its SELECT as `using (auth.role() =
+-- 'authenticated')` — the same permissive shape, and the same parent `tasks`
+-- (task_handoffs.task_id → tasks.id). An investor blocked from `tasks` could still
+-- `GET /rest/v1/task_handoffs?select=*` to read every handoff's task_id, the
+-- from/to user ids, and the free-text `note` (internal cross-department reassignment
+-- justifications) — exactly the task-internal context the parent wall hides.
+--
+-- CLIENT READ PATH: read from the browser via fetchTaskHandoffs (src/lib/supabase/
+-- data.ts) on the user-JWT createClient(), so this narrowing is what enforces the
+-- wall for the direct-PostgREST path. Every legitimate reader is is_investor = false
+-- (staff/contractors) → is_staff_for_rls = true, so their access is unchanged; only
+-- investors lose the read. Writes are already service-role only (insert in
+-- tasks.ts, deletes in admin.ts), so no write policy changes. Recreated under the
+-- ORIGINAL policy name so the drop replaces the permissive policy.
+
+drop policy if exists "Authenticated users can read task_handoffs" on public.task_handoffs;
+create policy "Authenticated users can read task_handoffs"
+  on public.task_handoffs for select
+  to authenticated
+  using (public.is_staff_for_rls(auth.uid()));
+
 -- ── parent: task_comments ───────────────────────────────────────────────────
 -- task_comment_attachments and task_comment_reactions
 -- (20260306000002_task_chat_redesign.sql) each shipped `to authenticated using
