@@ -97,6 +97,18 @@ const ENTRANCE_PLAYED_KEY = ENTRANCE_KEYS.loginCard;
  * here would just strand people with unusual addresses. */
 const EMAIL_RE = /^\S+@\S+\.\S+$/;
 
+/* ─── One ease-out, JS layer and CSS layer alike ──────────
+ * Motion's string `'easeOut'` is cubic-bezier(0, 0, 0.58, 1) — the weak
+ * built-in Emil warns against, and a DIFFERENT curve from the one this same
+ * page already decelerates on in CSS: the public view-transition entrances
+ * (globals.css → `seeko-vt-*-in`) run cubic-bezier(0.2, 0, 0, 1). During a
+ * /login ⇄ /legal transition those CSS pseudos and these JS crossfades are on
+ * screen together, so two ease-outs on one surface read as drift. Every
+ * sub-200ms opacity/scale/blur crossfade below borrows the VT curve — one
+ * vocabulary, snappier settle. (PAGE.t keeps its own [0.22,1,0.36,1]: that is
+ * the page-level slide curve, not a micro-crossfade, and it is already custom.) */
+const EASE_OUT: [number, number, number, number] = [0.2, 0, 0, 1];
+
 /* ─── View swap (transitions.dev page side-by-side) ───────
  * Sign-in is page 1 (rests/exits left), invite is page 2 (right).
  * Both pages animate SIMULTANEOUSLY (popLayout, not mode="wait"):
@@ -107,7 +119,7 @@ const PAGE = {
   t:    { duration: 0.25, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] },
   // Exits clear faster than entrances arrive — shrinks the double-exposure
   // window so the two content sets never read as clashing.
-  out:  { duration: 0.15, ease: 'easeOut' as const },
+  out:  { duration: 0.15, ease: EASE_OUT },
   // Card reshape runs on WAAPI, not Motion: Motion's height animation keeps
   // its own 'auto' unit state, and its auto→px conversion re-measures AFTER
   // the new page is in flow — so it always sprang new→new and the resize
@@ -127,7 +139,7 @@ const MORPH = {
   // Radius and tint keep MORPH.open — they bounce against nothing.
   grow:   { type: 'spring', duration: 0.5, bounce: 0 } as const,
   close:  { type: 'spring', duration: 0.35, bounce: 0 } as const,   // calmer settle
-  fade:   { duration: 0.2, ease: 'easeOut' } as const,              // face cross-fade
+  fade:   { duration: 0.2, ease: EASE_OUT } as const,               // face cross-fade
   slide:  12,     // px each face travels (vertical morph → vertical slide)
   scale:  0.97,   // form face rests slightly shrunk while hidden
   blur:   2,      // px blur bridging the cross-fade
@@ -160,7 +172,7 @@ const STACK = {
   in:   { type: 'spring', duration: 0.35, bounce: 0 } as const,  // pills returning
   // Fade well ahead of the collapse: a pill sliding shut at full opacity draws
   // the eye to what's leaving instead of to the panel that's opening.
-  fade: { duration: 0.16, ease: 'easeOut' } as const,
+  fade: { duration: 0.16, ease: EASE_OUT } as const,
 };
 
 /* ─── Element configs ────────────────────────────────────── */
@@ -768,7 +780,7 @@ export function LoginForm({ initialError = null, skipEntrance = false, nextPath 
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
-                transition={t({ duration: 0.2, ease: 'easeOut' })}
+                transition={t({ duration: 0.2, ease: EASE_OUT })}
               >
                 <p className="mb-4 rounded-lg bg-danger/10 px-3 py-2 text-sm text-danger">
                   {error}
@@ -790,7 +802,7 @@ export function LoginForm({ initialError = null, skipEntrance = false, nextPath 
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
-                transition={t({ duration: 0.2, ease: 'easeOut' })}
+                transition={t({ duration: 0.2, ease: EASE_OUT })}
               >
                 <p className="mb-4 rounded-lg bg-wash-5 px-3 py-2 text-sm text-ink">
                   {notice}
@@ -892,7 +904,7 @@ export function LoginForm({ initialError = null, skipEntrance = false, nextPath 
                       key={googleBusy ? 'busy' : 'idle'}
                       className="flex items-center gap-3"
                       {...SWAP}
-                      transition={t({ duration: 0.15, ease: 'easeOut' })}
+                      transition={t({ duration: 0.15, ease: EASE_OUT })}
                     >
                       {googleBusy ? <Loader2 className="size-6 animate-spin" /> : <GoogleGlyph />}
                       {googleBusy ? 'Redirecting…' : 'Continue with Google'}
@@ -912,7 +924,7 @@ export function LoginForm({ initialError = null, skipEntrance = false, nextPath 
                         key={passkeyBusy ? 'busy' : 'idle'}
                         className="flex items-center gap-3"
                         {...SWAP}
-                        transition={t({ duration: 0.15, ease: 'easeOut' })}
+                        transition={t({ duration: 0.15, ease: EASE_OUT })}
                       >
                         {passkeyBusy
                           ? <Loader2 className="size-6 animate-spin" />
@@ -1206,7 +1218,7 @@ export function LoginForm({ initialError = null, skipEntrance = false, nextPath 
                             key={loading ? 'busy' : 'idle'}
                             className="flex items-center gap-2"
                             {...SWAP}
-                            transition={t({ duration: 0.15, ease: 'easeOut' })}
+                            transition={t({ duration: 0.15, ease: EASE_OUT })}
                           >
                             {loading && <Loader2 className="size-4 animate-spin" />}
                             {loading ? 'Signing in…' : 'Sign in'}
