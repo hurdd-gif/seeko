@@ -409,7 +409,7 @@ export function PaymentCreateDialog({
                       Add another
                     </Button>
                     <Button
-                      onClick={() => { handleClose(); onCreated(); }}
+                      onClick={handleClose}
                       className={`transition-[background-color,transform] duration-150 ease-out active:scale-[0.98] ${DIALOG_SAVE}`}
                     >
                       Done
@@ -449,7 +449,7 @@ export function PaymentCreateDialog({
                       Add another
                     </Button>
                     <Button
-                      onClick={() => { handleClose(); onCreated(); }}
+                      onClick={handleClose}
                       className={`transition-[background-color,transform] duration-150 ease-out active:scale-[0.98] ${DIALOG_SAVE}`}
                     >
                       Done

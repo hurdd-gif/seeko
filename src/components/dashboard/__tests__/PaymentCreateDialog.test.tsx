@@ -66,4 +66,49 @@ describe('PaymentCreateDialog', () => {
       body: expect.stringContaining('"status":"paid"'),
     }));
   });
+
+  /* "Add another" is the one place onCreated fires while the dialog is still
+     open. A parent that treats onCreated as "close" — which PaymentsAdmin did —
+     tears the dialog down instead of returning the form, so pin both halves:
+     the form comes back, and nobody is asked to close. */
+  it('returns to a blank form on "Add another" without closing the dialog', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ id: 'payment-1' }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const onOpenChange = vi.fn();
+    const onCreated = vi.fn();
+
+    render(
+      <PaymentCreateDialog
+        open
+        onOpenChange={onOpenChange}
+        team={team}
+        recipient={null}
+        token={null}
+        onCreated={onCreated}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Select team member...' }));
+    fireEvent.click(await screen.findByRole('option', { name: 'Member Example' }));
+    fireEvent.change(screen.getByPlaceholderText('Item description'), {
+      target: { value: 'Missed deadline adjustment' },
+    });
+    fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '125' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Mark as Paid' }));
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Add another' }));
+
+    // The form is back, with the amount cleared and the payee lane kept.
+    const amount = await screen.findByPlaceholderText('0.00');
+    expect(amount).toHaveValue(null);
+    expect(screen.getByRole('button', { name: 'Mark as Paid' })).toBeInTheDocument();
+    expect(screen.getByText('Member Example')).toBeInTheDocument();
+
+    // Refresh the list behind me — but do not close me.
+    expect(onCreated).toHaveBeenCalledTimes(1);
+    expect(onOpenChange).not.toHaveBeenCalled();
+  });
 });

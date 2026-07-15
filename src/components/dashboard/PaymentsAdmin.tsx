@@ -315,9 +315,11 @@ export function PaymentsAdmin({ team, viewerMode = false }: PaymentsAdminProps) 
     setCreateDialogOpen(true);
   };
 
+  /* "A payment was recorded — refresh behind me." NOT "close me." The dialog
+     fires this from "Add another" while it is still open, so closing here tore
+     down the very form the user just asked for. Closing is the dialog's own
+     call (handleClose → onOpenChange(false)), and that path already refetches. */
   const handlePaymentCreated = () => {
-    setCreateDialogOpen(false);
-    setSelectedRecipient(null);
     fetchData();
   };
 
