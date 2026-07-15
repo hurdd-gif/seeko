@@ -9,7 +9,11 @@ import { loadLocalEnv } from './env';
 loadLocalEnv();
 
 const port = Number.parseInt(process.env.PORT ?? '8787', 10);
-const hostname = process.env.HOST ?? '127.0.0.1';
+// Bind all interfaces by default so the container is reachable on its host —
+// Render (and any container host) routes to the assigned PORT from outside the
+// loopback, so a 127.0.0.1 bind reports as unreachable ("no-server"). Override
+// with HOST if a narrower bind is ever needed locally.
+const hostname = process.env.HOST ?? '0.0.0.0';
 const staticRoot = resolve(process.cwd(), 'dist/react-router');
 const indexHtmlPath = resolve(staticRoot, 'index.html');
 const server = new Hono().route('/', app);
