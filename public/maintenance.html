@@ -4,11 +4,18 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="color-scheme" content="light dark" />
+<!-- Tint the browser's own chrome (iOS Safari tray, Android address bar) to the
+     canvas, so the page's floor and the browser's tray read as one surface. -->
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff" />
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#171717" />
 <meta name="robots" content="noindex" />
 <title>SEEKO Studio — Under maintenance</title>
 
-<!-- Favicon: the SEEKO mark, inlined so nothing is fetched. -->
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%236E6E6E' d='M-34.462 6.897C-33.929 6.81-33.26 7.191-32.987 7.635-32.279 8.787-33.85 10.264-32.249 11.026-31.077 11.584-29.886 11.156-28.681 10.977-27.383 10.789-26.17 10.395-25.04 9.728-24.903 9.647-24.572 9.419-24.446 9.38-24.393 9.392-24.342 9.417-24.323 9.469-24.168 9.876-24.261 10.481-24.393 10.859-24.772 11.949-25.672 12.724-26.686 13.228-28.169 13.965-29.864 13.998-31.466 13.693-31.926 13.606-32.386 13.508-32.831 13.361-32.859 14.171-32.248 14.826-31.466 15.008-30.573 15.216-29.618 14.819-28.723 14.784-28.225 14.764-27.709 14.781-27.21 14.791-27.21 14.791-24.859 14.835-24.859 14.835-24.268 14.851-23.676 14.862-23.085 14.869-22.681 14.875-22.267 14.873-21.865 14.906-21.728 14.918-21.623 14.981-21.505 15.045-21.339 15.136-21.205 15.421-21.171 15.607-21.103 15.97-21.078 16.394-21.056 16.763-20.977 18.14-20.997 19.494-21.349 20.837-21.428 21.137-21.525 21.506-21.691 21.768-22.031 22.306-22.677 22.549-23.293 22.608-24.008 22.677-24.798 22.585-25.508 22.482-26.378 22.355-27.23 22.204-28.108 22.13-28.963 22.058-29.775 22.197-30.625 22.289-32.211 22.462-33.79 22.675-35.35 23.014-37.066 23.362-39.214 24.115-40.804 24.832-41.199 25.015-41.589 25.206-41.975 25.406-42.169 25.508-42.713 25.825-42.877 25.861-42.978 25.836-43.028 25.769-43.016 25.666-42.781 23.655-42.206 21.652-40.697 20.206-39.602 19.157-38.415 19.065-36.998 18.955-36.304 18.897-35.608 18.867-34.911 18.866-31.368 18.881-27.62 19.661-24.147 20.389-24.03 20.162-23.941 19.867-23.901 19.616-23.793 18.94-23.962 18.249-24.37 17.695-25.106 16.714-26.238 17.082-27.291 16.973-27.802 16.92-28.328 16.827-28.839 16.762-29.833 16.633-30.829 16.52-31.827 16.422-32.623 16.343-33.42 16.27-34.218 16.202-34.646 16.166-35.227 16.137-35.637 16.075-35.912 15.781-35.593 15.748-35.361 15.698-35.093 15.64-34.893 15.435-34.756 15.209-33.92 13.831-35.821 13.072-36.093 11.877-36.335 11.063-35.638 10.589-35.35 9.955-35.116 9.44-35.051 8.483-35.028 7.913-35.004 7.335-35.206 7.037-34.462 6.897Z' transform='translate(36 2.25) scale(0.7497 0.75)'/%3E%3Cpath fill='%236E6E6E' d='M-37.392 0C-37.326 0.004-37.233 0.03-37.217 0.094-36.921 1.317-36.163 2.244-35.104 2.931-34.621 3.244-33.986 3.592-33.38 3.741-30.936 4.341-28.54 2.943-26.087 3.102-24.456 3.212-22.156 4.306-21.405 5.778-21.421 5.86-21.44 5.933-21.46 6.014-21.654 6.186-21.925 6.314-22.162 6.416-22.542 6.58-22.8 6.617-23.184 6.687-24.62 6.95-25.641 6.094-26.982 5.89-27.178 5.86-27.452 5.859-27.658 5.866-29.665 5.94-31.64 7.138-33.669 6.744-34.881 6.508-36.063 5.479-36.743 4.481-37.555 3.291-37.902 1.847-37.628 0.428-37.593 0.247-37.549 0.104-37.392 0Z' transform='translate(36 2.25) scale(0.7497 0.75)'/%3E%3C/svg%3E" />
+<!-- Favicon: the SEEKO "S" mark, inlined (base64) so nothing is fetched — under
+     Maintenance Mode the proxy won't serve /seeko-mark.svg, so it must be embedded.
+     Base64 (not raw) because Chrome drops a data-URI SVG with un-encoded spaces.
+     Theme-adaptive fill: ink #171717 on light tab bars, #fafafa on dark. -->
+<link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHN0eWxlPnBhdGh7ZmlsbDojMTcxNzE3fUBtZWRpYShwcmVmZXJzLWNvbG9yLXNjaGVtZTpkYXJrKXtwYXRoe2ZpbGw6I2ZhZmFmYX19PC9zdHlsZT48cGF0aCBkPSJNLTM0LjQ2MiA2Ljg5N0MtMzMuOTI5IDYuODEtMzMuMjYgNy4xOTEtMzIuOTg3IDcuNjM1LTMyLjI3OSA4Ljc4Ny0zMy44NSAxMC4yNjQtMzIuMjQ5IDExLjAyNi0zMS4wNzcgMTEuNTg0LTI5Ljg4NiAxMS4xNTYtMjguNjgxIDEwLjk3Ny0yNy4zODMgMTAuNzg5LTI2LjE3IDEwLjM5NS0yNS4wNCA5LjcyOC0yNC45MDMgOS42NDctMjQuNTcyIDkuNDE5LTI0LjQ0NiA5LjM4LTI0LjM5MyA5LjM5Mi0yNC4zNDIgOS40MTctMjQuMzIzIDkuNDY5LTI0LjE2OCA5Ljg3Ni0yNC4yNjEgMTAuNDgxLTI0LjM5MyAxMC44NTktMjQuNzcyIDExLjk0OS0yNS42NzIgMTIuNzI0LTI2LjY4NiAxMy4yMjgtMjguMTY5IDEzLjk2NS0yOS44NjQgMTMuOTk4LTMxLjQ2NiAxMy42OTMtMzEuOTI2IDEzLjYwNi0zMi4zODYgMTMuNTA4LTMyLjgzMSAxMy4zNjEtMzIuODU5IDE0LjE3MS0zMi4yNDggMTQuODI2LTMxLjQ2NiAxNS4wMDgtMzAuNTczIDE1LjIxNi0yOS42MTggMTQuODE5LTI4LjcyMyAxNC43ODQtMjguMjI1IDE0Ljc2NC0yNy43MDkgMTQuNzgxLTI3LjIxIDE0Ljc5MS0yNy4yMSAxNC43OTEtMjQuODU5IDE0LjgzNS0yNC44NTkgMTQuODM1LTI0LjI2OCAxNC44NTEtMjMuNjc2IDE0Ljg2Mi0yMy4wODUgMTQuODY5LTIyLjY4MSAxNC44NzUtMjIuMjY3IDE0Ljg3My0yMS44NjUgMTQuOTA2LTIxLjcyOCAxNC45MTgtMjEuNjIzIDE0Ljk4MS0yMS41MDUgMTUuMDQ1LTIxLjMzOSAxNS4xMzYtMjEuMjA1IDE1LjQyMS0yMS4xNzEgMTUuNjA3LTIxLjEwMyAxNS45Ny0yMS4wNzggMTYuMzk0LTIxLjA1NiAxNi43NjMtMjAuOTc3IDE4LjE0LTIwLjk5NyAxOS40OTQtMjEuMzQ5IDIwLjgzNy0yMS40MjggMjEuMTM3LTIxLjUyNSAyMS41MDYtMjEuNjkxIDIxLjc2OC0yMi4wMzEgMjIuMzA2LTIyLjY3NyAyMi41NDktMjMuMjkzIDIyLjYwOC0yNC4wMDggMjIuNjc3LTI0Ljc5OCAyMi41ODUtMjUuNTA4IDIyLjQ4Mi0yNi4zNzggMjIuMzU1LTI3LjIzIDIyLjIwNC0yOC4xMDggMjIuMTMtMjguOTYzIDIyLjA1OC0yOS43NzUgMjIuMTk3LTMwLjYyNSAyMi4yODktMzIuMjExIDIyLjQ2Mi0zMy43OSAyMi42NzUtMzUuMzUgMjMuMDE0LTM3LjA2NiAyMy4zNjItMzkuMjE0IDI0LjExNS00MC44MDQgMjQuODMyLTQxLjE5OSAyNS4wMTUtNDEuNTg5IDI1LjIwNi00MS45NzUgMjUuNDA2LTQyLjE2OSAyNS41MDgtNDIuNzEzIDI1LjgyNS00Mi44NzcgMjUuODYxLTQyLjk3OCAyNS44MzYtNDMuMDI4IDI1Ljc2OS00My4wMTYgMjUuNjY2LTQyLjc4MSAyMy42NTUtNDIuMjA2IDIxLjY1Mi00MC42OTcgMjAuMjA2LTM5LjYwMiAxOS4xNTctMzguNDE1IDE5LjA2NS0zNi45OTggMTguOTU1LTM2LjMwNCAxOC44OTctMzUuNjA4IDE4Ljg2Ny0zNC45MTEgMTguODY2LTMxLjM2OCAxOC44ODEtMjcuNjIgMTkuNjYxLTI0LjE0NyAyMC4zODktMjQuMDMgMjAuMTYyLTIzLjk0MSAxOS44NjctMjMuOTAxIDE5LjYxNi0yMy43OTMgMTguOTQtMjMuOTYyIDE4LjI0OS0yNC4zNyAxNy42OTUtMjUuMTA2IDE2LjcxNC0yNi4yMzggMTcuMDgyLTI3LjI5MSAxNi45NzMtMjcuODAyIDE2LjkyLTI4LjMyOCAxNi44MjctMjguODM5IDE2Ljc2Mi0yOS44MzMgMTYuNjMzLTMwLjgyOSAxNi41Mi0zMS44MjcgMTYuNDIyLTMyLjYyMyAxNi4zNDMtMzMuNDIgMTYuMjctMzQuMjE4IDE2LjIwMi0zNC42NDYgMTYuMTY2LTM1LjIyNyAxNi4xMzctMzUuNjM3IDE2LjA3NS0zNS45MTIgMTUuNzgxLTM1LjU5MyAxNS43NDgtMzUuMzYxIDE1LjY5OC0zNS4wOTMgMTUuNjQtMzQuODkzIDE1LjQzNS0zNC43NTYgMTUuMjA5LTMzLjkyIDEzLjgzMS0zNS44MjEgMTMuMDcyLTM2LjA5MyAxMS44NzctMzYuMzM1IDExLjA2My0zNS42MzggMTAuNTg5LTM1LjM1IDkuOTU1LTM1LjExNiA5LjQ0LTM1LjA1MSA4LjQ4My0zNS4wMjggNy45MTMtMzUuMDA0IDcuMzM1LTM1LjIwNiA3LjAzNy0zNC40NjIgNi44OTdaIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgzNiAyLjI1KSBzY2FsZSgwLjc0OTcgMC43NSkiLz48cGF0aCBkPSJNLTM3LjM5MiAwQy0zNy4zMjYgMC4wMDQtMzcuMjMzIDAuMDMtMzcuMjE3IDAuMDk0LTM2LjkyMSAxLjMxNy0zNi4xNjMgMi4yNDQtMzUuMTA0IDIuOTMxLTM0LjYyMSAzLjI0NC0zMy45ODYgMy41OTItMzMuMzggMy43NDEtMzAuOTM2IDQuMzQxLTI4LjU0IDIuOTQzLTI2LjA4NyAzLjEwMi0yNC40NTYgMy4yMTItMjIuMTU2IDQuMzA2LTIxLjQwNSA1Ljc3OC0yMS40MjEgNS44Ni0yMS40NCA1LjkzMy0yMS40NiA2LjAxNC0yMS42NTQgNi4xODYtMjEuOTI1IDYuMzE0LTIyLjE2MiA2LjQxNi0yMi41NDIgNi41OC0yMi44IDYuNjE3LTIzLjE4NCA2LjY4Ny0yNC42MiA2Ljk1LTI1LjY0MSA2LjA5NC0yNi45ODIgNS44OS0yNy4xNzggNS44Ni0yNy40NTIgNS44NTktMjcuNjU4IDUuODY2LTI5LjY2NSA1Ljk0LTMxLjY0IDcuMTM4LTMzLjY2OSA2Ljc0NC0zNC44ODEgNi41MDgtMzYuMDYzIDUuNDc5LTM2Ljc0MyA0LjQ4MS0zNy41NTUgMy4yOTEtMzcuOTAyIDEuODQ3LTM3LjYyOCAwLjQyOC0zNy41OTMgMC4yNDctMzcuNTQ5IDAuMTA0LTM3LjM5MiAwWiIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMzYgMi4yNSkgc2NhbGUoMC43NDk3IDAuNzUpIi8+PC9zdmc+" />
 
 <style>
 /* ─────────────────────────────────────────────────────────────────────────
@@ -71,6 +78,10 @@
 
 * { box-sizing: border-box; }
 
+/* The canvas on <html> too, not just <body>: mobile browsers sample the root's
+   background for the chrome they draw themselves (tray backdrop, overscroll) —
+   an unpainted root is what let a dark tray linger over the light page. */
+html { background: var(--canvas); }
 html, body { height: 100%; }
 
 body {
@@ -283,6 +294,21 @@ body.animate .veil {
     animation:
       fadeUp 0.55s cubic-bezier(0.22, 1, 0.36, 1) 60ms forwards,
       markIdle 12s ease-in-out 700ms infinite alternate;
+  }
+  /* Mobile browsers park a tray over the page's foot, slicing the veil at its
+     brightest rows. Desktop hands that same edge to the physical screen, where
+     the cut reads as the sunset continuing below the glass; against a tray it
+     reads as a severed render. Dissolve the field before the cut: full ink
+     holds to 66% (a straight fade from mid-field guts the warm band and the
+     sunset reads tan), then an eased tail to nothing at 99%, so the horizon
+     hazes into the canvas and the canvas meets the tray (which theme-color
+     tints to match). The mask covers both the dots and the .glow behind
+     them; desktop keeps its hard horizon. */
+  .veil {
+    -webkit-mask-image: linear-gradient(to bottom,
+      #000 66%, rgba(0,0,0,0.85) 80%, rgba(0,0,0,0.4) 91%, transparent 99%);
+    mask-image: linear-gradient(to bottom,
+      #000 66%, rgba(0,0,0,0.85) 80%, rgba(0,0,0,0.4) 91%, transparent 99%);
   }
 }
 
