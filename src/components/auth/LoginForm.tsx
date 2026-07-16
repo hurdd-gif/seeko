@@ -731,23 +731,21 @@ export function LoginForm({ initialError = null, skipEntrance = false, nextPath 
             animate={{ opacity: stage >= 3 ? 1 : 0 }}
             transition={t(FADE.spring)}
           >
-            {/* Public-facing page: never list what's inside the workspace
-                (feature names here leak product surface to visitors).
+            {/* This line used to avoid naming anything inside the workspace
+                (feature names leak product surface to visitors), but Google's
+                OAuth branding review requires the home page to state the app's
+                purpose in VISIBLE text — sr-only/meta text reads as cloaking to
+                their reviewers. Copy approved 2026-07-15; keep it purpose-
+                stating or the branding verification regresses.
 
-                WRAPPING: the em dash is bound to "on" with &nbsp;, and the back
-                half is nowrap. Those two together leave exactly ONE break
-                opportunity in the line — the space after the dash — which is the
-                only place it should ever break.
-
-                The nowrap span alone did NOT do this, despite the comment that
-                used to claim it: text-balance was breaking after "runs on" and
-                opening the second line with "— in one private workspace". A line
-                may not begin with an em dash. nowrap stopped the back half from
-                splitting, but it never said anything about where the dash goes,
-                and an ordinary space in front of it is a legal break. &nbsp; is
-                the thing that actually forbids it. */}
-            Everything the studio runs on&nbsp;—{' '}
-            <span className="whitespace-nowrap">in one private workspace</span>
+                WRAPPING: the em dash is bound to "workspace" with &nbsp; — an
+                ordinary space before a dash is a legal break, and a line may
+                not begin with an em dash. The final phrase is nowrap so a
+                break never strands "deadlines" on its own line; earlier words
+                may wrap freely, text-pretty places the break. */}
+            SEEKO&rsquo;s private workspace&nbsp;—{' '}
+            stay up to date on{' '}
+            <span className="whitespace-nowrap">tasks and deadlines</span>
           </motion.p>
         </motion.div>
 
