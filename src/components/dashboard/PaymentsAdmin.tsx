@@ -12,7 +12,7 @@
  *  650ms   recent payments card fades in
  * ───────────────────────────────────────────────────────── */
 
-import { useState, useEffect, useCallback, type ComponentType, type ReactNode } from 'react';
+import { useState, useEffect, useCallback, type ComponentType } from 'react';
 import { Link, useRouter, useSearchParams, usePathname } from '@/lib/react-router-adapters';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import {
@@ -109,14 +109,6 @@ function LightEmptyRow({ icon: Icon, text }: {
   );
 }
 
-function PaymentActionBeam({ children }: { children: ReactNode }) {
-  return (
-    <span className="payment-action-beam rounded-[16px]">
-      {children}
-    </span>
-  );
-}
-
 type TeamMember = Profile & { paypal_email?: string };
 
 interface InvoiceRequest {
@@ -166,7 +158,6 @@ export function PaymentsAdmin({ team, viewerMode = false }: PaymentsAdminProps) 
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [selectedRecipient, setSelectedRecipient] = useState<TeamMember | null>(null);
   const [invoiceRequests, setInvoiceRequests] = useState<InvoiceRequest[]>([]);
-  const [invoicesExpanded, setInvoicesExpanded] = useState(false);
   const reduce = useReducedMotion();
   const pillTransition = reduce ? { duration: 0 } : TAB_PILL_SPRING;
 
@@ -300,7 +291,7 @@ export function PaymentsAdmin({ team, viewerMode = false }: PaymentsAdminProps) 
 
   const recentPaid = payments
     .filter(p => p.status === 'paid')
-    .slice(0, 10);
+    .slice(0, 15);
 
   // Map: payment.id → paypal_email submitted on the linked invoice request
   const paypalEmailByPaymentId = new Map<string, string>();
@@ -309,6 +300,16 @@ export function PaymentsAdmin({ team, viewerMode = false }: PaymentsAdminProps) 
       paypalEmailByPaymentId.set(inv.submitted_payment_id, inv.paypal_email);
     }
   }
+
+  const recentPaidRows = recentPaid.map(payment => (
+    <PaidPaymentRow
+      key={payment.id}
+      payment={payment}
+      externalPaypalEmail={paypalEmailByPaymentId.get(payment.id) ?? null}
+      onAction={fetchData}
+      readOnly={viewerMode}
+    />
+  ));
 
   const handlePay = (member: TeamMember) => {
     setSelectedRecipient(member);
@@ -401,8 +402,6 @@ export function PaymentsAdmin({ team, viewerMode = false }: PaymentsAdminProps) 
       danger: exceptionCount > 0,
     },
   ];
-  const visibleInvoiceRequests = invoicesExpanded ? invoiceRequests : invoiceRequests.slice(0, 8);
-  const invoiceQueueScrollable = invoicesExpanded && invoiceRequests.length > 8;
 
   const filterOptions = [
     { label: 'All', value: 'all' as const, count: peopleWithPending.length },
@@ -412,17 +411,15 @@ export function PaymentsAdmin({ team, viewerMode = false }: PaymentsAdminProps) 
 
   const paymentActions = viewerMode ? null : (
     <div className="flex items-center gap-2">
-      <PaymentActionBeam>
-        <button
-          type="button"
-          onClick={() => { setSelectedRecipient(null); setCreateDialogOpen(true); }}
-          className={`${BTN_PRIMARY} inline-flex min-h-9 items-center gap-1.5 pl-3.5 pr-4 active:scale-[0.96]`}
-        >
-          <Plus className="size-4" />
-          <span className="hidden sm:inline">New Payment</span>
-          <span className="sm:hidden">Payment</span>
-        </button>
-      </PaymentActionBeam>
+      <button
+        type="button"
+        onClick={() => { setSelectedRecipient(null); setCreateDialogOpen(true); }}
+        className={`${BTN_PRIMARY} inline-flex min-h-9 items-center gap-1.5 pl-3.5 pr-4 active:scale-[0.96]`}
+      >
+        <Plus className="size-4" />
+        <span className="hidden sm:inline">New Payment</span>
+        <span className="sm:hidden">Payment</span>
+      </button>
     </div>
   );
   const backHref = inInvestorContext || viewerMode ? '/investor' : '/tasks';
@@ -478,9 +475,9 @@ export function PaymentsAdmin({ team, viewerMode = false }: PaymentsAdminProps) 
       {/* Admin gets the two-column console (work queue + rail). A viewer has no
           left-column content (pending/invoice are admin-only), so the read-only
           page collapses to one full-width column: chart → Recent payments. */}
-      <div className={cn('mt-5', viewerMode ? 'space-y-5' : 'grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-start')}>
+      <div className={cn('mt-5', viewerMode ? 'space-y-5' : 'grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-stretch')}>
         {!viewerMode && (
-        <div className="min-w-0 space-y-5">
+        <div className="flex min-w-0 flex-col gap-5">
 
       {/* ── Pending Requests ── */}
       <AnimatePresence>
@@ -530,9 +527,15 @@ export function PaymentsAdmin({ team, viewerMode = false }: PaymentsAdminProps) 
       </AnimatePresence>
 
       {/* ── Invoice Requests ── */}
+      {/* The card is absolutely positioned inside a flex-1 slot so it escapes the
+          grid row's intrinsic (content) sizing: with a long queue in flow, the tall
+          left column would drive the row taller than the right rail. Out of flow,
+          the RIGHT rail sets the row height and this card fills + scrolls to match
+          its end (grow-left) — no dead space, a bottom fade on the clipped edge. */}
       {!viewerMode && invoiceRequests.length > 0 && (
-        <FadeRise delay={d(TIMING.invoiceRequests)}>
-          <Card className={cn(PAYMENT_MAIN_SURFACE, 'overflow-hidden')}>
+        <div className="relative min-h-0 flex-1">
+        <FadeRise delay={d(TIMING.invoiceRequests)} className="absolute inset-0 flex flex-col">
+          <Card className={cn(PAYMENT_MAIN_SURFACE, 'flex min-h-0 flex-1 flex-col overflow-hidden')}>
             <CardHeader className={PAYMENT_SECTION_HEAD}>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
@@ -546,50 +549,35 @@ export function PaymentsAdmin({ team, viewerMode = false }: PaymentsAdminProps) 
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="px-5 py-0">
+            <CardContent className="flex min-h-0 flex-1 flex-col px-5 py-0">
               <div className="-mx-5 hidden grid-cols-[minmax(0,1fr)_92px_116px_112px] gap-3 border-b border-wash-6 px-5 py-2.5 text-[11px] font-medium text-[#a0a0a0] dark:text-ink-muted sm:grid">
                 <span>Recipient</span>
                 <span className="text-left">Date</span>
                 <span className="text-right">Amount</span>
                 <span className="text-right">Status</span>
               </div>
-              {invoiceQueueScrollable ? (
-                <div className="relative -mx-5">
-                  <ScrollArea className="h-[min(560px,calc(100vh-360px))]" viewportClassName="pb-14">
-                    <div className="divide-y divide-wash-6">
-                      {visibleInvoiceRequests.map((inv, i) => (
-                        <InvoiceRequestRow key={inv.id} invite={inv} index={i} onAction={fetchData} />
-                      ))}
-                    </div>
-                  </ScrollArea>
-                  <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-surface-1/80 via-surface-1/35 to-transparent" />
-                </div>
-              ) : (
-                <div className="-mx-5 divide-y divide-wash-6">
-                  {visibleInvoiceRequests.map((inv, i) => (
-                    <InvoiceRequestRow key={inv.id} invite={inv} index={i} onAction={fetchData} />
-                  ))}
-                </div>
-              )}
-              {invoiceRequests.length > 8 && (
-                <button
-                  type="button"
-                  onClick={() => setInvoicesExpanded((v) => !v)}
-                  className="my-3 flex w-full items-center justify-center gap-1.5 rounded-[14px] py-2 text-xs font-medium text-ink-muted transition-[background-color,color,transform] hover:bg-wash-3 hover:text-ink-title active:scale-[0.96]"
-                >
-                  {invoicesExpanded ? 'Show less' : `Show all ${invoiceRequests.length}`}
-                  <ChevronDown className={`size-3.5 transition-transform ${invoicesExpanded ? 'rotate-180' : ''}`} />
-                </button>
-              )}
+              {/* Fills the stretched slot (h-full) and scrolls the queue; the
+                  bottom fade softens the clipped edge past the fold. */}
+              <div className="relative -mx-5 min-h-0 flex-1">
+                <ScrollArea className="h-full" viewportClassName="pb-6">
+                  <div className="divide-y divide-wash-6">
+                    {invoiceRequests.map((inv, i) => (
+                      <InvoiceRequestRow key={inv.id} invite={inv} index={i} onAction={fetchData} />
+                    ))}
+                  </div>
+                </ScrollArea>
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-surface-1 via-surface-1/60 to-transparent" />
+              </div>
             </CardContent>
           </Card>
         </FadeRise>
+        </div>
       )}
 
         </div>
         )}
 
-        <aside className={cn('space-y-5', !viewerMode && 'xl:sticky xl:top-6')}>
+        <aside className={cn('space-y-5', !viewerMode && 'xl:sticky xl:top-6 xl:self-start')}>
 
       {/* ── People ── */}
       {!viewerMode && (
@@ -722,23 +710,16 @@ export function PaymentsAdmin({ team, viewerMode = false }: PaymentsAdminProps) 
             {recentPaid.length === 0 ? (
               <LightEmptyRow icon={CreditCard} text="No completed payments yet." />
             ) : (
+              /* Cap on the VIEWPORT (auto-height root): hugs the rows when short —
+                 no dead gap below the last payout — and caps + scrolls once long.
+                 A bottom fade softens the clipped edge once the list runs long. */
               <div className="relative -mx-5">
-                <ScrollArea className="h-[clamp(340px,calc(100vh-500px),650px)]" viewportClassName="pb-12">
+                <ScrollArea viewportClassName="max-h-[clamp(340px,calc(100vh-500px),650px)] pb-2">
                   <div className="divide-y divide-wash-6">
-                    {recentPaid.map(payment => (
-                      <PaidPaymentRow
-                        key={payment.id}
-                        payment={payment}
-                        externalPaypalEmail={paypalEmailByPaymentId.get(payment.id) ?? null}
-                        onAction={fetchData}
-                        readOnly={viewerMode}
-                      />
-                    ))}
+                    {recentPaidRows}
                   </div>
                 </ScrollArea>
-                {recentPaid.length > 5 && (
-                  <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-surface-1 via-surface-1/70 to-transparent" />
-                )}
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-surface-1 via-surface-1/60 to-transparent" />
               </div>
             )}
           </CardContent>
