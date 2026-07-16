@@ -28,9 +28,11 @@ describe('LoginRouteContent', () => {
   it('renders the sign-in card with Google and email pills, form collapsed', () => {
     renderLogin();
 
-    // NBSP binds "SEEKO Studio" (the exact OAuth app name must display intact).
+    // Exact string, no regex slack: the OAuth app name must render with a
+    // plain U+0020 space — an NBSP here breaks Google's exact-match name
+    // check against "SEEKO Studio" (a nowrap span handles the typography).
     expect(
-      screen.getByRole('heading', { name: /Sign in to SEEKO[\s ]Studio/ })
+      screen.getByRole('heading', { name: 'Sign in to SEEKO Studio' })
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Continue with Google/ })).toBeInTheDocument();
     // The email form starts collapsed behind the "Continue with email" pill.

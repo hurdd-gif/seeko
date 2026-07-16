@@ -693,9 +693,14 @@ export function LoginForm({ initialError = null, skipEntrance = false, nextPath 
               matches the consent-screen app name against the name DISPLAYED on
               the home page — the wordmark and possessive subtitle only say
               "SEEKO", so the H1 must carry the exact configured name or
-              verification fails on name mismatch. */}
+              verification fails on name mismatch.
+
+              A nowrap SPAN binds the name, not &nbsp;: U+00A0 in the rendered
+              text breaks an exact match against "SEEKO Studio" (U+0020), and
+              an automated name checker reading the rendered page is precisely
+              the audience this heading exists for. */}
           <h1 className="text-balance text-2xl font-[600] tracking-[-0.02em] text-ink-strong">
-            Sign in to SEEKO&nbsp;Studio
+            Sign in to <span className="whitespace-nowrap">SEEKO Studio</span>
           </h1>
         </motion.div>
 
