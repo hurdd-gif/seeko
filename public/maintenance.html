@@ -262,9 +262,35 @@ body.animate .veil {
   to   { opacity: 1; transform: translateY(0); }
 }
 
+/* ── Idle drift. Touch and no-pointer contexts can't drive the gradient with a
+      cursor, so the hero would otherwise sit frozen while the mouse-only sibling
+      catches light. Let it breathe on its own: a slow ±4% oscillation of the same
+      ink window the pointer drifts (REST 62%), HALF the cursor's amplitude so it
+      reads as breathing, not motion. Fine-pointer users never see this — they
+      already get living light from the cursor. Off under reduced motion (below). */
+@keyframes markIdle {
+  from { background-position-y: 58%; }
+  to   { background-position-y: 66%; }
+}
+@media (hover: none), (pointer: coarse) {
+  .mark { animation: markIdle 12s ease-in-out infinite alternate; }
+  /* First arrival still plays the entrance. markIdle animates a DIFFERENT property
+     than fadeUp (background-position vs opacity/transform/filter), so it rides
+     alongside rather than fighting it — delayed 700ms to begin only after the mark
+     has settled, not mid-fade. Re-declares fadeUp (with its 60ms delay) because the
+     shorthand owns the whole `animation` property. */
+  body.animate .mark {
+    animation:
+      fadeUp 0.55s cubic-bezier(0.22, 1, 0.36, 1) 60ms forwards,
+      markIdle 12s ease-in-out 700ms infinite alternate;
+  }
+}
+
 /* ── Reduced motion: everything at rest, no drift, instant arrival. ──────── */
 @media (prefers-reduced-motion: reduce) {
-  .mark { transition: none; }
+  /* animation:none also kills the coarse-pointer markIdle drift — on the returning
+     tab there's no body.animate wrapper, so plain .mark must clear it here too. */
+  .mark { transition: none; animation: none; }
   body.animate .mark,
   body.animate .subline,
   body.animate .actions {
