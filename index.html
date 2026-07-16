@@ -4,6 +4,14 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#eeeeee" />
+    <!-- Mirrors the login page's visible copy. The SPA ships an empty <body>
+         shell, so crawlers that don't execute JS (Google's OAuth branding
+         checker among them) otherwise find no app name or purpose anywhere
+         in the HTML. Keep this in lockstep with LoginForm's H1 + subtitle. -->
+    <meta
+      name="description"
+      content="SEEKO Studio — SEEKO's private workspace. Stay up to date on tasks and deadlines."
+    />
     <!-- Pre-paint theme guard: resolve the stored preference before first
          paint so a dark load never flashes the light canvas. Three-state:
          'dark' | 'light' are explicit; anything else (including no key)
@@ -47,6 +55,15 @@
   </head>
   <body>
     <div id="root"></div>
+    <!-- Non-JS fallback, same copy the rendered login page shows (name +
+         purpose). This is what a text-only crawler reads as "the home page";
+         browsers with JS never display it. Not cloaking: it mirrors the
+         visible page exactly — never let the two drift apart. -->
+    <noscript>
+      <h1>SEEKO Studio</h1>
+      <p>SEEKO&rsquo;s private workspace &mdash; stay up to date on tasks and deadlines.</p>
+      <p>SEEKO Studio requires JavaScript to sign in. Please enable JavaScript and reload.</p>
+    </noscript>
     <script type="module" src="/src/rr-app/main.tsx"></script>
   </body>
 </html>
