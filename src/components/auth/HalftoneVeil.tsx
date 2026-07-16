@@ -8,10 +8,11 @@
  *          the viewport (translateY 100% → 0) with a fade, smooth
  *          settle, no bounce — after the card's own entrance beats
  *          (0–170ms) so it never competes with the content
- *  hover   dots within ~140px part away from the cursor — each
+ *  hover   dots within ~140px part away from the pointer — each
  *          dot chases its own displaced target (per-dot lerp),
- *          so a moving cursor leaves an organic wake through the
- *          field; dots relax back individually when it leaves
+ *          so a moving cursor (or dragging finger — the lens is
+ *          touch-aware) leaves an organic wake through the field;
+ *          dots relax back individually when it leaves or lifts
  *  idle    static — the rAF loop stops once every dot settles,
  *          so at rest nothing runs
  *
@@ -24,6 +25,7 @@
 
 import { useEffect, useRef } from 'react';
 import { motion, useReducedMotion, useSpring } from 'motion/react';
+import { cn } from '@/lib/utils';
 import {
   bloomAlpha,
   bloomIntensity,
@@ -48,6 +50,12 @@ const MAX_RADIUS = 5.2;
  *  aspect is now 66.5 / 20 = 3.325 rather than Delphi's 1.33. */
 const BLOOM_RY_FRAC = 0.833;
 const BLOOM_ASPECT = 3.325;
+/** Lateral clamp on the bloom, as a fraction of the frame. The desktop ellipse
+ *  (ry × 3.325 ≈ 2.8 × the veil's height) overshoots any frame narrower than
+ *  ~900px, flattening the bloom into a wall-to-wall carpet with hard side
+ *  edges. Clamped, phones keep the desktop's shape — a centered dome whose
+ *  lateral falloff lands INSIDE the screen. No-op at desktop widths. */
+const BLOOM_RX_MAX_FRAC = 0.62;
 
 /** Lens reach in px — dots inside this distance part around the cursor.
  *  Radius/strength/ease are Delphi's shipped values (build.delphi.ai). */
@@ -152,7 +160,7 @@ function buildDots(w: number, h: number): Dot[] {
   const dots: Dot[] = [];
   const cx = w / 2;
   const ry = h * BLOOM_RY_FRAC;
-  const rx = ry * BLOOM_ASPECT;
+  const rx = Math.min(ry * BLOOM_ASPECT, w * BLOOM_RX_MAX_FRAC);
   const rows = Math.ceil(h / PITCH);
   const cols = Math.ceil(w / PITCH);
   for (let j = 0; j < rows; j++) {
@@ -350,11 +358,12 @@ export function HalftoneVeil() {
     window.addEventListener('resize', onResize);
 
     // The canvas is pointer-transparent, so the lens listens on the window.
-    // Mouse-driven only: on touch there is no hover to trail, and reduced
-    // motion opts out of the warp entirely.
-    const finePointer = window.matchMedia('(pointer: fine)').matches;
+    // It follows ANY pointer, not just a mouse: on touch the finger drags
+    // through the field and the dots part around it (pointerdown too, so even
+    // a tap nudges them) — the veil is the one interactive surface touch users
+    // can actually reach. A lifted finger relaxes the field the way a departing
+    // cursor does; reduced motion opts out of the warp entirely.
     const onMove = (e: PointerEvent) => {
-      if (e.pointerType !== 'mouse') return;
       const wasActive = pointer.active;
       // The canvas is fixed, full-bleed, and bottom-anchored, so its settled
       // position is derivable — no per-mousemove layout read, and the lens
@@ -377,8 +386,16 @@ export function HalftoneVeil() {
       pointer.active = false;
       wake();
     };
-    if (!reduceMotion && finePointer) {
-      window.addEventListener('pointermove', onMove);
+    // Mouse hover ends via pointerleave/blur; a touch ends at finger-lift, so
+    // pointerup (non-mouse) and pointercancel relax the field too.
+    const onPointerUp = (e: PointerEvent) => {
+      if (e.pointerType !== 'mouse') onLeave();
+    };
+    if (!reduceMotion) {
+      window.addEventListener('pointermove', onMove, { passive: true });
+      window.addEventListener('pointerdown', onMove, { passive: true });
+      window.addEventListener('pointerup', onPointerUp, { passive: true });
+      window.addEventListener('pointercancel', onLeave);
       document.documentElement.addEventListener('pointerleave', onLeave);
       // Alt-tab parks the cursor wherever it was — relax the field so it
       // doesn't sit warped around a ghost pointer.
@@ -390,6 +407,9 @@ export function HalftoneVeil() {
       cancelAnimationFrame(resizeRaf);
       window.removeEventListener('resize', onResize);
       window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerdown', onMove);
+      window.removeEventListener('pointerup', onPointerUp);
+      window.removeEventListener('pointercancel', onLeave);
       document.documentElement.removeEventListener('pointerleave', onLeave);
       window.removeEventListener('blur', onLeave);
     };
@@ -400,7 +420,20 @@ export function HalftoneVeil() {
       aria-hidden
       // Slide, not scaleY: scaling the container stretches the painted dots
       // mid-rise and zeroes the measured height the dot grid is built from.
-      className="pointer-events-none fixed inset-x-0 bottom-0 h-[24vh] print:hidden contrast-more:hidden"
+      //
+      // The coarse-pointer mask: mobile browsers park a tray over the page's
+      // foot, slicing the field at its brightest rows — desktop hands that
+      // same edge to the physical screen, where the cut reads as the sunset
+      // continuing below the glass; against a tray it reads as a severed
+      // render. Dissolve before the cut: full ink to 66% (a straight fade
+      // from mid-field guts the warm band and the sunset reads tan), then an
+      // eased tail to nothing at 99%. On the CONTAINER so glow + dots fade as
+      // one object; desktop keeps its hard horizon.
+      className={cn(
+        'pointer-events-none fixed inset-x-0 bottom-0 h-[24vh] print:hidden contrast-more:hidden',
+        'pointer-coarse:[-webkit-mask-image:linear-gradient(to_bottom,#000_66%,rgba(0,0,0,0.85)_80%,rgba(0,0,0,0.4)_91%,transparent_99%)]',
+        'pointer-coarse:[mask-image:linear-gradient(to_bottom,#000_66%,rgba(0,0,0,0.85)_80%,rgba(0,0,0,0.4)_91%,transparent_99%)]',
+      )}
       initial={reduceMotion || !playEntrance ? false : { opacity: 0, y: '100%' }}
       animate={{ opacity: 1, y: 0 }}
       transition={RISE}
