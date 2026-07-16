@@ -4,14 +4,24 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#eeeeee" />
-    <!-- Pre-paint theme guard: apply the stored dark preference before first
-         paint so a dark reload never flashes the light canvas. Mirrors
-         src/lib/theme.ts (same storage key) — keep in sync. -->
+    <!-- Pre-paint theme guard: resolve the stored preference before first
+         paint so a dark load never flashes the light canvas. Three-state:
+         'dark' | 'light' are explicit; anything else (including no key)
+         means follow prefers-color-scheme. Mirrors src/lib/theme.ts (same
+         key, same fallback-to-system rule) — keep in sync. The theme-color
+         meta flips too so the browser chrome never mismatches the canvas. -->
     <script>
       (function () {
         try {
-          if (localStorage.getItem('seeko-theme') !== 'dark') return;
+          var stored = localStorage.getItem('seeko-theme');
+          var dark =
+            stored === 'dark' ||
+            (stored !== 'light' &&
+              window.matchMedia('(prefers-color-scheme: dark)').matches);
+          if (!dark) return;
           document.documentElement.classList.add('dark');
+          var meta = document.querySelector('meta[name="theme-color"]');
+          if (meta) meta.setAttribute('content', '#1f1f1f');
         } catch (e) {}
       })();
     </script>

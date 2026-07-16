@@ -99,4 +99,33 @@ describe('StudioHeaderActions', () => {
       'false',
     );
   });
+
+  it('Appearance is a three-state radiogroup defaulting to System', () => {
+    localStorage.removeItem('seeko-theme');
+    render(<StudioHeaderActions email="a@seeko.dev" initials="KA" />);
+    openMenu();
+    const group = screen.getByRole('radiogroup', { name: 'Appearance' });
+    expect(group).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: 'System' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByRole('radio', { name: 'Light' })).toHaveAttribute('aria-checked', 'false');
+    expect(screen.getByRole('radio', { name: 'Dark' })).toHaveAttribute('aria-checked', 'false');
+  });
+
+  it('selecting a segment persists the preference and flips the html class', () => {
+    localStorage.removeItem('seeko-theme');
+    document.documentElement.classList.remove('dark');
+    render(<StudioHeaderActions email="a@seeko.dev" initials="KA" />);
+    openMenu();
+
+    fireEvent.click(screen.getByRole('radio', { name: 'Dark' }));
+    expect(localStorage.getItem('seeko-theme')).toBe('dark');
+    expect(document.documentElement.classList.contains('dark')).toBe(true);
+    expect(screen.getByRole('radio', { name: 'Dark' })).toHaveAttribute('aria-checked', 'true');
+
+    // The menu stays open so the flip is visible in place.
+    fireEvent.click(screen.getByRole('radio', { name: 'System' }));
+    expect(localStorage.getItem('seeko-theme')).toBe('system');
+    // jsdom's matchMedia stub never matches → system resolves light.
+    expect(document.documentElement.classList.contains('dark')).toBe(false);
+  });
 });
