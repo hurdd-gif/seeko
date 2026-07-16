@@ -15,7 +15,11 @@
         } catch (e) {}
       })();
     </script>
-    <link rel="icon" href="/icon-192.png" />
+    <!-- SVG first: the SEEKO "S", theme-adaptive (ink on light tab bars, #fafafa
+         on dark). PNG fallback for browsers without SVG-favicon support. -->
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/icon-192.png" sizes="192x192" type="image/png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <!-- Dashboard typography: one family; 600 carries the login heading and
          provider pills without faux-bold synthesis. Self-hosted (@font-face in
          globals.css) — Google Fonts cost two CHAINED third-party round trips
