@@ -168,10 +168,11 @@ main {
    vertically so the type catches light (see the pointer handler below). */
 .mark {
   margin: 0;
-  /* One line, always: the frame IS the viewport. The type is sized to fill the
-     width (minus a gutter) and never wrap, capped so it stays sane on a wide
-     monitor. 10.512em is the measured advance of the phrase at this tracking; the
-     /11 divisor buys ~4% headroom so the ends can't kiss the gutter. */
+  /* One line, always — above phone widths (the 480px block below breaks it to
+     two): the frame IS the viewport. The type is sized to fill the width (minus
+     a gutter) and never wrap, capped so it stays sane on a wide monitor.
+     10.512em is the measured advance of the phrase at this tracking; the /11
+     divisor buys ~4% headroom so the ends can't kiss the gutter. */
   max-width: none;
   white-space: nowrap;
   font-size: min(104px, (100vw - 64px) / 11);
@@ -229,6 +230,22 @@ main {
 .check:hover { background: var(--ink-strong); }
 .check:active { transform: scale(0.96); transition-duration: 60ms; }
 .check:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--canvas), 0 0 0 4px rgba(13,122,255,0.4); }
+
+/* ── Phones. Two problems the desktop frame never has: the no-wrap rule shrinks
+      the hero to ~30px — body-adjacent, 2:1 over the subline where desktop gets
+      7:1 — and geometric centering ignores the veil's mass, so the message
+      floats in a void with the horizon far below. Break the mark to two
+      balanced lines at display scale (the ink window maps across both: orange
+      feet, cerulean caps — the sunset in the type), and bias the stack up so it
+      centers in the space ABOVE the horizon, not the full viewport. ─────────── */
+@media (max-width: 480px) {
+  .mark {
+    white-space: normal;
+    text-wrap: balance;
+    font-size: clamp(40px, 12vw, 48px);
+  }
+  main { padding-bottom: calc(96px + 16vh); }
+}
 
 /* ── The halftone veil, pinned to the floor ─────────────────────────────── */
 .veil {
@@ -450,7 +467,13 @@ body.animate .veil {
 
   function buildDots(w, h) {
     var out = [];
-    var cx = w / 2, ry = h * BLOOM_RY_FRAC, rx = ry * BLOOM_ASPECT;
+    var cx = w / 2, ry = h * BLOOM_RY_FRAC;
+    /* Desktop's wide ellipse (ry × 3.325 ≈ 2.8 × the veil's height) overshoots
+       any frame narrower than ~900px, flattening the bloom into a wall-to-wall
+       carpet with hard side edges. Clamp it to the frame so phones keep the
+       desktop's shape — a centered dome whose lateral falloff lands INSIDE the
+       screen. No-op at desktop widths. */
+    var rx = Math.min(ry * BLOOM_ASPECT, w * 0.62);
     var rows = Math.ceil(h / PITCH), cols = Math.ceil(w / PITCH);
     for (var j = 0; j < rows; j++) {
       var y = j * PITCH + PITCH / 2;
@@ -508,9 +531,14 @@ body.animate .veil {
     resizeRaf = requestAnimationFrame(resize);
   });
 
-  if (!reduceMotion && finePointer) {
-    window.addEventListener('pointermove', function (e) {
-      if (e.pointerType !== 'mouse') return;
+  /* The lens follows ANY pointer, not just a mouse: on touch the finger drags
+     through the field and the dots part around it (pointerdown too, so even a
+     tap nudges them) — the mark's drift stays mouse-only, but the veil is the
+     one interactive surface touch users can actually reach. A lifted finger
+     relaxes the field the way a departing cursor does; mouse hover behaviour
+     is unchanged. Off under reduced motion. */
+  if (!reduceMotion) {
+    var track = function (e) {
       var wasActive = pointer.active;
       pointer.x = e.clientX;
       pointer.y = e.clientY - (window.innerHeight - H);
@@ -518,8 +546,14 @@ body.animate .veil {
                        pointer.y >= -LENS_RADIUS && pointer.y <= H + LENS_RADIUS;
       if (!pointer.active && !wasActive && !running) return;
       wake();
-    }, { passive: true });
+    };
+    window.addEventListener('pointermove', track, { passive: true });
+    window.addEventListener('pointerdown', track, { passive: true });
     var relax = function () { pointer.active = false; wake(); };
+    window.addEventListener('pointerup', function (e) {
+      if (e.pointerType !== 'mouse') relax();
+    }, { passive: true });
+    window.addEventListener('pointercancel', relax);
     document.documentElement.addEventListener('pointerleave', relax);
     window.addEventListener('blur', relax);
   }
