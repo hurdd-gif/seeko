@@ -689,8 +689,13 @@ export function LoginForm({ initialError = null, skipEntrance = false, nextPath 
               deliberately; it is the only real weight on the page, which is the
               point: one element outranks the rest by weight, everything else
               inherits body 500 and stays quiet. */}
+          {/* "SEEKO Studio", not "SEEKO": Google's OAuth branding review
+              matches the consent-screen app name against the name DISPLAYED on
+              the home page — the wordmark and possessive subtitle only say
+              "SEEKO", so the H1 must carry the exact configured name or
+              verification fails on name mismatch. */}
           <h1 className="text-balance text-2xl font-[600] tracking-[-0.02em] text-ink-strong">
-            Sign in to SEEKO
+            Sign in to SEEKO&nbsp;Studio
           </h1>
         </motion.div>
 

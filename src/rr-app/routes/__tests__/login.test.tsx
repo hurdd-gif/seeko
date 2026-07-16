@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { LoginRouteContent } from '../login';
 
 // Login redesigned to the Paper reference (SK_DB frame 27P-0): centered card
-// with badge + "Sign in to SEEKO" heading and a pills-only stack (Google,
+// with badge + "Sign in to SEEKO Studio" heading and a pills-only stack (Google,
 // passkey, email). The email pill is a transitions.dev-style surface morph:
 // collapsed (inert) by default, it expands into the ORIGINAL email/password
 // flow on click and collapses via its close button. The invite path is now a
@@ -28,7 +28,10 @@ describe('LoginRouteContent', () => {
   it('renders the sign-in card with Google and email pills, form collapsed', () => {
     renderLogin();
 
-    expect(screen.getByRole('heading', { name: 'Sign in to SEEKO' })).toBeInTheDocument();
+    // NBSP binds "SEEKO Studio" (the exact OAuth app name must display intact).
+    expect(
+      screen.getByRole('heading', { name: /Sign in to SEEKO[\s ]Studio/ })
+    ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Continue with Google/ })).toBeInTheDocument();
     // The email form starts collapsed behind the "Continue with email" pill.
     expect(screen.getByRole('button', { name: /Continue with email/ })).toHaveAttribute(
