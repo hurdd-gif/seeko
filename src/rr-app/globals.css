@@ -2239,3 +2239,27 @@ body.tour-cmd-k-active #command-palette-container * {
  * purpose: the persistent top bar is a layout fact, not an animation, and it
  * should hold still in either mode. */
 
+/* ── Sign-out departure ──────────────────────────────────────────────────
+ * `signing-out` on <html> is stamped by src/lib/sign-out.ts when the user
+ * confirms sign-out. The app recedes (fade + 0.985 — a recession, not a
+ * zoom) while the POST is in flight, leaving a quiet beat of bare canvas
+ * before the full-document navigation to /login, whose card storyboard
+ * plays as the arrival. Same fade-through grammar as the /login ⇄ /legal
+ * seam above: the exit fully clears before the entrance begins. The 60ms
+ * delay lets the account menu's own 130ms exit lead by a beat.
+ * Timing lives in TWO places by necessity — EXIT_TOTAL_MS in sign-out.ts
+ * must equal delay + duration here. Reduced motion never adds the class
+ * (sign-out.ts is never called; the native form POST runs instead), so no
+ * reduced rules are needed; the media query is belt-and-braces against
+ * future callers. */
+@media (prefers-reduced-motion: no-preference) {
+  html.signing-out #root {
+    opacity: 0;
+    transform: scale(0.985);
+    transition:
+      opacity 240ms cubic-bezier(0.4, 0, 1, 1) 60ms,
+      transform 240ms cubic-bezier(0.4, 0, 1, 1) 60ms;
+    pointer-events: none;
+  }
+}
+

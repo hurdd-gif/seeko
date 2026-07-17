@@ -34,15 +34,13 @@ import {
   CreditCard,
   Activity,
   BadgePlus,
-  Moon,
-  Sun,
-  Monitor,
 } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import type { Notification } from '@/lib/types';
-import { setThemePreference, useThemePreference, type ThemePreference } from '@/lib/theme';
-import { springs, shellEntrance, DROPDOWN, TAB_PILL_SPRING } from '@/lib/motion';
+import { springs, shellEntrance, DROPDOWN } from '@/lib/motion';
+import { performSignOutExit } from '@/lib/sign-out';
 import { CreateIssueButton } from '@/components/dashboard/CreateIssueButton';
+import { AppearanceToggle } from '@/components/dashboard/AppearanceToggle';
 
 const NotificationBell = dynamic(
   () => import('@/components/dashboard/NotificationBell').then((m) => m.NotificationBell),
@@ -291,7 +289,16 @@ export function StudioHeaderActions({
                           Sign out?
                         </span>
                         <div className="flex items-center gap-3">
-                          <form action="/auth/signout" method="post">
+                          <form
+                            action="/auth/signout"
+                            method="post"
+                            onSubmit={(e) => {
+                              // Reduced motion: the native POST runs — instant, no choreography.
+                              if (reduce) return;
+                              e.preventDefault();
+                              void performSignOutExit(e.currentTarget, close);
+                            }}
+                          >
                             <button
                               type="submit"
                               className="text-[14px] font-medium text-[#e5484d] dark:text-danger transition-colors hover:text-[#d33b40] dark:hover:text-danger-strong"
@@ -333,70 +340,6 @@ export function StudioHeaderActions({
       </div>
 
     </div>
-  );
-}
-
-/** Appearance row — label + a three-segment preference control (Sun / Moon /
- *  Monitor = light / dark / system). The old two-state Sun↔Moon crossfade
- *  became ambiguous once "follow the OS" existed: at night both dark and
- *  system would show the moon, hiding WHY the canvas is dark. The active
- *  segment is the canonical sliding pill (shared-layout, TAB_PILL_SPRING).
- *  Selecting keeps the menu open so the flip is visible in place. */
-const THEME_PREFERENCES = [
-  { value: 'light', label: 'Light', icon: Sun },
-  { value: 'dark', label: 'Dark', icon: Moon },
-  { value: 'system', label: 'System', icon: Monitor },
-] as const satisfies ReadonlyArray<{
-  value: ThemePreference;
-  label: string;
-  icon: typeof Sun;
-}>;
-
-function AppearanceToggle({ reduce }: { reduce: boolean | null }) {
-  const preference = useThemePreference();
-
-  return (
-    <motion.div variants={reduce ? undefined : MENU_ROW}>
-      {/* Not a PopoverLink row: the row itself does nothing, so it skips the
-          hover x-shift (that grammar promises navigation) but keeps the
-          sibling-dimming so it still answers the menu's pointer choreography. */}
-      <div className="flex w-full items-center justify-between rounded-2xl px-4 py-2 text-[14px] font-medium tracking-[-0.28px] text-ink-title opacity-100 transition-opacity group-hover/menu:opacity-20 hover:opacity-100!">
-        <span>Appearance</span>
-        <div
-          role="radiogroup"
-          aria-label="Appearance"
-          className="flex items-center gap-0.5 rounded-full bg-wash-3 p-0.5"
-        >
-          {THEME_PREFERENCES.map(({ value, label, icon: Icon }) => {
-            const active = preference === value;
-            return (
-              <button
-                key={value}
-                type="button"
-                role="radio"
-                aria-checked={active}
-                aria-label={label}
-                title={label}
-                onClick={() => setThemePreference(value)}
-                className={`relative flex size-8 items-center justify-center rounded-full outline-none transition-colors focus-visible:ring-2 focus-visible:ring-seeko-accent/40 ${
-                  active ? 'text-ink-title' : 'text-ink-muted hover:text-ink-title'
-                }`}
-              >
-                {active && (
-                  <motion.span
-                    layoutId="appearance-pill"
-                    transition={reduce ? { duration: 0 } : TAB_PILL_SPRING}
-                    className="absolute inset-0 rounded-full bg-wash-5"
-                    aria-hidden
-                  />
-                )}
-                <Icon className="relative size-4" />
-              </button>
-            );
-          })}
-        </div>
-      </div>
-    </motion.div>
   );
 }
 

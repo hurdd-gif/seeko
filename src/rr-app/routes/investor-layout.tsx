@@ -16,6 +16,8 @@ import {
 import { AnimatePresence, motion, useReducedMotion, type Variants } from 'motion/react';
 import { toast } from 'sonner';
 import { springs, shellEntrance, DROPDOWN } from '@/lib/motion';
+import { AppearanceToggle } from '@/components/dashboard/AppearanceToggle';
+import { performSignOutExit } from '@/lib/sign-out';
 import type { InvestorOverviewData, InvestorProfile } from '@/lib/investor-index';
 
 /* ─────────────────────────────────────────────────────────
@@ -364,13 +366,22 @@ export function InvestorShell({
                         />
                         {profile.isAdmin && (
                           <InvestorMenuLink
-                            to="/"
+                            // /issues, NOT "/": the root route is a bare
+                            // redirect wrapped in placeholder chrome (hardcoded
+                            // "SK" account stub in routes.tsx) that paints while
+                            // the real page lazy-loads. Land on the destination
+                            // directly and that stub never flashes.
+                            to="/issues"
                             icon={Home}
                             label="Back to dashboard"
                             reduce={reduce}
                             onClick={() => setProfileOpen(false)}
                           />
                         )}
+                        {/* Same control as the studio account menu — theme is
+                            global, so an investor-side switch flips the whole
+                            app, exactly like the studio side. */}
+                        <AppearanceToggle reduce={reduce} />
                       </div>
 
                       <div className="mx-4 h-px bg-wash-5" />
@@ -391,7 +402,19 @@ export function InvestorShell({
                                 Sign out?
                               </span>
                               <div className="flex items-center gap-3">
-                                <form action="/auth/signout" method="post">
+                                <form
+                                  action="/auth/signout"
+                                  method="post"
+                                  onSubmit={(e) => {
+                                    // Reduced motion: the native POST runs — instant, no choreography.
+                                    if (reduce) return;
+                                    e.preventDefault();
+                                    void performSignOutExit(e.currentTarget, () => {
+                                      setProfileOpen(false);
+                                      setConfirmingSignOut(false);
+                                    });
+                                  }}
+                                >
                                   <button
                                     type="submit"
                                     className="text-[14px] font-medium text-[#e5484d] dark:text-danger transition-colors hover:text-[#d33b40]"
