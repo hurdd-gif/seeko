@@ -177,12 +177,15 @@ describe('investor routes', () => {
     expect(screen.getByText('No ship dates set yet.')).toBeInTheDocument();
 
     // Milestones dither chart: header + summary; the canvas itself can't render
-    // in jsdom (zero-size measure), but the sr-only completion read must — and
-    // only milestones with linked tasks appear in it.
+    // in jsdom (zero-size measure), but the sr-only completion read must. The
+    // header count sums only charted (scoped) milestones; a zero-task milestone
+    // no longer vanishes — it earns a quiet "Not yet scoped" ledger row instead
+    // (2026-07-16: hiding it under-reported the roadmap).
     expect(screen.getByRole('heading', { name: 'Milestones' })).toBeInTheDocument();
     expect(screen.getByText('10 of 15 tasks shipped')).toBeInTheDocument();
     expect(screen.getByText(/ALPHA: 6 of 6 tasks shipped/)).toBeInTheDocument();
-    expect(screen.queryByText(/GHOST/)).not.toBeInTheDocument();
+    expect(screen.getByText(/GHOST: not yet scoped/)).toBeInTheDocument();
+    expect(screen.getByText('Not yet scoped')).toBeInTheDocument();
 
     // Latest ledger fed by recentActivity.
     expect(screen.getByRole('heading', { name: 'Latest' })).toBeInTheDocument();

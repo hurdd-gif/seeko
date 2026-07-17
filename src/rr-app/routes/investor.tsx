@@ -114,9 +114,10 @@ function InvestorOverview({
 }) {
   const { stats, areas } = index;
   const latest = investorLatestRows(index.recentActivity);
-  // Only milestones with linked work earn a bar; an all-empty set hides the
-  // section entirely (live data is sparse — the chart must never render bare).
-  const milestones = (index.milestones ?? []).filter((milestone) => milestone.taskCount > 0);
+  // All milestones reach the section; the chart-vs-ledger split (bars need
+  // linked work) happens inside InvestorMilestoneChart. Only a truly empty
+  // set hides the section.
+  const milestones = index.milestones ?? [];
 
   return (
     <div className="mx-auto flex w-full max-w-[880px] flex-col">
@@ -619,7 +620,14 @@ function InvestorMilestoneChart({
   milestones: InvestorOverviewData['milestones'];
 }) {
   const reduce = useReducedMotion();
-  const rows: MilestoneRow[] = milestones.map((milestone) => ({
+  // Bars need linked work — a zero-height stack reads as a rendering bug, so
+  // the chart only draws scoped milestones. The rest are still real, dated
+  // commitments: they get a quiet ledger row below the chart instead of
+  // vanishing (a roadmap that only shows started milestones under-reports
+  // the roadmap — that's how BETA disappeared entirely).
+  const scoped = milestones.filter((milestone) => milestone.taskCount > 0);
+  const unscoped = milestones.filter((milestone) => milestone.taskCount === 0);
+  const rows: MilestoneRow[] = scoped.map((milestone) => ({
     name: milestone.name,
     tip: milestone.targetDate
       ? `${milestone.name} — ships ${formatShortDate(milestone.targetDate)}`
@@ -627,22 +635,29 @@ function InvestorMilestoneChart({
     shipped: milestone.doneCount,
     remaining: milestone.taskCount - milestone.doneCount,
   }));
-  const totalTasks = milestones.reduce((sum, milestone) => sum + milestone.taskCount, 0);
-  const totalDone = milestones.reduce((sum, milestone) => sum + milestone.doneCount, 0);
+  const totalTasks = scoped.reduce((sum, milestone) => sum + milestone.taskCount, 0);
+  const totalDone = scoped.reduce((sum, milestone) => sum + milestone.doneCount, 0);
 
   return (
     <section>
       <div className="flex items-baseline justify-between gap-4">
         <h2 className={SECTION_H}>Milestones</h2>
-        <p className="whitespace-nowrap text-[12.5px] leading-[17px] tabular-nums text-ink-faint">
-          {totalDone} of {totalTasks} tasks shipped
-        </p>
+        {scoped.length > 0 && (
+          <p className="whitespace-nowrap text-[12.5px] leading-[17px] tabular-nums text-ink-faint">
+            {totalDone} of {totalTasks} tasks shipped
+          </p>
+        )}
       </div>
       <p className="sr-only">
         {milestones
-          .map((milestone) => `${milestone.name}: ${milestone.doneCount} of ${milestone.taskCount} tasks shipped`)
+          .map((milestone) =>
+            milestone.taskCount > 0
+              ? `${milestone.name}: ${milestone.doneCount} of ${milestone.taskCount} tasks shipped`
+              : `${milestone.name}: not yet scoped`,
+          )
           .join('. ')}
       </p>
+      {scoped.length > 0 && (
       <div aria-hidden className="mt-4 [--ms-ar:2.6/1] sm:[--ms-ar:5/1]">
         <BarChart
           data={rows as unknown as Record<string, unknown>[]}
@@ -691,6 +706,30 @@ function InvestorMilestoneChart({
           />
         </BarChart>
       </div>
+      )}
+
+      {/* Dated-but-unscoped milestones — same ledger grammar as "What's
+          shipping" (name · note · tabular date) so the two reads rhyme.
+          "Not yet scoped" answers the question the missing bar raises. */}
+      {unscoped.length > 0 && (
+        <div className="mt-2 flex flex-col divide-y divide-wash-5">
+          {unscoped.map((milestone) => (
+            <div key={milestone.id} className="flex items-center gap-4 py-3.5">
+              <p className="min-w-0 flex-1 truncate text-[14px] font-medium leading-[18px] text-ink-title">
+                {milestone.name}
+              </p>
+              <p className="whitespace-nowrap text-[12.5px] leading-[17px] text-ink-faint">
+                Not yet scoped
+              </p>
+              {milestone.targetDate && (
+                <p className="w-14 shrink-0 whitespace-nowrap text-right text-[13.5px] leading-[18px] tabular-nums text-ink-title">
+                  {formatShortDate(milestone.targetDate)}
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </section>
   );
 }
