@@ -12,11 +12,13 @@ import {
 import {
   loadActivityView,
   loadDocsView,
+  loadNotificationsView,
   loadPaymentsView,
   loadProgressView,
   loadSettingsView,
   type ActivityViewData,
   type DocsViewData,
+  type NotificationsViewData,
   type PaymentsViewData,
   type ProgressViewData,
   type SettingsViewData,
@@ -36,6 +38,7 @@ type DashboardRoutesOptions = {
   // DocList / ActivitySection / StudioProgressRing inside <LightShell>).
   docsViewLoader?: (user: AuthenticatedUser) => Promise<DocsViewData>;
   activityViewLoader?: (user: AuthenticatedUser) => Promise<ActivityViewData>;
+  notificationsViewLoader?: (user: AuthenticatedUser) => Promise<NotificationsViewData>;
   progressViewLoader?: (user: AuthenticatedUser) => Promise<ProgressViewData>;
   settingsViewLoader?: (user: AuthenticatedUser) => Promise<SettingsViewData>;
   paymentsViewLoader?: (user: AuthenticatedUser) => Promise<PaymentsViewData>;
@@ -49,6 +52,7 @@ export function createDashboardRoutes(options: DashboardRoutesOptions = {}) {
   const settingsLoader = options.settingsLoader ?? loadSettingsIndex;
   const docsViewLoader = options.docsViewLoader ?? loadDocsView;
   const activityViewLoader = options.activityViewLoader ?? loadActivityView;
+  const notificationsViewLoader = options.notificationsViewLoader ?? loadNotificationsView;
   const progressViewLoader = options.progressViewLoader ?? loadProgressView;
   const settingsViewLoader = options.settingsViewLoader ?? loadSettingsView;
   const paymentsViewLoader = options.paymentsViewLoader ?? loadPaymentsView;
@@ -60,6 +64,7 @@ export function createDashboardRoutes(options: DashboardRoutesOptions = {}) {
     .get('/settings-index', (c) => handleDashboardLoad(c, authResolver, settingsLoader))
     .get('/docs-view', (c) => handleDashboardLoad(c, authResolver, docsViewLoader))
     .get('/activity-view', (c) => handleDashboardLoad(c, authResolver, activityViewLoader))
+    .get('/notifications-view', (c) => handleDashboardLoad(c, authResolver, notificationsViewLoader))
     .get('/progress-view', (c) => handleDashboardLoad(c, authResolver, progressViewLoader))
     .get('/settings-view', (c) => handleDashboardLoad(c, authResolver, settingsViewLoader))
     .get('/payments-view', (c) => handleDashboardLoad(c, authResolver, paymentsViewLoader));

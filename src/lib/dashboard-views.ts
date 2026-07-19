@@ -80,6 +80,12 @@ export type SettingsViewData = {
   completedTasks: Pick<Task, 'id' | 'name' | 'bounty'>[];
 };
 
+/** Chrome-only payload: /notifications renders a self-contained preferences
+ *  panel, so the page needs nothing beyond the signed-in account cluster. */
+export type NotificationsViewData = {
+  account: TasksBoardAccount;
+};
+
 export type PaymentsViewData = {
   team: (Profile & { paypal_email?: string })[];
   isAdmin: boolean;
@@ -269,6 +275,14 @@ export async function loadActivityView(currentUser: {
     team: (teamRes.data ?? []) as unknown as Profile[],
     heatmap: [...counts.entries()].map(([date, count]) => ({ date, count })),
   };
+}
+
+export async function loadNotificationsView(currentUser: {
+  id: string;
+  email?: string | null;
+}): Promise<NotificationsViewData> {
+  const { account } = await loadShellContext(currentUser);
+  return { account };
 }
 
 export async function loadProgressView(currentUser: {

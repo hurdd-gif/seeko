@@ -1,36 +1,10 @@
-import {
-  lazy,
-  Suspense,
-  useEffect,
-  useRef,
-  useState,
-  type ElementType,
-  type ReactNode,
-} from 'react';
+import { lazy, Suspense } from 'react';
 import {
   createBrowserRouter,
   isRouteErrorResponse,
-  Link,
   Navigate,
-  Outlet,
-  useLocation,
   useRouteError,
 } from 'react-router';
-import {
-  Activity as ActivityIcon,
-  ChevronDown,
-  CreditCard,
-  FileSignature,
-  Inbox,
-  LogOut,
-  Plus,
-  RotateCw,
-  Settings,
-  TrendingUp,
-  Users,
-} from 'lucide-react';
-import { BTN_PRIMARY, BTN_SECONDARY, LIGHT_FOCUS_RING } from '@/components/dashboard/lightKit';
-import { TOUCH_TARGET } from '@/components/public/PublicLink';
 import { INVESTOR_LAYOUT_ROUTE_ID } from './route-ids';
 
 export const routeInventory = [
@@ -197,240 +171,6 @@ export const routeInventory = [
   },
 ] as const;
 
-/* ── Shell tabs + account-cluster menu (faithful to the shipped chrome) ──────────
- * The refreshed site's chrome is NOT a wide link bar. It is two flat tabs
- * (Issues → /issues, Docs → /docs) on the left and an account cluster on the
- * right: a notification glyph, a framed "Create" pill, a "More" popover holding
- * the secondary destinations, and an avatar identity menu. These mirror
- * src/components/dashboard/LightShell.tsx + StudioHeaderActions.tsx 1:1 so the
- * migration reads as the same product. */
-const SHELL_TABS: { label: string; to: string; match: string }[] = [
-  { label: 'Issues', to: '/issues', match: '/issues' },
-  { label: 'Docs', to: '/docs', match: '/docs' },
-];
-
-const MORE_LINKS: { to: string; label: string; icon: ElementType }[] = [
-  { to: '/activity', label: 'Activity', icon: ActivityIcon },
-  { to: '/team', label: 'Team', icon: Users },
-  // Progress disabled 2026-07 — nav entry removed and /progress redirects to
-  // /tasks; restore both to re-enable.
-  { to: '/settings', label: 'Settings', icon: Settings },
-];
-
-const MORE_ADMIN_LINKS: { to: string; label: string; icon: ElementType }[] = [
-  { to: '/payments', label: 'Payments', icon: CreditCard },
-  { to: '/admin/external-signing', label: 'External Signing', icon: FileSignature },
-  { to: '/investor', label: 'Investor Panel', icon: TrendingUp },
-];
-
-const TAB_BASE =
-  'flex h-8 items-center px-2 text-[13.5px] font-medium leading-[18px] tracking-[-0.27px] transition-[color,transform] duration-150 ease-out motion-safe:active:scale-[0.97]';
-
-function ShellTabs() {
-  const { pathname } = useLocation();
-  return (
-    <nav aria-label="Sections" className="-ml-2 flex items-center gap-1">
-      {SHELL_TABS.map((tab) => {
-        const isActive = pathname === tab.match || pathname.startsWith(`${tab.match}/`);
-        return (
-          <Link
-            key={tab.to}
-            to={tab.to}
-            aria-current={isActive ? 'page' : undefined}
-            className={`${TAB_BASE} ${isActive ? 'text-ink' : 'text-ink-muted hover:text-[#5a5a5a] dark:hover:text-ink-body'}`}
-          >
-            {tab.label}
-          </Link>
-        );
-      })}
-    </nav>
-  );
-}
-
-function ChromeMenuLink({
-  to,
-  label,
-  icon: Icon,
-  onNavigate,
-}: {
-  to: string;
-  label: string;
-  icon: ElementType;
-  onNavigate: () => void;
-}) {
-  return (
-    <Link
-      to={to}
-      onClick={onNavigate}
-      className="flex items-center justify-between rounded-2xl px-4 py-3 text-[14px] font-medium tracking-[-0.28px] text-ink-title transition-[color,background-color] duration-150 ease-out hover:bg-wash-4"
-    >
-      <span>{label}</span>
-      <Icon className="size-5 text-ink-muted" />
-    </Link>
-  );
-}
-
-function StudioHeaderCluster() {
-  const [open, setOpen] = useState<'more' | 'account' | null>(null);
-  const moreRef = useRef<HTMLDivElement>(null);
-  const accountRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    function handleClick(event: MouseEvent) {
-      const target = event.target as Node;
-      if (
-        moreRef.current && !moreRef.current.contains(target) &&
-        accountRef.current && !accountRef.current.contains(target)
-      ) {
-        setOpen(null);
-      }
-    }
-    function handleKey(event: KeyboardEvent) {
-      if (event.key === 'Escape') setOpen(null);
-    }
-    document.addEventListener('mousedown', handleClick);
-    window.addEventListener('keydown', handleKey);
-    return () => {
-      document.removeEventListener('mousedown', handleClick);
-      window.removeEventListener('keydown', handleKey);
-    };
-  }, [open]);
-
-  return (
-    <div className="flex items-center gap-1.5">
-      {/* Notification glyph (visual parity with the live NotificationBell slot) */}
-      <span className="flex size-9 items-center justify-center text-ink-muted">
-        <Inbox className="size-4" strokeWidth={2} aria-hidden />
-      </span>
-
-      {/* The one framed control on the bar */}
-      <button
-        type="button"
-        className="flex h-9 items-center gap-1.5 rounded-full bg-surface-1 pl-2.5 pr-3.5 shadow-seeko transition-[background-color,transform] duration-150 ease-out hover:bg-surface-3 active:scale-[0.97]"
-      >
-        <Plus className="size-[15px] text-ink-title" strokeWidth={2.25} aria-hidden />
-        <span className="text-[14px] font-medium leading-[18px] tracking-[-0.28px] text-ink-title">
-          Create
-        </span>
-      </button>
-
-      {/* More — secondary destinations */}
-      <div ref={moreRef} className="relative">
-        <button
-          type="button"
-          aria-expanded={open === 'more'}
-          onClick={() => setOpen((prev) => (prev === 'more' ? null : 'more'))}
-          className="flex h-9 items-center gap-1 rounded-full pl-3 pr-2 transition-[background-color,transform] duration-150 ease-out hover:bg-wash-4 active:scale-[0.97]"
-        >
-          <span className="text-[14px] font-medium leading-[18px] tracking-[-0.28px] text-ink-title">
-            More
-          </span>
-          <ChevronDown
-            className={`size-[14px] text-ink-muted transition-transform duration-200 ease-out motion-reduce:transition-none ${
-              open === 'more' ? 'rotate-180' : ''
-            }`}
-            strokeWidth={2.25}
-            aria-hidden
-          />
-        </button>
-
-        {open === 'more' && (
-          <div className="rr-pop absolute right-0 top-full z-50 mt-[9px] flex w-[244px] origin-top-right flex-col gap-1 overflow-hidden rounded-[20px] bg-overlay p-1 shadow-seeko-pop">
-            <div className="flex flex-col">
-              {MORE_LINKS.map((link) => (
-                <ChromeMenuLink key={link.to} {...link} onNavigate={() => setOpen(null)} />
-              ))}
-            </div>
-            <div className="mx-4 h-px bg-wash-5" />
-            <div className="flex flex-col">
-              {MORE_ADMIN_LINKS.map((link) => (
-                <ChromeMenuLink key={link.to} {...link} onNavigate={() => setOpen(null)} />
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Identity */}
-      <div ref={accountRef} className="relative">
-        <button
-          type="button"
-          aria-label="Open account menu"
-          aria-expanded={open === 'account'}
-          onClick={() => setOpen((prev) => (prev === 'account' ? null : 'account'))}
-          className="relative z-[60] flex size-9 items-center justify-center rounded-full bg-[#262626] text-[11px] font-medium leading-[13px] text-[#f0f0f0] ring-[0.5px] ring-inset ring-[#0000001f] dark:ring-white/10 transition-transform duration-150 ease-out hover:scale-105 active:scale-95"
-        >
-          SK
-        </button>
-
-        {open === 'account' && (
-          <div className="rr-pop absolute right-[-12px] top-[-14px] z-50 flex w-[244px] origin-top-right flex-col gap-1 overflow-hidden rounded-[20px] bg-overlay p-1 shadow-seeko-pop">
-            <div className="flex items-center px-3 py-2.5 pr-14">
-              <div className="min-w-0">
-                <p className="truncate text-[14px] font-medium tracking-[-0.28px] text-ink-title">
-                  SEEKO Studio
-                </p>
-                <p className="mt-0.5 truncate text-[13px] text-ink-muted">studio@seeko.app</p>
-              </div>
-            </div>
-            <div className="mx-4 h-px bg-wash-5" />
-            <a
-              href="/login"
-              className="flex w-full items-center justify-between rounded-2xl px-4 py-3 text-[14px] font-medium tracking-[-0.28px] text-ink-title transition-[color,background-color] duration-150 ease-out hover:bg-[rgba(229,72,77,0.08)] hover:text-[#e5484d] dark:hover:text-danger"
-            >
-              <span>Sign out</span>
-              <LogOut className="size-5" />
-            </a>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// The whole rr-app wears the refreshed light "Paper" system. `overview-light`
-// scopes the `--ov-*` tokens (also mirrored at :root in styles.css for the
-// standalone routes), and the chrome below reproduces the shipped LightShell:
-// a fixed Paper canvas, flat Issues/Docs tabs, the account cluster, and a single
-// scrolling content column (max-w-5xl) — NOT a wide link bar.
-function ShellFrame({ children }: { children: ReactNode }) {
-  return (
-    <div className="overview-light fixed inset-0 z-40 flex flex-col overflow-hidden bg-[var(--ov-bg)] antialiased">
-      <header className="shrink-0 border-b border-wash-6">
-        <div className="flex w-full items-center justify-between gap-3 px-6 pt-8 pb-3 md:px-[52px] md:pt-11">
-          <ShellTabs />
-          <StudioHeaderCluster />
-        </div>
-      </header>
-      <main className="scrollbar-paper min-h-0 flex-1 overflow-y-auto">
-        <div className="mx-auto w-full max-w-5xl px-6 py-8 pb-24 md:px-[52px]">
-          {children}
-        </div>
-      </main>
-    </div>
-  );
-}
-
-function RootLayout() {
-  return (
-    <ShellFrame>
-      <Outlet />
-    </ShellFrame>
-  );
-}
-
-// For the IN-SHELL error state, which has no numeral above it. There, "500
-// Internal Server Error" is the only thing on screen that names the failure, so
-// the status line earns its place.
-function getRouteErrorDetail(error: unknown) {
-  if (isRouteErrorResponse(error)) {
-    return [error.status, error.statusText].filter(Boolean).join(' ') || String(error.status);
-  }
-  if (error instanceof Error) return error.message;
-  return 'Unknown error';
-}
-
 // For the SUNSET 500, which has a 500 six inches tall above it — and a copy
 // button beside it. Different rules apply.
 //
@@ -483,91 +223,11 @@ function ServerErrorPage({ detail }: { detail: string | null }) {
   );
 }
 
-// Bare-canvas error composition (Midday / Threads / Tines pattern): quiet text
-// directly on Paper, no card, no icon badge. An error is the absence of content,
-// so it borrows nothing louder than the product's own compact pill buttons —
-// the previous elevated card + tinted icon made failure the loudest surface in
-// the app. The status detail reads as plain mono text (PayPal's debug-ID
-// pattern), not a chip.
-function PaperErrorState({
-  title,
-  description,
-  detail,
-}: {
-  title: string;
-  description: string;
-  detail: string;
-}) {
-  return (
-    <div className="mx-auto flex min-h-[min(620px,calc(100dvh-8rem))] w-full max-w-md flex-col items-center justify-center px-6 py-12 text-center">
-      <h1 className="text-balance text-[15px] font-semibold text-ink-title">{title}</h1>
-      <p className="mt-1.5 max-w-[44ch] text-pretty text-[13px] leading-relaxed text-ink-muted">
-        {description}
-      </p>
-      {/* It WRAPS. This was `truncate`, which on the one line of the card that
-          carries real information is self-defeating: a thrown Error's message
-          ellipsizes long before it has said anything useful, so the debug detail
-          you kept a mono tier for was unreadable exactly when it mattered. Two
-          lines of 11px mono cost nothing here. */}
-      <p className="mt-4 max-w-full break-words font-mono text-[11px] leading-relaxed text-ink-faintest">
-        {detail}
-      </p>
-      <div className="mt-7 flex items-center justify-center gap-2">
-        {/* TOUCH_TARGET on both: BTN_BASE is h-9 (36px), under the 40px desktop
-            floor and well under 44px for touch. */}
-        <button
-          type="button"
-          onClick={() => window.location.reload()}
-          className={`${BTN_PRIMARY} ${LIGHT_FOCUS_RING} ${TOUCH_TARGET} inline-flex items-center gap-1.5 pl-3.5`}
-        >
-          <RotateCw className="size-3.5" />
-          Refresh
-        </button>
-        <button
-          type="button"
-          onClick={() => window.history.back()}
-          className={`${BTN_SECONDARY} ${LIGHT_FOCUS_RING} ${TOUCH_TARGET} inline-flex items-center`}
-        >
-          Go back
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// When a child loader throws with no closer boundary (e.g. the studio API is
-// unreachable), React Router would otherwise replace the whole tree with its
-// raw developer error page — wiping the chrome and reading as a broken site.
-// Re-render the Paper shell with a calm error card instead, so EVERY route
-// degrades into the light design rather than out of it.
-//
-// THIS ONE STAYS QUIET, and its sibling below does not. That asymmetry is the
-// point. Here the shell SURVIVES: the nav still works, the user is mid-session,
-// and exactly one region failed. The full sunset 500 dropped into a working
-// chrome would make a local failure the loudest object in an app that is
-// otherwise fine — the same mistake as the elevated card + tinted icon this
-// composition replaced. StandaloneErrorBoundary has no chrome to survive, so
-// there the failure IS the page and gets to look like one.
-function RootErrorBoundary() {
-  const error = useRouteError();
-  const detail = getRouteErrorDetail(error);
-  return (
-    <ShellFrame>
-      <PaperErrorState
-        title="This view didn’t load"
-        description="The studio service didn’t respond. Refresh the page to try again. If it keeps happening, the API may be offline."
-        detail={detail}
-      />
-    </ShellFrame>
-  );
-}
-
-// Standalone routes (issues, task detail, contractor, the investor cluster,
-// onboarding, agreement, invoice, sign, shared) render OUTSIDE RootLayout, so
-// RootErrorBoundary can't catch their loader failures — and they have no chrome
-// to preserve. The boundary owns the ENTIRE viewport here, which is what makes
-// the full 500 page right: it isn't competing with surrounding content, because
-// on these routes there is none. This is the surface people actually mean when
+// Every route mounts standalone (each page wears its own <LightShell> or
+// investor shell), so there is no shared chrome for an error state to survive
+// inside. The boundary owns the ENTIRE viewport, which is what makes the full
+// 500 page right: it isn't competing with surrounding content, because on
+// these routes there is none. This is the surface people actually mean when
 // they say "the 500 page" — /500 itself is only where you go to look at it.
 function StandaloneErrorBoundary() {
   const error = useRouteError();
@@ -575,27 +235,22 @@ function StandaloneErrorBoundary() {
 }
 
 export const router = createBrowserRouter([
+  // Bare redirect, no layout element. The static ShellFrame mirror that used to
+  // wrap this (hardcoded "SK" monogram, fake identity) is gone — every page now
+  // mounts standalone and wears the real <LightShell account> chrome.
+  { path: '/', element: <Navigate to="/issues" replace /> },
   {
-    path: '/',
-    element: <RootLayout />,
-    ErrorBoundary: RootErrorBoundary,
-    children: [
-      { index: true, element: <Navigate to="/issues" replace /> },
-      {
-        path: 'notifications',
-        lazy: async () => {
-          const route = await import('./routes/notifications');
-          // No loader: the faithful <NotificationsPanel> is a self-contained
-          // preferences surface that needs no server data.
-          return { Component: route.NotificationsRoute };
-        },
-      },
-    ],
+    path: '/notifications',
+    ErrorBoundary: StandaloneErrorBoundary,
+    lazy: async () => {
+      const route = await import('./routes/notifications');
+      return { loader: route.notificationsLoader, Component: route.NotificationsRoute };
+    },
   },
   {
     // Investor cluster wears its OWN chrome (<InvestorShell> — the light-ported
     // left <InvestorSidebar>), NOT the team Issues/Docs top-bar. It therefore
-    // mounts OUTSIDE RootLayout as its own layout route: investorLayoutLoader
+    // mounts as its own top-level layout route: investorLayoutLoader
     // gates access + supplies the sidebar identity, and the four investor pages
     // render as bare column content inside the shell's <Outlet>.
     //
@@ -691,8 +346,7 @@ export const router = createBrowserRouter([
   {
     // Issues is the landing surface and owns the global chrome: <TasksBoard>
     // renders its OWN full-bleed <LightShell> (Issues/Docs tabs + account cluster
-    // + board controls). It therefore mounts OUTSIDE RootLayout/ShellFrame to
-    // avoid a doubled fixed header — mirroring the shipped Next.js /tasks page.
+    // + board controls), top-level — mirroring the shipped Next.js /tasks page.
     path: '/issues',
     ErrorBoundary: StandaloneErrorBoundary,
     lazy: async () => {
@@ -710,8 +364,7 @@ export const router = createBrowserRouter([
   {
     // The task detail (/tasks/:id) renders the original <TaskDetailPage>, which
     // owns its own full-bleed chrome (`overview-light fixed inset-0` with a
-    // bespoke breadcrumb bar). Like /tasks it mounts OUTSIDE RootLayout/ShellFrame
-    // so the shared shell never doubles up with the page's own fixed header.
+    // bespoke breadcrumb bar). Like /tasks it mounts top-level.
     path: '/tasks/:id',
     ErrorBoundary: StandaloneErrorBoundary,
     lazy: async () => {
@@ -758,7 +411,6 @@ export const router = createBrowserRouter([
     // Team is a full-bleed Paper page too: it renders its OWN <LightShell fill
     // bordered> with a back-link to the board (no Issues/Docs tabs, no account
     // cluster) — exactly the drill-in chrome the shipped Next.js team page uses.
-    // Mounts OUTSIDE RootLayout/ShellFrame so the shared shell never doubles up.
     path: '/team',
     ErrorBoundary: StandaloneErrorBoundary,
     lazy: async () => {
@@ -773,8 +425,7 @@ export const router = createBrowserRouter([
     // Settings is a full-bleed Paper page too: the original <SettingsPanel> owns
     // its OWN <LightShell fill bordered> with a back-link to the board (no
     // Issues/Docs tabs, no account cluster) — exactly the drill-in chrome the
-    // shipped Next.js settings page rendered. Mounts OUTSIDE RootLayout/ShellFrame
-    // so the shared shell never doubles up with the panel's own fixed header.
+    // shipped Next.js settings page rendered.
     path: '/settings',
     ErrorBoundary: StandaloneErrorBoundary,
     lazy: async () => {
@@ -789,8 +440,7 @@ export const router = createBrowserRouter([
     // Payments is a full-bleed Paper page too: the original <PaymentsAdmin> owns
     // its OWN <LightShell fill bordered> (back-link breadcrumb, no Issues/Docs
     // tabs) and self-gates with the passkey flow (PaymentsPasskeyGate, also its
-    // own LightShell). Mounts OUTSIDE RootLayout/ShellFrame so the shared shell
-    // never doubles up with the page's own fixed header.
+    // own LightShell).
     path: '/payments',
     ErrorBoundary: StandaloneErrorBoundary,
     lazy: async () => {
@@ -805,8 +455,7 @@ export const router = createBrowserRouter([
     // External Signing admin is a full-bleed Paper drill-in: the original
     // <ExternalSigningAdmin> owns its OWN <LightShell fill bordered> (back-link to
     // /tasks REPLACES the Issues/Docs tabs) and composes the real self-fetching
-    // <SendInviteForm> + <InviteTable>. Mounts OUTSIDE RootLayout/ShellFrame so the
-    // LightShell's fixed header never doubles up with the dashboard shell.
+    // <SendInviteForm> + <InviteTable>.
     path: '/admin/external-signing',
     ErrorBoundary: StandaloneErrorBoundary,
     lazy: async () => {
