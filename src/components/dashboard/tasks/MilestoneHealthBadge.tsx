@@ -4,8 +4,7 @@
  *   on_track   → green ring with check
  *   at_risk    → amber filled square (paused / hold)
  *   off_track  → red diamond (alert)
- *   completed  → green filled circle with white check (the terminal state —
- *                the solid sibling of on_track's outline, same family, done)
+ *   completed  → green finish flag (the terminal state — landed/shipped)
  *
  * Compact 14×14 glyphs designed to sit inline with the milestone name
  * and date in the rail row. Pass `showLabel` to render a small text label
@@ -70,19 +69,15 @@ function Glyph({
   }
 
   if (level === 'completed') {
-    // Same check as on_track, but the circle is FILLED — outline = in motion,
-    // solid = landed. The check knocks out in white on both palettes.
+    // A finish flag, NOT a second check — on_track already owns the check
+    // ring, and two green checks side by side in the picker read as
+    // duplicates. The flag is the milestone symbol (planted at the finish),
+    // and nothing else in the family uses it. Swallowtail banner filled
+    // solid; pole matches the family's 1.5 stroke.
     return (
       <svg viewBox="0 0 14 14" className={className} aria-hidden="true">
-        <circle cx="7" cy="7" r="6" fill={color} />
-        <path
-          d="M4.4 7.2 L6.2 9 L9.6 5.4"
-          fill="none"
-          stroke="#ffffff"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
+        <path d="M3.5 1.75 V12.25" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" />
+        <path d="M3.5 2.25 H11.4 L9.8 4.9 L11.4 7.55 H3.5 Z" fill={color} />
       </svg>
     );
   }
