@@ -1,9 +1,11 @@
 /* MilestoneHealthBadge — small status glyph for milestone health.
  *
- * Three signal levels:
+ * Four signal levels:
  *   on_track   → green ring with check
  *   at_risk    → amber filled square (paused / hold)
  *   off_track  → red diamond (alert)
+ *   completed  → green filled circle with white check (the terminal state —
+ *                the solid sibling of on_track's outline, same family, done)
  *
  * Compact 14×14 glyphs designed to sit inline with the milestone name
  * and date in the rail row. Pass `showLabel` to render a small text label
@@ -17,6 +19,7 @@ const COLOR: Record<MilestoneHealth, string> = {
   on_track: '#22c55e',
   at_risk: '#f59e0b',
   off_track: '#ef4444',
+  completed: '#22c55e',
 };
 
 // AA-on-white palette for the light Overview card (opt-in `light`). The dark
@@ -29,12 +32,14 @@ const LIGHT_COLOR: Record<MilestoneHealth, string> = {
   on_track: '#16a34a',
   at_risk: '#bd7e10',
   off_track: '#f04438',
+  completed: '#16a34a',
 };
 
 const LABEL: Record<MilestoneHealth, string> = {
   on_track: 'On track',
   at_risk: 'At risk',
   off_track: 'Off track',
+  completed: 'Completed',
 };
 
 function Glyph({
@@ -56,6 +61,24 @@ function Glyph({
           d="M4.4 7.2 L6.2 9 L9.6 5.4"
           fill="none"
           stroke={color}
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    );
+  }
+
+  if (level === 'completed') {
+    // Same check as on_track, but the circle is FILLED — outline = in motion,
+    // solid = landed. The check knocks out in white on both palettes.
+    return (
+      <svg viewBox="0 0 14 14" className={className} aria-hidden="true">
+        <circle cx="7" cy="7" r="6" fill={color} />
+        <path
+          d="M4.4 7.2 L6.2 9 L9.6 5.4"
+          fill="none"
+          stroke="#ffffff"
           strokeWidth="1.5"
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -116,6 +139,6 @@ export function MilestoneHealthBadge({
   );
 }
 
-export const HEALTH_LEVELS: MilestoneHealth[] = ['on_track', 'at_risk', 'off_track'];
+export const HEALTH_LEVELS: MilestoneHealth[] = ['on_track', 'at_risk', 'off_track', 'completed'];
 export const HEALTH_LABEL = LABEL;
 export const HEALTH_COLOR = COLOR;

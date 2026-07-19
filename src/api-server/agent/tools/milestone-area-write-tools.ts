@@ -4,7 +4,7 @@ import type { MilestoneHealth } from '@/lib/types';
 import { buildMilestoneIndex, buildAreaIndex, resolveMilestoneRef, resolveAreaRef } from '../entity-index';
 import { AgentActionError } from '../errors';
 
-const MILESTONE_HEALTHS: readonly MilestoneHealth[] = ['on_track', 'at_risk', 'off_track'];
+const MILESTONE_HEALTHS: readonly MilestoneHealth[] = ['on_track', 'at_risk', 'off_track', 'completed'];
 const AREA_STATUSES = ['Active', 'Planned', 'Complete'] as const;
 
 function asString(input: Record<string, unknown>, key: string): string {
@@ -16,7 +16,7 @@ const setMilestoneHealth: WriteTool = {
   id: 'set_milestone_health',
   gated: true,
   description:
-    'Set a project milestone\'s health to on_track, at_risk, or off_track. Use this when a milestone is or is not on track. Staged for approval.',
+    'Set a project milestone\'s health to on_track, at_risk, off_track, or completed. Use this when a milestone is or is not on track, or has shipped. Staged for approval.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -29,7 +29,7 @@ const setMilestoneHealth: WriteTool = {
   async stage(input, ctx): Promise<StageResult> {
     const health = asString(input, 'health') as MilestoneHealth;
     if (!MILESTONE_HEALTHS.includes(health)) {
-      return { ok: false, error: `Unknown health "${input.health}". Use on_track, at_risk, or off_track.` };
+      return { ok: false, error: `Unknown health "${input.health}". Use on_track, at_risk, off_track, or completed.` };
     }
     const milestone = resolveMilestoneRef(asString(input, 'milestone'), buildMilestoneIndex(ctx.board));
     if (!milestone) return { ok: false, error: `Could not find milestone "${asString(input, 'milestone')}".` };

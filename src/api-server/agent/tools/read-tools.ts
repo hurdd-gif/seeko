@@ -41,7 +41,7 @@ export const READ_TOOLS: ReadTool[] = [
     id: 'list_milestones',
     gated: false,
     description:
-      'List project milestones with their stored health (on_track | at_risk | off_track), target date, and how many days overdue they are. Use this to decide whether a milestone is on track.',
+      'List project milestones with their stored health (on_track | at_risk | off_track | completed), target date, and how many days overdue they are. Use this to decide whether a milestone is on track.',
     inputSchema: EMPTY_SCHEMA,
     async run(_input, ctx) {
       const now = new Date();

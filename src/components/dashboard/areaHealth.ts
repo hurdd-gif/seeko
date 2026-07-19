@@ -2,7 +2,10 @@ import type { Milestone, MilestoneHealth } from '@/lib/types';
 
 // Worst-of severity order: a single off-track milestone drags the whole area to
 // off_track, so the Progress card surfaces risk first instead of averaging it away.
+// Completed ranks below on_track — an area reads "Completed" only when every
+// signal-carrying milestone has landed.
 const RANK: Record<MilestoneHealth, number> = {
+  completed: 0,
   on_track: 1,
   at_risk: 2,
   off_track: 3,

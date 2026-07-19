@@ -71,7 +71,7 @@ export type LinkedTask = {
 };
 
 // Milestones (schema only this round — empty-state UI in Phase C).
-export type MilestoneHealth = 'on_track' | 'at_risk' | 'off_track';
+export type MilestoneHealth = 'on_track' | 'at_risk' | 'off_track' | 'completed';
 
 export type Milestone = {
   id: string;
