@@ -17,6 +17,7 @@ import { AnimatePresence, motion, useReducedMotion, type Variants } from 'motion
 import { toast } from 'sonner';
 import { springs, shellEntrance, DROPDOWN } from '@/lib/motion';
 import { AppearanceToggle } from '@/components/dashboard/AppearanceToggle';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { performSignOutExit } from '@/lib/sign-out';
 import type { InvestorOverviewData, InvestorProfile } from '@/lib/investor-index';
 
@@ -299,13 +300,18 @@ export function InvestorShell({
                 transition={SNAPPY}
                 className="relative z-[60] rounded-full"
               >
-                <span className="flex size-9 items-center justify-center overflow-hidden rounded-full bg-[#262626] text-[11px] font-medium leading-[13px] text-[#f0f0f0] ring-[0.5px] ring-inset ring-[#0000001f] dark:ring-white/10">
-                  {profile.avatarUrl ? (
-                    <img src={profile.avatarUrl} alt="" className="size-full object-cover" />
-                  ) : (
-                    getInitials(label)
-                  )}
-                </span>
+                {/* The house Avatar chain, NOT a raw <img>: AvatarImage is the
+                    app-wide chokepoint that currently short-circuits uploaded
+                    photos so everyone wears the deterministic gradient seeded
+                    from profile.id. Bypassing it here was why this header alone
+                    showed the stored photo while the studio header showed the
+                    gradient — same seed now, same face everywhere. */}
+                <Avatar className="size-9 ring-[0.5px] ring-inset ring-[#0000001f] dark:ring-white/10">
+                  <AvatarImage src={profile.avatarUrl} alt="" />
+                  <AvatarFallback seed={profile.id} className="bg-[#262626] text-[11px] font-medium leading-[13px] text-[#f0f0f0]">
+                    {getInitials(label)}
+                  </AvatarFallback>
+                </Avatar>
               </motion.button>
 
               <AnimatePresence>
