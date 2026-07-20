@@ -225,7 +225,9 @@ interface DocListProps {
   isAdmin?: boolean;
   isInvestor?: boolean;
   currentUserId?: string;
-  team?: Pick<Profile, 'id' | 'display_name'>[];
+  // is_investor rides along (optional — the investor docs payload omits it) so
+  // the admin editors can label investor entries in the grant picker.
+  team?: Pick<Profile, 'id' | 'display_name' | 'is_investor'>[];
 }
 
 export function DocList({ docs: initialDocs, userDepartment, isAdmin = false, isInvestor = false, currentUserId = '', team = [] }: DocListProps) {

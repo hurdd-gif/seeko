@@ -101,11 +101,28 @@ const docsResult = {
   error: null,
 };
 
+// Roster rows for the grant-picker tests: one staff member, one investor. The
+// discreet shell roster must drop the investor for everyone; the docs view
+// re-appends them for ADMINS ONLY so the "Also allow access" picker can grant
+// a deck to an investor (decks-confidentiality option (a)).
+const STAFF_ROSTER = {
+  id: 'staff-9',
+  display_name: 'Staff Example',
+  is_admin: false,
+  is_investor: false,
+};
+const INVESTOR_ROSTER = {
+  id: 'investor-7',
+  display_name: 'Investor Example',
+  is_admin: false,
+  is_investor: true,
+};
+
 // One settled value per table covers every read loadShellContext + loadDocsView
 // make. notifications is read twice (feed reads `.data`, unread count reads
 // `.count`), so its value carries both.
 const settledByTable: Record<string, unknown> = {
-  profiles: { data: [], error: null },
+  profiles: { data: [STAFF_ROSTER, INVESTOR_ROSTER], error: null },
   areas: { data: [], error: null },
   notifications: { data: [], count: 0, error: null },
   docs: docsResult,
@@ -217,6 +234,13 @@ describe('loadDocsView — confidential body strip (staff/contractor twin of loa
       expect(Object.keys(doc).sort()).toEqual(allowedKeys);
     }
   });
+
+  it('keeps the discreet roster for non-admins — no investor in team or account chrome', async () => {
+    const result = await loadDocsView({ id: CALLER_ID });
+
+    expect(result.team.map((p) => p.id)).toEqual([STAFF_ROSTER.id]);
+    expect(result.account.team.map((p) => p.id)).toEqual([STAFF_ROSTER.id]);
+  });
 });
 
 describe('loadDocsView — admin keeps the full grant list (grant-editor regression guard)', () => {
@@ -241,5 +265,18 @@ describe('loadDocsView — admin keeps the full grant list (grant-editor regress
     // complete ACL, not the minimized non-admin form, or saving would wipe grants.
     expect(byId['doc-b'].granted_user_ids).toEqual([OTHER_GRANTEE]);
     expect(byId['doc-c'].granted_user_ids).toEqual([CALLER_ID, OTHER_GRANTEE]);
+  });
+
+  it('appends investors (flagged, after staff) to the admin grant-picker roster — account chrome stays discreet', async () => {
+    const result = await loadDocsView({ id: ADMIN_ID });
+
+    // team feeds ONLY the admin-gated DocEditor/DeckEditor "Also allow access"
+    // picker — the append is what lets an admin grant a deck to an investor.
+    expect(result.team.map((p) => p.id)).toEqual([STAFF_ROSTER.id, INVESTOR_ROSTER.id]);
+    expect(result.team.find((p) => p.id === INVESTOR_ROSTER.id)?.is_investor).toBe(true);
+
+    // The header chrome roster is built upstream of the append and must NOT
+    // regrow investors, even for admins.
+    expect(result.account.team.map((p) => p.id)).toEqual([STAFF_ROSTER.id]);
   });
 });

@@ -20,7 +20,7 @@ interface DeckEditorProps {
   doc?: Doc;
   onSave: (doc: Doc) => void;
   onCancel: () => void;
-  team?: Pick<Profile, 'id' | 'display_name'>[];
+  team?: Pick<Profile, 'id' | 'display_name' | 'is_investor'>[];
 }
 
 export function DeckEditor({ doc, onSave, onCancel, team = [] }: DeckEditorProps) {
@@ -254,7 +254,10 @@ export function DeckEditor({ doc, onSave, onCancel, team = [] }: DeckEditorProps
           >
             <option value="">Add someone…</option>
             {team.filter(p => !grantedIds.includes(p.id)).map(p => (
-              <option key={p.id} value={p.id}>{p.display_name ?? p.id}</option>
+              // Investors are appended to this roster for admins only (the
+              // docs loader keeps the discreet team list for everyone else),
+              // labeled so a grant to an outside party is a deliberate act.
+              <option key={p.id} value={p.id}>{p.display_name ?? p.id}{p.is_investor ? ' — Investor' : ''}</option>
             ))}
           </Select>
           {grantedIds.map(id => {
@@ -265,6 +268,7 @@ export function DeckEditor({ doc, onSave, onCancel, team = [] }: DeckEditorProps
                 className="inline-flex items-center gap-1 rounded-full border border-wash-8 bg-wash-3 px-2.5 py-0.5 text-xs text-ink-strong"
               >
                 @{p?.display_name ?? 'Unknown'}
+                {p?.is_investor && <span className="text-ink-faint">· Investor</span>}
                 <button
                   type="button"
                   onClick={() => setGrantedIds(prev => prev.filter(x => x !== id))}

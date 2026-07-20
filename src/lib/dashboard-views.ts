@@ -95,6 +95,10 @@ export type PaymentsViewData = {
 type ShellContext = {
   account: TasksBoardAccount;
   team: Profile[];
+  /** The profiles the discreet roster drops. Kept separate so views that need
+   *  them (admin grant pickers) can opt in without every page's `team` — and
+   *  the account chrome built from it — quietly regrowing investors. */
+  investors: Profile[];
   areas: Area[];
   isAdmin: boolean;
   department: string | null;
@@ -145,7 +149,11 @@ async function loadShellContext(currentUser: {
   ]);
 
   // Investors are not shown on the roster (discreet), matching fetchTeam().
-  const team = ((teamResult.data ?? []) as unknown as Profile[]).filter((p) => !p.is_investor);
+  // The fetch already pulled every profile, so the dropped investors are handed
+  // back separately for the few opt-in consumers (see ShellContext.investors).
+  const allProfiles = (teamResult.data ?? []) as unknown as Profile[];
+  const team = allProfiles.filter((p) => !p.is_investor);
+  const investors = allProfiles.filter((p) => p.is_investor);
   const areas = (areasResult.data ?? []) as unknown as Area[];
   const notifications = (notificationsResult.data ?? []) as unknown as TasksBoardAccount['notifications'];
   const unreadCount = unreadResult.count ?? 0;
@@ -165,14 +173,14 @@ async function loadShellContext(currentUser: {
     areas: areas.map((a) => ({ id: a.id, name: a.name })),
   };
 
-  return { account, team, areas, isAdmin, department: profile.department ?? null };
+  return { account, team, investors, areas, isAdmin, department: profile.department ?? null };
 }
 
 export async function loadDocsView(currentUser: {
   id: string;
   email?: string | null;
 }): Promise<DocsViewData> {
-  const { account, team, isAdmin, department } = await loadShellContext(currentUser);
+  const { account, team, investors, isAdmin, department } = await loadShellContext(currentUser);
   const service = getServiceClient();
 
   const { data, error } = await service
@@ -227,10 +235,19 @@ export async function loadDocsView(currentUser: {
     };
   });
 
+  // Grant-picker roster. The shell `team` deliberately drops investors
+  // (discreet roster), which made the editors' "Also allow access" picker
+  // unable to grant a deck to an investor — the whole point of per-doc grants
+  // for the investor decks. Admins (the only role that can open the editors;
+  // <DocList> gates every edit affordance on isAdmin) get the investors
+  // appended after the staff list; everyone else keeps the investor-free
+  // roster, same as every other page.
+  const pickerTeam = isAdmin ? [...team, ...investors] : team;
+
   return {
     account,
     docs,
-    team,
+    team: pickerTeam,
     userDepartment: department,
     isAdmin,
     currentUserId: currentUser.id,
