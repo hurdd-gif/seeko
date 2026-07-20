@@ -2,7 +2,11 @@ services:
   - type: web
     name: seeko-studio
     env: node
-    buildCommand: npm run build
+    # npm ci must run here: Render executes buildCommand verbatim (no implicit
+    # install), so a bare `npm run build` has no node_modules → `vite: not
+    # found` → build exits 127. NODE_ENV=production prunes devDependencies,
+    # which is fine — every build/start dependency lives in `dependencies`.
+    buildCommand: npm ci && npm run build
     startCommand: npm start
     envVars:
       - key: NODE_ENV
