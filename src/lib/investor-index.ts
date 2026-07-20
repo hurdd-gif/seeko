@@ -261,34 +261,39 @@ export async function loadInvestorDocs(currentUser: { id: string }): Promise<Inv
   const rawDocs = (docsResult.data ?? []) as unknown as Doc[];
   const team = (teamResult.data ?? []) as Pick<Profile, 'id' | 'display_name'>[];
 
-  // Confidentiality allowlist. The investor viewer has NO department and is NOT
+  // Confidentiality filter. The investor viewer has NO department and is NOT
   // admin, so any department-restricted doc they aren't explicitly granted is
-  // LOCKED. The shared <DocList> only *hides* a locked doc's body in the UI — for
-  // an investor its isLocked() even short-circuits to false — so anything shipped
-  // in this payload is readable straight off the network response.
+  // LOCKED — and a locked doc does not ship AT ALL. The shared <DocList> has no
+  // lock treatment for investors (its isLocked() short-circuits to false), so a
+  // stripped-but-listed doc used to render as a normal tile that opened to
+  // nothing — "decks not loading" — while leaking the confidential title.
+  // Absent is honest; anything shipped in this payload is readable straight off
+  // the network response, title included.
   //
-  // We rebuild each row from an explicit field allowlist instead of spreading the
-  // raw doc. That makes exposure OPT-IN: a column later added to DOC_FULL_SELECT
-  // can't silently reach investors unless it's named here. The kept fields are
-  // what <DocList> needs to build the parent/child tree, derive tab counts, and
-  // render the tile.
-  //   - content / slides: the confidential body — blanked for any locked doc.
-  //     Grants still win: isDocLocked returns false for a granted investor, so a
-  //     doc this investor was explicitly granted keeps its full body.
+  // Grants win: isDocLocked returns false for a granted investor, so a doc this
+  // investor was explicitly granted ships with its full body (the per-deck
+  // grants an admin sets in DocEditor/DeckEditor's "Also allow access" picker).
+  //
+  // Survivors are rebuilt from an explicit field allowlist instead of spreading
+  // the raw doc. That makes exposure OPT-IN: a column later added to
+  // DOC_FULL_SELECT can't silently reach investors unless it's named here.
   //   - granted_user_ids: DELIBERATELY OMITTED. It is the doc's access-control
   //     list (the profile ids allowed to read a confidential doc); the investor
   //     <DocList> never consults it, and paired with `team` (id → display_name)
   //     it would let an investor enumerate the named people who can see each
-  //     locked doc.
-  const docs: Doc[] = rawDocs.map((doc) => {
-    const locked = isDocLocked({
-      restrictedDepartments: doc.restricted_department ?? [],
-      grantedUserIds: doc.granted_user_ids ?? [],
-      currentUserId: currentUser.id,
-      userDepartment: null,
-      isAdmin: false,
-    });
-    return {
+  //     restricted doc.
+  const docs: Doc[] = rawDocs
+    .filter(
+      (doc) =>
+        !isDocLocked({
+          restrictedDepartments: doc.restricted_department ?? [],
+          grantedUserIds: doc.granted_user_ids ?? [],
+          currentUserId: currentUser.id,
+          userDepartment: null,
+          isAdmin: false,
+        }),
+    )
+    .map((doc) => ({
       id: doc.id,
       title: doc.title,
       parent_id: doc.parent_id,
@@ -298,10 +303,9 @@ export async function loadInvestorDocs(currentUser: { id: string }): Promise<Inv
       restricted_department: doc.restricted_department,
       created_at: doc.created_at,
       updated_at: doc.updated_at,
-      content: locked ? '' : doc.content,
-      slides: locked ? [] : doc.slides,
-    };
-  });
+      content: doc.content,
+      slides: doc.slides,
+    }));
 
   return {
     profile,

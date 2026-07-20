@@ -12,9 +12,11 @@ vi.mock('@/lib/supabase/service', () => ({
 
 const INVESTOR_ID = 'investor-1';
 
-// A mix that exercises every branch of the server-side confidentiality strip:
+// A mix that exercises every branch of the server-side confidentiality filter:
 //  (a) unrestricted            → full body ships
-//  (b) restricted, NOT granted → body must be blanked (the bug)
+//  (b) restricted, NOT granted → doc does not ship AT ALL (no blanked-tile ghost,
+//                                no title leak — it used to render as a normal
+//                                tile that opened to nothing, "decks not loading")
 //  (c) restricted, granted     → granted_user_ids overrides the lock, body ships
 const docsResult = {
   data: [
@@ -95,48 +97,52 @@ function createQuery(table: string) {
   return query;
 }
 
-describe('loadInvestorDocs — confidential body strip', () => {
+describe('loadInvestorDocs — confidentiality filter (locked docs do not ship)', () => {
   beforeEach(() => {
     mocks.getServiceClient.mockReturnValue({
       from: vi.fn((table: string) => createQuery(table)),
     });
   });
 
-  it('keeps full content for unrestricted and granted docs, but blanks content + slides for a restricted doc the investor is not granted', async () => {
+  it('ships unrestricted and granted docs with full bodies, and DROPS a restricted doc the investor is not granted', async () => {
     const result = await loadInvestorDocs({ id: INVESTOR_ID });
 
     const byId = Object.fromEntries(result.docs.map((doc) => [doc.id, doc]));
 
-    // Tree stays intact — every doc is still present (dropping a doc would break
-    // <DocList>'s parent/child tree and tab counts).
-    expect(result.docs).toHaveLength(3);
-    expect(Object.keys(byId).sort()).toEqual(['doc-a', 'doc-b', 'doc-c']);
+    // (b) restricted and NOT granted → absent from the payload entirely. Not a
+    // blanked tile, not a title: <DocList> has no lock treatment for investors,
+    // so a listed-but-stripped doc rendered as a normal tile that opened to
+    // nothing, and its confidential title leaked. Absent is honest.
+    expect(result.docs).toHaveLength(2);
+    expect(Object.keys(byId).sort()).toEqual(['doc-a', 'doc-c']);
+    // Exact-title membership (doc-c is "Granted Restricted Deck", so a substring
+    // sweep would false-positive); the body sweep guards the whole payload.
+    expect(result.docs.map((doc) => doc.title)).not.toContain('Restricted Deck');
+    expect(JSON.stringify(result)).not.toContain('TOP SECRET');
 
     // (a) unrestricted → full body ships
     expect(byId['doc-a'].content).toBe('<p>Public body</p>');
 
-    // (c) restricted but granted to this investor → body ships untouched
+    // (c) restricted but granted to this investor (the per-deck grant an admin
+    // sets in the editors' "Also allow access" picker) → body ships untouched
     expect(byId['doc-c'].content).toBe('<p>Investor was explicitly granted this</p>');
     expect(byId['doc-c'].slides).toEqual([
       { url: 'https://granted.example.invalid/1.png', sort_order: 0 },
     ]);
 
-    // (b) restricted and NOT granted → confidential body is stripped
-    expect(byId['doc-b'].content).toBe('');
-    expect(byId['doc-b'].slides).toEqual([]);
-    // ...but the tile still renders: title + metadata survive
-    expect(byId['doc-b'].title).toBe('Restricted Deck');
-    expect(byId['doc-b'].restricted_department).toEqual(['Coding']);
-    expect(byId['doc-b'].type).toBe('deck');
+    // Counts are derived AFTER the filter — the overview numbers must match
+    // what the investor can actually open (1 visible deck, not 2).
+    expect(result.deckCount).toBe(1);
+    expect(result.docCount).toBe(1);
   });
 
   it('never ships granted_user_ids to an investor (the doc access-control list is confidential)', async () => {
     const result = await loadInvestorDocs({ id: INVESTOR_ID });
     const byId = Object.fromEntries(result.docs.map((doc) => [doc.id, doc]));
 
-    // The ACL must not ride along on ANY doc — not the locked one (doc-b), and
-    // especially not the granted one (doc-c), whose granted_user_ids names other
-    // profile ids that, joined against `team`, would reveal who can read it.
+    // The ACL must not ride along on ANY doc — especially not the granted one
+    // (doc-c), whose granted_user_ids names other profile ids that, joined
+    // against `team`, would reveal who can read it.
     for (const doc of result.docs) {
       expect(doc).not.toHaveProperty('granted_user_ids');
     }

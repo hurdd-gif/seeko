@@ -64,22 +64,19 @@ describe('investor docs index', () => {
     });
   });
 
-  it('does not treat non-admin investors as admins, and returns the full doc tree', async () => {
-    // The fidelity /investor/docs route renders the SHARED <DocList isInvestor>
-    // exactly like the shipped legacy page: investors (NDA-signed) see the whole
-    // doc tree, including department-restricted docs — DocList's isLocked()
-    // short-circuits on isInvestor. The loader therefore returns full rows and
-    // must NOT flag the investor as admin (admin unlocks editing affordances).
+  it('does not treat non-admin investors as admins, and drops restricted docs they are not granted', async () => {
+    // The /investor/docs route renders the SHARED <DocList isInvestor>, which has
+    // no lock treatment for investors — so the loader must not ship a restricted,
+    // ungranted doc at all (it would render as a normal tile that opens to
+    // nothing, leaking the title; see investor-docs-confidentiality.test.ts for
+    // the full filter matrix incl. the grants-win case). The loader must also
+    // NOT flag the investor as admin (admin unlocks editing affordances).
     const result = await loadInvestorDocs({ id: 'investor-1' });
 
     expect(result.profile.isAdmin).toBe(false);
-    expect(result.docs).toHaveLength(1);
-    expect(result.docs[0]).toMatchObject({
-      id: 'doc-1',
-      title: 'Restricted Plan',
-      restricted_department: ['Coding'],
-    });
-    expect(result.docCount).toBe(1);
+    // The only fixture doc is Coding-restricted with no grants → filtered out.
+    expect(result.docs).toHaveLength(0);
+    expect(result.docCount).toBe(0);
     expect(result.deckCount).toBe(0);
   });
 });
