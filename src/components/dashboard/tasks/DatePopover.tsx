@@ -153,6 +153,10 @@ export function DatePopover({
           key="date-panel"
           role="dialog"
           aria-label={ariaLabel}
+          /* Marker for container popovers (MilestoneEditPopover): the panel is
+             portaled to body, so a parent's outside-click handler must be able
+             to recognize clicks in here as "inside". */
+          data-date-popover-panel=""
           initial={reduce ? false : { opacity: 0, y: -4 }}
           animate={{ opacity: 1, y: 0 }}
           exit={reduce ? { opacity: 0 } : { opacity: 0, y: -4 }}

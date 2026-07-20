@@ -3,7 +3,7 @@
  *
  * Admin clicks any milestone row → portaled popover with:
  *   • Name (text)
- *   • Target date (native date input)
+ *   • Target date (DatePopover calendar dropdown)
  *   • Linked tasks (multi-select checkbox list of all project tasks)
  *   • Delete (two-step inline confirm) | Cancel | Save
  *
@@ -31,7 +31,7 @@ import {
 } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
-import { Check, Search, Trash2 } from 'lucide-react';
+import { CalendarClock, Check, Search, Trash2 } from 'lucide-react';
 import type { Milestone, MilestoneHealth, TaskWithAssignee } from '@/lib/types';
 import { createClient } from '@/lib/supabase/client';
 import {
@@ -39,8 +39,19 @@ import {
   HEALTH_LEVELS,
   HEALTH_LABEL,
 } from './MilestoneHealthBadge';
+import { DatePopover } from './DatePopover';
 
 const SPRING = { type: 'spring' as const, stiffness: 340, damping: 30 };
+
+// "2026-11-01" → "Nov 1, 2026". Parsed as LOCAL date parts — `new Date(iso)`
+// would read the string as UTC midnight and show the previous day in
+// negative-UTC timezones (same bug class the investor payments test pins).
+const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+function formatTargetDate(iso: string): string {
+  const [y, m, d] = iso.split('-').map(Number);
+  if (!y || !m || !d) return iso;
+  return `${MONTHS_SHORT[m - 1]} ${d}, ${y}`;
+}
 const PANEL_WIDTH = 320;
 const GAP = 4;
 const EDGE = 8;
@@ -182,10 +193,17 @@ export function MilestoneEditPopover({
       const target = e.target as Node;
       if (triggerRef.current?.contains(target)) return;
       if (panelRef.current?.contains(target)) return;
+      // The target-date calendar (DatePopover) portals its panel to body, so
+      // it lives outside panelRef — clicking a day must not close the editor.
+      if (target instanceof Element && target.closest('[data-date-popover-panel]')) return;
       setOpen(false);
     }
     function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') setOpen(false);
+      // Staged dismissal: while the calendar is open, Escape closes only it
+      // (its own document listener handles that); the next Escape closes us.
+      if (e.key === 'Escape' && !document.querySelector('[data-date-popover-panel]')) {
+        setOpen(false);
+      }
     }
     document.addEventListener('mousedown', onDocPointer);
     document.addEventListener('keydown', onKey);
@@ -348,13 +366,20 @@ export function MilestoneEditPopover({
             maxLength={120}
           />
 
-          {/* Date */}
-          <input
-            type="date"
-            value={targetDate}
-            onChange={(e) => setTargetDate(e.target.value)}
-            className="mt-1.5 block w-full rounded-md border border-wash-6 bg-surface-1 px-2.5 py-1.5 text-[12.5px] tabular-nums text-ink-title transition-colors focus:border-seeko-accent focus:outline-none"
-          />
+          {/* Date — house calendar dropdown, framed like the text field above */}
+          <DatePopover
+            value={targetDate || null}
+            onChange={(next) => setTargetDate(next ?? '')}
+            ariaLabel="Milestone target date"
+            triggerClassName="mt-1.5 flex w-full items-center gap-1.5 rounded-md border border-wash-6 bg-surface-1 px-2.5 py-1.5 text-left text-[12.5px] tabular-nums transition-colors hover:bg-wash-3 focus-visible:border-seeko-accent focus-visible:outline-none"
+          >
+            <CalendarClock className="size-3.5 shrink-0 text-ink-faint" strokeWidth={1.75} aria-hidden />
+            {targetDate ? (
+              <span className="text-ink-title">{formatTargetDate(targetDate)}</span>
+            ) : (
+              <span className="text-ink-faintest">Set target date</span>
+            )}
+          </DatePopover>
 
           {/* Health */}
           <div className="mt-3">
