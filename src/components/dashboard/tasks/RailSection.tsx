@@ -39,7 +39,7 @@ export function RailSection({
   const shouldReduce = useReducedMotion();
 
   return (
-    <section className="overflow-hidden rounded-xl bg-surface-1 shadow-seeko">
+    <section className="overflow-hidden rounded-xl bg-surface-1 shadow-seeko dark:bg-wash-4 dark:shadow-none">
       {/* Header 14/8 → 12/6: a 14px title over a 12px chevron was carrying 47px
           of card height. The rail is a dense reference column, not a page. */}
       <div className="flex items-center gap-2 px-4 pt-3 pb-1.5">

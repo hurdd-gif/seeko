@@ -907,6 +907,21 @@
     box-shadow var(--morph-close-dur) var(--morph-close-ease);
 }
 
+/* Dark: the closed pill is the EXACT recipe of the investor header's
+   Download PDF pill (bg-wash-4, no ring, no pool) — same 6% white wash,
+   fill-only separation. The wash is scoped to the closed state because the
+   open morph is a floating panel and must stay opaque surface-1 under
+   --sh-seeko-pop. Hover adds 3% white over the 6% wash, compositing to the
+   sibling pill's 9% hover. */
+.dark .t-morph.create-morph[data-open="false"] {
+  background: var(--wash-4);
+  box-shadow: none;
+}
+
+.dark .t-morph.create-morph[data-open="false"] .create-morph-plus:hover {
+  background: oklch(1 0 0 / 0.03);
+}
+
 .t-morph.create-morph[data-open="true"] {
   width: var(--create-morph-open-w);
   height: var(--create-morph-open-h);
@@ -1616,6 +1631,35 @@ body.tour-cmd-k-active #command-palette-container * {
     transform var(--badge-pop-close-dur) var(--badge-close-ease),
     opacity var(--badge-fade-close-dur) var(--badge-close-ease),
     filter var(--badge-pop-close-dur) var(--badge-close-ease);
+}
+/* Dark: the accent disc (L 0.604) is the single brightest object on the
+   header — a full tier louder than the wash-4 pills beside it. Drop the fill
+   to L 0.52 (hue and chroma stay in the accent family; in sRGB gamut) and flip
+   the numeral to white: 5.67:1 against the 4.5:1 AA floor for the 9px bold
+   count. Light mode keeps `bg-seeko-accent text-black` from the JSX
+   (L 0.604 > 0.6 → dark text); this two-class selector out-specifies those
+   utilities in dark only. */
+.dark .t-badge-dot {
+  background: oklch(0.52 0.191 257.92);
+  color: oklch(1 0 0);
+}
+/* Fresh-arrival bump: when the count grows while the badge is already showing,
+   the disc breathes 1 → 1.14 → 1. BellToggle sets data-bump and clears it on
+   animationend — and clears it when the tray opens, so the running animation
+   can't pin the transform against the scale(0) close transition. */
+@keyframes t-badge-bump {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.14);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.t-badge-dot[data-bump="true"] {
+  animation: t-badge-bump 420ms var(--badge-slide-ease);
 }
 @media (prefers-reduced-motion: reduce) {
   .t-badge,
