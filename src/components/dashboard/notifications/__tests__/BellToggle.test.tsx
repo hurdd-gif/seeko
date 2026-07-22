@@ -16,6 +16,15 @@ describe('BellToggle', () => {
     ).toBeInTheDocument();
   });
 
+  // The badge itself is aria-hidden, so the unread count only reaches a screen
+  // reader through the button's accessible name.
+  it('conveys the unread count in the accessible name when closed', () => {
+    render(<BellToggle open={false} unreadCount={3} onClick={() => {}} />);
+    expect(
+      screen.getByRole('button', { name: 'Open inbox, 3 unread' }),
+    ).toBeInTheDocument();
+  });
+
   // Unread badge — the transitions.dev slide-in + pop. The badge is ALWAYS in the
   // DOM (so the pop-OUT plays when it hides); `data-open` drives both directions.
   describe('unread badge (slide-in + pop)', () => {
