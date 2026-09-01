@@ -1493,6 +1493,46 @@ body.tour-cmd-k-active #command-palette-container * {
   -webkit-backdrop-filter: none !important;
 }
 
+/* Delphi toast-card palette — shared by rich-toast.tsx, TaskDeleteUndoToast.tsx
+   and LiveToastCard.tsx (different portals, one card language), so it lives on
+   :root rather than the sonner subtree. The components read ONLY these vars —
+   never hardcoded paint — so every card relights with the theme. Light values
+   are the Delphi alert language verbatim; dark mirrors the plain .seeko-toast
+   block above (surface-1 tier, white-alpha hairline, ink ramp). */
+:root {
+  --rt-neutral-bg: rgb(249 249 248);
+  --rt-neutral-border: oklab(0.641295 -0.00290838 0.0098139 / 0.12);
+  --rt-neutral-title: rgb(33 32 28);
+  --rt-neutral-muted: rgb(99 99 94);
+  --rt-glyph-strong: rgb(33 32 28);
+  --rt-glyph-muted: rgb(99 99 94);
+  --rt-glyph-ink: #fff;
+  --rt-error-ink: rgb(220 62 66);
+  --rt-error-bg: color-mix(in oklab, rgb(220 62 66) 10%, white);
+  --rt-error-border: oklab(0.625572 0.177957 0.0756395 / 0.2);
+  --rt-warn-ink: rgb(184 122 8);
+  --rt-warn-bg: color-mix(in oklab, rgb(184 122 8) 10%, white);
+  --rt-warn-border: color-mix(in oklab, rgb(184 122 8) 20%, transparent);
+}
+
+.dark {
+  --rt-neutral-bg: oklch(0.290 0 0);
+  --rt-neutral-border: oklch(1 0 0 / 0.12);
+  --rt-neutral-title: oklch(0.955 0 0);
+  --rt-neutral-muted: oklch(0.670 0 0);
+  --rt-glyph-strong: oklch(0.955 0 0);
+  --rt-glyph-muted: oklch(0.670 0 0);
+  /* Inverted glyph: near-white chip, so the icon cuts to the card surface. */
+  --rt-glyph-ink: oklch(0.290 0 0);
+  --rt-error-ink: var(--danger);
+  --rt-error-bg: color-mix(in oklab, var(--danger) 14%, oklch(0.290 0 0));
+  --rt-error-border: color-mix(in oklab, var(--danger) 28%, transparent);
+  /* Amber lifted for the dark canvas the same way --danger is (0.62 → 0.75 L). */
+  --rt-warn-ink: oklch(0.750 0.1300 75);
+  --rt-warn-bg: color-mix(in oklab, oklch(0.750 0.1300 75) 14%, oklch(0.290 0 0));
+  --rt-warn-border: color-mix(in oklab, oklch(0.750 0.1300 75) 28%, transparent);
+}
+
 /* Mobile fixed chrome: promote to own layer so it stays fixed during scroll (iOS) */
 .mobile-fixed-layer {
   transform: translateZ(0);

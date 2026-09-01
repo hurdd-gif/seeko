@@ -22,25 +22,27 @@ import { springs } from '@/lib/motion';
 const SWIPE_THRESHOLD = 60;
 const VELOCITY_THRESHOLD = 300;
 
-// Delphi alert surface — matches rich-toast.tsx NEUTRAL and the sonner block
-// in globals.css so all three toast systems read as one card language.
-const SURFACE_BG = 'rgb(249 249 248)';
-const SURFACE_BORDER = '1px solid oklab(0.641295 -0.00290838 0.0098139 / 0.12)';
-const TITLE_COLOR = 'rgb(33 32 28)';
-const MUTED_COLOR = 'rgb(99 99 94)';
+// Delphi alert surface — resolves through the shared --rt-* palette in
+// globals.css (:root + .dark) so all three toast systems read as one card
+// language and relight with the theme.
+const SURFACE_BG = 'var(--rt-neutral-bg)';
+const SURFACE_BORDER = '1px solid var(--rt-neutral-border)';
+const TITLE_COLOR = 'var(--rt-neutral-title)';
+const MUTED_COLOR = 'var(--rt-neutral-muted)';
 
 // KIND_CONFIG icon classes are tuned for the dark notification chrome (bell
-// dropdown, sheet). This card is a light Delphi surface, so darken each hue a
-// step for contrast; the pastel cfg.bg washes already read fine on light.
-// Fallback = original class (seeko-accent azure holds up on light).
+// dropdown, sheet). On the light Delphi card, darken each hue a step for
+// contrast; in dark mode the card is a dark surface again, so restore the
+// original chrome hue. Fallback = original class (seeko-accent azure holds up
+// on light).
 const LIGHT_ICON: Record<string, string> = {
-  'text-blue-400': 'text-blue-600',
-  'text-amber-400': 'text-amber-600',
-  'text-emerald-500': 'text-emerald-600',
-  'text-violet-400': 'text-violet-600',
-  'text-cyan-400': 'text-cyan-600',
-  'text-red-400': 'text-red-600',
-  'text-purple-400': 'text-purple-600',
+  'text-blue-400': 'text-blue-600 dark:text-blue-400',
+  'text-amber-400': 'text-amber-600 dark:text-amber-400',
+  'text-emerald-500': 'text-emerald-600 dark:text-emerald-500',
+  'text-violet-400': 'text-violet-600 dark:text-violet-400',
+  'text-cyan-400': 'text-cyan-600 dark:text-cyan-400',
+  'text-red-400': 'text-red-600 dark:text-red-400',
+  'text-purple-400': 'text-purple-600 dark:text-purple-400',
 };
 
 interface LiveToastCardProps {
@@ -153,7 +155,7 @@ export function LiveToastCard({
           ref={progressRef}
           className="absolute inset-0"
           style={{
-            background: 'rgb(33 32 28 / 0.05)',
+            background: 'color-mix(in oklab, var(--rt-neutral-title) 5%, transparent)',
             transformOrigin: 'bottom',
             animation: `toast-fill ${progressDuration} linear forwards`,
             animationPlayState: progressPaused ? 'paused' : 'running',
@@ -173,7 +175,7 @@ export function LiveToastCard({
               {notification.body}
             </p>
           )}
-          <p className="text-xs mt-1" style={{ color: 'rgb(99 99 94 / 0.7)' }}>
+          <p className="text-xs mt-1" style={{ color: 'color-mix(in oklab, var(--rt-neutral-muted) 70%, transparent)' }}>
             {formatTime(notification.created_at, 'Today')}
           </p>
         </div>
@@ -192,7 +194,7 @@ export function LiveToastCard({
           }}
           className={[
             'absolute top-3 right-3 flex size-6 items-center justify-center rounded-full',
-            'bg-wash-5 text-[rgb(99,99,94)] hover:bg-black/[0.09] hover:text-[rgb(33,32,28)] transition-colors cursor-pointer',
+            'bg-wash-5 text-[var(--rt-neutral-muted)] hover:bg-black/[0.09] dark:hover:bg-white/[0.09] hover:text-[var(--rt-neutral-title)] transition-colors cursor-pointer',
           ].join(' ')}
           role="button"
           aria-label="Dismiss notification"

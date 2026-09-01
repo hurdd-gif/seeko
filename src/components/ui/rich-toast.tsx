@@ -49,33 +49,35 @@ const RAIL_GAP_PX = 10; // glyph → title gap (reference icon-column gap); also
 const RAIL_INSET_PX = GLYPH_PX + RAIL_GAP_PX; // 28px — one clean vertical rail
 
 // ── Variant → surface + glyph (Delphi alert language) ──────────
-// Neutral values come straight off the reference; error is its destructive
-// variant. Warning derives by the same formula (one hue everywhere, 10% wash,
-// 20% border) — amber chosen to sit at the red's perceptual weight.
+// All colors resolve through the --rt-* custom properties declared on
+// .seeko-toast-rich in globals.css (light values + .dark overrides), so the
+// card relights with the theme instead of baking light-mode paint inline.
 const NEUTRAL = {
-  bg: 'rgb(249 249 248)',
-  border: '1px solid oklab(0.641295 -0.00290838 0.0098139 / 0.12)',
-  title: 'rgb(33 32 28)',
-  muted: 'rgb(99 99 94)',
+  bg: 'var(--rt-neutral-bg)',
+  border: '1px solid var(--rt-neutral-border)',
+  title: 'var(--rt-neutral-title)',
+  muted: 'var(--rt-neutral-muted)',
 };
-const tinted = (hue: string, borderColor: string) => ({
-  bg: `color-mix(in oklab, ${hue} 10%, white)`,
+const tinted = (ink: string, bg: string, borderColor: string) => ({
+  bg,
   border: `1px solid ${borderColor}`,
-  title: hue,
-  muted: hue,
+  title: ink,
+  muted: ink,
 });
-type VariantStyle = typeof NEUTRAL & { glyphBg: string; Icon: typeof Check };
+type VariantStyle = typeof NEUTRAL & { glyphBg: string; glyphInk: string; Icon: typeof Check };
 const VARIANT_STYLE: Record<RichToastVariant, VariantStyle> = {
-  success: { ...NEUTRAL, glyphBg: 'rgb(33 32 28)', Icon: Check },
-  info: { ...NEUTRAL, glyphBg: 'rgb(99 99 94)', Icon: Info },
+  success: { ...NEUTRAL, glyphBg: 'var(--rt-glyph-strong)', glyphInk: 'var(--rt-glyph-ink)', Icon: Check },
+  info: { ...NEUTRAL, glyphBg: 'var(--rt-glyph-muted)', glyphInk: 'var(--rt-glyph-ink)', Icon: Info },
   error: {
-    ...tinted('rgb(220 62 66)', 'oklab(0.625572 0.177957 0.0756395 / 0.2)'),
-    glyphBg: 'rgb(220 62 66)',
+    ...tinted('var(--rt-error-ink)', 'var(--rt-error-bg)', 'var(--rt-error-border)'),
+    glyphBg: 'var(--rt-error-ink)',
+    glyphInk: '#fff',
     Icon: X,
   },
   warning: {
-    ...tinted('rgb(184 122 8)', 'color-mix(in oklab, rgb(184 122 8) 20%, transparent)'),
-    glyphBg: 'rgb(184 122 8)',
+    ...tinted('var(--rt-warn-ink)', 'var(--rt-warn-bg)', 'var(--rt-warn-border)'),
+    glyphBg: 'var(--rt-warn-ink)',
+    glyphInk: '#fff',
     Icon: TriangleAlert,
   },
 };
@@ -117,7 +119,7 @@ function RichToastCard({
 }: RichToastOptions & { id: string | number }) {
   const reduce = useReducedMotion();
   const [open, setOpen] = useState(true);
-  const { bg, border, title: titleColor, muted, glyphBg, Icon } = VARIANT_STYLE[variant];
+  const { bg, border, title: titleColor, muted, glyphBg, glyphInk, Icon } = VARIANT_STYLE[variant];
 
   // ── Self-managed dismissal (so the exit animation plays before removal) ──
   const close = useCallback(() => setOpen(false), []);
@@ -209,7 +211,7 @@ function RichToastCard({
                 type="button"
                 onClick={close}
                 aria-label="Dismiss"
-                className="absolute right-[12px] top-[10px] flex size-6 items-center justify-center rounded-md transition-[background-color,transform] duration-150 ease-out hover:bg-wash-5 active:scale-95 active:bg-black/[0.09] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-black/20"
+                className="absolute right-[12px] top-[10px] flex size-6 items-center justify-center rounded-md transition-[background-color,transform] duration-150 ease-out hover:bg-wash-5 active:scale-95 active:bg-black/[0.09] dark:active:bg-white/[0.09] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-black/20 dark:focus-visible:outline-white/25"
                 style={{ color: muted }}
               >
                 <X className="size-4" strokeWidth={2} />
@@ -219,8 +221,8 @@ function RichToastCard({
               <div className="flex items-center" style={{ gap: RAIL_GAP_PX }}>
                 <span
                   aria-hidden
-                  className="flex shrink-0 items-center justify-center rounded-full text-white"
-                  style={{ width: GLYPH_PX, height: GLYPH_PX, background: glyphBg }}
+                  className="flex shrink-0 items-center justify-center rounded-full"
+                  style={{ width: GLYPH_PX, height: GLYPH_PX, background: glyphBg, color: glyphInk }}
                 >
                   <Icon className="size-3" strokeWidth={3} />
                 </span>
@@ -255,7 +257,7 @@ function RichToastCard({
                     <a
                       href={action.href ?? '#'}
                       onClick={handleAction}
-                      className="w-fit rounded-sm font-medium underline underline-offset-[3px] transition-opacity duration-150 ease-out hover:opacity-70 active:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black/20"
+                      className="w-fit rounded-sm font-medium underline underline-offset-[3px] transition-opacity duration-150 ease-out hover:opacity-70 active:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black/20 dark:focus-visible:outline-white/25"
                       style={{ fontSize: 14, lineHeight: '20px', color: titleColor }}
                     >
                       {action.label}
