@@ -37,15 +37,18 @@ import { springs } from '@/lib/motion';
 export const UNDO_WINDOW_MS = 15_000;
 
 // ── Delphi alert surface (mirrors VARIANT_STYLE.NEUTRAL in rich-toast.tsx) ──
+// Colors resolve through the shared --rt-* palette in globals.css (:root +
+// .dark), so the card relights with the theme.
 const SURFACE = {
-  bg: 'rgb(249 249 248)',
-  border: '1px solid oklab(0.641295 -0.00290838 0.0098139 / 0.12)',
-  title: 'rgb(33 32 28)',
-  muted: 'rgb(99 99 94)',
-  glyphBg: 'rgb(33 32 28)',
+  bg: 'var(--rt-neutral-bg)',
+  border: '1px solid var(--rt-neutral-border)',
+  title: 'var(--rt-neutral-title)',
+  muted: 'var(--rt-neutral-muted)',
+  glyphBg: 'var(--rt-glyph-strong)',
+  glyphInk: 'var(--rt-glyph-ink)',
   /** Drain tint — the system red, but BELOW the 10% error-wash strength so
       the countdown veil never reads as the error variant. */
-  drain: 'color-mix(in oklab, rgb(220 62 66) 7%, transparent)',
+  drain: 'color-mix(in oklab, var(--rt-error-ink) 7%, transparent)',
 };
 const GLYPH_PX = 18; // leading glyph diameter (matches rich toast)
 const RAIL_GAP_PX = 10; // glyph → title gap; rows 2–3 indent to the same rail
@@ -110,7 +113,7 @@ export function TaskDeleteUndoToast({
           type="button"
           onClick={onCommit}
           aria-label="Dismiss and delete now"
-          className="absolute right-[12px] top-[10px] flex size-6 items-center justify-center rounded-md transition-[background-color,transform] duration-150 ease-out hover:bg-wash-5 active:scale-95 active:bg-black/[0.09] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-black/20"
+          className="absolute right-[12px] top-[10px] flex size-6 items-center justify-center rounded-md transition-[background-color,transform] duration-150 ease-out hover:bg-wash-5 active:scale-95 active:bg-black/[0.09] dark:active:bg-white/[0.09] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-black/20 dark:focus-visible:outline-white/25"
           style={{ color: SURFACE.muted }}
         >
           <X className="size-4" strokeWidth={2} />
@@ -120,8 +123,8 @@ export function TaskDeleteUndoToast({
         <div className="flex items-center" style={{ gap: RAIL_GAP_PX }}>
           <span
             aria-hidden
-            className="flex shrink-0 items-center justify-center rounded-full text-white"
-            style={{ width: GLYPH_PX, height: GLYPH_PX, background: SURFACE.glyphBg }}
+            className="flex shrink-0 items-center justify-center rounded-full"
+            style={{ width: GLYPH_PX, height: GLYPH_PX, background: SURFACE.glyphBg, color: SURFACE.glyphInk }}
           >
             <Trash2 className="size-3" strokeWidth={2.5} />
           </span>
@@ -144,7 +147,7 @@ export function TaskDeleteUndoToast({
           <button
             type="button"
             onClick={onUndo}
-            className="w-fit rounded-sm font-medium underline underline-offset-[3px] transition-opacity duration-150 ease-out hover:opacity-70 active:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black/20"
+            className="w-fit rounded-sm font-medium underline underline-offset-[3px] transition-opacity duration-150 ease-out hover:opacity-70 active:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black/20 dark:focus-visible:outline-white/25"
             style={{ fontSize: 14, lineHeight: '20px', color: SURFACE.title }}
           >
             Undo
