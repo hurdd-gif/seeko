@@ -1,174 +1,90 @@
 # Persona: Software Engineer
 
-Load this file when working on: Next.js, API routes, Supabase queries, TypeScript types, Vitest tests.
+Load this file when working on: React Router routes, the Hono API server, Supabase queries, TypeScript types, Vitest tests.
 
 ---
 
 ## Stack
 
-- **Framework:** Next.js 16 App Router (TypeScript, `src/` layout)
-- **Auth:** Supabase (`@supabase/supabase-js` v2 + `@supabase/ssr`)
-- **Data:** Supabase Postgres (queried via `@supabase/supabase-js`)
-- **UI:** shadcn/ui + Tailwind v4
-- **Tests:** Vitest (`npm test`)
-- **Hosting:** Render
+- **Client:** React 19 + Vite + React Router (`createBrowserRouter`), entry `src/rr-app/main.tsx`, routes `src/rr-app/routes.tsx` + `src/rr-app/routes/*.tsx`
+- **API:** Hono on `@hono/node-server`, run with `tsx` (`npm start` → `src/api-server/index.ts`, app wiring in `app.ts`, one file per area in `src/api-server/routes/`)
+- **Data/Auth:** Supabase (`@supabase/supabase-js` v2, `@supabase/ssr` for the browser client)
+- **Tests:** Vitest + jsdom + Testing Library (`npm test`, setup `src/test-setup.ts`)
+- **Hosting:** Render (see devops persona)
+- The app was migrated off Next.js. There is no `src/app/`, no Server Components, no `proxy.ts`. `routeInventory[].nextFile` in `routes.tsx` is a migration record, not a live path.
 
 ---
 
-## App Router Patterns
+## Dev processes
 
-- **Server Components** (default) — fetch Supabase data directly, no `useState`
-- **Client Components** — `"use client"` directive, handle auth state, interactivity
-- Route groups: `(auth)` for login/signup, `(dashboard)` for protected pages
+| Process | Command | Port |
+|---------|---------|------|
+| Vite client (HMR) | `npm run dev` | 5173, proxies `/api` + `/auth` → `VITE_API_TARGET` (default `:8787`) |
+| API server | `npm start` | `PORT` (default 8787; usually run at 8788). Also serves the built client from `dist/react-router` |
+
+- The API server has **no watch**: restart it after editing `src/api-server/**`.
+- `:8788` serves the build, so `npm run build` ships client changes there. Run it before calling a client change ready. QA and perf checks go on `:8788`, not `:5173`.
+- The dev server talks to the **live production database**. Never curl a route that writes.
+
+---
+
+## API route pattern
+
+Each area exports a factory that takes injectable seams (used by tests) and returns a `Hono` app:
 
 ```ts
-// Server component fetching Supabase data
-import { fetchTasks } from '@/lib/supabase/data';
-
-export default async function TasksPage() {
-  const tasks = await fetchTasks();
-  return <TasksTable tasks={tasks} />;
+export function createTeamRoutes(options: TeamRoutesOptions = {}) {
+  const authResolver = options.authResolver ?? getAuthenticatedUser;
+  const teamLoader = options.teamLoader ?? loadTeamRoster;
+  return new Hono().get('/team', async (c) => {
+    const user = await authResolver(c);
+    if (!user) return c.json({ error: 'unauthorized' }, 401);
+    ...
+  });
 }
 ```
 
----
-
-## Supabase Auth
-
-### Client (browser)
-```ts
-// src/lib/supabase/client.ts
-import { createBrowserClient } from '@supabase/ssr';
-export const supabase = createBrowserClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
-```
-
-### Server (RSC + middleware)
-```ts
-// src/lib/supabase/server.ts
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
-export async function createClient() {
-  const cookieStore = await cookies();
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookies: { getAll: () => cookieStore.getAll(), setAll: (c) => c.forEach(({ name, value, options }) => cookieStore.set(name, value, options)) } }
-  );
-}
-```
-
-### Proxy — protect `(dashboard)` routes
-**IMPORTANT: Next.js 16 renamed `middleware.ts` → `proxy.ts`, function name `middleware` → `proxy`**
-
-```ts
-// src/proxy.ts
-import { createServerClient } from '@supabase/ssr';
-import { NextResponse, type NextRequest } from 'next/server';
-
-export async function proxy(request: NextRequest) {
-  let response = NextResponse.next({ request });
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookies: { getAll: () => request.cookies.getAll(), setAll: (c) => c.forEach(({ name, value, options }) => response.cookies.set(name, value, options)) } }
-  );
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user && !request.nextUrl.pathname.startsWith('/login')) {
-    return NextResponse.redirect(new URL('/login', request.url));
-  }
-  return response;
-}
-
-export const config = { matcher: ['/((?!_next/static|_next/image|favicon.ico|login).*)'] };
-```
+- Auth guards live in `src/api-server/auth-utils.ts`: `requireUser`, `requireAdmin`, `requireAdminVia`, `isAdminUser`, `isRateLimited`, `validatePaymentsToken`.
+- Loaders that build page data live in `src/lib/*-index.ts` (`docs-index`, `invoice-index`, `payments-index`, …); routes call them, they don't query inline.
+- Errors: throw `AccessError` (`src/lib/access-error.ts`), map with `accessErrorStatus`.
 
 ---
 
-## Supabase Data Layer
+## Supabase clients
 
-All data queries live in `src/lib/supabase/data.ts`:
+| File | Key | Use |
+|------|-----|-----|
+| `src/lib/supabase/client.ts` / `src/rr-app/supabase.ts` | anon | Browser only; RLS applies |
+| `src/lib/supabase/server.ts` | service role | Server reads in `data.ts`; bypasses RLS, so scope by explicit id filters. Never import into browser code |
+| `src/lib/supabase/service.ts` | service role + actor headers | Server writes; sets `x-seeko-actor` / `x-seeko-source` so `activity_log` stamps the real actor. Never stamp the actor from `auth.uid()` behind a service-role call |
 
-```ts
-import { createClient } from './server';
-import type { Task, Area, TeamMember, Doc } from '../types';
-
-export async function fetchTasks(assigneeId?: string): Promise<Task[]>
-export async function fetchAreas(): Promise<Area[]>
-export async function fetchTeam(): Promise<TeamMember[]>
-export async function fetchDocs(parentId?: string): Promise<Doc[]>
-```
-
-- Uses the server Supabase client (cookie-based auth)
-- Each function creates its own client instance
-- Tasks ordered by deadline, areas/team by name, docs by sort_order
-- Tasks optionally filtered by `assignee_id` (user's auth UUID)
+- Read helpers: `src/lib/supabase/data.ts` (React `cache()`-wrapped `fetchTasks`, `fetchAreas`, `fetchTeam`, `fetchDocs`, `fetchNotifications`, …). Check there before writing a query.
+- Write seams: `task-store.ts` / `tasks-repo.ts`, `invoice-store.ts` / `invoice-repo.ts`, `invites-repo.ts`, `comment-store.ts`.
+- Generated types: `src/lib/supabase/database.types.ts`; app types: `src/lib/types.ts`.
+- Env vars keep their `NEXT_PUBLIC_` names. Vite exposes them via `envPrefix: ['VITE_', 'NEXT_PUBLIC_']` and shims `process.env.NEXT_PUBLIC_*` in `vite.config.ts`.
+- Glossary of seams and terms: `CONTEXT.md` (repo root, local only).
 
 ---
 
-## TypeScript Types (`src/lib/types.ts`)
+## Migrations
 
-```ts
-export type Task = {
-  id: string;
-  name: string;
-  department: Department | string;
-  status: TaskStatus;
-  priority: Priority;
-  area_id?: string;
-  assignee_id?: string;
-  deadline?: string;
-  description?: string;
-};
-
-export type Area = {
-  id: string;
-  name: string;
-  status: string;
-  progress: number;
-  description?: string;
-  phase?: string;
-};
-
-export type TeamMember = {
-  id: string;
-  name: string;
-  role: string;
-  department: Department | string;
-  email?: string;
-};
-
-export type Profile = {
-  id: string;
-  display_name?: string;
-  department?: string;
-  role?: string;
-};
-
-export type Doc = {
-  id: string;
-  title: string;
-  content?: string;
-  parent_id?: string;
-  sort_order: number;
-};
-```
+- Files in `supabase/migrations/` (timestamped). Never apply one without asking: several are already applied live and must not be re-applied.
+- After a schema change, update `docs/personas/ia.md`, `docs/supabase-schema.sql` and `src/lib/types.ts`.
 
 ---
 
 ## Testing
 
-- Test runner: Vitest (`npm test`)
-- Unit test Supabase data fetchers with mocked `@supabase/supabase-js`
-- Test auth middleware behavior with mocked Supabase responses
-- Co-locate tests: `__tests__/` next to the file being tested, or `.test.ts` suffix
+- `npm test` with cwd = seeko-studio; never run two at once.
+- Tests sit in `__tests__/` next to the code.
+- Some failures predate current work (LightShell, investor-layout, payments); compare against `main` before calling a failure new.
+- Scope test queries to a heading/region, not a bare text match.
 
 ---
 
 ## Skill Routing Reminders
 
-- Before implementing any feature: invoke `test-driven-development`
-- Before claiming complete: invoke `verification-before-completion`
-- For bugs: invoke `systematic-debugging`
+- Before implementing a feature: `test-driven-development`
+- Before claiming complete: `verification-before-completion`
+- Bugs: `systematic-debugging`
+- Supabase writes/auth: `seeko-supabase-mutation-reviewer`

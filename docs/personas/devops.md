@@ -1,130 +1,73 @@
 # Persona: DevOps
 
-Load this file when working on: Render.com deployment, environment variables, CI/CD, build config.
+Load this file when working on: Render deployment, environment variables, CI, build config.
 
 ---
 
-## Hosting: Render.com
+## Hosting: Render
 
-Service type: **web** (Node.js)
-Deploy trigger: push to `main` branch
-Auto-deploy: enabled
+`render.yaml` defines two services:
 
----
+| Service | Type | Build | Start |
+|---------|------|-------|-------|
+| `seeko-studio` | Node web | `npm ci && npm run build` | `npm start` (`tsx src/api-server/index.ts`) |
+| `seeko-maintenance` | Static | none | publishes `public/` (serves `maintenance.html` while the main service is in Maintenance Mode) |
 
-## render.yaml
-
-```yaml
-services:
-  - type: web
-    name: seeko-studio
-    env: node
-    buildCommand: npm run build
-    startCommand: npm start
-    envVars:
-      - key: NODE_ENV
-        value: production
-      - key: PORT
-        value: 3000
-      - key: NOTION_TOKEN
-        sync: false
-      - key: NEXT_PUBLIC_SUPABASE_URL
-        sync: false
-      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
-        sync: false
-      - key: SUPABASE_SERVICE_ROLE_KEY
-        sync: false
-      - key: NOTION_TASKS_DB_ID
-        sync: false
-      - key: NOTION_AREAS_DB_ID
-        sync: false
-      - key: NOTION_TEAM_DB_ID
-        sync: false
-      - key: NOTION_DOCS_PAGE_ID
-        sync: false
-      - key: RESEND_API_KEY
-        sync: false
-      - key: ADMIN_EMAIL
-        sync: false
-```
-
-Note: `sync: false` means the value is set manually in the Render dashboard, not committed to the repo.
+- Render runs `buildCommand` verbatim (no implicit install), so `npm ci` must stay in it. Every build/start dependency lives in `dependencies`, because `NODE_ENV=production` prunes devDependencies.
+- The API server listens on `PORT` (Render assigns it; local default 8787) and serves the built client from `dist/react-router`.
+- Deploy trigger: push to `main`.
+- Maintenance page wiring: `public/maintenance.README.md`.
 
 ---
 
-## Required Environment Variables
+## Environment variables
 
-| Variable                       | Where set          | Description                          |
-|--------------------------------|--------------------|--------------------------------------|
-| `NOTION_TOKEN`                 | Render dashboard   | Notion integration secret            |
-| `NEXT_PUBLIC_SUPABASE_URL`     | Render + .env.local | Supabase project URL                 |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY`| Render + .env.local | Supabase anon key (public)           |
-| `SUPABASE_SERVICE_ROLE_KEY`    | Render dashboard   | Supabase service role (never public) |
-| `NOTION_TASKS_DB_ID`           | Render + .env.local | Notion Tasks database ID             |
-| `NOTION_AREAS_DB_ID`           | Render + .env.local | Notion Areas database ID             |
-| `NOTION_TEAM_DB_ID`            | Render + .env.local | Notion Team database ID              |
-| `NOTION_DOCS_PAGE_ID`          | Render + .env.local | Notion Docs parent page ID           |
-| `PAYMENTS_JWT_SECRET`          | Render + .env.local | Secret for signing payment session JWTs |
-| `PAYMENTS_ACCESS_HASH`         | Render dashboard   | bcrypt hash of recovery password (fallback when no passkey is registered or available) |
-| `RESEND_API_KEY`               | Render dashboard   | Resend API key for transactional email   |
-| `ADMIN_EMAIL`                  | Render dashboard   | Admin email for NDA notification copies  |
+Names keep the `NEXT_PUBLIC_` prefix from the Next.js era; Vite exposes them via `envPrefix` in `vite.config.ts`.
 
----
+| Variable | Notes |
+|----------|-------|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Public anon key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Server only, never in browser code |
+| `NEXT_PUBLIC_APP_URL` / `NEXT_PUBLIC_SITE_URL` | Public base URLs |
+| `PAYMENTS_JWT_SECRET` | Signs payments session JWTs |
+| `PAYMENTS_ACCESS_HASH` | bcrypt recovery password (fallback when no passkey) |
+| `RESEND_API_KEY` | Transactional email |
+| `ADMIN_EMAIL` | Admin notification copies |
+| `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL`, `EKO_ANTHROPIC_MODEL` | EKO agent |
+| `SIGNING_PROVIDER`, `DOCUSIGN_*` | External signing |
+| `DEV_AUTH_BYPASS` | Local dev only: fakes identity, not DB privileges. Never set on Render |
+| `VITE_API_TARGET` | Local dev: where Vite proxies `/api` and `/auth` |
 
-## .env.local (local dev, gitignored)
-
-```bash
-NOTION_TOKEN=secret_...
-NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
-SUPABASE_SERVICE_ROLE_KEY=eyJ...
-NOTION_TASKS_DB_ID=...
-NOTION_AREAS_DB_ID=...
-NOTION_TEAM_DB_ID=...
-NOTION_DOCS_PAGE_ID=...
-```
+- `sync: false` in `render.yaml` = set in the Render dashboard.
+- Local values live in `.env.local` (gitignored). Never print or commit secrets.
+- When code reads a new env var, add it here and to `render.yaml`.
 
 ---
 
-## Next.js on Render
+## CI (`.github/workflows/`)
 
-- Render auto-assigns a `PORT` — Next.js reads it automatically in production
-- No special `next.config.js` needed for Render (output: `'standalone'` optional but not required)
-- Build output: `.next/` directory
+`ci.yml`, `claude.yml`, `daily-commit-review.yml`, `error-log-monitor.yml`, `secret-scanning.yml`.
 
 ---
 
-## Deployment Workflow
+## Before deploying
 
-1. Commit and push changes to `main` branch
-2. Render auto-detects the push and triggers a new deployment
-3. Render runs `npm run build` → then `npm start`
-4. Monitor deploy logs in the Render dashboard
-5. Verify the deploy URL (e.g., `https://seeko-studio.onrender.com`)
+1. `npm run build` passes (check the exit code; `| tail` hides failures).
+2. `npm test` shows no new failures against `main`.
+3. Any migration the change needs is applied first, with the user's go-ahead.
+4. `git status` + `git fetch`: another session also edits this repo.
 
----
+## After deploying
 
-## .gitignore Requirements
-
-Ensure these are gitignored:
-- `.env.local`
-- `.env*.local`
-- `node_modules/`
-- `.next/`
-
----
-
-## Health Check
-
-After deploy, verify:
-1. `GET /` → redirects to `/login` (not logged in)
-2. Login with Supabase credentials → redirects to dashboard
-3. Notion data loads (tasks, areas, team)
+1. `GET /` while signed out redirects to `/login`.
+2. Sign in, dashboard data loads.
+3. Render logs show no boot errors.
 
 ---
 
 ## Skill Routing Reminders
 
-- After changing `render.yaml`: trigger maintenance agent to sync CLAUDE.md
-- After adding new env vars: update this file AND add them to `render.yaml`
-- After stack version bumps: update this file
+- Build/test gate: `seeko-build-gate`
+- Commit hygiene: `seeko-repo-hygiene`
+- After changing `render.yaml` or env vars: update this file
