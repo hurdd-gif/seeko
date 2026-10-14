@@ -266,16 +266,11 @@ Supabase (seeko-studio project)
 
 ## Data Access
 
-All queries go through `src/lib/supabase/data.ts`:
+Server reads go through `src/lib/supabase/data.ts` (`fetchTasks`, `fetchAreas`, `fetchTeam`, `fetchDocs`, `fetchNotifications`, …). It uses the **service-role** client (`server.ts`), so RLS does not filter these reads: per-user scoping is explicit id filters in `data.ts`. RLS still governs browser (anon-key) queries.
 
-```ts
-import { fetchTasks, fetchAreas, fetchTeam, fetchDocs } from '@/lib/supabase/data';
+Server writes go through `src/lib/supabase/service.ts`, which sends `x-seeko-actor` / `x-seeko-source` headers so `activity_log` records the real actor (`current_actor_id()` / `current_actor_source()` in migration `20260713140000_activity_actor.sql`).
 
-const tasks = await fetchTasks(userId);   // optional assignee filter
-const areas = await fetchAreas();
-const team  = await fetchTeam();          // queries profiles table
-const docs  = await fetchDocs(parentId);  // optional parent filter, null = top-level
-```
+The table list above is not exhaustive (invoices, notifications, activity_log, comments, …). The source of truth is `src/lib/supabase/database.types.ts` and `supabase/migrations/`.
 
 ---
 

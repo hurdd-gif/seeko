@@ -1,176 +1,80 @@
 # Persona: UX / UI Designer
 
-Load this file when working on: shadcn/ui components, Tailwind styling, animations, visual language, design tools.
+Load this file when working on: components, Tailwind styling, tokens, theme, motion, icons, visual QA.
 
 ---
 
-## Visual Language
+## Foundations
 
-- **Background:** `oklch(0.10 0 0)` (near-black)
-- **Success / Coding dept:** `#0d7aff` (azure blue — `--color-seeko-accent`)
-- **Font for IDs/labels:** JetBrains Mono (monospace)
-- **Font for UI text:** Outfit (sans-serif)
-- **Dark mode:** always on — OKLCH token system in `globals.css`
-
----
-
-## Department Color Map
-
-| Department     | Color     |
-|----------------|-----------|
-| Coding         | `#0d7aff` |
-| Visual Art     | `#93c5fd` |
-| UI/UX          | `#c4b5fd` |
-| Animation      | `#fbbf24` |
-| Asset Creation | `#f9a8d4` |
+- **Components:** house components in `src/components/ui/` (shadcn-style, `class-variance-authority` + `cn()` from `src/lib/utils.ts`). No HeroUI, no component library. Check here before building anything new.
+- **Styling:** Tailwind v4, configured in `src/rr-app/globals.css` (`@theme inline {}`, no `tailwind.config.ts`). Tokens are CSS variables mapped by reference, so `.dark` flips them.
+- **Font:** Inter for sans and mono (`--font-sans` / `--font-mono` → `--font-inter`).
+- **Accent:** `--color-seeko-accent` (+ `-ink`, `-strong`). Department colors are an AA-on-white ink ladder that flips to pastels in dark.
 
 ---
 
-## Status Color Map
+## Theme
 
-| Status      | Color     | CSS Variable               |
-|-------------|-----------|----------------------------|
-| Complete    | `#0d7aff` | `--color-status-complete`  |
-| In Progress | `#fbbf24` | `--color-status-progress`  |
-| In Review   | `#93c5fd` | `--color-status-review`    |
-| Blocked     | `#f87171` | `--color-status-blocked`   |
+- Three-state preference `light | dark | system` in `localStorage['seeko-theme']`; missing = system. Owned by `src/lib/theme.ts`.
+- Applied as `.dark` on `<html>` so portalled surfaces (sonner, menus, dialogs) flip too.
+- `index.html` has an inline pre-paint copy of the resolution. **Edit both together.**
+- Dark tiers are OKLCH; never drop them toward 0.205.
 
 ---
 
-## shadcn/ui Components
+## Token rules
 
-All components live in `src/components/ui/` and use the `cn()` utility from `src/lib/utils.ts`.
-
-### Components in use:
-
-| Component    | File                        | Usage                                |
-|--------------|-----------------------------|--------------------------------------|
-| Card         | `src/components/ui/card.tsx` | Page sections, stat cards, list wrappers |
-| Badge        | `src/components/ui/badge.tsx` | Status labels, department tags, priority |
-| Button       | `src/components/ui/button.tsx` | Actions, sign out                   |
-| Avatar       | `src/components/ui/avatar.tsx` | Team member initials                |
-| Input        | `src/components/ui/input.tsx` | Search fields                       |
-| Select       | `src/components/ui/select.tsx` | Status filter dropdown              |
-| Separator    | `src/components/ui/separator.tsx` | Visual dividers                  |
-
-### Pattern examples:
-```tsx
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-
-<Card>
-  <CardHeader>
-    <CardTitle>Section Title</CardTitle>
-  </CardHeader>
-  <CardContent>
-    <Badge variant="secondary">Label</Badge>
-  </CardContent>
-</Card>
-```
-
-### Badge variants:
-- `default` — primary bg
-- `secondary` — muted bg (department tags)
-- `outline` — bordered (status, phase labels)
-- `destructive` — red (high priority)
+- One elevation: `shadow-seeko` (`shadow-seeko-pop` for popovers one step up). Never inline a shadow.
+- Toast colors only via `var(--rt-…)` (Delphi toast palette).
+- Use semantic tokens, never raw color literals.
+- Avatars: `@outpacelabs/avatars` with `seed = profile.id` (never initials; a falsy seed white-screens).
+- No uppercase tracked eyebrows.
 
 ---
 
-## Animation
+## Motion
 
-Timings from seeko-dashboard.jsx:
-- Tab change: `fadeUp` 0.5s
-- Header entrance: `fadeIn` 0.6s
-
-For complex motion: invoke `interface-craft` skill before implementing.
-For motion patterns: invoke `motion-design-patterns` skill.
-
----
-
-## Design Tool Order
-
-1. **Pencil MCP** — wireframe / layout sketch (`.pen` files)
-2. **Design Canvas** (`/playground`) — code variations, component exploration
-3. **Figma MCP** — hi-fi prototypes, design tokens, final specs
-4. **visual-qa** — screenshot QA against design intent
+- Library: `motion` (`motion/react`).
+- Shared values: `src/lib/motion.ts` (`springs`, `TAB_PILL_SPRING`, `PANEL`, `DROPDOWN`, `MODAL`, `shellEntrance`, `rowEntrance`, …) and `src/lib/springs.ts` (`spring.fast` / `moderate`, each with an exit duration). Reuse these; no magic numbers in JSX.
+- Tab indicators: `layoutId` + `TAB_PILL_SPRING`.
+- Every animation honors reduced motion (the helpers take `reduce`).
+- Sign-out: `EXIT_TOTAL_MS` must match the 60+240ms in `globals.css`.
 
 ---
 
-## ui-design-brain Data Dashboard Conventions
+## Icons
 
-- **Data-dense layouts:** cards over tables where possible for overview; divide-y lists for detail
-- **State handling:** always show loading, empty, and error states — never blank
-- **KPI metrics at top**, detail below (StatCard grid → Cards → divide-y list pattern)
-- **Avoid overloading a single view** — use tabs to layer depth
-- **Categorical status:** use `Badge` or status dots, never raw text
-- **Progress:** use custom progress bar with `--color-seeko-accent`
+- Mapped through `src/lib/icon-map.tsx` (Lucide plus others). Add icons there, not as one-off imports.
 
 ---
 
-## Component File Locations
+## Layout & surfaces
 
-```
-src/components/ui/
-  card.tsx          — Card, CardHeader, CardTitle, CardContent
-  badge.tsx         — Badge with variant system
-  button.tsx        — Button with variant/size system
-  avatar.tsx        — Avatar, AvatarFallback
-  input.tsx         — Input field
-  select.tsx        — Native select wrapper
-  separator.tsx     — Horizontal/vertical divider
-
-src/components/layout/
-  Sidebar.tsx       — client component, usePathname, Lucide icons
-
-src/components/dashboard/
-  TaskList.tsx      — client component, search/filter task list
-
-src/components/notion/
-  NotionRenderer.tsx — renders Notion blocks as React JSX
-```
+- App chrome: `src/components/layout/`. Dashboard surfaces: `src/components/dashboard/`.
+- Surface context/classes: `src/lib/surface-context.tsx`, `src/lib/surface-classes.ts`.
+- Loading states: boneyard-js skeletons (`npm run bones`, output in `src/bones/`).
+- Always show loading, empty and error states.
 
 ---
 
-## Tailwind v4 + shadcn/ui Setup
+## Design references
 
-No `tailwind.config.ts` needed. Tailwind v4 uses CSS-based configuration in `globals.css`:
-
-```css
-@import "tailwindcss";
-
-@theme inline {
-  --color-background:        oklch(0.10 0 0);
-  --color-foreground:        oklch(0.95 0 0);
-  --color-card:              oklch(0.14 0 0);
-  --color-card-foreground:   oklch(0.95 0 0);
-  --color-border:            oklch(0.22 0 0);
-  --color-muted:             oklch(0.18 0 0);
-  --color-muted-foreground:  oklch(0.49 0 0);
-  --color-secondary:         oklch(0.18 0 0);
-  --color-primary:           oklch(0.95 0 0);
-  --color-sidebar:           oklch(0.12 0 0);
-  --color-seeko-accent:      #0d7aff;
-  /* ... see globals.css for full token list */
-
-  --font-sans: var(--font-outfit);
-  --font-mono: var(--font-jetbrains-mono);
-  --radius: 0.5rem;
-}
-```
-
-Tailwind v4 maps `--color-*` variables to `bg-*`, `text-*`, `border-*` utilities automatically.
+- `.impeccable.md` (repo root, local only): design context.
+- `.design-sync/NOTES.md`: claude.ai/design sync notes (canonical).
+- `docs/design-references.md`: inspiration log.
+- `~/.claude/interface-precedent.md`: global rulebook.
 
 ---
 
-## Design References
+## QA
 
-`docs/design-references.md` — running collection of UI inspiration links, component ideas, and annotated references. Check this before starting any new screen or component design.
+- Build, then check on `:8788`. Auth-free QA routes exist (`*-qa.tsx`, `/investor-preview*` in `src/rr-app/routes/`).
+- Browser QA uses a headless Playwright script, not the Playwright MCP.
 
 ---
 
 ## Skill Routing Reminders
 
-- Before any new screen/feature design: invoke `brainstorming`
-- For animations: invoke `interface-craft`
-- For design tokens: invoke `design-tokens`
-- For QA: invoke `visual-qa`
+- Before and after any design change: `emil-design-engineering`, `/interface-craft critique`, `/make-interfaces-feel-better`
+- Motion: `animate`, `motion-design-patterns`
+- Screenshot QA: `visual-qa`, `seeko-ui-regression-reviewer`
