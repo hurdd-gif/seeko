@@ -70,7 +70,9 @@ export function createPaymentsRoutes(options: PaymentsRoutesOptions = {}) {
       const select = isInvestorViewer
         ? 'id, recipient_id, amount, currency, description, status, paid_at, created_at, created_by, refund_amount, refund_note, refunded_at, recipient:profiles!payments_recipient_id_fkey(id, display_name, avatar_url, department), items:payment_items(id, payment_id, task_id, label, amount), adjustments:payment_adjustments(id, payment_id, previous_amount, new_amount, note, adjusted_by, created_at)'
         : '*, recipient:profiles!payments_recipient_id_fkey(id, display_name, avatar_url, department, paypal_email), items:payment_items(*), adjustments:payment_adjustments(*)';
-      let query = supabase
+      // Investors read through the service role: RLS gives them no direct
+      // payments access, so the explicit column list above is the only gate.
+      let query = (isInvestorViewer ? getServiceClient() : supabase)
         .from('payments')
         .select(select)
         .order('created_at', { ascending: false });
@@ -393,9 +395,11 @@ export function createPaymentsRoutes(options: PaymentsRoutesOptions = {}) {
         });
       }
 
+      // Investor viewer: service role (no direct payments RLS), amounts only.
+      const service = getServiceClient();
       const [paidMonthRes, allTimeRes] = await Promise.all([
-        supabase.from('payments').select('amount').eq('status', 'paid').gte('paid_at', monthStart),
-        supabase.from('payments').select('amount, recipient_id').eq('status', 'paid'),
+        service.from('payments').select('amount').eq('status', 'paid').gte('paid_at', monthStart),
+        service.from('payments').select('amount, recipient_id').eq('status', 'paid'),
       ]);
       const allTimePayments = allTimeRes.data ?? [];
       return c.json({

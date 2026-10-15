@@ -8,7 +8,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 // is a real consequence of the select string, exactly like Postgres projection.
 const mocks = vi.hoisted(() => ({
   viewerAuth: vi.fn(),
-  captured: {} as { select?: string; eq?: [string, unknown] },
+  captured: {} as { select?: string; eq?: [string, unknown]; viaService?: boolean },
+  // Investor reads go through the service role, so it gets the same double.
+  service: null as unknown,
 }));
 
 vi.mock('../../payments-auth', async (importOriginal) => ({
@@ -16,7 +18,7 @@ vi.mock('../../payments-auth', async (importOriginal) => ({
   requireHonoPaymentsViewerToken: mocks.viewerAuth,
 }));
 vi.mock('@/lib/supabase/service', () => ({
-  getServiceClient: () => ({ from: () => ({ insert: async () => ({ error: null }) }) }),
+  getServiceClient: () => mocks.service ?? { from: () => ({ insert: async () => ({ error: null }) }) },
   getServiceClientAs: () => ({ from: () => ({ insert: async () => ({ error: null }) }) }),
 }));
 
@@ -96,6 +98,8 @@ function makeSupabase() {
 }
 
 function setViewer({ isAdmin, isInvestor }: { isAdmin: boolean; isInvestor: boolean }) {
+  const service = makeSupabase();
+  mocks.service = { from: (t: string) => { mocks.captured.viaService = true; return service.from(t); } };
   mocks.viewerAuth.mockImplementation(async () => ({
     ok: true,
     auth: {
@@ -116,6 +120,7 @@ function requestPayments() {
 beforeEach(() => {
   mocks.viewerAuth.mockReset();
   mocks.captured = {};
+  mocks.service = null;
 });
 
 describe('GET /api/payments — investor payout PII lockdown', () => {
@@ -127,6 +132,9 @@ describe('GET /api/payments — investor payout PII lockdown', () => {
     const rows = (await res.json()) as Array<Record<string, unknown>>;
     expect(rows).toHaveLength(1);
     const [row] = rows;
+
+    // Investors have no direct payments RLS; the route must use the service role.
+    expect(mocks.captured.viaService).toBe(true);
 
     // Payout PII must not be in the response body.
     expect(row).not.toHaveProperty('recipient_email');
