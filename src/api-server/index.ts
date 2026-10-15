@@ -5,15 +5,19 @@ import { serveStatic } from '@hono/node-server/serve-static';
 import { Hono } from 'hono';
 import { app } from './app';
 import { loadLocalEnv } from './env';
+import { isDevAuthBypass } from './supabase';
 
 loadLocalEnv();
 
 const port = Number.parseInt(process.env.PORT ?? '8787', 10);
-// Bind all interfaces by default so the container is reachable on its host —
-// Render (and any container host) routes to the assigned PORT from outside the
-// loopback, so a 127.0.0.1 bind reports as unreachable ("no-server"). Override
-// with HOST if a narrower bind is ever needed locally.
-const hostname = process.env.HOST ?? '0.0.0.0';
+// Production binds all interfaces: Render routes to PORT from outside the
+// loopback, so a 127.0.0.1 bind reports as unreachable ("no-server"). Locally,
+// bind loopback only: the dev server talks to the live database and, with
+// DEV_AUTH_BYPASS, treats every request as an admin.
+const hostname = process.env.HOST ?? (process.env.NODE_ENV === 'production' ? '0.0.0.0' : '127.0.0.1');
+if (isDevAuthBypass() && !['127.0.0.1', '::1', 'localhost'].includes(hostname)) {
+  throw new Error(`DEV_AUTH_BYPASS refuses to listen on ${hostname}; unset HOST or the bypass.`);
+}
 const staticRoot = resolve(process.cwd(), 'dist/react-router');
 const indexHtmlPath = resolve(staticRoot, 'index.html');
 const server = new Hono().route('/', app);
