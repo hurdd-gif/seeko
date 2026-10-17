@@ -45,7 +45,7 @@ export function createTeamRoutes(options: TeamRoutesOptions = {}) {
 ```
 
 - Auth guards live in `src/api-server/auth-utils.ts`: `requireUser`, `requireAdmin`, `requireAdminVia`, `isAdminUser`, `isRateLimited`, `validatePaymentsToken`.
-- Loaders that build page data live in `src/lib/*-index.ts` (`docs-index`, `invoice-index`, `payments-index`, …); routes call them, they don't query inline.
+- Loaders that build page data live in `src/lib/*-index.ts` (`docs-index`, `payments-index`, `tasks-index`, …); routes call them, they don't query inline.
 - Errors: throw `AccessError` (`src/lib/access-error.ts`), map with `accessErrorStatus`.
 
 ---
@@ -59,7 +59,8 @@ export function createTeamRoutes(options: TeamRoutesOptions = {}) {
 | `src/lib/supabase/service.ts` | service role + actor headers | Server writes; sets `x-seeko-actor` / `x-seeko-source` so `activity_log` stamps the real actor. Never stamp the actor from `auth.uid()` behind a service-role call |
 
 - Read helpers: `src/lib/supabase/data.ts` (React `cache()`-wrapped `fetchTasks`, `fetchAreas`, `fetchTeam`, `fetchDocs`, `fetchNotifications`, …). Check there before writing a query.
-- Write seams: `task-store.ts` / `tasks-repo.ts`, `invoice-store.ts` / `invoice-repo.ts`, `invites-repo.ts`, `comment-store.ts`.
+- Write seams: `task-store.ts` / `tasks-repo.ts`, `invites-repo.ts`, `comment-store.ts`.
+- Server reads of PII columns (`profiles.email`, `paypal_email`, `nda_*`) must use the service role: those columns are not client-readable since `20261015000002`, so selecting them on a user-JWT client fails with a permission error.
 - Generated types: `src/lib/supabase/database.types.ts`; app types: `src/lib/types.ts`.
 - Env vars keep their `NEXT_PUBLIC_` names. Vite exposes them via `envPrefix: ['VITE_', 'NEXT_PUBLIC_']` and shims `process.env.NEXT_PUBLIC_*` in `vite.config.ts`.
 - Glossary of seams and terms: `CONTEXT.md` (repo root, local only).
