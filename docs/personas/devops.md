@@ -55,7 +55,7 @@ Names keep the `NEXT_PUBLIC_` prefix from the Next.js era; Vite exposes them via
 
 1. `npm run build` passes (check the exit code; `| tail` hides failures).
 2. `npm test` shows no new failures against `main`.
-3. Any migration the change needs is applied first, with the user's go-ahead.
+3. Any migration the change needs is applied first, with the user's go-ahead. Exception: a migration whose header says to apply it after deploy (it removes access the old code still uses, e.g. `20261015000003_investor_payments_via_api.sql`) goes in after the deploy is confirmed live.
 4. `git status` + `git fetch`: another session also edits this repo.
 
 ## After deploying

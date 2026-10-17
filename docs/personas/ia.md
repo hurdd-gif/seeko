@@ -276,8 +276,11 @@ The table list above is not exhaustive (invoices, notifications, activity_log, c
 
 ## RLS Policies
 
-- `profiles`: any authenticated user can read all profiles (needed for team page)
-- `tasks`, `areas`, `docs`: any authenticated user can read
+- `profiles`: any authenticated user can read every row, but only the column-granted, non-PII columns (`20261015000002`). `email`, `paypal_email` and the `nda_signer_*` / `nda_ip` / `nda_user_agent` columns are server-only (service role)
+- `tasks`, `areas`: any authenticated user can read
+- `docs`, `activity_log`: admin-only client reads; members get docs through the API (service role + lock filtering)
+- `payments`: no investor client reads once `20261015000003` is applied; investors read through `GET /api/payments` (service role, narrowed columns)
+- `pending_invites`: RLS on, no client policies. Signup is invite-only: the `handle_new_user` trigger rejects an `auth.users` insert with no matching invite (`20261015000001`)
 - `passkey_credentials`: owner can `select` and `delete`; inserts/updates only via service role
 - `passkey_challenges`: RLS enabled, no client policies — service-role only
 - `notes`: admin-only select/insert/update; service role bypasses for the Telegram bot.
