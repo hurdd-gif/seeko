@@ -58,7 +58,7 @@ export function createPaymentsRoutes(options: PaymentsRoutesOptions = {}) {
       const guard = await requireHonoPaymentsViewerToken(c);
       if (!guard.ok) return c.json({ error: guard.error }, guard.status);
 
-      const { supabase, isAdmin, isInvestor } = guard.auth;
+      const { isAdmin, isInvestor } = guard.auth;
       // Investors (non-admin) are the less-trusted payments viewer. Narrow the
       // payload to the investor-safe shape (mirroring loadInvestorPayments): every
       // column is enumerated explicitly — never `*`, not on the payments row and
@@ -70,9 +70,11 @@ export function createPaymentsRoutes(options: PaymentsRoutesOptions = {}) {
       const select = isInvestorViewer
         ? 'id, recipient_id, amount, currency, description, status, paid_at, created_at, created_by, refund_amount, refund_note, refunded_at, recipient:profiles!payments_recipient_id_fkey(id, display_name, avatar_url, department), items:payment_items(id, payment_id, task_id, label, amount), adjustments:payment_adjustments(id, payment_id, previous_amount, new_amount, note, adjusted_by, created_at)'
         : '*, recipient:profiles!payments_recipient_id_fkey(id, display_name, avatar_url, department, paypal_email), items:payment_items(*), adjustments:payment_adjustments(*)';
-      // Investors read through the service role: RLS gives them no direct
-      // payments access, so the explicit column list above is the only gate.
-      let query = (isInvestorViewer ? getServiceClient() : supabase)
+      // Both viewers read through the service role, gated by the guard above:
+      // investors have no direct payments RLS (so the explicit column list is
+      // the only gate), and profiles.paypal_email is no longer client-readable
+      // (20261015000002), so the admin embed would be denied on the user client.
+      let query = getServiceClient()
         .from('payments')
         .select(select)
         .order('created_at', { ascending: false });
