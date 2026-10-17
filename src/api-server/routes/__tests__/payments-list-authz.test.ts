@@ -165,6 +165,10 @@ describe('GET /api/payments — investor payout PII lockdown', () => {
     expect(row.payee_name).toBe('Acme Vendor');
     expect((row.recipient as Record<string, unknown>).paypal_email).toBe('bob@paypal.invalid');
 
+    // profiles.paypal_email is not client-readable (20261015000002), so the
+    // admin list must also read through the service role.
+    expect(mocks.captured.viaService).toBe(true);
+
     // Admins are not narrowed to status='paid'.
     expect(mocks.captured.eq).toBeUndefined();
   });
