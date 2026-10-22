@@ -3,7 +3,7 @@
 import { forwardRef, useState, useCallback, useRef, useEffect, useId, type HTMLAttributes } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { useIcon } from "@/lib/icon-context";
+import { Copy as CopyIcon } from "lucide-react";
 import { fontWeights } from "@/lib/font-weight";
 import { useShape } from "@/lib/shape-context";
 import { spring } from "@/lib/springs";
@@ -35,7 +35,6 @@ interface InputCopyProps extends Omit<HTMLAttributes<HTMLDivElement>, "children"
 
 const InputCopy = forwardRef<HTMLDivElement, InputCopyProps>(
   ({ value, label, onCopy, disabled, variant = "icon", align = "right", showTooltip = true, compact = false, monospace = true, className, ...props }, ref) => {
-    const CopyIcon = useIcon("copy");
     // "copied" and "error" both occupy the same animation slot on the button
     const [status, setStatus] = useState<"idle" | "copied" | "error">("idle");
     const [copyCount, setCopyCount] = useState(0);
