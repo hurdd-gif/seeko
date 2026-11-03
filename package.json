@@ -104,7 +104,7 @@
     "jsdom": "^28.1.0",
     "react-doctor": "^0.9.18",
     "typescript": "5.9.3",
-    "vitest": "^4.1.11"
+    "vitest": "^4.1.12"
   },
   "overrides": {
     "undici": "^7.30.1",
