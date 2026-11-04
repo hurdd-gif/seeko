@@ -58,7 +58,13 @@ export const BellToggle = forwardRef<HTMLButtonElement, BellToggleProps>(
       <motion.button
         ref={ref}
         onClick={onClick}
-        aria-label={open ? 'Close inbox' : 'Open inbox'}
+        aria-label={
+          open
+            ? 'Close inbox'
+            : unreadCount > 0
+              ? `Open inbox, ${unreadCount} unread`
+              : 'Open inbox'
+        }
         aria-expanded={open}
         whileHover={{ scale: d.bell.hoverScale }}
         whileTap={{ scale: d.bell.tapScale }}
